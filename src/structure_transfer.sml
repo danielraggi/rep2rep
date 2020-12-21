@@ -1,3 +1,14 @@
+signature KNOWLEDGE =
+sig
+  type base = CSpace.T * Correspondence.set * Relation.set
+  val make : CSpace.T -> Correspondence.set -> Relation.set -> base
+end
+
+structure Knowledge : KNOWLEDGE =
+struct
+  fun make cspace corrs rels = (cspace,corrs,rels)
+end
+
 signature STATE =
 sig
   type T;
@@ -5,9 +16,9 @@ sig
   val goalsOf : T -> goal list;
   val patternCompOf : T -> pattern.composition ;
   val constructionCompOf : T -> SGraph.constructionComposition;
-  val knowledgeOf ;
+  val knowledgeOf : T -> Knowledge.base;
   val make : Pattern.composition -> SGraph.constructionComposition -> goal list -> Correspondence.set -> Relation.set -> T;
-  val init : goal list -> Correspondence.set -> Relation.set -> T;
+  val init : goal list -> Knowledge.base -> T;
   val noGoals : T -> bool ;
   val propagateablePattern : T -> bool;
 
@@ -33,7 +44,9 @@ fun unfoldGoals st =
 let val goals = State.goalsOf st (*this list of goals is conjunctive; all must be satisfied*)
     val patternComp = State.patternCompOf st
     val KB = State.knowledgeOf st
-    val
+    val corrs = Knowledge.correspondencesOf
+    val g = State.
+    val matchingCorrs = Correspondence.get
 in State.make (pattern ) (*the reaturned sequence of lists of goals is disjunctive; one must be satisfied *)
 end
 
