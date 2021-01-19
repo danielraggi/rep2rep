@@ -4,7 +4,7 @@ import "state"
 signature TRANSFER =
 sig
 
-val unfoldGoals : State.T -> State.T seq
+val unfoldState : State.T -> State.T seq
 val StructureTransfer : Correspondence.set -> Relation.set -> SGraph.T -> Relation.T -> State.T
 
 end
@@ -29,7 +29,7 @@ let val matchingGoals = Correspondence.TagMatchingGoals corr goals
 in unfoldGoalsGivenCorr' matchingGoals
 end
 
-fun unfoldGoals st =
+fun unfoldState st =
 let val goals = State.goalsOf st (*this list of goals is conjunctive; all must be satisfied*)
     val patternComp = State.patternCompOf st
     val graph = State.sgraphOf st
@@ -49,7 +49,7 @@ let
   fun heuristic st = 0
   fun sat st = State.noGoals st andalso State.propagateablePattern st
 in
-  Search.strategy unfoldGoals heuristic sat initialState
+  Search.strategy unfoldState heuristic sat initialState
 end
 
 
