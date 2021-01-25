@@ -1,6 +1,6 @@
 import "term"
 import "constructor"
-import "set"
+import "util.set"
 
 signature SGRAPH =
 sig
