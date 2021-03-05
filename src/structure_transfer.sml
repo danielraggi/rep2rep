@@ -39,17 +39,15 @@ let val goals = State.goalsOf st (*this list of goals is conjunctive; all must b
 in options (*the reaturned sequence of lists of goals is disjunctive; one must be satisfied *)
 end
 
-(* every element of R should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-fun StructureTransfer Corrs Rels graph Rs =
+(* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
+fun StructureTransfer KB g goals =
 let
-  val patternComp = Pattern.empty
-  val goals = map Relation.decompose Rs
-  val KB = Knowledge.make Corrs Rels
-  val initialState = State.make patternComp goals KB
-  fun heuristic st = 0
-  fun sat st = State.noGoals st andalso State.propagateablePattern st
+  val patternComp = Pattern.trivialComposition
+  val initialState = State.make KB goals g
+  fun heuristic (st,st') = EQUAL
+  val limit = 10
 in
-  Search.strategy unfoldState heuristic sat initialState
+  Search.sort unfoldState heuristic limit initialState
 end
 
 
