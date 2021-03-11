@@ -4,17 +4,21 @@ import "relation"
 signature CORRESPONDENCE =
 sig
   type corr = Pattern.T * Pattern.T * Relation.T * Relation.T
-  type composition
-  type set
-  val rightMatching : corr -> SGraph.T -> SGraph.vertex -> SGraph.T set
-  val leftMatching : corr -> SGraph.T -> SGraph.vertex -> SGraph.T set
+  val patternsOf : corr -> Pattern.T * Pattern.T
+  val relationsOf : corr -> Relation.T * Relation.T
+  val ofRelation : Relation.T -> corr
 end
 
 structure Correspondence : CORRESPONDENCE =
 struct
-  type corr
-  type composition
-  type set
-  fun rightmatching
-  fun leftmatching
+  type corr = Pattern.T * Pattern.T * Relation.T * Relation.T
+
+  fun patternsOf (sP,tP,Rf,Rc) = (sP,tP)
+  fun relationsOf (sP,tP,Rf,Rc) = (Rf,Rc)
+
+  (*the following turns a relation into a correspondence.*)
+  fun ofRelation R = (Pattern.trivial (Relation.leftTypeOf R),
+                      Pattern.trivial (Relation.rightTypeOf R),
+                      Relation.alwaysTrue,
+                      R)
 end
