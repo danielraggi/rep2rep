@@ -3,7 +3,7 @@ import "knowledge"
 signature STATE =
 sig
   type T;
-  type goal = Pattern.vertexIndex list * SGraph.vertexIndex list * Relation.T;
+  type goal = Relation.relationship;
   val goalsOf : T -> goal Sequence.T;
   val patternCompOf : T -> Pattern.composition ;
   val constructionCompOf : T -> SGraph.constructionComposition;
