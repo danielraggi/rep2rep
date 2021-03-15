@@ -10,18 +10,17 @@ end
 
 structure acmt : ACMT =
 struct
-  datatype construction = Constructor of CSpace.crep * construction list | FoundationT of CSpace.trep ;
-  datatype UV = U of CSpace.crep | V of CSpace.trep ;
-  type trail = UV list;
+  datatype construction = Constructor of CSpace.vertex * construction list | FoundationT of CSpace.vertex ;
+  type trail = CSpace.vertex list;
 
-   fun TES _ (FoundationT v) = [[V v]]
+   fun TES _ (FoundationT v) = [[v]]
      | TES tr (Constructor (u, cs)) =
-         if List.exists (fn x => case x of U x' => x' = u | _ => false) tr
-         then [[C u]]
-         else let fun addToAll S = List.map (fn s => U u :: s) S
-                  fun TES_REC c = TES (U u :: tr) c
+         if null cs orelse List.exists (fn x => x = u | _ => false) tr
+         then [[u]]
+         else let fun addToAll S = List.map (fn s => u :: s) S
+                  fun TES_REC c = TES (u :: tr) c
                   val tes = maps (addToAll o TES_REC) cs
-              in if null tes then [[U u]] else tes
+              in tes
               end
 
   fun wellFormed acmt =
