@@ -15,7 +15,7 @@ struct
 
    fun TES _ (FoundationT v) = [[v]]
      | TES tr (Constructor (u, cs)) =
-         if null cs orelse List.exists (fn x => x = u) tr
+         if null cs orelse List.exists (fn x => CSpace.sameVertices x u) tr
          then [[u]]
          else let fun addToAll S = List.map (fn s => u :: s) S
                   fun TES_REC c = TES (u :: tr) c
