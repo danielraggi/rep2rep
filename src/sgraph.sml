@@ -4,8 +4,7 @@ import "util.set"
 
 signature SGRAPH =
 sig
-  type trep = string;
-  type crep = string;
+  type vertex = string;
   type arrow = string;
   type trepLabel = trep -> Term.T;
   type crepLabel = crep -> Constructor.T;
