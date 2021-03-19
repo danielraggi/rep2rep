@@ -154,8 +154,6 @@ struct
         then Construct ({trep = trep, crep = crep}, cs)
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
-    (* TO DO: make sure that inducedConstructions of a well formed construction are well formed,
-        especially when there are loops *)
 
   exception Match
   fun split c c' = map (inducedConstruction c) (CTS c')
