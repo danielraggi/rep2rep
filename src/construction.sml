@@ -68,6 +68,13 @@ struct
           in maps (addToAll o CTS_lossless) cs
           end
 
+  fun pseudoCTS (Source v) = [[Source v]]
+    | pseudoCTS (Loop v) = [[Loop v]]
+    | pseudoCTS (Construct (uv,cs)) =
+        let fun addToFirst (s::S) = (Construct (uv,cs) :: s) :: S | addToFirst [] = [[(Construct (uv,cs))]]
+        in maps (addToFirst o pseudoCTS) cs
+        end
+
   fun coherent c =
     let
       fun strongCoh (Source v) (Source v') = CSpace.sameVertices v v'
@@ -91,7 +98,7 @@ struct
         | compareFromCTS ([]::(h::t)) = compareFromCTS (h::t)
         | compareFromCTS (_::[]) = true
         | compareFromCTS [] = true
-    in compareFromCTS (CTS_lossless c)
+    in compareFromCTS (pseudoCTS c)
     end
 
   (* the datatype construction itself is not a perfect representation of constructions.
