@@ -68,10 +68,11 @@ struct
           in maps (addToAll o CTS_lossless) cs
           end
 
+  exception EmptyInputSequence
   fun pseudoCTS (Source v) = [[Source v]]
     | pseudoCTS (Loop v) = [[Loop v]]
     | pseudoCTS (Construct (uv,cs)) =
-        let fun addToFirst (s::S) = (Construct (uv,cs) :: s) :: S | addToFirst [] = [[(Construct (uv,cs))]]
+        let fun addToFirst (s::S) = (Construct (uv,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(Construct (uv,cs))]]*)
         in maps (addToFirst o pseudoCTS) cs
         end
 
@@ -98,7 +99,7 @@ struct
         | compareFromCTS ([]::(h::t)) = compareFromCTS (h::t)
         | compareFromCTS (_::[]) = true
         | compareFromCTS [] = true
-    in compareFromCTS (pseudoCTS c)
+    in compareFromCTS (pseudoCTS c) handle EmptyInputSequence => false
     end
 
   (* the datatype construction itself is not a perfect representation of constructions.
