@@ -2,8 +2,8 @@ import "cspace"
 
 signature ACMT =
 sig
-  type uv = {trep : CSpace.vertex, crep : CSpace.vertex}
-  datatype construction = Construct of uv * construction list
+  type ut = {token : CSpace.vertex, crep : CSpace.vertex}
+  datatype construction = Construct of ut * construction list
                         | Loop of CSpace.vertex
                         | Source of CSpace.vertex ;
   type trail;
@@ -22,9 +22,9 @@ end
 structure acmt : ACMT =
 struct
 
-  type uv = {trep : CSpace.vertex, crep : CSpace.vertex}
+  type ut = {token : CSpace.vertex, crep : CSpace.vertex}
   datatype construction =
-      Construct of uv * construction list
+      Construct of ut * construction list
     | Loop of CSpace.vertex
     | Source of CSpace.vertex ;
   type trail = construction list;
@@ -34,65 +34,65 @@ struct
     | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
     | allZip _ _ _ = false
 
-  fun sameACMT (Source v) (Source v') = CSpace.sameVertices v v'
-    | sameACMT (Loop v) (Loop v') = CSpace.sameVertices v v'
-    | sameACMT (Construct ({trep = v, crep = u}, cs)) (Construct ({trep = v', crep = u'}, cs')) =
-        CSpace.sameVertices v v' andalso CSpace.sameVertices u u'
+  fun sameACMT (Source t) (Source t') = CSpace.sameVertices t t'
+    | sameACMT (Loop t) (Loop t') = CSpace.sameVertices t t'
+    | sameACMT (Construct ({token = t, crep = u}, cs)) (Construct ({token = t', crep = u'}, cs')) =
+        CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
         andalso allZip sameACMT cs cs'
     | sameACMT _ _ = false
     (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their ACMTs *)
 
-  fun constructOf (Source v) = v
-    | constructOf (Loop v) = v
-    | constructOf (Construct ({trep, ...}, _)) = trep
+  fun constructOf (Source t) = t
+    | constructOf (Loop t) = t
+    | constructOf (Construct ({token, ...}, _)) = token
 
   fun grounded (Source _) = false
     | grounded (Loop _) = false
     | grounded (Construct (_, cs)) = List.all grounded cs
 
-  fun CTS (Source v) = [[Source v]]
-    | CTS (Loop v) = [[Loop v]]
-    | CTS (Construct ({trep, crep}, cs)) =
-        if null cs then [[(Construct ({trep = trep, crep = crep}, []))]]
+  fun CTS (Source t) = [[Source t]]
+    | CTS (Loop t) = [[Loop t]]
+    | CTS (Construct ({token, crep}, cs)) =
+        if null cs then [[(Construct ({token, crep}, []))]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({trep = trep, crep = crep}, []) :: s) S
+          let fun addToAll S = List.map (fn s => Construct ({token = token, crep = crep}, []) :: s) S
           in maps (addToAll o CTS) cs
           end
 
-  fun CTS_lossless (Source v) = [[Source v]]
-    | CTS_lossless (Loop v) = [[Loop v]]
-    | CTS_lossless (Construct ({trep, crep}, cs)) =
-        if null cs then [[(Construct ({trep = trep, crep = crep}, []))]]
+  fun CTS_lossless (Source t) = [[Source t]]
+    | CTS_lossless (Loop t) = [[Loop t]]
+    | CTS_lossless (Construct ({token, crep}, cs)) =
+        if null cs then [[(Construct ({token = token, crep = crep}, []))]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({trep = trep, crep = crep}, cs) :: s) S
+          let fun addToAll S = List.map (fn s => Construct ({token = token, crep = crep}, cs) :: s) S
           in maps (addToAll o CTS_lossless) cs
           end
 
   exception EmptyInputSequence
-  fun pseudoCTS (Source v) = [[Source v]]
-    | pseudoCTS (Loop v) = [[Loop v]]
-    | pseudoCTS (Construct (uv,cs)) =
-        let fun addToFirst (s::S) = (Construct (uv,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(Construct (uv,cs))]]*)
+  fun pseudoCTS (Source t) = [[Source t]]
+    | pseudoCTS (Loop t) = [[Loop t]]
+    | pseudoCTS (Construct (ut,cs)) =
+        let fun addToFirst (s::S) = (Construct (ut,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(Construct (ut,cs))]]*)
         in maps (addToFirst o pseudoCTS) cs
         end
 
   fun coherent c =
     let
-      fun strongCoh (Source v) (Source v') = CSpace.sameVertices v v'
-        | strongCoh (Loop v) (Loop v') = CSpace.sameVertices v v'
-        | strongCoh (Construct ({trep = v, crep = u}, q)) (Construct ({trep = v', crep = u'}, q')) =
-            CSpace.sameVertices v v' andalso CSpace.sameVertices u u' andalso allZip strongCoh q q'
-        | strongCoh (Construct ({trep = v, ...}, _)) (Loop v') = CSpace.sameVertices v v'
-        | strongCoh (Loop v') (Construct ({trep = v, ...}, _)) = CSpace.sameVertices v v'
+      fun strongCoh (Source t) (Source t') = CSpace.sameVertices t t'
+        | strongCoh (Loop t) (Loop t') = CSpace.sameVertices t t'
+        | strongCoh (Construct ({token = t, crep = u}, q)) (Construct ({token = t', crep = u'}, q')) =
+            CSpace.sameVertices t t' andalso CSpace.sameVertices u u' andalso allZip strongCoh q q'
+        | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameVertices t t'
+        | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameVertices t t'
         | strongCoh _ _ = false
-      fun weakCoh (c as Construct ({trep = v, ...}, _)) (c' as Construct ({trep = v', ...}, _)) =
-            if CSpace.sameVertices v v' then strongCoh c c' else true
+      fun weakCoh (c as Construct ({token = t, ...}, _)) (c' as Construct ({token = t', ...}, _)) =
+            if CSpace.sameVertices t t' then strongCoh c c' else true
             (*else List.all (weakCoh c) q' andalso List.all (weakCoh c') q*)
         (* the following 4 cases just make sure that there's no source somewhere that appears as a non-source somewhere else*)
-        | weakCoh (Construct ({trep = v, ...}, _)) (Source v') = not (CSpace.sameVertices v v')
-        | weakCoh (Source v') (Construct ({trep = v, ...}, _)) = not (CSpace.sameVertices v v')
-        | weakCoh (Loop v) (Source v') = not (CSpace.sameVertices v v')
-        | weakCoh (Source v') (Loop v) = not (CSpace.sameVertices v v')
+        | weakCoh (Construct ({token = t, ...}, _)) (Source t') = not (CSpace.sameVertices t t')
+        | weakCoh (Source t') (Construct ({token = t, ...}, _)) = not (CSpace.sameVertices t t')
+        | weakCoh (Loop t) (Source t') = not (CSpace.sameVertices t t')
+        | weakCoh (Source t') (Loop t) = not (CSpace.sameVertices t t')
         | weakCoh _ _ = true
       fun compareFromCTS ((x::C)::(h::t)) =
             List.all (weakCoh x) h andalso compareFromCTS (C::(h::t)) andalso compareFromCTS ((x::C)::t)
@@ -106,12 +106,12 @@ struct
      The following function makes sure that they are well formed, by checking that Loops
      are actually loops and that non-Loops are not forming loops.*)
   fun wellFormed c =
-    let fun correctLoops tr (Source v) = not (List.exists (fn x => #trep x = v) tr)
-          | correctLoops tr (Loop v) = List.exists (fn x => #trep x = v) tr
-          | correctLoops tr (Construct (uv, cs)) =
-              List.all (fn x => not (CSpace.sameVertices (#trep x) (#trep uv))
-                      andalso not (CSpace.sameVertices (#crep x) (#crep uv))) tr
-              andalso List.all (correctLoops (uv :: tr)) cs
+    let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
+          | correctLoops tr (Loop t) = List.exists (fn x => #token x = t) tr
+          | correctLoops tr (Construct (ut, cs)) =
+              List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
+                      andalso not (CSpace.sameVertices (#crep x) (#crep ut))) tr
+              andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
 
@@ -119,47 +119,47 @@ struct
     well formed, in the sense that there may be potential references to loops where
     the loop is not within the induced construction, but otherwise it's fine. *)
   fun almostWellFormed c =
-    let fun correctLoops tr (Source v) = not (List.exists (fn x => #trep x = v) tr)
-          | correctLoops tr (Loop v) = true
-          | correctLoops tr (Construct (uv, cs)) =
-              List.all (fn x => not (CSpace.sameVertices (#trep x) (#trep uv))
-                        andalso not (CSpace.sameVertices (#crep x) (#crep uv))) tr
-              andalso List.all (correctLoops (uv :: tr)) cs
+    let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
+          | correctLoops tr (Loop t) = true
+          | correctLoops tr (Construct (ut, cs)) =
+              List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
+                        andalso not (CSpace.sameVertices (#crep x) (#crep ut))) tr
+              andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
 
   fun foundationSequence c = map (hd o rev) (CTS c);
 
-  fun isGenerator (Source v) (Source v') = CSpace.sameVertices v v'
-    | isGenerator (Loop v) (Loop v') = CSpace.sameVertices v v'
-    | isGenerator (Construct ({trep = v, crep = u}, cs)) (Construct ({trep = v', crep = u'}, cs')) =
-        CSpace.sameVertices v v' andalso CSpace.sameVertices u u'
+  fun isGenerator (Source t) (Source t') = CSpace.sameVertices t t'
+    | isGenerator (Loop t) (Loop t') = CSpace.sameVertices t t'
+    | isGenerator (Construct ({token = t, crep = u}, cs)) (Construct ({token = t', crep = u'}, cs')) =
+        CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
         andalso allZip isGenerator cs cs'
-    | isGenerator (Source v) (Construct ({trep, ...}, _)) =
-        CSpace.sameVertices v trep
-    | isGenerator (Source v) (Loop v') =
-        CSpace.sameVertices v v'
+    | isGenerator (Source t) (Construct ({token, ...}, _)) =
+        CSpace.sameVertices t token
+    | isGenerator (Source t) (Loop t') =
+        CSpace.sameVertices t t'
     | isGenerator _ _ = false
 
   exception badTrail
-  fun inducedConstruction (Source v) [Source v'] =
-        if CSpace.sameVertices v v'
-        then Source v
+  fun inducedConstruction (Source t) [Source t'] =
+        if CSpace.sameVertices t t'
+        then Source t
         else raise badTrail
-    | inducedConstruction (Loop v) [Loop v'] =
-        if CSpace.sameVertices v v'
-        then Source v
+    | inducedConstruction (Loop t) [Loop t'] =
+        if CSpace.sameVertices t t'
+        then Source t
         else raise badTrail
-    | inducedConstruction (Construct ({trep = trep, crep = crep}, cs)) (Construct ({trep = trep', crep = crep'}, [])::tr) =
-        if CSpace.sameVertices trep trep' andalso CSpace.sameVertices crep crep'
+    | inducedConstruction (Construct ({token = token, crep = crep}, cs)) (Construct ({token = token', crep = crep'}, [])::tr) =
+        if CSpace.sameVertices token token' andalso CSpace.sameVertices crep crep'
         then let fun ic (c::C) = (inducedConstruction c tr handle badTrail => ic C)
                    | ic [] = raise badTrail
-             in if null tr then Construct ({trep = trep, crep = crep}, cs) else ic cs
+             in if null tr then Construct ({token = token, crep = crep}, cs) else ic cs
              end
         else raise badTrail
-    | inducedConstruction (Construct ({trep = trep, crep = crep}, cs)) [Source v'] =
-        if CSpace.sameVertices trep v'
-        then Construct ({trep = trep, crep = crep}, cs)
+    | inducedConstruction (Construct ({token = token, crep = crep}, cs)) [Source t'] =
+        if CSpace.sameVertices token t'
+        then Construct ({token = token, crep = crep}, cs)
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
 
@@ -170,10 +170,10 @@ struct
 
   fun fixInducedConstruction c =
     let
-      fun fic _ (Source v) = (Source v)
-        | fic tr (Loop v) = if List.exists (fn x => #trep x = v) tr then Loop v else Source v
-        | fic tr (Construct (uv, cs)) =
-            Construct (uv, map (fic (uv::tr)) cs)
+      fun fic _ (Source t) = (Source t)
+        | fic tr (Loop t) = if List.exists (fn x => #token x = t) tr then Loop t else Source t
+        | fic tr (Construct (ut, cs)) =
+            Construct (ut, map (fic (ut::tr)) cs)
     in fic [] c
     end
 

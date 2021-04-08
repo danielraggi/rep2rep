@@ -1,4 +1,4 @@
-import "term"
+import "type"
 
 signature CONSTRUCTOR =
 sig
@@ -7,5 +7,5 @@ end
 
 structure Constructor : CONSTRUCTOR =
 struct
-  
+
 end

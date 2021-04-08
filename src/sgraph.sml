@@ -1,4 +1,4 @@
-import "term"
+import "type"
 import "constructor"
 import "util.set"
 
@@ -6,19 +6,18 @@ signature SGRAPH =
 sig
   type vertex = string;
   type arrow = string;
-  type trepLabel = trep -> Term.T;
-  type crepLabel = crep -> Constructor.T;
-  type vertLabel = trepLabel * crepLabel;
-  type T = (trep set * crep set * arrow set * incidentVertices * vertexLabel);
+  type tokenLabelling = vertex -> Type.T;
+  type crepLabelling = vertex -> Constructor.T;
+  type vertLabelling = tokenLabelling * crepLabelling;
+  type T = (token set * crep set * arrow set * incidentVertices * vertexLabelling);
 end
 
 structure SGraph : SGRAPH =
 struct
-  type trep = string;
-  type crep = string;
+  type vertex = string;
   type arrow = string;
-  type trepLabel = trep -> CSpace.term;
-  type crepLabel = crep -> CSpace.constructor;
-  type vertLabel = trepLabel * crepLabel;
-  type T = (trep set * crep set * arrow set * incidentVertices * vertexLabel);
+  type tokenLabelling = vertex -> Type.T;
+  type crepLabelling = vertex -> Constructor.T;
+  type vertLabelling = tokenLabelling * crepLabelling;
+  type T = (token set * crep set * arrow set * incidentVertices * vertexLabelling);
 end
