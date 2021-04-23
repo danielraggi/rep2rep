@@ -1,8 +1,8 @@
 import "cspace"
 
-signature ACMT =
+signature CONSTRUCTIONTERM =
 sig
-  type ut = {token : CSpace.vertex, crep : CSpace.vertex}
+  type ut = {token : CSpace.vertex, configurator : CSpace.vertex}
   datatype construction = Construct of ut * construction list
                         | Loop of CSpace.vertex
                         | Source of CSpace.vertex ;
@@ -19,10 +19,10 @@ sig
   val fixInducedConstruction : construction -> construction;
 end
 
-structure acmt : ACMT =
+structure ConstructionTerm : CONSTRUCTIONTERM =
 struct
 
-  type ut = {token : CSpace.vertex, crep : CSpace.vertex}
+  type ut = {token : CSpace.vertex, configurator : CSpace.vertex}
   datatype construction =
       Construct of ut * construction list
     | Loop of CSpace.vertex
@@ -34,13 +34,13 @@ struct
     | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
     | allZip _ _ _ = false
 
-  fun sameACMT (Source t) (Source t') = CSpace.sameVertices t t'
-    | sameACMT (Loop t) (Loop t') = CSpace.sameVertices t t'
-    | sameACMT (Construct ({token = t, crep = u}, cs)) (Construct ({token = t', crep = u'}, cs')) =
+  fun sameCT (Source t) (Source t') = CSpace.sameVertices t t'
+    | sameCT (Loop t) (Loop t') = CSpace.sameVertices t t'
+    | sameCT (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
         CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
-        andalso allZip sameACMT cs cs'
-    | sameACMT _ _ = false
-    (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their ACMTs *)
+        andalso allZip sameCT cs cs'
+    | sameCT _ _ = false
+    (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
 
   fun constructOf (Source t) = t
     | constructOf (Loop t) = t
@@ -52,19 +52,19 @@ struct
 
   fun CTS (Source t) = [[Source t]]
     | CTS (Loop t) = [[Loop t]]
-    | CTS (Construct ({token, crep}, cs)) =
-        if null cs then [[(Construct ({token, crep}, []))]]
+    | CTS (Construct ({token, configurator}, cs)) =
+        if null cs then [[(Construct ({token, configurator}, []))]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({token = token, crep = crep}, []) :: s) S
+          let fun addToAll S = List.map (fn s => Construct ({token = token, configurator = configurator}, []) :: s) S
           in maps (addToAll o CTS) cs
           end
 
   fun CTS_lossless (Source t) = [[Source t]]
     | CTS_lossless (Loop t) = [[Loop t]]
-    | CTS_lossless (Construct ({token, crep}, cs)) =
-        if null cs then [[(Construct ({token = token, crep = crep}, []))]]
+    | CTS_lossless (Construct ({token, configurator}, cs)) =
+        if null cs then [[(Construct ({token = token, configurator = configurator}, []))]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({token = token, crep = crep}, cs) :: s) S
+          let fun addToAll S = List.map (fn s => Construct ({token = token, configurator = configurator}, cs) :: s) S
           in maps (addToAll o CTS_lossless) cs
           end
 
@@ -76,17 +76,20 @@ struct
         in maps (addToFirst o pseudoCTS) cs
         end
 
+  (* coherent checks that, if a token appears in two parts of term, there are no
+  inconsistencies on which arrows target them, etc. This is very costly because it
+  needs to compare every pair of subterms. *)
   fun coherent c =
     let
       fun strongCoh (Source t) (Source t') = CSpace.sameVertices t t'
         | strongCoh (Loop t) (Loop t') = CSpace.sameVertices t t'
-        | strongCoh (Construct ({token = t, crep = u}, q)) (Construct ({token = t', crep = u'}, q')) =
+        | strongCoh (Construct ({token = t, configurator = u}, q)) (Construct ({token = t', configurator = u'}, q')) =
             CSpace.sameVertices t t' andalso CSpace.sameVertices u u' andalso allZip strongCoh q q'
         | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameVertices t t'
         | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameVertices t t'
         | strongCoh _ _ = false
       fun weakCoh (c as Construct ({token = t, ...}, _)) (c' as Construct ({token = t', ...}, _)) =
-            if CSpace.sameVertices t t' then strongCoh c c' else true
+            not (CSpace.sameVertices t t') orelse strongCoh c c'
             (*else List.all (weakCoh c) q' andalso List.all (weakCoh c') q*)
         (* the following 4 cases just make sure that there's no source somewhere that appears as a non-source somewhere else*)
         | weakCoh (Construct ({token = t, ...}, _)) (Source t') = not (CSpace.sameVertices t t')
@@ -110,7 +113,7 @@ struct
           | correctLoops tr (Loop t) = List.exists (fn x => #token x = t) tr
           | correctLoops tr (Construct (ut, cs)) =
               List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
-                      andalso not (CSpace.sameVertices (#crep x) (#crep ut))) tr
+                      andalso not (CSpace.sameVertices (#configurator x) (#configurator ut))) tr
               andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
@@ -123,7 +126,7 @@ struct
           | correctLoops tr (Loop t) = true
           | correctLoops tr (Construct (ut, cs)) =
               List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
-                        andalso not (CSpace.sameVertices (#crep x) (#crep ut))) tr
+                        andalso not (CSpace.sameVertices (#configurator x) (#configurator ut))) tr
               andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
@@ -132,7 +135,7 @@ struct
 
   fun isGenerator (Source t) (Source t') = CSpace.sameVertices t t'
     | isGenerator (Loop t) (Loop t') = CSpace.sameVertices t t'
-    | isGenerator (Construct ({token = t, crep = u}, cs)) (Construct ({token = t', crep = u'}, cs')) =
+    | isGenerator (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
         CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
         andalso allZip isGenerator cs cs'
     | isGenerator (Source t) (Construct ({token, ...}, _)) =
@@ -150,16 +153,16 @@ struct
         if CSpace.sameVertices t t'
         then Source t
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, crep = crep}, cs)) (Construct ({token = token', crep = crep'}, [])::tr) =
-        if CSpace.sameVertices token token' andalso CSpace.sameVertices crep crep'
+    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) (Construct ({token = token', configurator = configurator'}, [])::tr) =
+        if CSpace.sameVertices token token' andalso CSpace.sameVertices configurator configurator'
         then let fun ic (c::C) = (inducedConstruction c tr handle badTrail => ic C)
                    | ic [] = raise badTrail
-             in if null tr then Construct ({token = token, crep = crep}, cs) else ic cs
+             in if null tr then Construct ({token = token, configurator = configurator}, cs) else ic cs
              end
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, crep = crep}, cs)) [Source t'] =
+    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) [Source t'] =
         if CSpace.sameVertices token t'
-        then Construct ({token = token, crep = crep}, cs)
+        then Construct ({token = token, configurator = configurator}, cs)
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
 

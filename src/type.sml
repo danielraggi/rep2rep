@@ -1,35 +1,40 @@
-signature TYPESYSTEM =
+signature typeSystem =
 sig
   type typ
-  type Ty = typ Set.set;
   type subType = typ * typ -> bool;
-  type TypeSystem = Ty * subType;
-  val reflexive : TypeSystem -> bool;
-  val transitive : TypeSystem -> bool;
-  val antisymmetric : TypeSystem -> bool;
-  val wellDefined : TypeSystem -> bool;
-  val reflexiveClosure : TypeSystem -> TypeSystem;
-  val transitiveClosure : TypeSystem -> TypeSystem;
+  type typeSystem = {Ty : typ Set.set, subtype : subType};
+
+  val equal : typ -> typ -> bool;
+
+  val reflexive : typeSystem -> bool;
+  val transitive : typeSystem -> bool;
+  val antisymmetric : typeSystem -> bool;
+
+  val wellDefined : typeSystem -> bool;
+
+  val reflexiveClosure : typeSystem -> typeSystem;
+  val transitiveClosure : typeSystem -> typeSystem;
 end
 
-structure TypeSystem : TYPESYSTEM =
+structure typeSystem : typeSystem =
 struct
   type typ = string;
-  type Ty = typ set;
   type subType = typ * typ -> bool;
-  type TypeSystem = Ty * subType;
+  type typeSystem = {Ty : typ Set.set, subtype : subType};
 
-  fun reflexive (types,leq) = Set.all (fn x => leq (x,x)) types;
-  fun transitive (types,leq) = Set.all (fn x => Set.all (fn y => Set.all (fn z => not (leq (x,y) andalso leq (y,z)) orelse leq (x,z)) types) types) types;
-  fun antisymmetric (types,leq) = Set.all (fn x => Set.all (fn y => not (leq (x,y) andalso leq (y,x)) orelse x = y) types) types;
+  fun equal x y = (x = y)
 
-  fun wellDefined (types,leq) =
-    reflexive (types,leq) andalso transitive (types,leq) andalso antisymmetric (types,leq);
+  fun reflexive {Ty,subtype} = Set.all (fn x => subtype (x,x)) Ty;
+  fun transitive {Ty,subtype} = Set.all (fn x => Set.all (fn y => Set.all (fn z => not (subtype (x,y) andalso subtype (y,z)) orelse subtype (x,z)) Ty) Ty) Ty;
+  fun antisymmetric {Ty,subtype} = Set.all (fn x => Set.all (fn y => not (subtype (x,y) andalso subtype (y,x)) orelse x = y) Ty) Ty;
 
-  fun reflexiveClosure (types,leq) = (types, fn (x,y) => x = y orelse leq (x,y))
-  fun transitiveClosure (types,leq) =
-    let fun leq' (x,y) = (leq (x,y) orelse Set.exists (fn z => leq (x,z) andalso leq (z,y)) types)
-    in if Set.all (fn x => Set.all (fn y => leq (x,y) = leq' (x,y)) types) types then (types,leq) else transitiveClosure (types,leq')
+  fun wellDefined T =
+    reflexive T andalso transitive T andalso antisymmetric T;
+
+  fun reflexiveClosure T = {Ty = #Ty T, subtype = (fn (x,y) => x = y orelse (#subtype T) (x,y))}
+  fun transitiveClosure {Ty,subtype} =
+    let fun subtype' (x,y) = (subtype (x,y) orelse Set.exists (fn z => subtype (x,z) andalso subtype (z,y)) Ty)
+    in if Set.all (fn x => Set.all (fn y => subtype (x,y) = subtype' (x,y)) Ty) Ty then {Ty = Ty, subtype = subtype} else transitiveClosure {Ty=Ty,subtype=subtype'}
     end
 
 end
