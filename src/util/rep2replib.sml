@@ -16,6 +16,7 @@ sig
     val imported__asFilenames__ : unit -> string list;
     val spread : ('a -> 'b) -> ('a * 'a) -> ('b * 'b);
     val flip : ('a * 'b) -> ('b * 'a);
+    val allZip : ('a * 'b -> bool) -> 'a list -> 'b list -> bool
 end;
 
 
@@ -55,4 +56,12 @@ fun spread f (a, b) = (f a, f b);
 
 fun flip (a, b) = (b, a);
 
+
+fun allZip _ [] [] = true
+  | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
+  | allZip _ _ _ = false
+
+fun funZip _ [] [] = []
+  | funZip f (h::t) (h'::t') = f h h' :: funZip f t t'
+  | funZip _ _ _ = raise Match
 end;

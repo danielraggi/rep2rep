@@ -23,12 +23,12 @@ struct
     let val (_,[tv],_) = Relation.goal goal handle _ => raise Mismatch
         val (Rf,_) = Correspondence.relationsOf corr
         val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-        val sourceFoundations = Construction.foundationsOf (g,v)
+        val sourceFoundations = ConstructionTerm.foundationsOf (g,v)
         val patternComp = State.patternCompOf st
-        val targetPattern' = Construction.refreshNames targetPattern patternComp
-        val targetConstruct = Construction.constructOf targetPattern'
-        val targetFoundations = Construction.foundationsOf targetPattern'
-        val resultingpComp = Construction.joinWithIdentifications (patternComp,targetPattern') [(tv,targetConstruct)]
+        val targetPattern' = ConstructionTerm.refreshNames targetPattern patternComp
+        val targetConstruct = ConstructionTerm.constructOf targetPattern'
+        val targetFoundations = ConstructionTerm.foundationsOf targetPattern'
+        val resultingpComp = ConstructionTerm.joinWithIdentifications (patternComp,targetPattern') [(tv,targetConstruct)]
         val newGoal = Relation.goal (sourceFoundations,targetFoundations,Rf)
     in State.updatePatternComp (State.replaceGoals st goal newGoal) resultingpComp
     end
