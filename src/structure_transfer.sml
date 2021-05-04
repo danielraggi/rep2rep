@@ -17,32 +17,40 @@ struct
 
   exception Mismatch
   (* given corr, a goal which matches the construct-relation of corr,
-     and a construction (g,v) which source-matches corr, the following
+     and a construction ct which source-matches corr, the following
      function produces the state with updated goals and pattern composition *)
-  fun applyCorrespondenceForGoalAndMatch st corr goal (g,v) =
+  fun applyCorrespondenceForGoalAndMatch st corr goal ct =
     let val (_,[tv],_) = Relation.goal goal handle _ => raise Mismatch
         val (Rf,_) = Correspondence.relationsOf corr
         val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-        val sourceFoundations = ConstructionTerm.foundationsOf (g,v)
+        val sourceFoundations = ConstructionTerm.foundationSequence ct
         val patternComp = State.patternCompOf st
         val targetPattern' = ConstructionTerm.refreshNames targetPattern patternComp
         val targetConstruct = ConstructionTerm.constructOf targetPattern'
-        val targetFoundations = ConstructionTerm.foundationsOf targetPattern'
+        val targetFoundations = ConstructionTerm.foundationSequence targetPattern'
         val resultingpComp = ConstructionTerm.joinWithIdentifications (patternComp,targetPattern') [(tv,targetConstruct)]
         val newGoal = Relation.goal (sourceFoundations,targetFoundations,Rf)
     in State.updatePatternComp (State.replaceGoals st goal newGoal) resultingpComp
     end
 
+  exception NoMatchingGenerator
   fun applyCorrespondenceForGoal st corr goal =
-    let val ([sv],_,Rg) = Relation.goal goal handle _ => raise Mismatch
-        val (_,Rc) = Correspondence.relationsOf corr
-        val (lPattern,rPattern) = Correspondence.patternsOf corr
-        val sgraph = State.sgraphOf st
-        val matchingConstructions = Pattern.matchingConstructionsForConstruct lPattern sgraph sv
-    in Seq.map (applyCorrespondenceForGoalAndMatch st corr goal) matchingConstructions
+    let val ([sv],[tv],Rg) = Relation.goal goal handle _ => raise Mismatch
+        val (Rf,Rc) = Correspondence.relationsOf corr
+        val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
+        val ct = State.constructionOf st
+        val matchingGenerator = case Pattern.findGeneratorMatching ct sourcePattern of SOME x => x | NONE => raise NoMatchingGenerator
+        val generatorFoundations = ConstructionTerm.foundationSequence matchingGenerator
+        val patternComp = State.patternCompOf st
+        val targetPattern' = ConstructionTerm.refreshNames targetPattern patternComp
+        val targetConstruct = ConstructionTerm.constructOf targetPattern'
+        val targetFoundations = ConstructionTerm.foundationSequence targetPattern'
+        val resultingpComp = ConstructionTerm.joinWithIdentifications (patternComp,targetPattern') [(tv,targetConstruct)]
+        val newGoal = Relation.goal (generatorFoundations,targetFoundations,Rf)
+    in State.updatePatternComp (State.replaceGoals st goal newGoal) resultingpComp
     end
 
-  fun applyCorrespondence st corr = Seq.maps (applyCorrespondenceForGoal st corr) (Seq.of_list (State.goalsOf st))
+  fun applyCorrespondence st corr = Seq.map (applyCorrespondenceForGoal st corr) (Seq.of_list (State.goalsOf st))
 
   fun quickCorrFilter KB rships corrs =
     let fun f [] corr = false
