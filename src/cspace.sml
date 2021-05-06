@@ -10,6 +10,7 @@ sig
   type token;(* = string * Type.typ;*)
   type configurator;
 
+  val makeToken : string -> Type.typ -> token;
   val sameVertices : token -> token -> bool;
   val typeOfToken : token -> Type.typ;
 
@@ -21,6 +22,8 @@ struct
   (*datatype atom = Token of string | Variable of string;*)
   type token = string * Type.typ;
   type configurator = string * constructor;
+
+  fun makeToken s ty = (s,ty)
 
   fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso Type.equal ty ty' andalso allZip Type.equal tyL tyL');
   fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructor c c');

@@ -2,12 +2,14 @@ import "cspace"
 
 signature CONSTRUCTIONTERM =
 sig
-  type ut = {token : CSpace.vertex, configurator : CSpace.vertex}
+  type ut = {token : CSpace.token, configurator : CSpace.configurator}
   datatype construction = Construct of ut * construction list
-                        | Loop of CSpace.vertex
-                        | Source of CSpace.vertex ;
+                        | Loop of CSpace.token
+                        | Source of CSpace.token ;
   type trail;
 
+  val same : construction -> construction -> bool;
+  val constructOf : construction -> CSpace.token;
   val wellFormed : construction -> bool;
   val almostWellFormed : construction -> bool;
   val grounded : construction -> bool;
@@ -17,16 +19,18 @@ sig
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
   val fixInducedConstruction : construction -> construction;
+
+  exception MalformedConstructionTerm
 end
 
 structure ConstructionTerm : CONSTRUCTIONTERM =
 struct
 
-  type ut = {token : CSpace.vertex, configurator : CSpace.vertex}
+  type ut = {token : CSpace.token, configurator : CSpace.configurator}
   datatype construction =
       Construct of ut * construction list
-    | Loop of CSpace.vertex
-    | Source of CSpace.vertex ;
+    | Loop of CSpace.token
+    | Source of CSpace.token ;
   type trail = construction list;
 
   (*The following function belongs in lists*)
@@ -34,12 +38,12 @@ struct
     | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
     | allZip _ _ _ = false
 
-  fun sameCT (Source t) (Source t') = CSpace.sameVertices t t'
-    | sameCT (Loop t) (Loop t') = CSpace.sameVertices t t'
-    | sameCT (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
+  fun same (Source t) (Source t') = CSpace.sameVertices t t'
+    | same (Loop t) (Loop t') = CSpace.sameVertices t t'
+    | same (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
         CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
-        andalso allZip sameCT cs cs'
-    | sameCT _ _ = false
+        andalso allZip same cs cs'
+    | same _ _ = false
     (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
 
   fun constructOf (Source t) = t
@@ -117,6 +121,7 @@ struct
               andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
+  exception MalformedConstructionTerm;
 
   (* this function simply ensures that induced constructions in a split are almost
     well formed, in the sense that there may be potential references to loops where
