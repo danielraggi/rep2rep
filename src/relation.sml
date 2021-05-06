@@ -1,30 +1,33 @@
-import "type"
+import "cspace"
 
 signature RELATION =
 sig
   type T;
-  type relationship = SGraph.vertex list * SGraph.vertex list * T;
+  type relationship = CSpace.token list * SGraph.token list * T;
 
-  val goal : SGraph.vertex list * SGraph.vertex list * T -> relationship;
+  val ship : SGraph.token list * SGraph.token list * T -> relationship;
 
-  val leftTypeOf : T -> Type.T;
-  val rightTypeOf : T -> Type.T;
+  val leftTypeOf : T -> Type.typ;
+  val rightTypeOf : T -> Type.typ;
 
-  val alwaysTrue : Type.T -> Type.T -> T;
+  val alwaysTrue : Type.typ -> Type.typ -> T;
+  val isAlwaysTrue R : T -> bool;
   val same : T -> T -> bool;
 end
 
 structure Relation : RELATION =
 struct
-  type T = string * Type.T * Type.T;
-  type relationship = SGraph.vertex list * SGraph.vertex list * T;
+  type T = string * Type.typ * Type.typ;
+  type relationship = SGraph.token list * SGraph.token list * T;
 
-  fun goal x = x;
+  fun ship x = x;
 
+  fun nameOf (s,_,_) = s;
   fun leftTypeOf (_,t,_) = t;
   fun rightTypeOf (_,_,t) = t;
 
-  fun alwaysTrue lt rt = ("alwaysTrue",lt,rt) ;
+  fun alwaysTrue lty rty = ("alwaysTrue",lty,rty) ;
+  fun isAlwaysTrue R = (nameOf R = "alwaysTrue");
 
   fun same (n,t1,t2) (n',t1',t2') =
      n = n' andalso Type.same t1 t1' andalso Type.same t2 t2'
