@@ -7,6 +7,7 @@ sig
   val patternsOf : corr -> Pattern.T * Pattern.T;
   val relationsOf : corr -> Relation.T * Relation.T;
   val ofRelation : Relation.T -> corr;
+  val declareCorrespondence : Pattern.construction -> Pattern.construction -> Relation.T -> Relation.T;
 end
 
 structure Correspondence : CORRESPONDENCE =
@@ -22,4 +23,6 @@ struct
                       Pattern.trivial (Relation.rightTypeOf R),
                       Relation.alwaysTrue,
                       R);
+
+  fun declareCorrespondence sP tP Rf Rc = (sP,tP,Rf,Rc);
 end

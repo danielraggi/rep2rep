@@ -32,7 +32,7 @@ struct
         val targetFoundations = ConstructionTerm.foundationSequence targetPattern'
         val resultingpDecomp = ConstructionTerm.joinWithIdentifications (patternDecomp,targetPattern') [(tv,targetConstruct)]
         val newGoal = Relation.ship (sourceFoundations,targetFoundations,Rf)
-    in State.updatePatternDecomp (State.replaceGoals st goal newGoal) resultingpDecomp
+    in State.updatePatternDecomp (State.replaceGoal st goal newGoal) resultingpDecomp
     end
     *)
 
@@ -53,7 +53,7 @@ struct
                              then Decomposition.initFromConstruction targetPattern'
                              else Decomposition.attachConstructionAt patternDecomp targetPattern' targetToken
         val stateWithUpdatedGoals = if Relation.isAlwaysTrue Rf then State.removeGoal st goal
-                                    else State.replaceGoals st goal (generatorFoundations,targetFoundations,Rf)
+                                    else State.replaceGoal st goal (generatorFoundations,targetFoundations,Rf)
     in State.updatePatternDecomp stateWithUpdatedGoals newPatternDecomp
     end
 
@@ -76,16 +76,23 @@ struct
   fun unfoldState st =
     let val KB = State.knowledgeOf st
         val corrs = Knowledge.correspondencesOf KB
-        val rels = Set.map Correspondence.ofRelation (Knowledge.relationshipsOf KB)
-        val CR = Set.seqOf (Set.union rels corrs)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
-    in Seq.maps (applyCorrespondence st) CR (*the returned sequence states is disjunctive; one must be satisfied *)
+    in Seq.maps (applyCorrespondence st) corrs (*the returned sequence states is disjunctive; one must be satisfied *)
     end
 
+  exception BadGoals
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-  fun StructureTransfer KB graph goals =
+  fun structureTransfer T corrs rels ct goals =
     let
-      val initialState = State.init KB goals graph
+      val relsAsCorrs = Set.map Correspondence.ofRelation rels
+      val KB = Knowledge.make (Set.union relsAsCorrs corrs)
+      val typeOfTarget = case goals of [(_,_,R)] => Relation.rightTypeOf R
+                                     | _ => raise BadGoals (* in the future I want to update this so that one can start with multiple goals *)
+      val initialState = State.make {typeSystem = T,
+                                      construction = ct,
+                                      goals = goals,
+                                      decomposition = Decomposition.Placeholder (CSpace.makeToken "dummy" ty),
+                                      knowledge = KB}
       fun heuristic (st,st') = EQUAL
       val limit = 10
     in
