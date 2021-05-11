@@ -7,6 +7,7 @@ sig
   val matches : Type.typeSystem -> construction -> construction -> bool;
   val generatorMatches : Type.typeSystem -> construction -> construction -> bool;
   val findGeneratorMatching : Type.typeSystem -> construction -> construction -> construction option;
+  val findMapAndGeneratorForTokenMatching : Type.typeSystem -> construction -> construction -> ((CSpace.token -> CSpace.token option) * construction option);
 
   val trivial : Type.typ -> construction;
 end
@@ -36,7 +37,7 @@ struct
 
   exception NoMatchingGenerator
   (* genertorMatches T c c' checks whether a generator of c matches the pattern c' exists*)
-  fun findGeneratorMatching T (Source t) (Source t') = if tokenMatches T t t' then SOME (Source t)
+  fun findGeneratorMatching T (Source t) (Source t') = if tokenMatches T t t' then SOME (Source t) else NONE
     | findGeneratorMatching T (Loop t) (Loop _) = SOME (Loop t) (* assumes this has been checked before *)
     | findGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
       if CSpace.sameConfigurator u u' andalso tokenMatches T t t'
@@ -51,16 +52,54 @@ struct
     | findGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Source t') =
         if tokenMatches T t t' then SOME (Source t) else NONE
 
+  (* *)
+  fun findMapAndGeneratorMatching T (Source t) (Source t') =
+        if tokenMatches T t t'
+        then (fn x => if CSpace.sameToken x t' then SOME t else NONE, SOME (Source t))
+        else (fn x => NONE, NONE)
+    | findMapAndGeneratorMatching T (Loop t) (Loop _) = (fn x => NONE, SOME (Loop t)) (* assumes this has been checked before *)
+    | findMapAndGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
+        if CSpace.sameConfigurator u u' andalso tokenMatches T t t'
+        then
+          let val CH = funZip (findMapAndGeneratorMatching T) cs cs'
+              fun ss (SOME x ::t) = x :: ss t
+                | ss (NONE :: t) = raise NoMatchingGenerator
+                | ss [] = []
+              fun sf (f::L) x = (case f x of NONE => sf L | SOME y => SOME y)
+                | sf [] x = NONE
+              fun f x = if CSpace.sameToken x t' then SOME t else sf (map #1 CH) x
+              val ch = ss (map #2 CH)
+          in (f, SOME (Construct ({token = t, configurator = u}, ch))) handle NoMatchingGenerator => (fn x => NONE,NONE)
+          end
+        else (fn x => NONE, NONE)
+    | findMapAndGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Source t') =
+        if tokenMatches T t t' then (fn x => if CSpace.sameToken x t' then SOME t else NONE),SOME (Source t)) else NONE
+
   (* Belongs in LISTS (?) *)
   fun findFirstSome [] = NONE
     | findFirstSome (NONE :: L) = findFirstSome L
     | findFirstSome (SOME x :: L) = SOME x
+  fun findFirstSome' [] = (fn x => NONE,NONE)
+    | findFirstSome' ((_,NONE) :: L) = findFirstSome L
+    | findFirstSome' ((f,SOME x) :: L) = (f,SOME x)
 
   fun findGeneratorForTokenMatching T ct t p =
-      if CSpace.sameTokens t (ConstructionTerm.constructOf ct) then findGeneratorMatching T ct p
-      else case ct of Construct (tu, cs) => findFirstSome (map (fn c => findGeneratorForTokenMatching T c t p) cs) | _ => NONE
+      if CSpace.sameTokens t (ConstructionTerm.constructOf ct) then findGeneratorMatching T (ConstructionTerm.fixInducedConstruction ct) p
+      else (case ct of Construct (tu, cs) => findFirstSome (map (fn c => findGeneratorForTokenMatching T c t p) cs)
+                                      | _ => NONE)
+
+  fun findMapAndGeneratorForTokenMatching T ct t p =
+      if CSpace.sameTokens t (ConstructionTerm.constructOf ct) then findMapAndGeneratorMatching T (ConstructionTerm.fixInducedConstruction ct) p
+      else (case ct of Construct (tu, cs) => findFirstSome' (map (fn c => findMapAndGeneratorForTokenMatching T c t p) cs)
+                                      | _ => NONE)
 
   fun trivial ty = Source (CSpace.makeToken "dummy" ty)
+
+  fun applyPartialIsomorpism f (Source t) = case f t of NONE => Source t | SOME x => Source x
+    | applyPartialIsomorpism f (Loop t) = case f t of NONE => Loop t | SOME x => Loop x
+    | applyPartialIsomorpism f (Construct ({token = t, configurator = u},cs)) =
+        case f t of NONE => Construct ({token = t, configurator = u}, map (applyPartialIsomorpism f) cs)
+                  | SOME x => Construct ({token = x, configurator = u}, map (applyPartialIsomorpism f) cs)
 
   (* The following was a failure when trying to incorporate variables function.
     Maybe it should be revisited*)
