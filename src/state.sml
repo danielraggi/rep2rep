@@ -14,7 +14,7 @@ sig
               knowledge : Knowledge.base} -> T;
   val updatePatternDecomp : T -> Decomposition.decomposition -> T
   val updateGoals : T -> Relation.relationship list -> T
-  val replaceGoal : T -> Relation.relationship -> Relation.relationship -> T
+  val replaceGoal : T -> Relation.relationship -> Relation.relationship list -> T
   val removeGoal : T -> Relation.relationship -> T
 
 end
@@ -49,8 +49,8 @@ struct
             decomposition = #decomposition st,
             knowledge = #knowledge st}
 
-  fun replaceGoal st g1 g2 =
-    let fun r [] = [] | r (x::xs) => if Relation.sameRelationship x g1 then g2 :: r xs else x :: r xs
+  fun replaceGoal st g gs =
+    let fun r [] = [] | r (x::xs) => if Relation.sameRelationship x g then g @ r xs else x :: r xs
         val newGoals = r (#goals st)
     in updateGoals st newGoals
     end

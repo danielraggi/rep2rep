@@ -5,6 +5,7 @@ sig
   type T;
   type relationship = CSpace.token list * SGraph.token list * T;
 
+  val tupleOfRelationship : relationship -> CSpace.token list * SGraph.token list * T;
   val make : SGraph.token list * SGraph.token list * T -> relationship;
 
   val leftTypeOf : T -> Type.typ;
@@ -21,7 +22,8 @@ struct
   type T = string * Type.typ * Type.typ;
   type relationship = SGraph.token list * SGraph.token list * T;
 
-  fun make x = x;
+  fun tupleOfRelationship r = r;
+  fun make r = r;
 
   fun nameOf (s,_,_) = s;
   fun leftTypeOf (_,t,_) = t;
