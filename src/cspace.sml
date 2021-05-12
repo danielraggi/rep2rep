@@ -11,7 +11,10 @@ sig
   type configurator;
 
   val makeToken : string -> Type.typ -> token;
-  val sameVertices : token -> token -> bool;
+  val sameConstructors : constructor -> constructor -> bool;
+  val sameConfigurators : configurator -> configurator -> bool;
+  val sameTokens : token -> token -> bool;
+  val nameOfToken : token -> string;
   val typeOfToken : token -> Type.typ;
 
 end
@@ -28,7 +31,8 @@ struct
   fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso Type.equal ty ty' andalso allZip Type.equal tyL tyL');
   fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructor c c');
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso Type.equal ty ty');
-  fun typeOfToken (t,ty) = ty;
+  fun nameOfToken (t,_) = t;
+  fun typeOfToken (_,ty) = ty;
   (*
   fun tsystemOf (T,_,_) = T
 

@@ -20,6 +20,10 @@ sig
   val split : construction -> construction -> construction list;
   val fixInducedConstruction : construction -> construction;
 
+  val renameConstruct : construction -> CSpace.token -> construction;
+
+  val tokensOfConstruction : construction -> CSpace.token list;
+
   exception MalformedConstructionTerm
 end
 
@@ -184,5 +188,33 @@ struct
             Construct (ut, map (fic (ut::tr)) cs)
     in fic [] c
     end
+
+
+      (* Maybe the following should live in ConstructionTerm*)
+  exception BadConstruction
+  fun renameConstruct ct t' =
+    let fun rc originalConstruct (Source t)  = Source t
+          | rc originalConstruct (Loop t) = if CSpace.sameTokens t originalConstruct then Loop t' else Loop t
+          | rc originalConstruct (Construct (ut, cs)) = Construct (ut, map (rc originalConstruct) cs)
+    in case ct of Source _ => Source t'
+                | Loop _ => raise BadConstruction
+                | Construct ({token = t,configurator = u}, cs) => Construct ({token = t',configurator = u}, map (rc t) cs)
+    end
+
+  fun tokensOfConstruction (Source t) = [t]
+    | tokensOfConstruction (Loop t) = []
+    | tokensOfConstruction (Construct ({token, configurator}, cs)) = token :: List.maps tokensOfConstruction cs
+
+  (* belongs in lists *)
+  fun removeRepetition eq (n::ns) = n :: removeRepetition (List.filter (fn x => not (eq x n)) ns)
+    | removeRepetition _ [] = []
+
+  fun tokensOfConstruction ct =
+    let fun toc (Source t) = [t]
+          | toc (Loop t) = []
+          | toc (Construct ({token, configurator}, cs)) = token :: List.maps toc cs
+    in removeRepetition CSpace.sametokens (toc ct)
+    end
+
 
 end

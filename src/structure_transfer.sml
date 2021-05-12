@@ -16,6 +16,31 @@ end
 structure Transfer : TRANSFER =
 struct
 
+  (*  *)
+  fun refreshNamesUpToConstruct ct D t =
+    let
+      fun firstUnusedName Ns =
+        let fun f n =
+              let val vcandidate = "v"^(Int.toString n)
+              in if List.exists (fn x => x = vcandidate) Ns then f (n+1) else "v"^(Int.toString n)
+              end
+        in f 0
+        end
+      val tokensInConstruction = List.filter (fn x => not (CSpace.sameToken t x)) (ConstructionTerm.tokensOfConstruction ct)
+      val tokensInDecomposition = Decomposition.tokensOfDecomposition D
+      val names = map CSpace.nameOfToken (tokensInDecomposition @ tokensInConstruction)
+      fun mkRenameFunction _ [] = (fn _ => NONE)
+        | mkRenameFunction Ns (y::ys) =
+            let
+              fun f x = if CSpace.sameTokens x y then SOME (CSpace.makeToken (firstUnusedName Ns) (CSpace.typeOfToken x))
+                        else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
+            in f
+            end
+      fun renameFunction x = if CSpace.sameToken x t then SOME t else mkRenameFunction names tokensInConstruction x
+      val updatedConstruction = Pattern.applyPartialIsomorpism renameFunction ct
+    in (Option.valOf o renameFunction, updatedConstruction)
+    end
+
   exception CorrespondenceNotApplicable
   (* The following function takes a correspondence, corr, with construct relation Rc,
      and a goal assumed to have a superRelation Rg of Rc.
@@ -26,24 +51,15 @@ struct
      vertices in the decomposition.  *)
   fun instantiateCorrForStateAndGoal corr st goal =
     let
-      val ([sourceToken],[targetToken],Rg) = case Relation.tupleOfRelationship goal of
-                                                   ([x],[y],R) => ([x],[y],R)
-                                                 | _ => raise CorrespondenceNotApplicable
+      val ([sourceToken],[targetToken],_) = Relation.tupleOfRelationship goal (* assumes Rc is subrelation of Rg*)
       val (rfs,rc) = Correspondence.relationshipsOf corr
       val (sc,tc,Rc) = rc
       val ct = State.constructionOf st
       val T = State.typeSystemOf st
       val patternDecomp = State.patternDecompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-      val (trf, updatedTargetPattern) = Decomposition.refreshNames targetPattern patternDecomp
-            (*
-              !!!!!!!!!!!
-              TODO refreshNames : construction -> decomposition -> ((CSpace.token -> CSpace.token option) * construction)
-              !!!!!!!!!!!
-            *)
-      fun targetRenamingFunction x = (case trf x of SOME y => y | NONE => raise Match)
-      val (srf,matchingGenerator) = (case Pattern.findMapAndGeneratorForTokenMatching T ct sourceToken sourcePattern of (f,SOME x) => (f,x) | (_,NONE) => raise CorrespondenceNotApplicable)
-      val sourceRenamingFunction x = (case srf x of SOME y => y | NONE => raise Match)
+      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternDecomp targetToken
+      val (sourceRenamingFunction,matchingGenerator) = (case Pattern.findMapAndGeneratorForTokenMatching T ct sourceToken sourcePattern of (f,SOME x) => (Option.valOf o f,x) | (_,NONE) => raise CorrespondenceNotApplicable)
       fun updateRFs ((sfs,tfs,R)::rfs') = (map sourceRenamingFunction sfs, map targetRenamingFunction tfs, R) :: (updateRFs rfs')
         | updateRFs [] = []
       val updatedSourceRelationships = updateRFs rfs
