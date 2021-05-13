@@ -59,8 +59,8 @@ sig
   (*added by draggi*)
   val insert : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertMany : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
-  val findFirst : ('a seq -> bool) -> 'a seq -> 'a
-  val exists : ('a seq -> bool) -> 'a seq -> bool
+  val findFirst : ('a -> bool) -> 'a seq -> 'a option
+  val exists : ('a -> bool) -> 'a seq -> bool
 end;
 
 structure Seq: SEQ =
@@ -301,7 +301,7 @@ fun insertMany xq yq f =
 fun findFirst f xq =
   (case pull xq of
     NONE => NONE
-  | SOME (x,q) = if f x then SOME x else findFirst f q);
+  | SOME (x,q) => if f x then SOME x else findFirst f q);
 
 fun exists f xq = case findFirst f xq of NONE => false | SOME _ => true;
 

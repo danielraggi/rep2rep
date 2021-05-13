@@ -1,6 +1,6 @@
 import "cspace"
 
-signature CONSTRUCTIONTERM =
+signature CONSTRUCTION =
 sig
   type ut = {token : CSpace.token, configurator : CSpace.configurator}
   datatype construction = Construct of ut * construction list
@@ -15,7 +15,8 @@ sig
   val grounded : construction -> bool;
 
   val CTS : construction -> trail list;
-  val foundationSequence : construction -> construction list;
+  val inducedConstruction : construction -> trail -> construction;
+  val foundationSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
   val fixInducedConstruction : construction -> construction;
@@ -27,7 +28,7 @@ sig
   exception MalformedConstructionTerm
 end
 
-structure ConstructionTerm : CONSTRUCTIONTERM =
+structure Construction : CONSTRUCTION =
 struct
 
   type ut = {token : CSpace.token, configurator : CSpace.configurator}
@@ -35,17 +36,14 @@ struct
       Construct of ut * construction list
     | Loop of CSpace.token
     | Source of CSpace.token ;
-  type trail = construction list;
+  datatype vertex = Token of CSpace.token | Configurator of CSpace.configurator
+  type trail = vertex list;
 
-  (*The following function belongs in lists*)
-  fun allZip _ [] [] = true
-    | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
-    | allZip _ _ _ = false
 
-  fun same (Source t) (Source t') = CSpace.sameVertices t t'
-    | same (Loop t) (Loop t') = CSpace.sameVertices t t'
+  fun same (Source t) (Source t') = CSpace.sameTokens t t'
+    | same (Loop t) (Loop t') = CSpace.sameTokens t t'
     | same (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
-        CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
+        CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
         andalso allZip same cs cs'
     | same _ _ = false
     (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
@@ -58,12 +56,12 @@ struct
     | grounded (Loop _) = false
     | grounded (Construct (_, cs)) = List.all grounded cs
 
-  fun CTS (Source t) = [[Source t]]
-    | CTS (Loop t) = [[Loop t]]
+  fun CTS (Source t) = [[Token t]]
+    | CTS (Loop t) = [[Token t]]
     | CTS (Construct ({token, configurator}, cs)) =
-        if null cs then [[(Construct ({token, configurator}, []))]]
+        if null cs then [[Token token, Configurator configurator]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({token = token, configurator = configurator}, []) :: s) S
+          let fun addToAll S = List.map (fn s => [Token token, Configurator configurator] @ s) S
           in maps (addToAll o CTS) cs
           end
 
@@ -89,21 +87,21 @@ struct
   needs to compare every pair of subterms. *)
   fun coherent c =
     let
-      fun strongCoh (Source t) (Source t') = CSpace.sameVertices t t'
-        | strongCoh (Loop t) (Loop t') = CSpace.sameVertices t t'
+      fun strongCoh (Source t) (Source t') = CSpace.sameTokens t t'
+        | strongCoh (Loop t) (Loop t') = CSpace.sameTokens t t'
         | strongCoh (Construct ({token = t, configurator = u}, q)) (Construct ({token = t', configurator = u'}, q')) =
-            CSpace.sameVertices t t' andalso CSpace.sameVertices u u' andalso allZip strongCoh q q'
-        | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameVertices t t'
-        | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameVertices t t'
+            CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u' andalso allZip strongCoh q q'
+        | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameTokens t t'
+        | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameTokens t t'
         | strongCoh _ _ = false
       fun weakCoh (c as Construct ({token = t, ...}, _)) (c' as Construct ({token = t', ...}, _)) =
-            not (CSpace.sameVertices t t') orelse strongCoh c c'
+            not (CSpace.sameTokens t t') orelse strongCoh c c'
             (*else List.all (weakCoh c) q' andalso List.all (weakCoh c') q*)
         (* the following 4 cases just make sure that there's no source somewhere that appears as a non-source somewhere else*)
-        | weakCoh (Construct ({token = t, ...}, _)) (Source t') = not (CSpace.sameVertices t t')
-        | weakCoh (Source t') (Construct ({token = t, ...}, _)) = not (CSpace.sameVertices t t')
-        | weakCoh (Loop t) (Source t') = not (CSpace.sameVertices t t')
-        | weakCoh (Source t') (Loop t) = not (CSpace.sameVertices t t')
+        | weakCoh (Construct ({token = t, ...}, _)) (Source t') = not (CSpace.sameTokens t t')
+        | weakCoh (Source t') (Construct ({token = t, ...}, _)) = not (CSpace.sameTokens t t')
+        | weakCoh (Loop t) (Source t') = not (CSpace.sameTokens t t')
+        | weakCoh (Source t') (Loop t) = not (CSpace.sameTokens t t')
         | weakCoh _ _ = true
       fun compareFromCTS ((x::C)::(h::t)) =
             List.all (weakCoh x) h andalso compareFromCTS (C::(h::t)) andalso compareFromCTS ((x::C)::t)
@@ -120,8 +118,8 @@ struct
     let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
           | correctLoops tr (Loop t) = List.exists (fn x => #token x = t) tr
           | correctLoops tr (Construct (ut, cs)) =
-              List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
-                      andalso not (CSpace.sameVertices (#configurator x) (#configurator ut))) tr
+              List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
+                      andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
               andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
@@ -134,43 +132,46 @@ struct
     let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
           | correctLoops tr (Loop t) = true
           | correctLoops tr (Construct (ut, cs)) =
-              List.all (fn x => not (CSpace.sameVertices (#token x) (#token ut))
-                        andalso not (CSpace.sameVertices (#configurator x) (#configurator ut))) tr
+              List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
+                        andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
               andalso List.all (correctLoops (ut :: tr)) cs
     in correctLoops [] c andalso coherent c
     end;
 
-  fun foundationSequence c = map (hd o rev) (CTS c);
+  fun tokenOfVertex (Token t) = t
+    | tokenOfVertex _ = raise MalformedConstructionTerm;
 
-  fun isGenerator (Source t) (Source t') = CSpace.sameVertices t t'
-    | isGenerator (Loop t) (Loop t') = CSpace.sameVertices t t'
+  fun foundationSequence c = map (tokenOfVertex o hd o rev) (CTS c);
+
+  fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
+    | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
     | isGenerator (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
-        CSpace.sameVertices t t' andalso CSpace.sameVertices u u'
+        CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
         andalso allZip isGenerator cs cs'
     | isGenerator (Source t) (Construct ({token, ...}, _)) =
-        CSpace.sameVertices t token
+        CSpace.sameTokens t token
     | isGenerator (Source t) (Loop t') =
-        CSpace.sameVertices t t'
+        CSpace.sameTokens t t'
     | isGenerator _ _ = false
 
   exception badTrail
-  fun inducedConstruction (Source t) [Source t'] =
-        if CSpace.sameVertices t t'
+  fun inducedConstruction (Source t) [Token t'] =
+        if CSpace.sameTokens t t'
         then Source t
         else raise badTrail
-    | inducedConstruction (Loop t) [Loop t'] =
-        if CSpace.sameVertices t t'
+    | inducedConstruction (Loop t) [Token t'] =
+        if CSpace.sameTokens t t'
         then Source t
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) (Construct ({token = token', configurator = configurator'}, [])::tr) =
-        if CSpace.sameVertices token token' andalso CSpace.sameVertices configurator configurator'
+    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) (Token token'::Configurator configurator'::tr) =
+        if CSpace.sameTokens token token' andalso CSpace.sameConfigurators configurator configurator'
         then let fun ic (c::C) = (inducedConstruction c tr handle badTrail => ic C)
                    | ic [] = raise badTrail
              in if null tr then Construct ({token = token, configurator = configurator}, cs) else ic cs
              end
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) [Source t'] =
-        if CSpace.sameVertices token t'
+    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) [Token t'] =
+        if CSpace.sameTokens token t'
         then Construct ({token = token, configurator = configurator}, cs)
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
@@ -190,7 +191,6 @@ struct
     end
 
 
-      (* Maybe the following should live in ConstructionTerm*)
   exception BadConstruction
   fun renameConstruct ct t' =
     let fun rc originalConstruct (Source t)  = Source t
@@ -206,14 +206,14 @@ struct
     | tokensOfConstruction (Construct ({token, configurator}, cs)) = token :: List.maps tokensOfConstruction cs
 
   (* belongs in lists *)
-  fun removeRepetition eq (n::ns) = n :: removeRepetition (List.filter (fn x => not (eq x n)) ns)
+  fun removeRepetition eq (n::ns) = n :: removeRepetition eq (List.filter (fn x => not (eq x n)) ns)
     | removeRepetition _ [] = []
 
   fun tokensOfConstruction ct =
     let fun toc (Source t) = [t]
           | toc (Loop t) = []
           | toc (Construct ({token, configurator}, cs)) = token :: List.maps toc cs
-    in removeRepetition CSpace.sametokens (toc ct)
+    in removeRepetition CSpace.sameTokens (toc ct)
     end
 
 

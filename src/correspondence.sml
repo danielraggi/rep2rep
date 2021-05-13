@@ -4,40 +4,44 @@ import "relation"
 signature CORRESPONDENCE =
 sig
   type corr;
-  val patternsOf : corr -> Pattern.T * Pattern.T;
+  val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
   val ofRelation : Relation.T -> corr;
-  val declareCorrespondence : Pattern.construction -> Pattern.construction -> Relation.T -> Relation.T;
+  val declareCorrespondence : {sourcePattern : Pattern.construction,
+                               targetPattern : Pattern.construction,
+                               foundationRels : Relation.relationship list,
+                               constructRel : Relation.relationship} -> corr;
 end
 
 structure Correspondence : CORRESPONDENCE =
 struct
-  type corr = Pattern.construction * Pattern.construction * Relation.relationship list * Relation.relationship;
+  type corr = {sourcePattern : Pattern.construction,
+               targetPattern : Pattern.construction,
+               foundationRels : Relation.relationship list,
+               constructRel : Relation.relationship};
 
   exception badForm
-  fun wellFormed (sP,tP,rf,rc) =
-  let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] fseq = true
-      fun okAtFoundations ((sfseq,tfseq,Rf)::rfs) = inFoundations sfseq (Pattern.foundationSequence sP) andalso inFoundations tfseq (Pattern.foundationSequence tP) andalso okAtFoundations rfs
-        | okAtFoundations [] = true
-      fun okAtConstructs ([t],[t'],Rc) = CSpace.sameTokens t (Pattern.constructOf sP) andalso CSpace.sameTokens t' (Pattern.constructOf tP)
-        | okAtConstructs _ => false
-  in okAtConstructs rc andalso okAtFoundations rF
-  end
+  fun wellFormed {sourcePattern,targetPattern,foundationRels,constructRel} =
+    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] fseq = true
+        fun okAtFoundations ((sfseq,tfseq,Rf)::rfs) = inFoundations sfseq (Pattern.foundationSequence sourcePattern) andalso inFoundations tfseq (Pattern.foundationSequence targetPattern) andalso okAtFoundations rfs
+          | okAtFoundations [] = true
+        fun okAtConstructs ([t],[t'],Rc) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
+          | okAtConstructs _ = false
+    in okAtConstructs constructRel andalso okAtFoundations foundationRels
+    end
 
-  fun patternsOf (sP,tP,Rf,Rc) = (sP,tP);
-  fun relationshipsOf (sP,tP,rfs,rc) = (rfs,rc);
+  fun patternsOf {sourcePattern,targetPattern,foundationRels,constructRel} = (sourcePattern,targetPattern);
+  fun relationshipsOf {sourcePattern,targetPattern,foundationRels,constructRel} = (foundationRels,constructRel);
 
-  fun declareCorrespondence sP tP rfs rc = (sP,tP,rfs,rc);
+  fun declareCorrespondence x = x;
   (*the following turns a relation between tokens into a correspondence, with Rf being the
     "always true" relation, and Rc being the relation we want.*)
   fun ofRelation R =
-    let val lP = (Pattern.trivial (Relation.leftTypeOf R))
-        val rP = (Pattern.trivial (Relation.rightTypeOf R))
-        val lPc = Pattern.constructOf lP
-        val rPc = Pattern.constructOf rP
-        val lPfs = Pattern.foundationSequence lP
-        val rPfs = Pattern.foundationSequence rP
-    in declareCorrespondence lP rP (lPfs,rPfs,Relation.alwaysTrue) (lPc,rPc,R)
+    let val sP = (Pattern.trivial (TypeSystem.any))
+        val tP = (Pattern.trivial (TypeSystem.any))
+        val sPc = Pattern.constructOf sP
+        val tPc = Pattern.constructOf tP
+    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.make (sPc,tPc,R)}
     end;
 
 end
