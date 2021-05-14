@@ -3,6 +3,7 @@ import "knowledge"
 signature STATE =
 sig
   type T;
+  val typeSystemOf : T -> TypeSystem.typeSystem;
   val constructionOf : T -> Construction.construction;
   val goalsOf : T -> Relation.relationship list;
   val patternCompOf : T -> Composition.composition;
