@@ -1,32 +1,32 @@
 signature SET =
 sig
-  type ''a set
+  type ''a set(*)
+  val compare : ''a set * ''a set -> order;*)
+  val elementOf : ''a -> ''a set -> bool;
+  val empty : ''a set;
+  val make : (''a -> bool) -> ''a set;
   val ofList : ''a list -> ''a set;
+  val ofFiniteSet : ''a FiniteSet.set -> ''a set;
+
   val minus : ''a set -> ''a set -> ''a set;
   val union : ''a set -> ''a set -> ''a set;
   val intersection : ''a set -> ''a set -> ''a set;
   val filter : (''a -> bool) -> ''a set -> ''a set;
-  val all : (''a -> bool) -> ''a set -> bool;
-  val exists :  (''a -> bool) -> ''a set -> bool;
-  val find : (''a -> bool) -> ''a set -> ''a option;
-  val map : (''a -> ''b) -> ''a set -> ''b set;
-  val toSeq : ''a set -> ''a Seq.seq
 end
+
 structure Set : SET =
 struct
-  type 'a set = 'a list;
+  type 'a set = 'a -> bool;
 
-  val empty = [];
-  fun ofList (n::ns) = n :: List.filter (fn x => not (x = n)) (ofList ns)
-    | ofList [] = empty
+  fun elementOf x S = S x;
+  val empty = fn _ => false;
+  fun ofList L = fn x => List.exists (fn y => not (x = y)) L
+  fun ofFiniteSet F = fn x => FiniteSet.exists (fn s => x = s) F
+  fun make x = x
 
-  fun minus S1 S2 = filter (fn x => not (exists (fn y => x = y) S2)) S1
-  fun intersection S1 S2 = filter (fn x => (exists (fn y => x = y) S1)) S2
-  fun union S1 S2 = S1 @ (minus S2 S1)
-  val filter = List.filter
-  val all = List.all
-  val exists = List.exists
-  val find = List.find
-  val map = List.map
-  val toSeq = Seq.of_list
+  fun minus S1 S2 = fn x => S1 x andalso not (S2 x)
+  fun intersection S1 S2 = fn x => S1 x andalso S2 x
+  fun union S1 S2 = fn x => S1 x orelse S2 x
+  fun filter f S = intersection S (make f)
+
 end

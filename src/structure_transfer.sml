@@ -49,9 +49,10 @@ struct
      vertices in the composition.  *)
   fun instantiateCorrForStateAndGoal corr st goal =
     let
-      val ([sourceToken],[targetToken],_) = Relation.tupleOfRelationship goal (* assumes Rc is subrelation of Rg*)
+      val ([sourceToken],[targetToken],_) = case Relation.tupleOfRelationship goal of
+                                                  ([x],[y],R) => ([x],[y],R)
+                                                | _ => raise CorrespondenceNotApplicable (* assumes Rc is subrelation of Rg*)
       val (rfs,rc) = Correspondence.relationshipsOf corr
-      val (sc,tc,Rc) = rc
       val ct = State.constructionOf st
       val T = #typeSystem st
       val patternComp = State.patternCompOf st
@@ -70,15 +71,18 @@ struct
                                               constructRel=updatedTargetRelationship}
     end
 
+  exception Error
   fun applyCorrespondenceForGoal st corr goal =
-    let val ([sourceToken],[targetToken],Rg) = case Relation.tupleOfRelationship goal of
+    let val (_,[targetToken],Rg) = case Relation.tupleOfRelationship goal of
                                                   ([x],[y],R) => ([x],[y],R)
                                                 | _ => raise CorrespondenceNotApplicable
         val (_,(_,_,Rc)) = Correspondence.relationshipsOf corr
-        val _ = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg then () else raise CorrespondenceNotApplicable
-        val instantiatedCorr = instantiateCorrForStateAndGoal corr st goal
-        val (sourcePattern,targetPattern) = Correspondence.patternsOf instantiatedCorr
+        val instantiatedCorr = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
+                               then instantiateCorrForStateAndGoal corr st goal
+                               else raise CorrespondenceNotApplicable
+        val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
         val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr
+        val _ = if Relation.sameRelationship rc goal then () else raise Error
         val patternComp = State.patternCompOf st
         val updatedPatternComp = if Composition.isPlaceholder patternComp
                                    then Composition.initFromConstruction targetPattern
@@ -88,9 +92,9 @@ struct
     end
 
   fun applyCorrespondence st corr =
-    let fun applyCorrespondence' [] = []
-          | applyCorrespondence' (g::gs) = (applyCorrespondenceForGoal st corr g handle CorrespondenceNotApplicable => st) :: applyCorrespondence' gs
-    in Seq.of_list (applyCorrespondence' (State.goalsOf st))
+    let fun ac [] = Seq.empty
+          | ac (g::gs) = Seq.cons (applyCorrespondenceForGoal st corr g handle CorrespondenceNotApplicable => st) (ac gs)
+    in ac (State.goalsOf st)
     end
 
   (*
@@ -100,12 +104,12 @@ struct
         let val (_,Rc) = Correspondence.relationsOf corr
         in Knowledge.subRelation KB Rc R orelse f rships corr
         end
-    in Set.filter f corrs end
+    in FiniteSet.filter f corrs end
   *)
 
   fun unfoldState st =
     let val KB = State.knowledgeOf st
-        val corrs = Set.toSeq (Knowledge.correspondencesOf KB)
+        val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
     in Seq.maps (applyCorrespondence st) corrs (*the returned sequence states is disjunctive; one must be satisfied *)
     end

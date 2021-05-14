@@ -5,12 +5,15 @@ sig
   include PATTERN;
   type composition;
 
+  val dataOfComposition : composition -> {construct : CSpace.token, attachments : (construction * composition list) list};
+
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
   val wellFormedComposition : composition -> bool;
 
   val initFromConstruction : construction -> composition;
   val attachConstructionAt : composition -> construction -> CSpace.token -> composition;
+
   val makePlaceholderComposition : CSpace.token -> composition;
 (*
   val isExactDecompositionOf : composition -> construction -> bool;

@@ -4,6 +4,7 @@ import "relation"
 signature CORRESPONDENCE =
 sig
   type corr;
+  val wellFormed : corr -> bool;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
   val ofRelation : Relation.T -> corr;
@@ -22,16 +23,16 @@ struct
 
   exception badForm
   fun wellFormed {sourcePattern,targetPattern,foundationRels,constructRel} =
-    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] fseq = true
-        fun okAtFoundations ((sfseq,tfseq,Rf)::rfs) = inFoundations sfseq (Pattern.foundationSequence sourcePattern) andalso inFoundations tfseq (Pattern.foundationSequence targetPattern) andalso okAtFoundations rfs
+    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] _ = true
+        fun okAtFoundations ((sfseq,tfseq,_)::rfs) = inFoundations sfseq (Pattern.foundationSequence sourcePattern) andalso inFoundations tfseq (Pattern.foundationSequence targetPattern) andalso okAtFoundations rfs
           | okAtFoundations [] = true
-        fun okAtConstructs ([t],[t'],Rc) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
+       fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false
     in okAtConstructs constructRel andalso okAtFoundations foundationRels
     end
 
-  fun patternsOf {sourcePattern,targetPattern,foundationRels,constructRel} = (sourcePattern,targetPattern);
-  fun relationshipsOf {sourcePattern,targetPattern,foundationRels,constructRel} = (foundationRels,constructRel);
+  fun patternsOf {sourcePattern,targetPattern,...} = (sourcePattern,targetPattern);
+  fun relationshipsOf {foundationRels,constructRel,...} = (foundationRels,constructRel);
 
   fun declareCorrespondence x = x;
   (*the following turns a relation between tokens into a correspondence, with Rf being the
@@ -41,7 +42,7 @@ struct
         val tP = (Pattern.trivial (TypeSystem.any))
         val sPc = Pattern.constructOf sP
         val tPc = Pattern.constructOf tP
-    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.make (sPc,tPc,R)}
+    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.make ([sPc],[tPc],R)}
     end;
 
 end

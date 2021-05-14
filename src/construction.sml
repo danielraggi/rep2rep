@@ -130,7 +130,7 @@ struct
     the loop is not within the induced construction, but otherwise it's fine. *)
   fun almostWellFormed c =
     let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
-          | correctLoops tr (Loop t) = true
+          | correctLoops _ (Loop _) = true
           | correctLoops tr (Construct (ut, cs)) =
               List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
                         andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
@@ -179,8 +179,6 @@ struct
   exception Match
   fun split c c' = map (inducedConstruction c) (CTS c')
 
-  fun foundationSequence' c c' = maps foundationSequence (split c c');
-
   fun fixInducedConstruction c =
     let
       fun fic _ (Source t) = (Source t)
@@ -193,7 +191,7 @@ struct
 
   exception BadConstruction
   fun renameConstruct ct t' =
-    let fun rc originalConstruct (Source t)  = Source t
+    let fun rc _ (Source t)  = Source t
           | rc originalConstruct (Loop t) = if CSpace.sameTokens t originalConstruct then Loop t' else Loop t
           | rc originalConstruct (Construct (ut, cs)) = Construct (ut, map (rc originalConstruct) cs)
     in case ct of Source _ => Source t'
@@ -201,9 +199,6 @@ struct
                 | Construct ({token = t,configurator = u}, cs) => Construct ({token = t',configurator = u}, map (rc t) cs)
     end
 
-  fun tokensOfConstruction (Source t) = [t]
-    | tokensOfConstruction (Loop t) = []
-    | tokensOfConstruction (Construct ({token, configurator}, cs)) = token :: List.maps tokensOfConstruction cs
 
   (* belongs in lists *)
   fun removeRepetition eq (n::ns) = n :: removeRepetition eq (List.filter (fn x => not (eq x n)) ns)
@@ -211,8 +206,8 @@ struct
 
   fun tokensOfConstruction ct =
     let fun toc (Source t) = [t]
-          | toc (Loop t) = []
-          | toc (Construct ({token, configurator}, cs)) = token :: List.maps toc cs
+          | toc (Loop _) = []
+          | toc (Construct ({token, ...}, cs)) = token :: maps toc cs
     in removeRepetition CSpace.sameTokens (toc ct)
     end
 

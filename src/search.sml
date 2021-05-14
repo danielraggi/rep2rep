@@ -4,7 +4,6 @@ signature SEARCH =
 sig
   type state;
   val sort : (state -> state Seq.seq) -> (state * state -> order) -> int -> state -> state Seq.seq;
-  val depthFirst : (state -> state Seq.seq) -> (state -> bool) -> state -> state Seq.seq;
 end
 
 structure Search : SEARCH =
@@ -24,7 +23,5 @@ fun sort next h n state =
   in
     Seq.insertMany x y h
   end;
-
-  fun depthFirst next sat st = Seq.single st; (*dummy*)
 
 end

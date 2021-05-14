@@ -9,12 +9,12 @@ sig
 
 
   (* Relational knowledge *)
-  val relationshipsOf : base -> Relation.relationship Set.set;
+  val relationshipsOf : base -> Relation.relationship FiniteSet.set;
   val related : base -> Relation.T -> CSpace.token list -> CSpace.token list -> bool;
   val subRelation : base -> Relation.T -> Relation.T -> bool;
 
   (* Correspondence knowledge *)
-  val correspondencesOf : base -> Correspondence.corr Set.set;
+  val correspondencesOf : base -> Correspondence.corr FiniteSet.set;
 
   (* Building a knowledge base *)
   val addCorrespondences : base -> Correspondence.corr list -> base;
@@ -26,9 +26,9 @@ end
 
 structure Knowledge : KNOWLEDGE =
 struct
-  type base = {relationships : Relation.relationship Set.set,
+  type base = {relationships : Relation.relationship FiniteSet.set,
                subRelation : Relation.T * Relation.T -> bool,
-               correspondences : Correspondence.corr Set.set};
+               correspondences : Correspondence.corr FiniteSet.set};
 
   (* Relational knowledge *)
   fun relationshipsOf KB = #relationships KB;
@@ -36,7 +36,7 @@ struct
 
   fun related KB R a b =
     let fun sat (X,Y,R') = allZip CSpace.sameTokens a X andalso allZip CSpace.sameTokens b Y andalso subRelation KB R' R
-    in Relation.same R Relation.alwaysTrue orelse Option.isSome (Set.find sat (relationshipsOf KB))
+    in Relation.same R Relation.alwaysTrue orelse Option.isSome (FiniteSet.find sat (relationshipsOf KB))
     end;
 
   (* Correspondence knowledge *)
@@ -46,19 +46,19 @@ struct
   fun addCorrespondences KB corrs =
     {relationships= #relationships KB,
       subRelation = #subRelation KB,
-      correspondences = Set.union (#correspondences KB) (Set.ofList corrs)}
+      correspondences = FiniteSet.union (#correspondences KB) (FiniteSet.ofList corrs)}
 
   fun addRelationships KB rels =
-    {relationships= Set.union (#relationships KB) rels,
+    {relationships= FiniteSet.union (#relationships KB) rels,
       subRelation = #subRelation KB,
       correspondences = #correspondences KB}
 
   (* for now, the subRelation function is simply reflexive *)
   fun make rels corrs =
     let fun subrel (R1,R2) = if Relation.same R1 R2 then true else false
-    in {relationships= Set.ofList rels,
+    in {relationships= FiniteSet.ofList rels,
         subRelation = subrel,
-        correspondences = Set.ofList corrs}
+        correspondences = FiniteSet.ofList corrs}
     end
 
 end
