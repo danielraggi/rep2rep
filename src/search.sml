@@ -25,6 +25,6 @@ fun sort next h n state =
     Seq.insertMany x y h
   end;
 
-  fun depthFirst next sat st = Seq.single state; (*dummy*)
+  fun depthFirst next sat st = Seq.single st; (*dummy*)
 
 end

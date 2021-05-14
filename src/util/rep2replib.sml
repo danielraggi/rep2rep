@@ -17,6 +17,7 @@ sig
     val spread : ('a -> 'b) -> ('a * 'a) -> ('b * 'b);
     val flip : ('a * 'b) -> ('b * 'a);
     val allZip : ('a * 'b -> bool) -> 'a list -> 'b list -> bool
+    val funZip : ('a * 'b -> 'c) -> 'a list -> 'b list -> 'c list
 end;
 
 

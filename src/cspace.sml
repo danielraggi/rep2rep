@@ -7,28 +7,32 @@ signature CSPACE =
 sig
   type constructor;
   (*datatype atom = Token of string | Variable of string;*)
-  type token;(* = string * Type.typ;*)
+  type token;(* = string * TypeSystem.typ;*)
   type configurator;
 
-  val makeToken : string -> Type.typ -> token;
-  val sameVertices : token -> token -> bool;
-  val typeOfToken : token -> Type.typ;
+  val makeToken : string -> TypeSystem.typ -> token;
+  val sameConstructors : constructor -> constructor -> bool;
+  val sameConfigurators : configurator -> configurator -> bool;
+  val sameTokens : token -> token -> bool;
+  val nameOfToken : token -> string;
+  val typeOfToken : token -> TypeSystem.typ;
 
 end
 
 structure CSpace : CSPACE =
 struct
-  type constructor = string * (Type.typ list * Type.typ);
+  type constructor = string * (TypeSystem.typ list * TypeSystem.typ);
   (*datatype atom = Token of string | Variable of string;*)
-  type token = string * Type.typ;
+  type token = string * TypeSystem.typ;
   type configurator = string * constructor;
 
   fun makeToken s ty = (s,ty)
 
-  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso Type.equal ty ty' andalso allZip Type.equal tyL tyL');
-  fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructor c c');
-  fun sameTokens (t,ty) (t',ty') = (t = t' andalso Type.equal ty ty');
-  fun typeOfToken (t,ty) = ty;
+  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso TypeSystem.equal ty ty' andalso allZip TypeSystem.equal tyL tyL');
+  fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructors c c');
+  fun sameTokens (t,ty) (t',ty') = (t = t' andalso TypeSystem.equal ty ty');
+  fun nameOfToken (t,_) = t;
+  fun typeOfToken (_,ty) = ty;
   (*
   fun tsystemOf (T,_,_) = T
 
@@ -38,11 +42,11 @@ struct
 
 
   exception Variable
-  fun sameVertices (Token t,ty) (Token t',ty') = (equalTokens t t' andalso Type.equal ty ty')
+  fun sameVertices (Token t,ty) (Token t',ty') = (equalTokens t t' andalso TypeSystem.equal ty ty')
     | sameVertices _ _ = raise Variable;
 
-  fun metaEqual (Token t,ty) (Token t',ty') = (equalTokens t t' andalso Type.equal ty ty')
-    | metaEqual (Var v,ty) (Var v',ty') = (equalVars v v' andalso Type.equal ty ty');
+  fun metaEqual (Token t,ty) (Token t',ty') = (equalTokens t t' andalso TypeSystem.equal ty ty')
+    | metaEqual (Var v,ty) (Var v',ty') = (equalVars v v' andalso TypeSystem.equal ty ty');
 *)
 
 end

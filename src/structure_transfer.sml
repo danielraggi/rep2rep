@@ -1,65 +1,95 @@
 import "search"
 import "state"
-import "decomposition"
+import "composition"
 
 signature TRANSFER =
 sig
-  (*
-  val applyCorrespondenceForGoalAndMatch : State.T -> Correspondence.T -> Relation.relationship -> acmt.construction -> State.T seq *)
-  val applyCorrespondenceForGoal : State.T -> Correspondence.T -> Relation.relationship -> State.T seq
-  val applyCorrespondence : State.T -> Correspondence.T -> State.T seq
-  val unfoldState : State.T -> State.T seq
-  val StructureTransfer : Knowledge.base -> SGraph.T -> Relation.relationship list -> State.T
+  val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
+  val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
+  val unfoldState : State.T -> State.T Seq.seq
+  val structureTransfer : Knowledge.base -> TypeSystem.typeSystem -> Construction.construction -> Relation.relationship list -> State.T Seq.seq
 
 end
 
 structure Transfer : TRANSFER =
 struct
 
-  exception Mismatch
-  (* given corr, a goal which matches the construct-relation of corr,
-     and a construction ct which source-matches corr, the following
-     function produces the state with updated goals and pattern composition *)
-  (*
-  fun applyCorrespondenceForGoalAndMatch st corr goal ct =
-    let val (_,[tv],_) = Relation.tupleOfRelationship goal handle _ => raise Mismatch
-        val (Rf,_) = Correspondence.relationsOf corr
-        val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-        val sourceFoundations = ConstructionTerm.foundationSequence ct
-        val patternDecomp = State.patternDecompOf st
-        val targetPattern' = ConstructionTerm.refreshNames targetPattern patternDecomp
-        val targetConstruct = ConstructionTerm.constructOf targetPattern'
-        val targetFoundations = ConstructionTerm.foundationSequence targetPattern'
-        val resultingpDecomp = ConstructionTerm.joinWithIdentifications (patternDecomp,targetPattern') [(tv,targetConstruct)]
-        val newGoal = Relation.ship (sourceFoundations,targetFoundations,Rf)
-    in State.updatePatternDecomp (State.replaceGoal st goal newGoal) resultingpDecomp
+  (*  *)
+  fun refreshNamesUpToConstruct ct D t =
+    let
+      fun firstUnusedName Ns =
+        let fun f n =
+              let val vcandidate = "v"^(Int.toString n)
+              in if List.exists (fn x => x = vcandidate) Ns then f (n+1) else "v"^(Int.toString n)
+              end
+        in f 0
+        end
+      val tokensInConstruction = List.filter (fn x => not (CSpace.sameTokens t x)) (Construction.tokensOfConstruction ct)
+      val tokensInComposition = Composition.tokensOfComposition D
+      val names = map CSpace.nameOfToken (tokensInComposition @ tokensInConstruction)
+      fun mkRenameFunction _ [] = (fn _ => NONE)
+        | mkRenameFunction Ns (y::ys) =
+            let
+              fun f x = if CSpace.sameTokens x y then SOME (CSpace.makeToken (firstUnusedName Ns) (CSpace.typeOfToken x))
+                        else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
+            in f
+            end
+      fun renameFunction x = if CSpace.sameTokens x t then SOME t else mkRenameFunction names tokensInConstruction x
+      val updatedConstruction = Pattern.applyPartialIsomorpism renameFunction ct
+    in (Option.valOf o renameFunction, updatedConstruction)
     end
-    *)
 
   exception CorrespondenceNotApplicable
+  (* The following function takes a correspondence, corr, with construct relation Rc,
+     and a goal assumed to have a superRelation Rg of Rc.
+     The function will try to find a generator in the given source construction that matches
+     the source pattern of corr. If found, it will use the isomorphic map (from pattern to generator)
+     to rename the relationships between the vertices of the source specified by the correspondence.
+     It will also rename the vertices of the target pattern so that they don't clash with the
+     vertices in the composition.  *)
+  fun instantiateCorrForStateAndGoal corr st goal =
+    let
+      val ([sourceToken],[targetToken],_) = Relation.tupleOfRelationship goal (* assumes Rc is subrelation of Rg*)
+      val (rfs,rc) = Correspondence.relationshipsOf corr
+      val (sc,tc,Rc) = rc
+      val ct = State.constructionOf st
+      val T = #typeSystem st
+      val patternComp = State.patternCompOf st
+      val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
+      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternComp targetToken
+      val (sourceRenamingFunction, matchingGenerator) =
+            (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
+              (f,SOME x) => (Option.valOf o f,x)
+            | (_,NONE) => raise CorrespondenceNotApplicable)
+      fun updateRF (sfs,tfs,R) = (map sourceRenamingFunction sfs, map targetRenamingFunction tfs, R)
+      val updatedSourceRelationships = map updateRF rfs
+      val updatedTargetRelationship = updateRF rc
+    in Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
+                                              targetPattern=updatedTargetPattern,
+                                              foundationRels=updatedSourceRelationships,
+                                              constructRel=updatedTargetRelationship}
+    end
+
   fun applyCorrespondenceForGoal st corr goal =
-    let val ([sourceToken],[targetToken],Rg) = Relation.tupleOfRelationship goal handle _ => raise Mismatch
-        val (Rf,Rc) = Correspondence.relationsOf corr
-        val _ = if Knowledge.subRelation KB Rc Rg then () else raise CorrespondenceNotApplicable
-        val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-        val ct = State.constructionOf st
-        val T = State.typeSystemOf st
-        val matchingGenerator = case Pattern.findGeneratorForTokenMatching T ct sourceToken sourcePattern of SOME x => x | NONE => raise CorrespondenceNotApplicable
-        val generatorFoundations = ConstructionTerm.foundationSequence matchingGenerator
-        val patternDecomp = State.patternDecompOf st
-        val targetPattern' = Decomposition.refreshNames targetPattern patternDecomp
-        val targetFoundations = ConstructionTerm.foundationSequence targetPattern'
-        val newPatternDecomp = if Decomposition.isPlaceholder patternDecomp
-                             then Decomposition.initFromConstruction targetPattern'
-                             else Decomposition.attachConstructionAt patternDecomp targetPattern' targetToken
-        val stateWithUpdatedGoals = if Relation.isAlwaysTrue Rf then State.removeGoal st goal
-                                    else State.replaceGoal st goal (generatorFoundations,targetFoundations,Rf)
-    in State.updatePatternDecomp stateWithUpdatedGoals newPatternDecomp
+    let val ([sourceToken],[targetToken],Rg) = case Relation.tupleOfRelationship goal of
+                                                  ([x],[y],R) => ([x],[y],R)
+                                                | _ => raise CorrespondenceNotApplicable
+        val (_,(_,_,Rc)) = Correspondence.relationshipsOf corr
+        val _ = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg then () else raise CorrespondenceNotApplicable
+        val instantiatedCorr = instantiateCorrForStateAndGoal corr st goal
+        val (sourcePattern,targetPattern) = Correspondence.patternsOf instantiatedCorr
+        val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr
+        val patternComp = State.patternCompOf st
+        val updatedPatternComp = if Composition.isPlaceholder patternComp
+                                   then Composition.initFromConstruction targetPattern
+                                   else Composition.attachConstructionAt patternComp targetPattern targetToken
+        val stateWithUpdatedGoals = State.replaceGoal st goal rfs
+    in State.updatePatternComp stateWithUpdatedGoals updatedPatternComp
     end
 
   fun applyCorrespondence st corr =
     let fun applyCorrespondence' [] = []
-          | applyCorrespondence' (g::gs) = ([applyCorrespondenceForGoal st corr g] handle CorrespondenceNotApplicable => []) @ applyCorrespondence' gs
+          | applyCorrespondence' (g::gs) = (applyCorrespondenceForGoal st corr g handle CorrespondenceNotApplicable => st) :: applyCorrespondence' gs
     in Seq.of_list (applyCorrespondence' (State.goalsOf st))
     end
 
@@ -75,23 +105,19 @@ struct
 
   fun unfoldState st =
     let val KB = State.knowledgeOf st
-        val corrs = Knowledge.correspondencesOf KB
+        val corrs = Set.toSeq (Knowledge.correspondencesOf KB)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
     in Seq.maps (applyCorrespondence st) corrs (*the returned sequence states is disjunctive; one must be satisfied *)
     end
 
   exception BadGoals
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-  fun structureTransfer T corrs rels ct goals =
+  fun structureTransfer KB T ct goals =
     let
-      val relsAsCorrs = Set.map Correspondence.ofRelation rels
-      val KB = Knowledge.make (Set.union relsAsCorrs corrs)
-      val typeOfTarget = case goals of [(_,_,R)] => Relation.rightTypeOf R
-                                     | _ => raise BadGoals (* in the future I want to update this so that one can start with multiple goals *)
       val initialState = State.make {typeSystem = T,
                                       construction = ct,
                                       goals = goals,
-                                      decomposition = Decomposition.Placeholder (CSpace.makeToken "dummy" ty),
+                                      composition = Composition.makePlaceholderComposition (CSpace.makeToken "dummy" TypeSystem.any),
                                       knowledge = KB}
       fun heuristic (st,st') = EQUAL
       val limit = 10
