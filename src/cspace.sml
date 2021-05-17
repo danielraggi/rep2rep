@@ -16,6 +16,9 @@ sig
   val sameTokens : token -> token -> bool;
   val nameOfToken : token -> string;
   val typeOfToken : token -> TypeSystem.typ;
+  val stringOfToken : token -> string
+  val stringOfConstructor : constructor -> string
+  val stringOfConfigurator : configurator -> string
 
 end;
 
@@ -33,6 +36,10 @@ struct
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso TypeSystem.equal ty ty');
   fun nameOfToken (t,_) = t;
   fun typeOfToken (_,ty) = ty;
+
+  fun stringOfToken (t,ty) = t ^ " : " ^ (TypeSystem.stringOfType ty)
+  fun stringOfConstructor (c,(tys,ty)) = c ^ " : " ^ (String.addSquareBrackets (String.stringOfList TypeSystem.stringOfType tys)) ^ " -> " ^ (TypeSystem.stringOfType ty)
+  fun stringOfConfigurator (u,(c,_)) = u ^ "::" ^ c
   (*
   fun tsystemOf (T,_,_) = T
 

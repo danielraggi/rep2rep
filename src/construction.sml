@@ -24,9 +24,8 @@ sig
   val renameConstruct : construction -> CSpace.token -> construction;
 
   val tokensOfConstruction : construction -> CSpace.token list;
-  
+
   val toString : construction -> string;
-  val fromString : string -> construction;
 
   exception MalformedConstructionTerm
 end;

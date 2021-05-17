@@ -315,7 +315,7 @@ sig
     val stripSpaces : string -> string;
     val splitOn : string -> string -> string list;
     val splitStrip : string -> string -> string list;
-    val splitStripApply : (string -> 'a) -> string -> 'a list;
+    val splitStripApply : (string -> 'a) -> string -> string -> 'a list;
     val breakOn : string -> string -> (string * string * string);
     val removeDelimiters : (string * string) -> string -> string;
     val removeParens : string -> string;
@@ -366,11 +366,12 @@ fun splitOn sep s =
             end;
     in group [] [] (String.explode s) end;
 
-fun stripSpaces str =
+fun stripSpaces str = implode (List.filter (not o Char.isSpace) (explode str))
+(*)
     let val chars = explode str;
         val revDrop = List.rev o (List.dropWhile Char.isSpace);
         val remainingChars = (revDrop o revDrop) chars;
-    in implode remainingChars end;
+    in implode remainingChars end;*)
 
 fun splitStrip sep s = List.map stripSpaces (splitOn sep s);
 

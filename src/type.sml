@@ -3,11 +3,11 @@ import "util.set";
 signature TYPESYSTEM =
 sig
   type typ
-  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};
+  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool}
 
-  val any : typ;
-
-  val equal : typ -> typ -> bool;
+  val typeOfString : string -> typ
+  val any : typ
+  val equal : typ -> typ -> bool
 
 (*
   val reflexive : typeSystem -> bool;
@@ -32,8 +32,8 @@ struct
   type typ = string;
   type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};
 
+  fun typeOfString x = x
   val any = "" (* emtpy string *)
-
   fun equal x y = (x = y)
 
 (*
@@ -59,4 +59,5 @@ struct
   fun respectAnyClosure {Ty,subType} = {Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
 
   val fixSubTypeFunction = respectAnyClosure o reflexiveClosure;
+  fun stringOfType x = x
 end;

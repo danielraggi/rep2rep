@@ -22,7 +22,7 @@ struct
 
   fun elementOf x S = S x;
   val empty = fn _ => false;
-  fun ofList L = fn x => List.exists (fn y => not (x = y)) L
+  fun ofList L = fn x => List.exists (fn y => x = y) L
   fun ofFiniteSet F = fn x => FiniteSet.exists (fn s => x = s) F
   fun make x = x
 

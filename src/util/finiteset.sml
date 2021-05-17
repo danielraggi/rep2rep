@@ -1,3 +1,5 @@
+import "util.sequence";
+
 signature FINITESET =
 sig
   type ''a set
