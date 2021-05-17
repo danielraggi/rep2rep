@@ -1,5 +1,5 @@
-import "pattern"
-import "relation"
+import "pattern";
+import "relation";
 
 signature CORRESPONDENCE =
 sig
@@ -12,7 +12,7 @@ sig
                                targetPattern : Pattern.construction,
                                foundationRels : Relation.relationship list,
                                constructRel : Relation.relationship} -> corr;
-end
+end;
 
 structure Correspondence : CORRESPONDENCE =
 struct
@@ -45,4 +45,4 @@ struct
     in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.make ([sPc],[tPc],R)}
     end;
 
-end
+end;

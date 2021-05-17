@@ -1,3 +1,5 @@
+import "util.finiteset";
+
 signature SET =
 sig
   type ''a set(*)
@@ -12,7 +14,7 @@ sig
   val union : ''a set -> ''a set -> ''a set;
   val intersection : ''a set -> ''a set -> ''a set;
   val filter : (''a -> bool) -> ''a set -> ''a set;
-end
+end;
 
 structure Set : SET =
 struct
@@ -29,4 +31,4 @@ struct
   fun union S1 S2 = fn x => S1 x orelse S2 x
   fun filter f S = intersection S (make f)
 
-end
+end;

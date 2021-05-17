@@ -1,4 +1,4 @@
-import "cspace"
+import "cspace";
 
 signature RELATION =
 sig
@@ -12,7 +12,7 @@ sig
   val isAlwaysTrue : T -> bool;
   val same : T -> T -> bool;
   val sameRelationship : relationship -> relationship -> bool;
-end
+end;
 
 structure Relation : RELATION =
 struct
@@ -30,6 +30,6 @@ struct
   fun same n n' = (n = n')
 
   fun sameRelationship (ts1,ts2,R) (ts1',ts2',R') =
-    allZip CSpace.sameTokens ts1 ts1' andalso allZip CSpace.sameTokens ts2 ts2' andalso same R R'
+    List.allZip CSpace.sameTokens ts1 ts1' andalso List.allZip CSpace.sameTokens ts2 ts2' andalso same R R'
 
-end
+end;

@@ -1,4 +1,4 @@
-import "construction"
+import "construction";
 
 signature PATTERN =
 sig
@@ -12,7 +12,7 @@ sig
   val applyPartialIsomorpism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
 
   val trivial : TypeSystem.typ -> construction;
-end
+end;
 
 structure Pattern : PATTERN =
 struct
@@ -26,7 +26,7 @@ struct
     | matches T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
         CSpace.sameConfigurators u u'
         andalso tokenMatches T t t'
-        andalso allZip (matches T) cs cs'
+        andalso List.allZip (matches T) cs cs'
     | matches _ _ _ = false
 
   (* genertorMatches T c c' checks whether a generator of c matches the pattern c' exists*)
@@ -35,7 +35,7 @@ struct
     | generatorMatches T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
         CSpace.sameConfigurators u u'
         andalso tokenMatches T t t'
-        andalso allZip (generatorMatches T) cs cs'
+        andalso List.allZip (generatorMatches T) cs cs'
     | generatorMatches T (Construct ({token = t, ...},_)) (Source t') =
         tokenMatches T t t'
     | generatorMatches _ _ _ = false
@@ -47,7 +47,7 @@ struct
     | findGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
       if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
       then
-        let val CH = funZip (findGeneratorMatching T) cs cs'
+        let val CH = List.funZip (findGeneratorMatching T) cs cs'
             fun ss (SOME x ::t) = x :: ss t
               | ss (NONE :: _) = raise NoMatchingGenerator
               | ss [] = []
@@ -67,7 +67,7 @@ struct
     | findMapAndGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
         if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
         then
-          let val CH = funZip (findMapAndGeneratorMatching T) cs cs'
+          let val CH = List.funZip (findMapAndGeneratorMatching T) cs cs'
               fun ss (SOME x ::t) = x :: ss t
                 | ss (NONE :: _) = raise NoMatchingGenerator
                 | ss [] = []
@@ -108,4 +108,4 @@ struct
         (case f t of NONE => Construct ({token = t, configurator = u}, map (applyPartialIsomorpism f) cs)
                   | SOME x => Construct ({token = x, configurator = u}, map (applyPartialIsomorpism f) cs))
 
-end
+end;

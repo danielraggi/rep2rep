@@ -1,4 +1,4 @@
-import "pattern"
+import "pattern";
 
 signature COMPOSITION =
 sig
@@ -21,7 +21,7 @@ sig
 *)
   val tokensOfComposition : composition -> CSpace.token list;
 
-end
+end;
 
 structure Composition : COMPOSITION =
 struct
@@ -37,7 +37,7 @@ struct
     let
       fun wfds ((ct,Ds)::L) =
             Construction.wellFormed ct
-            andalso allZip CSpace.sameTokens (foundationSequence ct) (map constructOfComposition Ds)
+            andalso List.allZip CSpace.sameTokens (foundationSequence ct) (map constructOfComposition Ds)
             andalso List.all wellFormedComposition Ds
             andalso wfds L
         | wfds [] =  true
@@ -62,9 +62,9 @@ struct
     end
 
   fun tokensOfComposition (Composition {attachments,...}) =
-    let fun tokensOfAttachments ((ct,DS)::L) = tokensOfConstruction ct @ (maps tokensOfComposition DS) @ tokensOfAttachments L
+    let fun tokensOfAttachments ((ct,DS)::L) = tokensOfConstruction ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
           | tokensOfAttachments [] = []
     in tokensOfAttachments attachments
     end
 
-end
+end;

@@ -1,4 +1,4 @@
-import "knowledge"
+import "knowledge";
 
 signature STATE =
 sig
@@ -18,7 +18,7 @@ sig
   val replaceGoal : T -> Relation.relationship -> Relation.relationship list -> T
   val removeGoal : T -> Relation.relationship -> T
 
-end
+end;
 
 structure State : STATE =
 struct
@@ -62,4 +62,4 @@ struct
     in updateGoals st newGoals
     end
 
-end
+end;

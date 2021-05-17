@@ -1,4 +1,4 @@
-import "set"
+import "util.set";
 
 signature TYPESYSTEM =
 sig
@@ -23,7 +23,9 @@ sig
   val respectAnyClosure : typeSystem -> typeSystem;
   val fixSubTypeFunction : typeSystem -> typeSystem;
 
-end
+  val stringOfType : typ -> string;
+
+end;
 
 structure TypeSystem : TYPESYSTEM =
 struct
@@ -47,7 +49,7 @@ struct
     reflexive T andalso transitive T andalso antisymmetric T;
     *)
 
-  fun reflexiveClosure T = {Ty = #Ty T, subType = (fn (x,y) => x = y orelse (#subType T) (x,y))}
+  fun reflexiveClosure T = {Ty = #Ty T, subType = (fn (x,y) => equal x y orelse (#subType T) (x,y))}
   (*)
   fun transitiveClosure {Ty,subType} =
     let fun subType' (x,y) = (subType (x,y) orelse Set.exists (fn z => subType (x,z) andalso subType (z,y)) Ty)
@@ -57,4 +59,4 @@ struct
   fun respectAnyClosure {Ty,subType} = {Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
 
   val fixSubTypeFunction = respectAnyClosure o reflexiveClosure;
-end
+end;

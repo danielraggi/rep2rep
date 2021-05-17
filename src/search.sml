@@ -1,10 +1,11 @@
-import "sequence"
+import "util.sequence";
+import "state";
 
 signature SEARCH =
 sig
   type state;
   val sort : (state -> state Seq.seq) -> (state * state -> order) -> int -> state -> state Seq.seq;
-end
+end;
 
 structure Search : SEARCH =
 struct
@@ -24,4 +25,4 @@ fun sort next h n state =
     Seq.insertMany x y h
   end;
 
-end
+end;

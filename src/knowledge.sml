@@ -1,5 +1,5 @@
-import "correspondence"
-import "composition"
+import "correspondence";
+import "composition";
 
 signature KNOWLEDGE =
 sig
@@ -22,7 +22,7 @@ sig
 
   val make : Relation.relationship list -> Correspondence.corr list -> base;
 
-end
+end;
 
 structure Knowledge : KNOWLEDGE =
 struct
@@ -35,7 +35,7 @@ struct
   fun subRelation KB R1 R2 = (#subRelation KB) (R1,R2);
 
   fun related KB R a b =
-    let fun sat (X,Y,R') = allZip CSpace.sameTokens a X andalso allZip CSpace.sameTokens b Y andalso subRelation KB R' R
+    let fun sat (X,Y,R') = List.allZip CSpace.sameTokens a X andalso List.allZip CSpace.sameTokens b Y andalso subRelation KB R' R
     in Relation.same R Relation.alwaysTrue orelse Option.isSome (FiniteSet.find sat (relationshipsOf KB))
     end;
 
@@ -61,4 +61,4 @@ struct
         correspondences = FiniteSet.ofList corrs}
     end
 
-end
+end;

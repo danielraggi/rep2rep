@@ -1,6 +1,5 @@
-import "search"
-import "state"
-import "composition"
+import "search";
+import "composition";
 
 signature TRANSFER =
 sig
@@ -9,7 +8,7 @@ sig
   val unfoldState : State.T -> State.T Seq.seq
   val structureTransfer : Knowledge.base -> TypeSystem.typeSystem -> Construction.construction -> Relation.relationship list -> State.T Seq.seq
 
-end
+end;
 
 structure Transfer : TRANSFER =
 struct
@@ -130,4 +129,4 @@ struct
     end
 
 
-end
+end;

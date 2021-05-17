@@ -1,4 +1,4 @@
-imports "type"
+import "type";
 
 
 (* An underlying assumption of having token = string * type is that two tokens in a
@@ -17,7 +17,7 @@ sig
   val nameOfToken : token -> string;
   val typeOfToken : token -> TypeSystem.typ;
 
-end
+end;
 
 structure CSpace : CSPACE =
 struct
@@ -28,7 +28,7 @@ struct
 
   fun makeToken s ty = (s,ty)
 
-  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso TypeSystem.equal ty ty' andalso allZip TypeSystem.equal tyL tyL');
+  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso TypeSystem.equal ty ty' andalso List.allZip TypeSystem.equal tyL tyL');
   fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructors c c');
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso TypeSystem.equal ty ty');
   fun nameOfToken (t,_) = t;
@@ -49,4 +49,4 @@ struct
     | metaEqual (Var v,ty) (Var v',ty') = (equalVars v v' andalso TypeSystem.equal ty ty');
 *)
 
-end
+end;

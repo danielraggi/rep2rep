@@ -1,4 +1,4 @@
-import "cspace"
+import "cspace";
 
 signature CONSTRUCTION =
 sig
@@ -24,9 +24,12 @@ sig
   val renameConstruct : construction -> CSpace.token -> construction;
 
   val tokensOfConstruction : construction -> CSpace.token list;
+  
+  val toString : construction -> string;
+  val fromString : string -> construction;
 
   exception MalformedConstructionTerm
-end
+end;
 
 structure Construction : CONSTRUCTION =
 struct
@@ -44,7 +47,7 @@ struct
     | same (Loop t) (Loop t') = CSpace.sameTokens t t'
     | same (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
         CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
-        andalso allZip same cs cs'
+        andalso List.allZip same cs cs'
     | same _ _ = false
     (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
 
@@ -62,7 +65,7 @@ struct
         if null cs then [[Token token, Configurator configurator]]
         else
           let fun addToAll S = List.map (fn s => [Token token, Configurator configurator] @ s) S
-          in maps (addToAll o CTS) cs
+          in List.maps (addToAll o CTS) cs
           end
 
   fun CTS_lossless (Source t) = [[Source t]]
@@ -71,7 +74,7 @@ struct
         if null cs then [[(Construct ({token = token, configurator = configurator}, []))]]
         else
           let fun addToAll S = List.map (fn s => Construct ({token = token, configurator = configurator}, cs) :: s) S
-          in maps (addToAll o CTS_lossless) cs
+          in List.maps (addToAll o CTS_lossless) cs
           end
 
   exception EmptyInputSequence
@@ -79,7 +82,7 @@ struct
     | pseudoCTS (Loop t) = [[Loop t]]
     | pseudoCTS (Construct (ut,cs)) =
         let fun addToFirst (s::S) = (Construct (ut,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(Construct (ut,cs))]]*)
-        in maps (addToFirst o pseudoCTS) cs
+        in List.maps (addToFirst o pseudoCTS) cs
         end
 
   (* coherent checks that, if a token appears in two parts of term, there are no
@@ -90,7 +93,7 @@ struct
       fun strongCoh (Source t) (Source t') = CSpace.sameTokens t t'
         | strongCoh (Loop t) (Loop t') = CSpace.sameTokens t t'
         | strongCoh (Construct ({token = t, configurator = u}, q)) (Construct ({token = t', configurator = u'}, q')) =
-            CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u' andalso allZip strongCoh q q'
+            CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u' andalso List.allZip strongCoh q q'
         | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameTokens t t'
         | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameTokens t t'
         | strongCoh _ _ = false
@@ -147,7 +150,7 @@ struct
     | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
     | isGenerator (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
         CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
-        andalso allZip isGenerator cs cs'
+        andalso List.allZip isGenerator cs cs'
     | isGenerator (Source t) (Construct ({token, ...}, _)) =
         CSpace.sameTokens t token
     | isGenerator (Source t) (Loop t') =
@@ -207,9 +210,12 @@ struct
   fun tokensOfConstruction ct =
     let fun toc (Source t) = [t]
           | toc (Loop _) = []
-          | toc (Construct ({token, ...}, cs)) = token :: maps toc cs
+          | toc (Construct ({token, ...}, cs)) = token :: List.maps toc cs
     in removeRepetition CSpace.sameTokens (toc ct)
     end
 
-
-end
+  fun toString (Source t) = CSpace.stringOfToken t
+    | toString (Loop t) = "Loop " ^ (CSpace.stringOfToken t)
+    | toString (Construct ({token,configurator}, cs)) =
+       CSpace.stringOfToken token ^ "_" ^ CSpace.stringOfConfigurator configurator ^ "(" ^ String.concat (map toString cs) ^ ")"
+end;

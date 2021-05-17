@@ -1,3 +1,137 @@
+(*  Title:      Pure/General/basics.ML
+    Author:     Florian Haftmann and Makarius, TU Muenchen
+
+Fundamental concepts.
+*)
+
+infix 1 |> |-> |>> ||> ||>>
+infix 1 #> #-> #>> ##> ##>>
+
+signature BASICS =
+sig
+  (*functions*)
+  val |> : 'a * ('a -> 'b) -> 'b
+  val |-> : ('c * 'a) * ('c -> 'a -> 'b) -> 'b
+  val |>> : ('a * 'c) * ('a -> 'b) -> 'b * 'c
+  val ||> : ('c * 'a) * ('a -> 'b) -> 'c * 'b
+  val ||>> : ('c * 'a) * ('a -> 'd * 'b) -> ('c * 'd) * 'b
+  val #> : ('a -> 'b) * ('b -> 'c) -> 'a -> 'c
+  val #-> : ('a -> 'c * 'b) * ('c -> 'b -> 'd) -> 'a -> 'd
+  val #>> : ('a -> 'c * 'b) * ('c -> 'd) -> 'a -> 'd * 'b
+  val ##> : ('a -> 'c * 'b) * ('b -> 'd) -> 'a -> 'c * 'd
+  val ##>> : ('a -> 'c * 'b) * ('b -> 'e * 'd) -> 'a -> ('c * 'e) * 'd
+  val ` : ('b -> 'a) -> 'b -> 'a * 'b
+  val tap: ('b -> 'a) -> 'b -> 'b
+
+  (*options*)
+  val is_some: 'a option -> bool
+  val is_none: 'a option -> bool
+  val the: 'a option -> 'a
+  val these: 'a list option -> 'a list
+  val the_list: 'a option -> 'a list
+  val the_default: 'a -> 'a option -> 'a
+  val perhaps: ('a -> 'a option) -> 'a -> 'a
+  val merge_options: 'a option * 'a option -> 'a option
+  val eq_option: ('a * 'b -> bool) -> 'a option * 'b option -> bool
+
+  (*partiality*)
+  (*
+  val try: ('a -> 'b) -> 'a -> 'b option
+  val can: ('a -> 'b) -> 'a -> bool*)
+
+  (*lists*)
+  val cons: 'a -> 'a list -> 'a list
+  val append: 'a list -> 'a list -> 'a list
+  val fold: ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val fold_rev: ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val fold_map: ('a -> 'b -> 'c * 'b) -> 'a list -> 'b -> 'c list * 'b
+end;
+
+structure Basics: BASICS =
+struct
+
+(* functions *)
+
+(*application and structured results*)
+fun x |> f = f x;
+fun (x, y) |-> f = f x y;
+fun (x, y) |>> f = (f x, y);
+fun (x, y) ||> f = (x, f y);
+fun (x, y) ||>> f = let val (z, y') = f y in ((x, z), y') end;
+
+(*composition and structured results*)
+fun (f #> g) x   = x |> f |> g;
+fun (f #-> g) x  = x |> f |-> g;
+fun (f #>> g) x  = x |> f |>> g;
+fun (f ##> g) x  = x |> f ||> g;
+fun (f ##>> g) x = x |> f ||>> g;
+
+(*result views*)
+fun `f = fn x => (f x, x);
+fun tap f = fn x => (f x; x);
+
+
+(* options *)
+
+fun is_some (SOME _) = true
+  | is_some NONE = false;
+
+fun is_none (SOME _) = false
+  | is_none NONE = true;
+
+fun the (SOME x) = x
+  | the NONE = raise Option.Option;
+
+fun these (SOME x) = x
+  | these NONE = [];
+
+fun the_list (SOME x) = [x]
+  | the_list NONE = []
+
+fun the_default x (SOME y) = y
+  | the_default x NONE = x;
+
+fun perhaps f x = the_default x (f x);
+
+fun merge_options (x, y) = if is_some x then x else y;
+
+fun eq_option eq (SOME x, SOME y) = eq (x, y)
+  | eq_option _ (NONE, NONE) = true
+  | eq_option _ _ = false;
+
+
+(* partiality *)
+(*)
+fun try f x = SOME (f x)
+  handle exn => if Exn.is_interrupt exn then Exn.reraise exn else NONE;
+
+fun can f x = is_some (try f x);*)
+
+
+(* lists *)
+
+fun cons x xs = x :: xs;
+
+fun append xs ys = xs @ ys;
+
+fun fold _ [] y = y
+  | fold f (x :: xs) y = fold f xs (f x y);
+
+fun fold_rev _ [] y = y
+  | fold_rev f (x :: xs) y = f x (fold_rev f xs y);
+
+fun fold_map _ [] y = ([], y)
+  | fold_map f (x :: xs) y =
+      let
+        val (x', y') = f x y;
+        val (xs', y'') = fold_map f xs y';
+      in (x' :: xs', y'') end;
+
+end;
+
+open Basics;
+
+
 (*  Title:      Pure/General/seq.ML
     Author:     Lawrence C Paulson, Cambridge University Computer Laboratory
     Author:     Markus Wenzel, TU Munich
@@ -16,11 +150,11 @@ sig
   val empty: 'a seq
   val cons: 'a -> 'a seq -> 'a seq
   val single: 'a -> 'a seq
-  val try: ('a -> 'b) -> 'a -> 'b seq
+  (*val try: ('a -> 'b) -> 'a -> 'b seq*)
   val hd: 'a seq -> 'a
   val tl: 'a seq -> 'a seq
-  val chop: int -> 'a seq -> 'a list * 'a seq
-  val take: int -> 'a seq -> 'a seq
+  (*val chop: int -> 'a seq -> 'a list * 'a seq
+  val take: int -> 'a seq -> 'a seq*)
   val list_of: 'a seq -> 'a list
   val of_list: 'a list -> 'a seq
   val append: 'a seq -> 'a seq -> 'a seq
@@ -34,7 +168,7 @@ sig
   val lift: ('a -> 'b -> 'c) -> 'a seq -> 'b -> 'c seq
   val lifts: ('a -> 'b -> 'c seq) -> 'a seq -> 'b -> 'c seq
   val singleton: ('a list -> 'b list seq) -> 'a -> 'b seq
-  val print: (int -> 'a -> unit) -> int -> 'a seq -> unit
+  (*val print: (int -> 'a -> unit) -> int -> 'a seq -> unit*)
   val it_right : ('a * 'b seq -> 'b seq) -> 'a seq * 'b seq -> 'b seq
   datatype 'a result = Result of 'a | Error of unit -> string
   val make_results: 'a seq -> 'a result seq
@@ -42,8 +176,9 @@ sig
   val maps_results: ('a -> 'b result seq) -> 'a result seq -> 'b result seq
   val maps_result: ('a -> 'b seq) -> 'a result seq -> 'b result seq
   val map_result: ('a -> 'b) -> 'a result seq -> 'b result seq
+  (*)
   val first_result: string -> 'a result seq -> 'a * 'a seq
-  val the_result: string -> 'a result seq -> 'a
+  val the_result: string -> 'a result seq -> 'a*)
   val succeed: 'a -> 'a seq
   val fail: 'a -> 'b seq
   val THEN: ('a -> 'b seq) * ('b -> 'c seq) -> 'a -> 'c seq
@@ -89,9 +224,10 @@ fun cons x xq = make (fn () => SOME (x, xq));
 fun single x = cons x empty;
 
 (*head and tail -- beware of calling the sequence function twice!!*)
-fun hd xq = #1 (the (pull xq))
-and tl xq = #2 (the (pull xq));
+fun hd xq = #1 (Option.valOf (pull xq))
+and tl xq = #2 (Option.valOf (pull xq));
 
+(*)
 (*partial function as procedure*)
 fun try f x =
   (case Basics.try f x of
@@ -107,12 +243,14 @@ fun chop n xq =
     (case pull xq of
       NONE => ([], xq)
     | SOME (x, xq') => apfst (Basics.cons x) (chop (n - 1) xq'));
+    *)
 
 (*truncate the sequence after n elements*)
+(*)
 fun take n xq =
   if n <= (0 : int) then empty
   else make (fn () =>
-    (Option.map o apsnd) (take (n - 1)) (pull xq));
+    (Option.map o apsnd) (take (n - 1)) (pull xq));*)
 
 (*conversion from sequence to list*)
 fun list_of xq =
@@ -188,6 +326,7 @@ fun lifts f xq y = maps (fn x => f x y) xq;
 
 fun singleton f x = f [x] |> map (fn [y] => y | _ => raise List.Empty);
 
+(*)
 (*print a sequence, up to "count" elements*)
 fun print print_elem count =
   let
@@ -197,7 +336,7 @@ fun print print_elem count =
         (case pull xq of
           NONE => ()
         | SOME (x, xq') => (print_elem k x; writeln ""; prnt (k + 1) xq'));
-  in prnt 1 end;
+  in prnt 1 end;*)
 
 (*accumulating a function over a sequence; this is lazy*)
 fun it_right f (xq, yq) =
@@ -227,6 +366,7 @@ fun maps_results f xq =
 fun maps_result f = maps_results (map Result o f);
 fun map_result f = maps_result (single o f);
 
+(*)
 (*first result or first error within sequence*)
 fun first_result default_msg seq =
   let
@@ -240,7 +380,7 @@ fun first_result default_msg seq =
   in result NONE seq end;
 
 fun the_result default_msg seq = #1 (first_result default_msg seq);
-
+*)
 
 
 (** sequence functions **)      (*cf. Pure/tactical.ML*)
@@ -257,6 +397,7 @@ fun op ORELSE (f, g) x =
 
 fun op APPEND (f, g) x =
   append (f x) (make (fn () => pull (g x)));
+
 
 fun EVERY fs = fold_rev (curry op THEN) fs succeed;
 fun FIRST fs = fold_rev (curry op ORELSE) fs fail;
