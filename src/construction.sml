@@ -3,14 +3,14 @@ import "cspace";
 signature CONSTRUCTION =
 sig
   type ut = {token : CSpace.token, configurator : CSpace.configurator}
-  datatype construction = Construct of ut * construction list
+  datatype construction = TCPair of ut * construction list
                         | Loop of CSpace.token
                         | Source of CSpace.token ;
   type trail;
 
   val same : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
-  val wellFormed : construction -> bool;
+  val wellFormed : TypeSystem.typeSystem -> construction -> bool;
   val almostWellFormed : construction -> bool;
   val grounded : construction -> bool;
 
@@ -35,7 +35,7 @@ struct
 
   type ut = {token : CSpace.token, configurator : CSpace.configurator}
   datatype construction =
-      Construct of ut * construction list
+      TCPair of ut * construction list
     | Loop of CSpace.token
     | Source of CSpace.token ;
   datatype vertex = Token of CSpace.token | Configurator of CSpace.configurator
@@ -44,7 +44,7 @@ struct
 
   fun same (Source t) (Source t') = CSpace.sameTokens t t'
     | same (Loop t) (Loop t') = CSpace.sameTokens t t'
-    | same (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
+    | same (TCPair ({token = t, configurator = u}, cs)) (TCPair ({token = t', configurator = u'}, cs')) =
         CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
         andalso List.allZip same cs cs'
     | same _ _ = false
@@ -52,15 +52,15 @@ struct
 
   fun constructOf (Source t) = t
     | constructOf (Loop t) = t
-    | constructOf (Construct ({token, ...}, _)) = token
+    | constructOf (TCPair ({token, ...}, _)) = token
 
   fun grounded (Source _) = false
     | grounded (Loop _) = false
-    | grounded (Construct (_, cs)) = List.all grounded cs
+    | grounded (TCPair (_, cs)) = List.all grounded cs
 
   fun CTS (Source t) = [[Token t]]
     | CTS (Loop t) = [[Token t]]
-    | CTS (Construct ({token, configurator}, cs)) =
+    | CTS (TCPair ({token, configurator}, cs)) =
         if null cs then [[Token token, Configurator configurator]]
         else
           let fun addToAll S = List.map (fn s => [Token token, Configurator configurator] @ s) S
@@ -69,18 +69,18 @@ struct
 
   fun CTS_lossless (Source t) = [[Source t]]
     | CTS_lossless (Loop t) = [[Loop t]]
-    | CTS_lossless (Construct ({token, configurator}, cs)) =
-        if null cs then [[(Construct ({token = token, configurator = configurator}, []))]]
+    | CTS_lossless (TCPair ({token, configurator}, cs)) =
+        if null cs then [[(TCPair ({token = token, configurator = configurator}, []))]]
         else
-          let fun addToAll S = List.map (fn s => Construct ({token = token, configurator = configurator}, cs) :: s) S
+          let fun addToAll S = List.map (fn s => TCPair ({token = token, configurator = configurator}, cs) :: s) S
           in List.maps (addToAll o CTS_lossless) cs
           end
 
   exception EmptyInputSequence
   fun pseudoCTS (Source t) = [[Source t]]
     | pseudoCTS (Loop t) = [[Loop t]]
-    | pseudoCTS (Construct (ut,cs)) =
-        let fun addToFirst (s::S) = (Construct (ut,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(Construct (ut,cs))]]*)
+    | pseudoCTS (TCPair (ut,cs)) =
+        let fun addToFirst (s::S) = (TCPair (ut,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(TCPair (ut,cs))]]*)
         in List.maps (addToFirst o pseudoCTS) cs
         end
 
@@ -91,17 +91,17 @@ struct
     let
       fun strongCoh (Source t) (Source t') = CSpace.sameTokens t t'
         | strongCoh (Loop t) (Loop t') = CSpace.sameTokens t t'
-        | strongCoh (Construct ({token = t, configurator = u}, q)) (Construct ({token = t', configurator = u'}, q')) =
+        | strongCoh (TCPair ({token = t, configurator = u}, q)) (TCPair ({token = t', configurator = u'}, q')) =
             CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u' andalso List.allZip strongCoh q q'
-        | strongCoh (Construct ({token = t, ...}, _)) (Loop t') = CSpace.sameTokens t t'
-        | strongCoh (Loop t') (Construct ({token = t, ...}, _)) = CSpace.sameTokens t t'
+        | strongCoh (TCPair ({token = t, ...}, _)) (Loop t') = CSpace.sameTokens t t'
+        | strongCoh (Loop t') (TCPair ({token = t, ...}, _)) = CSpace.sameTokens t t'
         | strongCoh _ _ = false
-      fun weakCoh (c as Construct ({token = t, ...}, _)) (c' as Construct ({token = t', ...}, _)) =
+      fun weakCoh (c as TCPair ({token = t, ...}, _)) (c' as TCPair ({token = t', ...}, _)) =
             not (CSpace.sameTokens t t') orelse strongCoh c c'
             (*else List.all (weakCoh c) q' andalso List.all (weakCoh c') q*)
         (* the following 4 cases just make sure that there's no source somewhere that appears as a non-source somewhere else*)
-        | weakCoh (Construct ({token = t, ...}, _)) (Source t') = not (CSpace.sameTokens t t')
-        | weakCoh (Source t') (Construct ({token = t, ...}, _)) = not (CSpace.sameTokens t t')
+        | weakCoh (TCPair ({token = t, ...}, _)) (Source t') = not (CSpace.sameTokens t t')
+        | weakCoh (Source t') (TCPair ({token = t, ...}, _)) = not (CSpace.sameTokens t t')
         | weakCoh (Loop t) (Source t') = not (CSpace.sameTokens t t')
         | weakCoh (Source t') (Loop t) = not (CSpace.sameTokens t t')
         | weakCoh _ _ = true
@@ -113,17 +113,26 @@ struct
     in compareFromCTS (pseudoCTS c) handle EmptyInputSequence => false
     end
 
+  fun specialises T [] [] = true
+    | specialises T (ty::tys) (ty'::tys') = (#subType T) (ty, ty') andalso specialises T tys tys'
+    | specialises _ _ = false
   (* the datatype construction itself is not a perfect representation of constructions.
      The following function makes sure that they are well formed, by checking that Loops
      are actually loops and that non-Loops are not forming loops.*)
-  fun wellFormed c =
-    let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
-          | correctLoops tr (Loop t) = List.exists (fn x => #token x = t) tr
-          | correctLoops tr (Construct (ut, cs)) =
-              List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
-                      andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
-              andalso List.all (correctLoops (ut :: tr)) cs
-    in correctLoops [] c andalso coherent c
+  fun wellFormed T c =
+    let fun correctLoopsAndTypes tr (Source t) = not (List.exists (fn x => #token x = t) tr)
+          | correctLoopsAndTypes tr (Loop t) = List.exists (fn x => #token x = t) tr
+          | correctLoopsAndTypes tr (TCPair (ut, cs)) =
+            let val typesOfInducedConstructs = map (CSpace.typeOfToken o constructOf) cs
+                val (typesOfConfigurator,ty) = CSpace.typesOfConfigurator (#configurator ut)
+                val typeOfConstruct = CSpace.typeOfToken (#token ut)
+            in (#subType T) (typeOfConstruct, ty)
+                andalso specialises T (typesOfInducedConstructs) typesOfConfigurator
+                andalso List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
+                                  andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
+                andalso List.all (correctLoopsAndTypes (ut :: tr)) cs
+            end
+    in correctLoopsAndTypes [] c andalso coherent c
     end;
   exception MalformedConstructionTerm;
 
@@ -133,7 +142,7 @@ struct
   fun almostWellFormed c =
     let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
           | correctLoops _ (Loop _) = true
-          | correctLoops tr (Construct (ut, cs)) =
+          | correctLoops tr (TCPair (ut, cs)) =
               List.all (fn x => not (CSpace.sameTokens (#token x) (#token ut))
                         andalso not (CSpace.sameConfigurators (#configurator x) (#configurator ut))) tr
               andalso List.all (correctLoops (ut :: tr)) cs
@@ -147,10 +156,10 @@ struct
 
   fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
     | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
-    | isGenerator (Construct ({token = t, configurator = u}, cs)) (Construct ({token = t', configurator = u'}, cs')) =
+    | isGenerator (TCPair ({token = t, configurator = u}, cs)) (TCPair ({token = t', configurator = u'}, cs')) =
         CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
         andalso List.allZip isGenerator cs cs'
-    | isGenerator (Source t) (Construct ({token, ...}, _)) =
+    | isGenerator (Source t) (TCPair ({token, ...}, _)) =
         CSpace.sameTokens t token
     | isGenerator (Source t) (Loop t') =
         CSpace.sameTokens t t'
@@ -165,16 +174,16 @@ struct
         if CSpace.sameTokens t t'
         then Source t
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) (Token token'::Configurator configurator'::tr) =
+    | inducedConstruction (TCPair ({token = token, configurator = configurator}, cs)) (Token token'::Configurator configurator'::tr) =
         if CSpace.sameTokens token token' andalso CSpace.sameConfigurators configurator configurator'
         then let fun ic (c::C) = (inducedConstruction c tr handle badTrail => ic C)
                    | ic [] = raise badTrail
-             in if null tr then Construct ({token = token, configurator = configurator}, cs) else ic cs
+             in if null tr then TCPair ({token = token, configurator = configurator}, cs) else ic cs
              end
         else raise badTrail
-    | inducedConstruction (Construct ({token = token, configurator = configurator}, cs)) [Token t'] =
+    | inducedConstruction (TCPair ({token = token, configurator = configurator}, cs)) [Token t'] =
         if CSpace.sameTokens token t'
-        then Construct ({token = token, configurator = configurator}, cs)
+        then TCPair ({token = token, configurator = configurator}, cs)
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
 
@@ -185,8 +194,8 @@ struct
     let
       fun fic _ (Source t) = (Source t)
         | fic tr (Loop t) = if List.exists (fn x => #token x = t) tr then Loop t else Source t
-        | fic tr (Construct (ut, cs)) =
-            Construct (ut, map (fic (ut::tr)) cs)
+        | fic tr (TCPair (ut, cs)) =
+            TCPair (ut, map (fic (ut::tr)) cs)
     in fic [] c
     end
 
@@ -195,10 +204,10 @@ struct
   fun renameConstruct ct t' =
     let fun rc _ (Source t)  = Source t
           | rc originalConstruct (Loop t) = if CSpace.sameTokens t originalConstruct then Loop t' else Loop t
-          | rc originalConstruct (Construct (ut, cs)) = Construct (ut, map (rc originalConstruct) cs)
+          | rc originalConstruct (TCPair (ut, cs)) = TCPair (ut, map (rc originalConstruct) cs)
     in case ct of Source _ => Source t'
                 | Loop _ => raise BadConstruction
-                | Construct ({token = t,configurator = u}, cs) => Construct ({token = t',configurator = u}, map (rc t) cs)
+                | TCPair ({token = t,configurator = u}, cs) => TCPair ({token = t',configurator = u}, map (rc t) cs)
     end
 
 
@@ -209,12 +218,12 @@ struct
   fun tokensOfConstruction ct =
     let fun toc (Source t) = [t]
           | toc (Loop _) = []
-          | toc (Construct ({token, ...}, cs)) = token :: List.maps toc cs
+          | toc (TCPair ({token, ...}, cs)) = token :: List.maps toc cs
     in removeRepetition CSpace.sameTokens (toc ct)
     end
 
   fun toString (Source t) = CSpace.stringOfToken t
     | toString (Loop t) = "Loop " ^ (CSpace.stringOfToken t)
-    | toString (Construct ({token,configurator}, cs)) =
+    | toString (TCPair ({token,configurator}, cs)) =
        CSpace.stringOfToken token ^ "_" ^ CSpace.stringOfConfigurator configurator ^ "(" ^ String.concat (map toString cs) ^ ")"
 end;

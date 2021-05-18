@@ -9,7 +9,7 @@ sig
 
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
-  val wellFormedComposition : composition -> bool;
+  val wellFormedComposition : TypeSystem.typeSystem -> composition -> bool;
 
   val initFromConstruction : construction -> composition;
   val attachConstructionAt : composition -> construction -> CSpace.token -> composition;
@@ -33,12 +33,12 @@ struct
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
 
-  fun wellFormedComposition (Composition {construct,attachments}) =
+  fun wellFormedComposition T (Composition {construct,attachments}) =
     let
       fun wfds ((ct,Ds)::L) =
-            Construction.wellFormed ct
+            Construction.wellFormed T ct
             andalso List.allZip CSpace.sameTokens (foundationSequence ct) (map constructOfComposition Ds)
-            andalso List.all wellFormedComposition Ds
+            andalso List.all (wellFormedComposition T) Ds
             andalso wfds L
         | wfds [] =  true
       val constructsOfAttachments = map (constructOf o #1) attachments

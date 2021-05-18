@@ -5,17 +5,24 @@ import "type";
   cspace are different if and only if their string type pairs are different.*)
 signature CSPACE =
 sig
-  type constructor;
+  type ctyp
+  type constructor
   (*datatype atom = Token of string | Variable of string;*)
-  type token;(* = string * TypeSystem.typ;*)
-  type configurator;
+  type token(* = string * TypeSystem.typ;*)
+  type configurator
 
-  val makeToken : string -> TypeSystem.typ -> token;
-  val sameConstructors : constructor -> constructor -> bool;
-  val sameConfigurators : configurator -> configurator -> bool;
-  val sameTokens : token -> token -> bool;
-  val nameOfToken : token -> string;
-  val typeOfToken : token -> TypeSystem.typ;
+  val makeCTyp : TypeSystem.typ list * TypeSystem.typ -> ctyp
+  val makeConstructor : string * ctyp -> constructor
+  val makeConfigurator : string * constructor -> configurator
+  val makeToken : string -> TypeSystem.typ -> token
+
+  val spec : constructor -> ctyp
+  val typesOfConfigurator : configurator -> ctyp
+  val sameConstructors : constructor -> constructor -> bool
+  val sameConfigurators : configurator -> configurator -> bool
+  val sameTokens : token -> token -> bool
+  val nameOfToken : token -> string
+  val typeOfToken : token -> TypeSystem.typ
   val stringOfToken : token -> string
   val stringOfConstructor : constructor -> string
   val stringOfConfigurator : configurator -> string
@@ -24,12 +31,19 @@ end;
 
 structure CSpace : CSPACE =
 struct
-  type constructor = string * (TypeSystem.typ list * TypeSystem.typ);
+  type ctyp = TypeSystem.typ list * TypeSystem.typ
+  type constructor = string * ctyp
   (*datatype atom = Token of string | Variable of string;*)
-  type token = string * TypeSystem.typ;
-  type configurator = string * constructor;
+  type token = string * TypeSystem.typ
+  type configurator = string * constructor
 
+  fun makeCTyp x = x
+  fun makeConstructor x = x
+  fun makeConfigurator x = x
   fun makeToken s ty = (s,ty)
+
+  fun spec (s,ctyp) = ctyp
+  fun typesOfConfigurator (u,c) = spec c
 
   fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso TypeSystem.equal ty ty' andalso List.allZip TypeSystem.equal tyL tyL');
   fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructors c c');
@@ -38,8 +52,8 @@ struct
   fun typeOfToken (_,ty) = ty;
 
   fun stringOfToken (t,ty) = t ^ " : " ^ (TypeSystem.stringOfType ty)
-  fun stringOfConstructor (c,(tys,ty)) = c ^ " : " ^ (String.addSquareBrackets (String.stringOfList TypeSystem.stringOfType tys)) ^ " -> " ^ (TypeSystem.stringOfType ty)
-  fun stringOfConfigurator (u,(c,_)) = u ^ "::" ^ c
+  fun stringOfConstructor (c,(tys,ty)) = c ^ "::" ^ (String.addSquareBrackets (String.stringOfList TypeSystem.stringOfType tys)) ^ " -> " ^ (TypeSystem.stringOfType ty)
+  fun stringOfConfigurator (u,(c,_)) = u ^ ":" ^ c
   (*
   fun tsystemOf (T,_,_) = T
 

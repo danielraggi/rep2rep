@@ -23,7 +23,7 @@ struct
 
   fun matches T (Source t) (Source t') = tokenMatches T t t'
     | matches _ (Loop _) (Loop _) = true (* assumes this has been checked before *)
-    | matches T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
+    | matches T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
         CSpace.sameConfigurators u u'
         andalso tokenMatches T t t'
         andalso List.allZip (matches T) cs cs'
@@ -32,11 +32,11 @@ struct
   (* genertorMatches T c c' checks whether a generator of c matches the pattern c' exists*)
   fun generatorMatches T (Source t) (Source t') = tokenMatches T t t'
     | generatorMatches _ (Loop _) (Loop _) = true (* assumes this has been checked before *)
-    | generatorMatches T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
+    | generatorMatches T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
         CSpace.sameConfigurators u u'
         andalso tokenMatches T t t'
         andalso List.allZip (generatorMatches T) cs cs'
-    | generatorMatches T (Construct ({token = t, ...},_)) (Source t') =
+    | generatorMatches T (TCPair ({token = t, ...},_)) (Source t') =
         tokenMatches T t t'
     | generatorMatches _ _ _ = false
 
@@ -44,17 +44,17 @@ struct
   (* genertorMatches T c c' checks whether a generator of c matches the pattern c' exists*)
   fun findGeneratorMatching T (Source t) (Source t') = if tokenMatches T t t' then SOME (Source t) else NONE
     | findGeneratorMatching _ (Loop t) (Loop _) = SOME (Loop t) (* assumes this has been checked before *)
-    | findGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
+    | findGeneratorMatching T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
       if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
       then
         let val CH = List.funZip (findGeneratorMatching T) cs cs'
             fun ss (SOME x ::t) = x :: ss t
               | ss (NONE :: _) = raise NoMatchingGenerator
               | ss [] = []
-        in SOME (Construct ({token = t, configurator = u},ss CH)) handle NoMatchingGenerator => NONE
+        in SOME (TCPair ({token = t, configurator = u},ss CH)) handle NoMatchingGenerator => NONE
         end
       else NONE
-    | findGeneratorMatching T (Construct ({token = t, ...},_)) (Source t') =
+    | findGeneratorMatching T (TCPair ({token = t, ...},_)) (Source t') =
         if tokenMatches T t t' then SOME (Source t) else NONE
     | findGeneratorMatching _ _ _ = NONE
 
@@ -64,7 +64,7 @@ struct
         then (fn x => if CSpace.sameTokens x t' then SOME t else NONE, SOME (Source t))
         else (fn _ => NONE, NONE)
     | findMapAndGeneratorMatching _ (Loop t) (Loop _) = (fn _ => NONE, SOME (Loop t)) (* assumes this has been checked before *)
-    | findMapAndGeneratorMatching T (Construct ({token = t, configurator = u},cs)) (Construct ({token = t', configurator = u'},cs')) =
+    | findMapAndGeneratorMatching T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
         if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
         then
           let val CH = List.funZip (findMapAndGeneratorMatching T) cs cs'
@@ -75,10 +75,10 @@ struct
                 | sf [] _ = NONE
               fun f x = if CSpace.sameTokens x t' then SOME t else sf (map #1 CH) x
               val ch = ss (map #2 CH)
-          in (f, SOME (Construct ({token = t, configurator = u}, ch))) handle NoMatchingGenerator => (fn _ => NONE,NONE)
+          in (f, SOME (TCPair ({token = t, configurator = u}, ch))) handle NoMatchingGenerator => (fn _ => NONE,NONE)
           end
         else (fn _ => NONE, NONE)
-    | findMapAndGeneratorMatching T (Construct ({token = t, ...},_)) (Source t') =
+    | findMapAndGeneratorMatching T (TCPair ({token = t, ...},_)) (Source t') =
         if tokenMatches T t t' then (fn x => if CSpace.sameTokens x t' then SOME t else NONE, SOME (Source t)) else (fn _ => NONE,NONE)
     | findMapAndGeneratorMatching _ _ _ = (fn _ => NONE,NONE)
 
@@ -92,20 +92,20 @@ struct
 
   fun findGeneratorMatchingForToken T ct p t =
       if CSpace.sameTokens t (Construction.constructOf ct) then findGeneratorMatching T (Construction.fixInducedConstruction ct) p
-      else (case ct of Construct (_, cs) => findFirstSome (map (fn c => findGeneratorMatchingForToken T c p t) cs)
+      else (case ct of TCPair (_, cs) => findFirstSome (map (fn c => findGeneratorMatchingForToken T c p t) cs)
                                       | _ => NONE)
 
   fun findMapAndGeneratorMatchingForToken T ct p t =
       if CSpace.sameTokens t (Construction.constructOf ct) then findMapAndGeneratorMatching T (Construction.fixInducedConstruction ct) p
-      else (case ct of Construct (_, cs) => findFirstSome' (map (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
+      else (case ct of TCPair (_, cs) => findFirstSome' (map (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
                                       | _ => (fn _ => NONE,NONE))
 
   fun trivial ty = Source (CSpace.makeToken "dummy" ty)
 
   fun applyPartialIsomorpism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
     | applyPartialIsomorpism f (Loop t) = (case f t of NONE => Loop t | SOME x => Loop x)
-    | applyPartialIsomorpism f (Construct ({token = t, configurator = u},cs)) =
-        (case f t of NONE => Construct ({token = t, configurator = u}, map (applyPartialIsomorpism f) cs)
-                  | SOME x => Construct ({token = x, configurator = u}, map (applyPartialIsomorpism f) cs))
+    | applyPartialIsomorpism f (TCPair ({token = t, configurator = u},cs)) =
+        (case f t of NONE => TCPair ({token = t, configurator = u}, map (applyPartialIsomorpism f) cs)
+                  | SOME x => TCPair ({token = x, configurator = u}, map (applyPartialIsomorpism f) cs))
 
 end;
