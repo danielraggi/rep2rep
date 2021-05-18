@@ -115,7 +115,7 @@ struct
 
   fun specialises T [] [] = true
     | specialises T (ty::tys) (ty'::tys') = (#subType T) (ty, ty') andalso specialises T tys tys'
-    | specialises _ _ = false
+    | specialises _ _ _ = false
   (* the datatype construction itself is not a perfect representation of constructions.
      The following function makes sure that they are well formed, by checking that Loops
      are actually loops and that non-Loops are not forming loops.*)
