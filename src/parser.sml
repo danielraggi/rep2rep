@@ -25,11 +25,12 @@ end;
 
 structure Parser : PARSER =
 struct
-  exception ParseError;
+  exception ParseError of string;
+  exception CodeError;
 
   fun breakOnClosingDelimiter (lD,rD) s =
     let
-      fun bcb _ [] = raise ParseError
+      fun bcb _ [] = raise ParseError s
         | bcb (p,s,c) (x::xs) =
             let val p' = if x = #"(" then p+1 else (if x = #")" then p-1 else p)
                 val s' = if x = #"[" then s+1 else (if x = #"]" then s-1 else s)
@@ -39,7 +40,7 @@ struct
       val triple = if rD = #")" then (1,0,0)
                     else if rD = #"]" then (0,1,0)
                     else if rD = #"}" then (0,0,1)
-                    else raise ParseError
+                    else raise CodeError
     in bcb triple (String.explode s)
     end;
 (*)
@@ -92,17 +93,17 @@ struct
   fun boolfun eq f s x = List.exists (eq x) (List.map f (splitLevel (String.explode (String.removeBraces s))))
   fun typ s = TypeSystem.typeOfString s
   fun token s = case String.breakOn ":" (String.stripSpaces s) of (ts,_,tys) => CSpace.makeToken ts (typ tys)
-  fun ctyp s = let val (ty::tys) = rev (list typ (String.stripSpaces s)) in (rev tys,ty) end (*case String.breakOn "->" (String.stripSpaces s) of (tyss,_,tys) => (list typ tyss, typ tys)*)
+  fun ctyp s = let val (ty::tys) = list typ (String.stripSpaces s) in (tys,ty) end (*case String.breakOn "->" (String.stripSpaces s) of (tyss,_,tys) => (list typ tyss, typ tys)*)
   fun constructor s = case String.breakOn ":" (String.stripSpaces s) of (cs,_,ctys) => CSpace.makeConstructor (cs, ctyp ctys)
   fun configurator s = case String.breakOn ":" (String.stripSpaces s) of (us,_,ccs) => CSpace.makeConfigurator (us, constructor ccs)
   fun tcpair s = case String.breakOn "<-" (String.stripSpaces s) of (ts,_,cfgs) => {token = token ts, configurator = configurator cfgs}
 
   fun pair (f,g) s =
-    let val [x,y] = splitLevel (String.explode (String.removeParens s))
+    let val (x,y) = (case splitLevel (String.explode (String.removeParens s)) of [x,y] => (x,y) | _ => raise ParseError (s ^ " not a pair"))
     in (f x, g y)
     end
 
-  fun boolean s = if s = "true" then true else if s = "false" then false else raise ParseError
+  fun boolean s = if s = "true" then true else if s = "false" then false else raise ParseError (s ^ " not boolean")
 
   exception undefined
   fun functionFromPairs (f,g) eq (s::ss) x =
@@ -111,14 +112,14 @@ struct
 
   fun finiteTypeSystem s =
     let val s' = String.stripSpaces s
-        val L = if String.isPrefix "(" s' then String.explode (String.removeParens s') else raise ParseError
-        val [Tys,subTys] = splitLevel L
+        val L = if String.isPrefix "(" s' then String.explode (String.removeParens s') else raise ParseError (s ^ " not a type system")
+        val (Tys,subTys) = (case splitLevel L of [x,y] => (x,y) | _ => raise ParseError (s ^ " not a type system"))
         val finTy = finiteSet typ Tys
         val Ty = set typ Tys
         fun eq (x,y) (x',y') = TypeSystem.equal x x' andalso TypeSystem.equal y y'
         val subType' = boolfun eq (pair (typ,typ)) subTys
         val {subType,...} = TypeSystem.fixFiniteSubTypeFunction {Ty = finTy, subType = subType'}
-    in {Ty = Ty, subType = subType} handle Bind => raise ParseError
+    in {Ty = Ty, subType = subType}
     end;
 
   fun construction s =
@@ -133,24 +134,25 @@ struct
         | (tcps,_,ss) =>
             let val tcp = tcpair tcps
                 val tok = #token tcp
-                val (xs,[]) = breakOnClosingDelimiter (#"[",#"]") ss
+                val (xs,ys) = breakOnClosingDelimiter (#"[",#"]") ss
+                val _ = if ys = [] then () else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, map ((c (tok::tacc)) o String.removeParens) (splitLevel xs))
             end
-    in c [] (String.stripSpaces s) handle Bind => raise ParseError
+    in c [] (String.stripSpaces s)
     end;
   fun pattern s = construction s;
 
   fun relation s = Relation.make s
   fun relationship s =
-    let val (ss,_,Rs) = String.breakOn "::" (String.stripSpaces s)
-        val [xs,ys] = splitLevel (String.explode (String.removeParens ss))
+    let val (ss,sep,Rs) = String.breakOn "::" (String.stripSpaces s)
+        val _ = if sep = "::" then () else raise ParseError ("missing :: in relation expression: " ^ s)
+        val (xs,ys) = (case splitLevel (String.explode (String.removeParens ss)) of [x,y] => (x,y) | _ => raise ParseError ("non-binary relation expression: " ^ s))
     in Relation.makeRelationship (list token xs,list token ys,relation Rs)
-        handle Bind => raise ParseError
     end
 
   fun correspondence s =
     let val ss = String.removeParens (String.stripSpaces s)
-        val [sPs,tPs,fRss,cRs] = splitLevel (String.explode ss)
+        val (sPs,tPs,fRss,cRs) = (case splitLevel (String.explode ss) of [w,x,y,z] => (w,x,y,z) | _ => raise ParseError ("invalid correspondence expression: " ^ s))
         val sP = pattern sPs
         val tP = pattern tPs
         val fRs = list relationship fRss
