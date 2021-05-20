@@ -4,7 +4,7 @@ import "relation";
 signature CORRESPONDENCE =
 sig
   type corr;
-  val wellFormed : corr -> bool;
+  val wellFormed : TypeSystem.typeSystem -> TypeSystem.typeSystem -> corr -> bool;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
   val ofRelation : Relation.T -> corr;
@@ -22,13 +22,14 @@ struct
                constructRel : Relation.relationship};
 
   exception badForm
-  fun wellFormed {sourcePattern,targetPattern,foundationRels,constructRel} =
+  fun wellFormed sT tT {sourcePattern,targetPattern,foundationRels,constructRel} =
     let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] _ = true
         fun okAtFoundations ((sfseq,tfseq,_)::rfs) = inFoundations sfseq (Pattern.foundationSequence sourcePattern) andalso inFoundations tfseq (Pattern.foundationSequence targetPattern) andalso okAtFoundations rfs
           | okAtFoundations [] = true
        fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false
-    in okAtConstructs constructRel andalso okAtFoundations foundationRels
+    in Pattern.wellFormed sT sourcePattern andalso Pattern.wellFormed tT targetPattern
+        andalso okAtConstructs constructRel andalso okAtFoundations foundationRels
     end
 
   fun patternsOf {sourcePattern,targetPattern,...} = (sourcePattern,targetPattern);
@@ -42,7 +43,7 @@ struct
         val tP = (Pattern.trivial (TypeSystem.any))
         val sPc = Pattern.constructOf sP
         val tPc = Pattern.constructOf tP
-    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.make ([sPc],[tPc],R)}
+    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
     end;
 
 end;

@@ -14,10 +14,11 @@ sig
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
   val finiteTypeSystem : string -> TypeSystem.typeSystem
-  (*val pattern : string -> Pattern.construction
+  val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
   val correspondence : string -> Correspondence.corr
+  (*
   val knowledge : string -> Knowledge.base
   val state : string -> State.T*)
 end;
@@ -69,8 +70,24 @@ struct
     end;
 
 
-  fun list f s = String.splitStripApply f "," (String.removeSquareBrackets s)
-  fun finiteSet f s = FiniteSet.ofList (String.splitStripApply f "," (String.removeBraces s))
+  fun splitLevelApply f L =
+    let
+      fun sl _ [] = [[]]
+        | sl (p,s,c) (x::xs) =
+            let val p' = if x = #"(" then p+1 else (if x = #")" then p-1 else p)
+                val s' = if x = #"[" then s+1 else (if x = #"]" then s-1 else s)
+                val c' = if x = #"{" then c+1 else (if x = #"}" then c-1 else c)
+                val slr = sl (p',s',c') xs
+            in
+              if (p',s',c') = (0,0,0) then if x = #"," then []::slr
+                                            else (case slr of (L::LL) => (x::L) :: LL)
+              else (case slr of (L::LL) => (x::L) :: LL)
+            end
+    in List.map (f o String.implode) (sl (0,0,0) L)
+    end;
+
+  fun list f s = (splitLevelApply f (String.explode (String.removeSquareBrackets s)))
+  fun finiteSet f s = FiniteSet.ofList (splitLevelApply f (String.explode (String.removeBraces s)))
   fun set f s = Set.ofList (String.splitStripApply f "," ( String.removeBraces s))
   fun boolfun eq f s x = List.exists (eq x) (List.map f (splitLevel (String.explode (String.removeBraces s))))
   fun typ s = TypeSystem.typeOfString s
@@ -121,7 +138,27 @@ struct
             end
     in c [] (String.stripSpaces s) handle Bind => raise ParseError
     end;
+  fun pattern s = construction s;
 
+  fun relation s = Relation.make s
+  fun relationship s =
+    let val (ss,_,Rs) = String.breakOn "::" (String.stripSpaces s)
+        val [xs,ys] = splitLevel (String.explode (String.removeParens ss))
+    in Relation.makeRelationship (list token xs,list token ys,relation Rs)
+        handle Bind => raise ParseError
+    end
 
-
+  fun correspondence s =
+    let val ss = String.removeParens (String.stripSpaces s)
+        val [sPs,tPs,fRss,cRs] = splitLevel (String.explode ss)
+        val sP = pattern sPs
+        val tP = pattern tPs
+        val fRs = list relationship fRss
+        val cR = relationship cRs
+        val corr = {sourcePattern = sP,
+                    targetPattern = tP,
+                    foundationRels = fRs,
+                    constructRel = cR}
+    in Correspondence.declareCorrespondence corr
+    end
 end;
