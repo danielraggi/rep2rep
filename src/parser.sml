@@ -64,8 +64,8 @@ struct
                 val slr = sl (p',s',c') xs
             in
               if (p',s',c') = (0,0,0) then if x = #"," then []::slr
-                                            else (case slr of (L::LL) => (x::L) :: LL)
-              else (case slr of (L::LL) => (x::L) :: LL)
+                                            else (case slr of (L::LL) => (x::L) :: LL | _ => raise CodeError)
+              else (case slr of (L::LL) => (x::L) :: LL | _ => raise CodeError)
             end
     in List.map String.implode (sl (0,0,0) L)
     end;
@@ -81,8 +81,8 @@ struct
                 val slr = sl (p',s',c') xs
             in
               if (p',s',c') = (0,0,0) then if x = #"," then []::slr
-                                            else (case slr of (L::LL) => (x::L) :: LL)
-              else (case slr of (L::LL) => (x::L) :: LL)
+                                            else (case slr of (L::LL) => (x::L) :: LL | _ => raise CodeError)
+              else (case slr of (L::LL) => (x::L) :: LL | _ => raise CodeError)
             end
     in List.map (f o String.implode) (sl (0,0,0) L)
     end;
@@ -93,7 +93,7 @@ struct
   fun boolfun eq f s x = List.exists (eq x) (List.map f (splitLevel (String.explode (String.removeBraces s))))
   fun typ s = TypeSystem.typeOfString s
   fun token s = case String.breakOn ":" (String.stripSpaces s) of (ts,_,tys) => CSpace.makeToken ts (typ tys)
-  fun ctyp s = let val (ty::tys) = list typ (String.stripSpaces s) in (tys,ty) end (*case String.breakOn "->" (String.stripSpaces s) of (tyss,_,tys) => (list typ tyss, typ tys)*)
+  fun ctyp s = case list typ (String.stripSpaces s) of (ty::tys) => (tys,ty) | _ => raise ParseError ("bad constructor spec: " ^ s)
   fun constructor s = case String.breakOn ":" (String.stripSpaces s) of (cs,_,ctys) => CSpace.makeConstructor (cs, ctyp ctys)
   fun configurator s = case String.breakOn ":" (String.stripSpaces s) of (us,_,ccs) => CSpace.makeConfigurator (us, constructor ccs)
   fun tcpair s = case String.breakOn "<-" (String.stripSpaces s) of (ts,_,cfgs) => {token = token ts, configurator = configurator cfgs}
