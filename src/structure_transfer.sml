@@ -48,9 +48,9 @@ struct
      vertices in the composition.  *)
   fun instantiateCorrForStateAndGoal corr st goal =
     let
-      val ([sourceToken],[targetToken],_) = case Relation.tupleOfRelationship goal of
-                                                  ([x],[y],R) => ([x],[y],R)
-                                                | _ => raise CorrespondenceNotApplicable (* assumes Rc is subrelation of Rg*)
+      val (sourceToken,targetToken) = (case Relation.tupleOfRelationship goal of
+                                          ([x],[y],_) => (x,y)
+                                        | _ => raise CorrespondenceNotApplicable) (* assumes Rc is subrelation of Rg*)
       val (rfs,rc) = Correspondence.relationshipsOf corr
       val ct = State.constructionOf st
       val T = #typeSystem st
@@ -72,9 +72,9 @@ struct
 
   exception Error
   fun applyCorrespondenceForGoal st corr goal =
-    let val (_,[targetToken],Rg) = case Relation.tupleOfRelationship goal of
-                                                  ([x],[y],R) => ([x],[y],R)
-                                                | _ => raise CorrespondenceNotApplicable
+    let val (targetToken,Rg) = (case Relation.tupleOfRelationship goal of
+                                  ([x],[y],R) => (y,R)
+                                | _ => raise CorrespondenceNotApplicable)
         val (_,(_,_,Rc)) = Correspondence.relationshipsOf corr
         val instantiatedCorr = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
                                then instantiateCorrForStateAndGoal corr st goal
