@@ -51,9 +51,9 @@ struct
   fun nameOfToken (t,_) = t;
   fun typeOfToken (_,ty) = ty;
 
-  fun stringOfToken (t,ty) = t ^ " : " ^ (TypeSystem.stringOfType ty)
-  fun stringOfConstructor (c,(tys,ty)) = c ^ "::" ^ (String.addSquareBrackets (String.stringOfList TypeSystem.stringOfType tys)) ^ " -> " ^ (TypeSystem.stringOfType ty)
-  fun stringOfConfigurator (u,(c,_)) = u ^ ":" ^ c
+  fun stringOfToken (t,ty) = t ^ ":" ^ (TypeSystem.stringOfType ty)
+  fun stringOfConstructor (c,(tys,ty)) = c ^ ":" ^ (String.stringOfList TypeSystem.stringOfType (ty::tys))
+  fun stringOfConfigurator (u,cc) = u ^ ":" ^ stringOfConstructor cc
   (*
   fun tsystemOf (T,_,_) = T
 

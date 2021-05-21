@@ -223,7 +223,7 @@ struct
     end
 
   fun toString (Source t) = CSpace.stringOfToken t
-    | toString (Loop t) = "Loop " ^ (CSpace.stringOfToken t)
+    | toString (Loop t) = CSpace.stringOfToken t
     | toString (TCPair ({token,configurator}, cs)) =
-       CSpace.stringOfToken token ^ "_" ^ CSpace.stringOfConfigurator configurator ^ "(" ^ String.concat (map toString cs) ^ ")"
+       CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConfigurator configurator ^ " <-" ^ (String.stringOfList toString cs)
 end;
