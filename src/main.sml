@@ -43,8 +43,8 @@ fun main () =
                                ^ version ^ "\n");
       val (ctName, numAlternatives, corrDir') = parseArgs ();
       val corrDir = case corrDir' of SOME d => d
-                                   | NONE => "corrs/";
-      val corrFiles = filesMatchingPrefix corrDir "corr_";
+                                   | NONE => "descriptions/";
+      val corrFiles = filesMatchingPrefix corrDir "corr";
 
   in ()
   end

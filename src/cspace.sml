@@ -17,6 +17,7 @@ sig
   val makeToken : string -> TypeSystem.typ -> token
 
   val spec : constructor -> ctyp
+  val constructorOfConfigurator : configurator -> constructor;
   val typesOfConfigurator : configurator -> ctyp
   val sameConstructors : constructor -> constructor -> bool
   val sameConfigurators : configurator -> configurator -> bool
@@ -43,9 +44,11 @@ struct
   fun makeToken s ty = (s,ty)
 
   fun spec (s,ctyp) = ctyp
+  fun constructorOfConfigurator (_,c) = c
   fun typesOfConfigurator (u,c) = spec c
 
-  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) = (n = n' andalso TypeSystem.equal ty ty' andalso List.allZip TypeSystem.equal tyL tyL');
+  fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) =
+    (n = n' andalso TypeSystem.equal ty ty' andalso List.allZip TypeSystem.equal tyL tyL');
   fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructors c c');
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso TypeSystem.equal ty ty');
   fun nameOfToken (t,_) = t;

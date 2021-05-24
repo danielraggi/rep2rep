@@ -3,12 +3,14 @@ import "knowledge";
 signature STATE =
 sig
   type T;
-  val typeSystemOf : T -> TypeSystem.typeSystem;
+  val sourceTypeSystemOf : T -> TypeSystem.typeSystem;
+  val targetTypeSystemOf : T -> TypeSystem.typeSystem;
   val constructionOf : T -> Construction.construction;
   val goalsOf : T -> Relation.relationship list;
   val patternCompOf : T -> Composition.composition;
   val knowledgeOf : T -> Knowledge.base;
-  val make : {typeSystem : TypeSystem.typeSystem,
+  val make : {sourceTypeSystem : TypeSystem.typeSystem,
+              targetTypeSystem : TypeSystem.typeSystem,
               construction : Construction.construction,
               goals : Relation.relationship list,
               composition : Composition.composition,
@@ -22,13 +24,15 @@ end;
 
 structure State : STATE =
 struct
-  type T = {typeSystem : TypeSystem.typeSystem,
+  type T = {sourceTypeSystem : TypeSystem.typeSystem,
+            targetTypeSystem : TypeSystem.typeSystem,
             construction : Construction.construction,
             goals : Relation.relationship list,
             composition : Composition.composition,
             knowledge : Knowledge.base};
 
-  fun typeSystemOf {typeSystem,...} = typeSystem;
+  fun sourceTypeSystemOf {sourceTypeSystem,...} = sourceTypeSystem;
+  fun targetTypeSystemOf {targetTypeSystem,...} = targetTypeSystem;
   fun constructionOf {construction,...} = construction;
   fun goalsOf {goals,...} = goals;
   fun patternCompOf {composition,...} = composition;
@@ -37,14 +41,16 @@ struct
   fun make st = st
 
   fun updatePatternComp st d =
-           {typeSystem = #typeSystem st,
+           {sourceTypeSystem = #sourceTypeSystem st,
+            targetTypeSystem = #targetTypeSystem st,
             construction = #construction st,
             goals = #goals st,
             composition = d,
             knowledge = #knowledge st}
 
   fun updateGoals st gs =
-           {typeSystem = #typeSystem st,
+           {sourceTypeSystem = #sourceTypeSystem st,
+            targetTypeSystem = #targetTypeSystem st,
             construction = #construction st,
             goals = gs,
             composition = #composition st,

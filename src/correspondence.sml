@@ -7,7 +7,7 @@ sig
   val wellFormed : TypeSystem.typeSystem -> TypeSystem.typeSystem -> corr -> bool;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
-  val ofRelation : Relation.T -> corr;
+  val ofRelationship : Relation.relationship -> corr;
   val declareCorrespondence : {sourcePattern : Pattern.construction,
                                targetPattern : Pattern.construction,
                                foundationRels : Relation.relationship list,
@@ -38,12 +38,15 @@ struct
   fun declareCorrespondence x = x;
   (*the following turns a relation between tokens into a correspondence, with Rf being the
     "always true" relation, and Rc being the relation we want.*)
-  fun ofRelation R =
-    let val sP = (Pattern.trivial (TypeSystem.any))
-        val tP = (Pattern.trivial (TypeSystem.any))
-        val sPc = Pattern.constructOf sP
-        val tPc = Pattern.constructOf tP
-    in {sourcePattern = sP, targetPattern = tP, foundationRels = [], constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
+  exception nonBinary
+  fun ofRelationship (xs,ys,R) =
+    let val (sPc,tPc) = case (xs,ys) of ([x],[y]) => (x,y) | _ => raise nonBinary
+        val sP = Pattern.Source sPc
+        val tP = Pattern.Source tPc
+    in {sourcePattern = sP,
+      targetPattern = tP,
+      foundationRels = [],
+      constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
     end;
 
 end;

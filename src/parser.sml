@@ -11,6 +11,7 @@ sig
   val constructor : string -> CSpace.constructor
   val configurator : string -> CSpace.configurator
   val tcpair : string -> {token : CSpace.token, configurator : CSpace.configurator}
+  val splitLevelWithSeparatorApply : (string -> 'a) -> char -> char list -> 'a list
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
   val finiteTypeSystem : string -> TypeSystem.typeSystem
@@ -75,7 +76,7 @@ struct
     end;
 
 
-  fun splitLevelApply f L =
+  fun splitLevelWithSeparatorApply f sep L =
     let
       fun sl _ [] = [[]]
         | sl (p,s,c) (x::xs) =
@@ -84,7 +85,7 @@ struct
                 val c' = if x = #"{" then c+1 else (if x = #"}" then c-1 else c)
                 val slr = sl (p',s',c') xs
             in
-              if (p',s',c') = (0,0,0) then if x = #"," then []::slr
+              if (p',s',c') = (0,0,0) then if x = sep then []::slr
                                             else (case slr of
                                                     (L::LL) => (x::L) :: LL
                                                   | _ => raise CodeError)
@@ -92,6 +93,8 @@ struct
             end
     in List.map (f o String.implode) (sl (0,0,0) L)
     end;
+
+  fun splitLevelApply f L = splitLevelWithSeparatorApply f #"," L;
 
   fun list f = splitLevelApply f o String.explode o String.removeSquareBrackets
   fun finiteSet f = FiniteSet.ofList o splitLevelApply f o String.explode o String.removeBraces
@@ -110,7 +113,7 @@ struct
                     (ts,_,cfgs) => {token = token ts, configurator = configurator cfgs}
 
   fun pair (f,g) s =
-    case splitLevel (String.explode (String.removeParens s)) of
+    case splitLevel (String.explode (String.removeParentheses s)) of
       [x,y] => (f x, g y)
     | _ => raise ParseError (s ^ " not a pair")
 
@@ -127,7 +130,7 @@ struct
   fun finiteTypeSystem s =
     let val s' = String.stripSpaces s
         val L = if String.isPrefix "(" s'
-                then String.explode (String.removeParens s')
+                then String.explode (String.removeParentheses s')
                 else raise ParseError (s ^ " not a type system")
         val (Tys,subTys) = (case splitLevel L of
                               [x,y] => (x,y)
@@ -143,7 +146,7 @@ struct
   fun construction s =
     let
       fun c tacc s' =
-        case String.breakOn "<-[" (String.removeParens s') of
+        case String.breakOn "<-[" (String.removeParentheses s') of
           (ts,"",_) =>
             let val tok = token ts
             in if List.exists (CSpace.sameTokens tok) tacc
@@ -156,7 +159,7 @@ struct
                 val (xs,ys) = breakOnClosingDelimiter (#"[",#"]") ss
                 val _ = if ys = [] then ()
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-            in Construction.TCPair (tcp, splitLevelApply ((c (tok::tacc)) o String.removeParens) xs)
+            in Construction.TCPair (tcp, splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
     in c [] (String.stripSpaces s)
     end;
@@ -166,14 +169,14 @@ struct
   fun relationship s =
     let val (ss,sep,Rs) = String.breakOn "::" (String.stripSpaces s)
         val _ = if sep = "::" then () else raise ParseError ("missing :: in relation expression: " ^ s)
-        val (xs,ys) = (case splitLevel (String.explode (String.removeParens ss)) of
+        val (xs,ys) = (case splitLevel (String.explode (String.removeParentheses ss)) of
                           [x,y] => (x,y)
                         | _ => raise ParseError ("non-binary relation expression: " ^ s))
     in Relation.makeRelationship (list token xs,list token ys,relation Rs)
     end
 
   fun correspondence s =
-    let val ss = String.removeParens (String.stripSpaces s)
+    let val ss = String.removeParentheses (String.stripSpaces s)
         val (sPs,tPs,fRss,cRs) = (case splitLevel (String.explode ss) of
                                     [w,x,y,z] => (w,x,y,z)
                                   | _ => raise ParseError ("invalid correspondence expression: " ^ s))

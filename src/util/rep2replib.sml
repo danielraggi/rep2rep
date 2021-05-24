@@ -318,7 +318,7 @@ sig
     val splitStripApply : (string -> 'a) -> string -> string -> 'a list;
     val breakOn : string -> string -> (string * string * string);
     val removeDelimiters : (string * string) -> string -> string;
-    val removeParens : string -> string;
+    val removeParentheses : string -> string;
     val removeBraces : string -> string;
     val removeSquareBrackets : string -> string;
     val removeDoubleQuotes : string -> string;
@@ -406,7 +406,7 @@ fun removeDelimiters (left, right) s =
                             | SOME chars' => String.implode chars'
     end;
 
-val removeParens = removeDelimiters ("(", ")");
+val removeParentheses = removeDelimiters ("(", ")");
 val removeBraces = removeDelimiters ("{", "}");
 val removeSquareBrackets = removeDelimiters ("[", "]");
 val removeDoubleQuotes = removeDelimiters ("\"", "\"");

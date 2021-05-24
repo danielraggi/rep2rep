@@ -1,17 +1,15 @@
 import "util.sequence";
-import "state";
 
 signature SEARCH =
 sig
-  type state;
-  val sort : (state -> state Seq.seq) -> (state * state -> order) -> int -> state -> state Seq.seq;
+  val sort : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> int -> 'a -> 'a Seq.seq;
 end;
 
 structure Search : SEARCH =
 struct
-  type state = State.T;
 
-(* I think that if the next function returns an ordered sequence, performance of sort should be much better*)
+(* I think that if the next function returns an ordered sequence,
+performance of sort should be much better *)
 fun sort next h n state =
   let
     fun sort' new old i =

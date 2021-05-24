@@ -5,6 +5,7 @@ sig
   include CONSTRUCTION
   type pattern;
 
+  val tokenMatches : TypeSystem.typeSystem -> CSpace.token -> CSpace.token -> bool
   val matches : TypeSystem.typeSystem -> construction -> pattern -> bool;
   val generatorMatches : TypeSystem.typeSystem -> construction -> pattern -> bool;
   val findGeneratorMatching : TypeSystem.typeSystem -> construction -> pattern -> construction option;
@@ -19,12 +20,15 @@ struct
   open Construction
   type pattern = construction;
 
+  fun matchingConfigurators u u' =
+      CSpace.sameConstructors (CSpace.constructorOfConfigurator u) (CSpace.constructorOfConfigurator u')
+
   fun tokenMatches T t t' = (#subType T) (CSpace.typeOfToken t,CSpace.typeOfToken t')
 
   fun matches T (Source t) (Source t') = tokenMatches T t t'
     | matches _ (Loop _) (Loop _) = true (* assumes this has been checked before *)
     | matches T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
-        CSpace.sameConfigurators u u'
+        matchingConfigurators u u'
         andalso tokenMatches T t t'
         andalso List.allZip (matches T) cs cs'
     | matches _ _ _ = false
@@ -33,7 +37,7 @@ struct
   fun generatorMatches T (Source t) (Source t') = tokenMatches T t t'
     | generatorMatches _ (Loop _) (Loop _) = true (* assumes this has been checked before *)
     | generatorMatches T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
-        CSpace.sameConfigurators u u'
+        matchingConfigurators u u'
         andalso tokenMatches T t t'
         andalso List.allZip (generatorMatches T) cs cs'
     | generatorMatches T (TCPair ({token = t, ...},_)) (Source t') =
@@ -45,7 +49,7 @@ struct
   fun findGeneratorMatching T (Source t) (Source t') = if tokenMatches T t t' then SOME (Source t) else NONE
     | findGeneratorMatching _ (Loop t) (Loop _) = SOME (Loop t) (* assumes this has been checked before *)
     | findGeneratorMatching T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
-      if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
+      if matchingConfigurators u u' andalso tokenMatches T t t'
       then
         let val CH = List.funZip (findGeneratorMatching T) cs cs'
             fun ss (SOME x ::t) = x :: ss t
@@ -65,7 +69,7 @@ struct
         else (fn _ => NONE, NONE)
     | findMapAndGeneratorMatching _ (Loop t) (Loop _) = (fn _ => NONE, SOME (Loop t)) (* assumes this has been checked before *)
     | findMapAndGeneratorMatching T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
-        if CSpace.sameConfigurators u u' andalso tokenMatches T t t'
+        if matchingConfigurators u u' andalso tokenMatches T t t'
         then
           let val CH = List.funZip (findMapAndGeneratorMatching T) cs cs'
               fun ss (SOME x ::t) = x :: ss t

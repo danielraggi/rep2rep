@@ -1,12 +1,12 @@
 import "search";
-import "composition";
+import "state";
 
 signature TRANSFER =
 sig
   val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
   val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
   val unfoldState : State.T -> State.T Seq.seq
-  val structureTransfer : Knowledge.base -> TypeSystem.typeSystem -> Construction.construction -> Relation.relationship list -> State.T Seq.seq
+  val structureTransfer : Knowledge.base -> TypeSystem.typeSystem -> TypeSystem.typeSystem -> Construction.construction -> Relation.relationship -> int -> State.T Seq.seq
 
 end;
 
@@ -53,7 +53,7 @@ struct
                                         | _ => raise CorrespondenceNotApplicable) (* assumes Rc is subrelation of Rg*)
       val (rfs,rc) = Correspondence.relationshipsOf corr
       val ct = State.constructionOf st
-      val T = #typeSystem st
+      val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
       val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternComp targetToken
@@ -61,39 +61,73 @@ struct
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
               (f,SOME x) => (Option.valOf o f,x)
             | (_,NONE) => raise CorrespondenceNotApplicable)
-      fun updateRF (sfs,tfs,R) = (map sourceRenamingFunction sfs, map targetRenamingFunction tfs, R)
-      val updatedSourceRelationships = map updateRF rfs
-      val updatedTargetRelationship = updateRF rc
+      fun updateR (sfs,tfs,R) = (map sourceRenamingFunction sfs, map targetRenamingFunction tfs, R)
+      val updatedFoundationRelationships = map updateR rfs
+      val updatedConstructRelationship = updateR rc
     in Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
-                                              foundationRels=updatedSourceRelationships,
-                                              constructRel=updatedTargetRelationship}
+                                              foundationRels=updatedFoundationRelationships,
+                                              constructRel=updatedConstructRelationship}
     end
 
   exception Error
   fun applyCorrespondenceForGoal st corr goal =
-    let val (targetToken,Rg) = (case Relation.tupleOfRelationship goal of
-                                  ([x],[y],R) => (y,R)
-                                | _ => raise CorrespondenceNotApplicable)
-        val (_,(_,_,Rc)) = Correspondence.relationshipsOf corr
+    let val (sourceToken,targetToken,Rg) = (case Relation.tupleOfRelationship goal of
+                                              ([x],[y],R) => (x,y,R)
+                                            | _ => raise CorrespondenceNotApplicable)
+        val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of (_,([x],[y],R)) => (x,y,R) | _ => raise Error)
+        val sT = #sourceTypeSystem st
+        val tT = #targetTypeSystem st
         val instantiatedCorr = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
+                                  andalso Pattern.tokenMatches sT sourceToken stcs (* check order *)
+                                  andalso Pattern.tokenMatches tT ttcs targetToken
                                then instantiateCorrForStateAndGoal corr st goal
                                else raise CorrespondenceNotApplicable
         val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
         val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr
-        val _ = if Relation.sameRelationship rc goal then () else raise Error
         val patternComp = State.patternCompOf st
         val updatedPatternComp = if Composition.isPlaceholder patternComp
-                                   then Composition.initFromConstruction targetPattern
-                                   else Composition.attachConstructionAt patternComp targetPattern targetToken
+                                 then Composition.initFromConstruction targetPattern
+                                 else Composition.attachConstructionAt patternComp targetPattern targetToken
         val stateWithUpdatedGoals = State.replaceGoal st goal rfs
     in State.updatePatternComp stateWithUpdatedGoals updatedPatternComp
     end
 
   fun applyCorrespondence st corr =
     let fun ac [] = Seq.empty
-          | ac (g::gs) = Seq.cons (applyCorrespondenceForGoal st corr g handle CorrespondenceNotApplicable => st) (ac gs)
+          | ac (g::gs) = (Seq.cons (applyCorrespondenceForGoal st corr g) (ac gs)
+                            handle CorrespondenceNotApplicable => ac gs)
     in ac (State.goalsOf st)
+    end
+
+  exception RelationNotApplicable
+  fun applyRelationshipForGoal st rel goal =
+    let val (xgs,ygs,Rg) = Relation.tupleOfRelationship goal
+        val (xs,ys,R) = Relation.tupleOfRelationship rel
+        val sT = #sourceTypeSystem st
+        val tT = #targetTypeSystem st
+        val _ = if Knowledge.subRelation (State.knowledgeOf st) R Rg
+                   andalso List.allZip (Pattern.tokenMatches sT) xgs xs (* check that this line makes sense semantically. I think it does if you interpret relations as being universally quantified on the source relative to the type. *)
+                   andalso List.allZip (Pattern.tokenMatches tT) ys ygs
+                then () else raise RelationNotApplicable
+        val patternComp = State.patternCompOf st
+        fun attachInstantiatedLeaves [y] [yg] =
+              if Composition.isPlaceholder patternComp
+              then Composition.initFromConstruction (Pattern.Source y)
+              else Composition.attachConstructionAt patternComp (Pattern.Source y) yg
+          | attachInstantiatedLeaves (y::Y) (yg::Yg) =
+              Composition.attachConstructionAt (attachInstantiatedLeaves Y Yg) (Pattern.Source y) yg
+          | attachInstantiatedLeaves _ _ = raise Error
+        val updatedPatternComp = attachInstantiatedLeaves ys ygs
+        val stateWithUpdatedGoals = State.replaceGoal st goal []
+    in State.updatePatternComp stateWithUpdatedGoals updatedPatternComp
+    end
+
+  fun applyRelationship st rel =
+    let fun ar [] = Seq.empty
+          | ar (g::gs) = (Seq.cons (applyRelationshipForGoal st rel g) (ar gs)
+                            handle RelationNotApplicable => ar gs)
+    in ar (State.goalsOf st)
     end
 
   (*
@@ -109,21 +143,23 @@ struct
   fun unfoldState st =
     let val KB = State.knowledgeOf st
         val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
+        val rels = FiniteSet.toSeq (Knowledge.relationshipsOf KB)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
-    in Seq.maps (applyCorrespondence st) corrs (*the returned sequence states is disjunctive; one must be satisfied *)
+    in Seq.append (Seq.maps (applyRelationship st) rels) (Seq.maps (applyCorrespondence st) corrs) (*the returned sequence states is disjunctive; one must be satisfied *)
     end
 
-  exception BadGoals
+  exception BadGoal
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-  fun structureTransfer KB T ct goals =
+  fun structureTransfer KB sourceT targetT ct goal limit =
     let
-      val initialState = State.make {typeSystem = T,
+      val t = case Relation.tupleOfRelationship goal of (_,[x],_) => x | _ => raise BadGoal
+      val initialState = State.make {sourceTypeSystem = sourceT,
+                                      targetTypeSystem = targetT,
                                       construction = ct,
-                                      goals = goals,
-                                      composition = Composition.makePlaceholderComposition (CSpace.makeToken "dummy" TypeSystem.any),
+                                      goals = [goal],
+                                      composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
       fun heuristic (st,st') = EQUAL
-      val limit = 10
     in
       Search.sort unfoldState heuristic limit initialState
     end
