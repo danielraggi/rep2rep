@@ -23,8 +23,10 @@ struct
 
   exception badForm
   fun wellFormed sT tT {sourcePattern,targetPattern,foundationRels,constructRel} =
-    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq | inFoundations [] _ = true
-        fun okAtFoundations ((sfseq,tfseq,_)::rfs) = inFoundations sfseq (Pattern.foundationSequence sourcePattern) andalso inFoundations tfseq (Pattern.foundationSequence targetPattern) andalso okAtFoundations rfs
+    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq
+          | inFoundations [] _ = true
+        fun okAtFoundations ((sfseq,tfseq,_)::rfs) = inFoundations (sfseq @ tfseq) ((Pattern.foundationSequence sourcePattern) @ (Pattern.foundationSequence targetPattern))
+                                                      andalso okAtFoundations rfs
           | okAtFoundations [] = true
        fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false

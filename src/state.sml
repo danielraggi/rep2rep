@@ -57,15 +57,14 @@ struct
             knowledge = #knowledge st}
 
   fun replaceGoal st g gs =
-    let fun r [] = [] | r (x::xs) = if Relation.sameRelationship x g then gs @ r xs else x :: r xs
+    let fun r [] = []
+          | r (x::xs) = if Relation.sameRelationship x g
+                        then gs @ r xs
+                        else x :: r xs
         val newGoals = r (#goals st)
     in updateGoals st newGoals
     end
 
-  fun removeGoal st g =
-    let fun r [] = [] | r (x::xs) = if Relation.sameRelationship x g then r xs else x :: r xs
-        val newGoals = r (#goals st)
-    in updateGoals st newGoals
-    end
+  fun removeGoal st g = replaceGoal st g []
 
 end;

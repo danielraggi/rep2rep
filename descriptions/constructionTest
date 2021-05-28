@@ -1,0 +1,5 @@
+t:1plus2plus3 <- u:infixOp:[numExp,numExp,plus,numExp]
+                    <-[t1:1plus2 <- u1:infixOp:[numExp,numExp,plus,numExp]
+                                        <-[t11:1,x2:plus,t12:2],
+                       x1:plus,
+                       t2:3]

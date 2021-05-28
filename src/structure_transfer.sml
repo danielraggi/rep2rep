@@ -13,6 +13,7 @@ end;
 structure Transfer : TRANSFER =
 struct
 
+  exception CorrespondenceNotApplicable
   (*  *)
   fun refreshNamesUpToConstruct ct D t =
     let
@@ -34,11 +35,11 @@ struct
             in f
             end
       fun renameFunction x = if CSpace.sameTokens x t then SOME t else mkRenameFunction names tokensInConstruction x
-      val updatedConstruction = Pattern.applyPartialIsomorpism renameFunction ct
-    in (Option.valOf o renameFunction, updatedConstruction)
+      val updatedConstruction = Pattern.applyMorpism renameFunction ct
+    in (renameFunction, updatedConstruction)
     end
 
-  exception CorrespondenceNotApplicable
+  exception Undefined
   (* The following function takes a correspondence, corr, with construct relation Rc,
      and a goal assumed to have a superRelation Rg of Rc.
      The function will try to find a generator in the given source construction that matches
@@ -56,14 +57,26 @@ struct
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternComp targetToken
+      val (targetRenamingFunction, updatedTargetPattern) = (refreshNamesUpToConstruct targetPattern patternComp targetToken
+                                                            handle Undefined => raise CorrespondenceNotApplicable)
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
-              (f,SOME x) => (Option.valOf o f,x)
-            | (_,NONE) => raise CorrespondenceNotApplicable)
-      fun updateR (sfs,tfs,R) = (map sourceRenamingFunction sfs, map targetRenamingFunction tfs, R)
-      val updatedFoundationRelationships = map updateR rfs
-      val updatedConstructRelationship = updateR rc
+                ((f,SOME x) :: _) => (f, x)
+              | _ => raise CorrespondenceNotApplicable)
+      fun updateConstructR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
+                                          map (Option.valOf o targetRenamingFunction) tfs,
+                                          R)
+      fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
+        (case (f x, funUnion L x) of
+            (NONE,SOME y) => SOME y
+          | (SOME y,NONE) => SOME y
+          | (NONE,NONE) => NONE
+          | (SOME y, SOME z) => if CSpace.sameTokens y z then SOME y else raise Undefined)
+        | funUnion [] _ = NONE
+      val f = Pattern.funUnion [sourceRenamingFunction,targetRenamingFunction]
+      fun updateFoundationR (xfs,yfs,R) = (map (Option.valOf o f) xfs, map (Option.valOf o f) yfs, R)
+      val updatedFoundationRelationships = map updateFoundationR rfs
+      val updatedConstructRelationship = updateConstructR rc
     in Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
                                               foundationRels=updatedFoundationRelationships,
@@ -152,14 +165,20 @@ struct
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
   fun structureTransfer KB sourceT targetT ct goal limit =
     let
-      val t = case Relation.tupleOfRelationship goal of (_,[x],_) => x | _ => raise BadGoal
+      val t = (case Relation.tupleOfRelationship goal of (_,[x],_) => x | _ => raise BadGoal)
       val initialState = State.make {sourceTypeSystem = sourceT,
                                       targetTypeSystem = targetT,
                                       construction = ct,
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      fun heuristic (st,st') = EQUAL
+      fun heuristic (st,st') =
+        let val gs = State.goalsOf st
+            val gs' = State.goalsOf st'
+            val D = State.patternCompOf st
+            val D' = State.patternCompOf st'
+        in Int.compare ((Composition.size D') * (length gs), (Composition.size D) * (length gs'))
+        end
     in
       Search.sort unfoldState heuristic limit initialState
     end

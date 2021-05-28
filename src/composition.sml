@@ -7,6 +7,8 @@ sig
 
   val dataOfComposition : composition -> {construct : CSpace.token, attachments : (construction * composition list) list};
 
+  val size : composition -> int;
+
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
   val wellFormedComposition : TypeSystem.typeSystem -> composition -> bool;
@@ -29,6 +31,9 @@ struct
   datatype composition = Composition of {construct : CSpace.token, attachments : (construction * composition list) list};
 
   fun dataOfComposition (Composition {construct, attachments}) = {construct = construct, attachments = attachments}
+  fun size (Composition {attachments = (c,D::DL)::L, construct}) = size D + size (Composition {attachments = (c,DL)::L, construct=construct})
+    | size (Composition {attachments = (_,[])::L, construct}) = size (Composition {attachments = L, construct=construct})
+    | size (Composition {attachments = [], ...}) = 1
 
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
