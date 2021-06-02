@@ -194,6 +194,8 @@ sig
   (*added by draggi*)
   val insert : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertMany : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
+  val insertNoRepetition : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
+  val insertManyNoRepetition : 'a seq -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
   val findFirst : ('a -> bool) -> 'a seq -> 'a option
   val exists : ('a -> bool) -> 'a seq -> bool
 end;
@@ -434,10 +436,24 @@ fun insert x xq f =
       NONE => SOME (x,empty)
     | SOME (x',q) => if f(x,x') = GREATER then SOME (x',insert x q f) else SOME (x,xq));
 
+fun insertNoRepetition x xq f eq =
+  make (fn () =>
+    case pull xq of
+      NONE => SOME (x,empty)
+    | SOME (x',q) => if f(x,x') = GREATER then SOME (x',insertNoRepetition x q f eq)
+                     else if f(x,x') = LESS then SOME (x,xq)
+                     else if eq(x,x') then SOME (x',q)
+                          else SOME (x',insertNoRepetition x q f eq));
+
 fun insertMany xq yq f =
   (case pull xq of
     NONE => yq
   | SOME (x,q) => insert x (insertMany q yq f) f);
+
+fun insertManyNoRepetition xq yq f eq =
+  (case pull xq of
+    NONE => yq
+  | SOME (x,q) => insertNoRepetition x (insertManyNoRepetition q yq f eq) f eq);
 
 fun findFirst f xq =
   (case pull xq of

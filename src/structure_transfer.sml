@@ -179,8 +179,16 @@ struct
             val D' = State.patternCompOf st'
         in Int.compare ((Composition.size D') * (length gs), (Composition.size D) * (length gs'))
         end
+      fun heuristic' (st,st') =
+        let val gs = State.goalsOf st
+            val gs' = State.goalsOf st'
+            val D = State.patternCompOf st
+            val D' = State.patternCompOf st'
+        in Int.compare ((length gs),(length gs'))
+        end
+      fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sort unfoldState heuristic limit initialState
+      Search.sortNoRepetition unfoldState heuristic' eq limit initialState
     end
 
 
