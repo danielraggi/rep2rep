@@ -165,21 +165,30 @@ struct
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
   fun structureTransfer KB sourceT targetT ct goal limit =
     let
-      val t = (case Relation.tupleOfRelationship goal of (_,[x],_) => x | _ => raise BadGoal)
+      val t = (case Relation.tupleOfRelationship goal of
+                  (_,[x],_) => x
+                | _ => raise BadGoal)
       val initialState = State.make {sourceTypeSystem = sourceT,
                                       targetTypeSystem = targetT,
                                       construction = ct,
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      fun heuristic (st,st') =
+      fun heuristic1 (st,st') =
+        let val gs = State.goalsOf st
+            val gs' = State.goalsOf st'
+            val D = State.patternCompOf st
+            val D' = State.patternCompOf st'
+        in Int.compare ((Composition.size D'), (Composition.size D))
+        end
+      fun heuristic2 (st,st') =
         let val gs = State.goalsOf st
             val gs' = State.goalsOf st'
             val D = State.patternCompOf st
             val D' = State.patternCompOf st'
         in Int.compare ((Composition.size D') * (length gs), (Composition.size D) * (length gs'))
         end
-      fun heuristic' (st,st') =
+      fun heuristic3 (st,st') =
         let val gs = State.goalsOf st
             val gs' = State.goalsOf st'
             val D = State.patternCompOf st
@@ -188,7 +197,7 @@ struct
         end
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sortNoRepetition unfoldState heuristic' eq limit initialState
+      Search.sortNoRepetition unfoldState heuristic1 eq limit initialState
     end
 
 

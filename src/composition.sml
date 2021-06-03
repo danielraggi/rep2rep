@@ -32,7 +32,7 @@ struct
 
   fun dataOfComposition (Composition {construct, attachments}) = {construct = construct, attachments = attachments}
   fun size (Composition {attachments = (c,D::DL)::L, construct}) = size D + size (Composition {attachments = (c,DL)::L, construct=construct})
-    | size (Composition {attachments = (_,[])::L, construct}) = size (Composition {attachments = L, construct=construct})
+    | size (Composition {attachments = (_,[])::L, construct}) = 1+size (Composition {attachments = L, construct=construct})
     | size (Composition {attachments = [], ...}) = 1
 
   fun isPlaceholder (Composition {attachments,...}) = null attachments
