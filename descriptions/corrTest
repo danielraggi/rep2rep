@@ -1,6 +1,0 @@
-(t:numExp <- u:infixOp:[numExp,numExp,plus,numExp]
-                <-[n:numExp,p:plus,m:numExp],
- t':arrangement <- u':join:[arrangement,arrangement,arrangement]
-                    <-[a:arrangement,b:arrangement],
- [([n:numExp],[a:arrangement]) :: count, ([m:numExp],[b:arrangement]) :: count, ([a:arrangement],[b:arrangement]) :: disjoint],
- ([t:numExp],[t':arrangement])::count)

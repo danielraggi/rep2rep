@@ -1,0 +1,20 @@
+(t:numExp <- u:infixOp:[numExp,numExp,plus,numExp]
+                <-[n:numExp,p:plus,m:numExp],
+ t':arrangement <- u':join:[arrangement,arrangement,arrangement]
+                    <-[a:arrangement,b:arrangement],
+ [([n:numExp],[a:arrangement]) :: count, ([m:numExp],[b:arrangement]) :: count, ([a:arrangement],[b:arrangement]) :: disjoint],
+ ([t:numExp],[t':arrangement]) :: count)
+
+(t:formula <- u:infixRel:[formula,numExp,equals,numExp]
+                  <-[n:numExp,e:equals,m:numExp],
+ t':arrangement,
+ [([n:numExp],[t':arrangement]) :: count, ([m:numExp],[t':arrangement]) :: count],
+ ([t:formula],[t':arrangement]) :: firstArgumentIsValid)
+
+(t:numExp <- u:frac:[numExp,numExp,div,numExp]
+                <-[t1:numExp,line:div,t2:numExp],
+ t':arrangement <- u':rotateX:[arrangement,arrangement]
+                    <-[t1':arrangement <- u1':remove:[arrangement,arrangement,arrangement]
+                                            <-[t2':arrangement,t':arrangement]],
+ [([t1:numExp],[t2':arrangement]) :: count, ([t'],[t2']) :: subArrangement],
+ ([t:numExp],[t':arrangement]) :: count)

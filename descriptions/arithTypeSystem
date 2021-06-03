@@ -1,0 +1,13 @@
+({1,2,3,1plus2,1plus2plus3,3plus1,oB3plus1cB,3oB3plus1cB,3oB3plus1cBdiv2,1plus2plus3equal3oB3plus1cBdiv2,numExp,plus,binOp,equal,binRel,div,oB,cB},
+ {(1,numExp),
+  (2,numExp),
+  (3,numExp),
+  (1plus2,numExp),
+  (1plus2plus3,numExp),
+  (3plus1,numExp),
+  (oB3plus1cB,numExp),
+  (3oB3plus1cB,numExp),
+  (3oB3plus1cBdiv2,numExp),
+  (1plus2plus3equal3oB3plus1cBdiv2,formula),
+  (plus,binOp),
+  (equal,binRel)})
