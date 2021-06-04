@@ -1,1 +1,4 @@
-({dot,arrangement},{(dot,arrangement)})
+({dot,arrangement},
+ {(dot,arrangement),
+  (arrangement2,arrangement),
+  (arrangement3,arrangement)})

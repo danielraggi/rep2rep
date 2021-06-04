@@ -35,6 +35,7 @@ struct
             in f
             end
       fun renameFunction x = if CSpace.sameTokens x t then SOME t else mkRenameFunction names tokensInConstruction x
+      val ct' = Construction.renameConstruct ct t
       val updatedConstruction = Pattern.applyMorpism renameFunction ct
     in (renameFunction, updatedConstruction)
     end
@@ -57,8 +58,7 @@ struct
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-      val (targetRenamingFunction, updatedTargetPattern) = (refreshNamesUpToConstruct targetPattern patternComp targetToken
-                                                            handle Undefined => raise CorrespondenceNotApplicable)
+      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternComp targetToken
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
                 ((f,SOME x) :: _) => (f, x)
@@ -120,7 +120,7 @@ struct
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         val _ = if Knowledge.subRelation (State.knowledgeOf st) R Rg
-                   andalso List.allZip (Pattern.tokenMatches sT) xgs xs (* check that this line makes sense semantically. I think it does if you interpret relations as being universally quantified on the source relative to the type. *)
+                   andalso List.allZip (Pattern.tokenMatches sT) xs xgs  (* check that this line makes sense semantically. I think it does if you interpret relations as being universally quantified on the source relative to the type. *)
                    andalso List.allZip (Pattern.tokenMatches tT) ys ygs
                 then () else raise RelationNotApplicable
         val patternComp = State.patternCompOf st
@@ -158,7 +158,8 @@ struct
         val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
         val rels = FiniteSet.toSeq (Knowledge.relationshipsOf KB)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
-    in Seq.append (Seq.maps (applyRelationship st) rels) (Seq.maps (applyCorrespondence st) corrs) (*the returned sequence states is disjunctive; one must be satisfied *)
+    in Seq.append (Seq.maps (applyRelationship st) rels)
+                  (Seq.maps (applyCorrespondence st) corrs) (*the returned sequence states is disjunctive; one must be satisfied *)
     end
 
   exception BadGoal
@@ -186,7 +187,7 @@ struct
             val gs' = State.goalsOf st'
             val D = State.patternCompOf st
             val D' = State.patternCompOf st'
-        in Int.compare ((Composition.size D') * (length gs), (Composition.size D) * (length gs'))
+        in Int.compare ((Composition.size D'+1) * (length gs), (Composition.size D+1) * (length gs'))
         end
       fun heuristic3 (st,st') =
         let val gs = State.goalsOf st

@@ -21,7 +21,10 @@ sig
   val isExactDecompositionOf : composition -> construction -> bool;
   val isPatternDecompositionOf : composition -> construction -> bool;
 *)
+  val constructionsInComposition : composition -> construction list;
   val tokensOfComposition : composition -> CSpace.token list;
+  val resultingConstructions : composition -> construction list;
+  val firstResultingConstruction : composition -> construction;
 
 end;
 
@@ -71,5 +74,25 @@ struct
           | tokensOfAttachments [] = []
     in tokensOfAttachments attachments
     end
+
+  fun constructionsInComposition (Composition {attachments,...}) =
+    let fun coc ((ct,comps)::A) = ct :: (List.maps constructionsInComposition comps) @ coc A
+          | coc [] = []
+    in coc attachments
+    end
+
+  fun resultingConstructions (Composition {construct,attachments}) =
+    let fun rc ((ct,comps)::A) = let val rr = List.listProduct (map resultingConstructions comps)
+                                     fun f x = Construction.unsplit(ct,x)
+                                 in map f rr @ rc A
+                                 end
+          | rc [] = []
+    in if null attachments then [Source construct] else rc attachments
+    end
+
+  fun firstResultingConstruction (Composition {construct,attachments}) =
+    case attachments of
+      [] => Source construct
+    | ((ct,comps)::_) => Construction.unsplit (ct, map firstResultingConstruction comps)
 
 end;

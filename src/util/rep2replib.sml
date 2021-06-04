@@ -97,6 +97,7 @@ sig
    val flatmap : ('a -> 'b list) -> 'a list -> 'b list;
 
    val product : ('a list * 'b list) -> ('a * 'b) list;
+   val listProduct : 'a list list -> 'a list list;
 
    val toString : ('a -> string) -> 'a list -> string;
 
@@ -218,6 +219,10 @@ struct
       in
           cartprod [] xs ys
       end;
+
+  fun listProduct ((h::t)::T) = (map (fn x => h :: x) (listProduct T)) @ (listProduct (t::T))
+    | listProduct ([]::T) = []
+    | listProduct [] = [[]];
 
   fun toString fmt items = "[" ^ String.concatWith ", " (map fmt items) ^ "]";
 

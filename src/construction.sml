@@ -19,7 +19,9 @@ sig
   val foundationSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
+  val unsplit : (construction * construction list) -> construction;
   val fixInducedConstruction : construction -> construction;
+  val attachAtSource : construction -> construction -> construction;
 
   val renameConstruct : construction -> CSpace.token -> construction;
 
@@ -187,8 +189,22 @@ struct
         else raise badTrail
     | inducedConstruction _ _ = raise badTrail
 
-  exception Match
+  exception NotASplit
   fun split c c' = map (inducedConstruction c) (CTS c')
+
+  (* The choice of how this function is built may seem strange, but it's made
+      so that if the split is not actually a split but something like a pattern split, where
+      the induced construction are specialisations, it uses the construct of the
+      specialisation instead of the original token *)
+  fun unsplit (Source _,[ct]) = ct
+    | unsplit (Loop _, [ct]) = Loop (constructOf ct)
+    | unsplit ((TCPair (ut,cs)), cts) =
+        let fun us (c::L) icts = (case List.split(icts, length (foundationSequence c)) of
+                                      (cLx,cly) => unsplit (c, cLx) :: us L cly)
+              | us [] _ = []
+        in TCPair (ut, us cs cts)
+        end
+    | unsplit _ = raise NotASplit
 
   fun fixInducedConstruction c =
     let
@@ -198,6 +214,17 @@ struct
             TCPair (ut, map (fic (ut::tr)) cs)
     in fic [] c
     end
+
+  fun isLoop (Loop _) = true
+    | isLoop _ = false
+
+  fun attachAtSource ct (Source t) =
+        if CSpace.sameTokens (constructOf ct) t then ct else (Source t)
+    | attachAtSource ct (TCPair (ut, cs)) =
+        if CSpace.sameTokens (constructOf ct) (#token ut)
+        then (print "not attachable";(TCPair (ut, cs)))
+        else (TCPair (ut, map (attachAtSource ct) cs))
+    | attachAtSource _ (Loop t) = (Loop t)
 
 
   exception BadConstruction

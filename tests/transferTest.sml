@@ -1,4 +1,6 @@
 import "input.input";
+fun printableList [] = ""
+  | printableList (h::t) = h ^ "\n" ^ printableList t;
 val KB = Input.loadKnowledge "arithDotsCorrs" "arithDotsRels";
 val arithT = Input.loadTypeSystem "arithTypeSystem";
 val dotsT = Input.loadTypeSystem "dotsTypeSystem";
@@ -6,6 +8,16 @@ val ct = Input.loadConstruction "1plus2plus3equalsn";
 val goal = Parser.relationship "([t:1plus2plus3equal3oB3plus1cBdiv2],[t':arrangement]) :: firstArgumentIsValid";
 val results = Transfer.structureTransfer KB arithT dotsT ct goal 100;
 val rL = Seq.list_of results;
+val comps = map State.patternCompOf rL;
+val rCons = map Composition.resultingConstructions comps;
+val x = map (map Construction.toString) rCons;
+val p = printableList (map printableList x);
+print p;
+
+val rCon = map Composition.firstResultingConstruction comps;
+val y = map (Construction.toString) rCon;
+
+val x = map Composition.constructionsInComposition comps;
 
 val ct' = Input.loadConstruction "1plus2plus3";
 val goal' = Parser.relationship "([t:1plus2plus3],[t':arrangement]) :: count";
