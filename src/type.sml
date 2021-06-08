@@ -10,7 +10,7 @@ sig
   val any : typ
   val equal : typ -> typ -> bool
 
-  val stringOfType : typ -> string;
+  val nameOfType : typ -> string;
 
   val reflexiveClosure : typeSystem -> typeSystem;
   val respectAnyClosure : typeSystem -> typeSystem;
@@ -67,5 +67,5 @@ struct
 
   val fixSubTypeFunction = respectAnyClosure o reflexiveClosure;
   val fixFiniteSubTypeFunction = finiteRespectAnyClosure o finiteReflexiveClosure o transitiveClosure;
-  fun stringOfType x = x
+  fun nameOfType x = x
 end;

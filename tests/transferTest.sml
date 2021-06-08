@@ -1,4 +1,5 @@
-import "input.input";
+import "IO.input";
+import "IO.latex";
 fun printableList [] = ""
   | printableList (h::t) = h ^ "\n" ^ printableList t;
 val KB = Input.loadKnowledge "arithDotsCorrs" "arithDotsRels";
@@ -9,7 +10,14 @@ val goal = Parser.relationship "([t:1plus2plus3equal3oB3plus1cBdiv2],[t':arrange
 val results = Transfer.structureTransfer KB arithT dotsT ct goal 100;
 val rL = Seq.list_of results;
 val comps = map State.patternCompOf rL;
-val rCons = map Composition.resultingConstructions comps;
+val rCons = List.take (map Composition.resultingConstructions comps,2);
+val xx = (Latex.construction (0.0,0.0) ct)
+val x = map (map (Latex.construction (0.0,0.0))) rCons;
+val p = printableList (map printableList x);
+print xx;
+print "\n\n";
+print p;
+
 val x = map (map Construction.toString) rCons;
 val p = printableList (map printableList x);
 print p;

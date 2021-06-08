@@ -117,8 +117,8 @@ sig
 
    val rotate : int -> 'a list -> 'a list;
 
-   val weightedSumIndexed : ('a -> real) -> ('a -> real) -> 'a list -> real;
-   val sumIndexed : ('a -> real) -> 'a list -> real;
+   val weightedSumMap : ('a -> real) -> ('a -> real) -> 'a list -> real;
+   val sumMap : ('a -> real) -> 'a list -> real;
    val weightedSum : (real -> real) -> real list -> real;
    val sum : real list -> real;
 
@@ -271,15 +271,15 @@ struct
     | rotate _ [] = []
     | rotate n xs = (op@ o flip o split) (xs, Int.mod (n, length xs));
 
-  fun weightedSumIndexed w f L =
+  fun weightedSumMap w f L =
       List.foldr (fn (x, s) => ((w x) * (f x)) + s) 0.0 L;
 
-  fun weightedSum w L = weightedSumIndexed w (fn x => x) L;
+  fun weightedSum w L = weightedSumMap w (fn x => x) L;
 
-  fun sumIndexed f L = weightedSumIndexed (fn _ => 1.0) f L;
-  fun sum L = weightedSumIndexed (fn _ => 1.0) (fn x => x) L;
+  fun sumMap f L = weightedSumMap (fn _ => 1.0) f L;
+  fun sum L = weightedSumMap (fn _ => 1.0) (fn x => x) L;
 
-  fun weightedAvgIndexed w f L = if null L then raise Empty else (weightedSumIndexed w f L) / (sumIndexed w L)
+  fun weightedAvgIndexed w f L = if null L then raise Empty else (weightedSumMap w f L) / (sumMap w L)
 
   fun weightedAvg w L = weightedAvgIndexed w (fn x => x) L;
 

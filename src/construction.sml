@@ -17,6 +17,7 @@ sig
   val CTS : construction -> trail list;
   val inducedConstruction : construction -> trail -> construction;
   val foundationSequence : construction -> CSpace.token list;
+  val vertexSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
   val unsplit : (construction * construction list) -> construction;
@@ -155,6 +156,11 @@ struct
     | tokenOfVertex _ = raise MalformedConstructionTerm;
 
   fun foundationSequence c = map (tokenOfVertex o hd o rev) (CTS c);
+
+  fun vertexSequence (Source t) = [t]
+    | vertexSequence (Loop t) = [t]
+    | vertexSequence (TCPair ({token,configurator},cs)) =
+        token :: List.concat (map vertexSequence cs)
 
   fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
     | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
