@@ -10,6 +10,7 @@ sig
   val loadRelations : string -> Relation.relationship FiniteSet.set
   val loadKnowledge : string -> string -> Knowledge.base
   val loadConstruction : string -> Construction.construction
+  val loadGoal : string -> Relation.relationship
 end;
 
 structure Input : INPUT =
@@ -78,5 +79,13 @@ struct
         val _ = TextIO.closeIn file
         val ctString = removeLineBreaks ctBulk
     in Parser.construction ctString
+    end
+
+  fun loadGoal filename =
+    let val file = TextIO.openIn ("descriptions/"^filename)
+        val rBulk = TextIO.inputAll file
+        val _ = TextIO.closeIn file
+        val rString = removeLineBreaks rBulk
+    in Parser.relationship rString
     end
 end;

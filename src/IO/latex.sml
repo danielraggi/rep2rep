@@ -3,6 +3,8 @@ import "composition";
 signature LATEX =
 sig
   val construction : real * real -> Construction.construction -> string;
+  val mkDocument : string -> string;
+  val outputDocument : TextIO.outstream -> string -> unit;
 end;
 
 structure Latex : LATEX =
@@ -78,7 +80,7 @@ struct
             val widthEstimates = map (fn x => (0.8*Math.pow(quickWidthEstimate x,0.8))) cs
             fun mkIntervals _ [] = []
               | mkIntervals _ [h] = []
-              | mkIntervals p (h1::(h2::t)) = let val p' = p + (h1 + h2) in p' :: mkIntervals p' (h2::t) end
+              | mkIntervals p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: mkIntervals p' (h2::t))
             val intervals = 0.0 :: mkIntervals 0.0 widthEstimates
             val cssize = List.last intervals
             fun calcX j = ~cssize/2.0 + List.nth(intervals,j)
@@ -97,5 +99,18 @@ struct
         val closing = "\\end{tikzpicture}"
     in lines [opening, construction' coor NONE 0 ct, closing]
     end
+
+  fun mkDocument content =
+    let val opening = "\\documentclass[a4paper,10pt]{article}\n "^
+                      "\\usepackage[margin=2.5cm]{geometry}\n "^
+                      "\\input{commands.sty}\n\n"^
+                      "\\begin{document}"
+        val closing = "\\end{document}"
+    in lines [opening, content, closing]
+    end
+
+  fun outputDocument file content =
+    let val _ = TextIO.output(file, mkDocument content)
+    in () end
 
 end;
