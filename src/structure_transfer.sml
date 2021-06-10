@@ -187,7 +187,7 @@ struct
             val gs' = State.goalsOf st'
             val D = State.patternCompOf st
             val D' = State.patternCompOf st'
-        in Int.compare ((Composition.size D') * (length gs), (Composition.size D) * (length gs'))
+        in Real.compare (real(Composition.size D') * Math.ln(real(length gs + 1)), real(Composition.size D) * Math.ln(real(length gs' + 1)))
         end
       fun heuristic3 (st,st') =
         let val gs = State.goalsOf st
