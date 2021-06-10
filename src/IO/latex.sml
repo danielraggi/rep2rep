@@ -43,10 +43,11 @@ struct
     in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConfigurator u t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
     end
 
-  fun tokenNode coor t =
+  fun tokenNode isSource coor t =
     let val typn = "$\\mathsf{"^TypeSystem.nameOfType (CSpace.typeOfToken t)^"}$"
         val tokn = "$"^CSpace.nameOfToken t^"$"
-    in "\\node[term = " ^ String.addBraces typn ^ "] " ^ nodeNameOfToken t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces tokn ^ ";"
+        val att = if isSource then "termS" else "term"
+    in "\\node["^att^" = " ^ String.addBraces typn ^ "] " ^ nodeNameOfToken t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces tokn ^ ";"
     end
 
   fun arrowBent nodeName parentName (ix,ox) =
@@ -60,24 +61,29 @@ struct
   fun arrowLabelledBent nodeName parentName i (ix,ox)=
     "\\path[->,in=" ^intToString ix^",out="^intToString ox ^ "] " ^ nodeName ^ " edge node[index label] " ^ String.addBraces (intToString i) ^ " " ^ parentName ^ ";"
 
-  fun quickWidthEstimate (Construction.Source _) = 1.0
+  fun quickWidthEstimate (Construction.Source t) =
+        let val sizeOfToken = real (String.size (CSpace.nameOfToken t))
+            val sizeOfType = 0.75 * real (String.size (TypeSystem.nameOfType (CSpace.typeOfToken t)))
+        (*in Real.max(0.75,0.1*real (Int.max(sizeOfToken,sizeOfType)))*)
+        in Real.max(0.75,0.12* (Real.max(sizeOfToken, sizeOfType)))
+        end
     | quickWidthEstimate (Construction.Loop _) = 0.0
     | quickWidthEstimate (Construction.TCPair (_,cs)) = List.sumMap quickWidthEstimate cs
 
   fun construction' coor parentName i (Construction.Source t) =
         (case parentName of
-          NONE => lines [tokenNode coor t]
-        | SOME pn => lines [tokenNode coor t, arrowLabelled (nodeNameOfToken t) pn i])
+          NONE => lines [tokenNode true coor t]
+        | SOME pn => lines [tokenNode true coor t, arrowLabelled (nodeNameOfToken t) pn i])
     | construction' _ parentName i (Construction.Loop t) =
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
         | SOME pn => if i = 1 then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,195)] else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,~15)])
     | construction' (x,y) parentName i (Construction.TCPair ({configurator,token},cs)) =
-        let val tn = tokenNode (x,y) token
+        let val tn = tokenNode false (x,y) token
             val cn = configuratorNode (x,y-1.0) configurator token
             val configuratorNodeName = nodeNameOfConfigurator configurator token
             val cn2tn = arrow configuratorNodeName (nodeNameOfToken token)
-            val widthEstimates = map (fn x => (0.8*Math.pow(quickWidthEstimate x,0.8))) cs
+            val widthEstimates = map (fn x => (Math.pow(quickWidthEstimate x,0.75))) cs
             fun mkIntervals _ [] = []
               | mkIntervals _ [h] = []
               | mkIntervals p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: mkIntervals p' (h2::t))
@@ -95,7 +101,7 @@ struct
         end
 
   fun construction coor ct =
-    let val opening = "\\begin{tikzpicture}[construction]"
+    let val opening = "\\begin{tikzpicture}[construction,align at top]"
         val closing = "\\end{tikzpicture}"
     in lines [opening, construction' coor NONE 0 ct, closing]
     end
@@ -103,7 +109,8 @@ struct
   fun mkDocument content =
     let val opening = "\\documentclass[a4paper,10pt]{article}\n "^
                       "\\usepackage[margin=2.5cm]{geometry}\n "^
-                      "\\input{commands.sty}\n\n"^
+                      "\\input{commands.sty}\n"^
+                      "\\tikzset{align at top/.style={baseline=(current bounding box.north)}}\n\n"^
                       "\\begin{document}"
         val closing = "\\end{document}"
     in lines [opening, content, closing]

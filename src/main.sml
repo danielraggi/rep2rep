@@ -36,34 +36,15 @@ fun parseArgs () =
              constructionFilename,
              goalFilename,
              limit,
-             outputFileName] => (sourceTypeSystemFilename,
-                                 targetTypeSystemFilename,
-                                 correspondencesFilename,
-                                 relationsFilename,
-                                 constructionFilename,
-                                 goalFilename,
+             outputFilename] => (Input.loadTypeSystem sourceTypeSystemFilename,
+                                 Input.loadTypeSystem targetTypeSystemFilename,
+                                 Input.loadKnowledge correspondencesFilename relationsFilename,
+                                 Input.loadConstruction constructionFilename,
+                                 Input.loadGoal goalFilename,
                                  valOf (Int.fromString limit),
-                                 outputFileName)
+                                 "tests/latex/"^outputFilename^".tex")
           | _ => raise BadArguments)
   in configuration end
-
-  (* the following is just a test *)
-  fun printableList [] = ""
-    | printableList (h::t) = h ^ "\n" ^ printableList t;
-    (*)
-  val KB = Input.loadKnowledge "arithDotsCorrs" "arithDotsRels";
-  val arithT = Input.loadTypeSystem "arithTypeSystem";
-  val dotsT = Input.loadTypeSystem "dotsTypeSystem";
-  val ct = Input.loadConstruction "1plus2plus3equalsn";
-  val goal = Parser.relationship "([t:1plus2plus3equal3oB3plus1cBdiv2],[t':arrangement]) :: firstArgumentIsValid";
-  val results = Transfer.structureTransfer KB arithT dotsT ct goal 100;
-  val rL = Seq.list_of results;
-  val comps = map State.patternCompOf rL;
-  val rCons = List.take (map Composition.resultingConstructions comps,1);
-  val xx = (Latex.construction (0.0,0.0) ct)
-  val x = map (map (Latex.construction (0.0,0.0))) rCons;
-  val p = printableList (map printableList x);*)
-  (* test ends *)
 
 fun main () =
   let val today = Date.fmt "%Y-%m-%d" (Date.fromTimeLocal (Time.now()));
@@ -72,27 +53,27 @@ fun main () =
                                ^ today
                                ^ " with "
                                ^ version ^ "\n");
-      val (sourceTypeSystemFilename,
-            targetTypeSystemFilename,
-            correspondencesFilename,
-            relationsFilename,
-            constructionFilename,
-            goalFilename,
+      val (sourceTypeSystem,
+            targetTypeSystem,
+            KB,
+            construction,
+            goal,
             limit,
-            outputFilename) = parseArgs ();
-      val sourceTypeSystem = Input.loadTypeSystem sourceTypeSystemFilename
-      val targetTypeSystem = Input.loadTypeSystem targetTypeSystemFilename
-      val KB = Input.loadKnowledge correspondencesFilename relationsFilename
-      val ct = Input.loadConstruction constructionFilename
-      val goal = Input.loadGoal goalFilename
-      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem ct goal 100
+            outputFile) = parseArgs ();
+      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 100
       val comps = map State.patternCompOf (Seq.list_of results);
       val rCons = List.take (map Composition.resultingConstructions comps,limit);
-      val latexCT = Latex.construction (0.0,0.0) ct
+      val latexCT = Latex.construction (0.0,0.0) construction
       val x = map (map (Latex.construction (0.0,0.0))) rCons;
-      val latexResults = printableList (map printableList x)
-      val outputFile = TextIO.openOut ("tests/latex/"^outputFilename^".tex")
-      val _ = Latex.outputDocument outputFile (latexCT ^ "\n\n" ^ latexResults);
+        fun printableList [] = ""
+          | printableList (h::t) = h ^ "\n \\hfill \n " ^ printableList t;
+        fun subsectionedList _ [] = ""
+          | subsectionedList i (h::t) = "\\subsection*{Result "^Int.toString i^"}\n" ^ h ^ subsectionedList (i+1) t;
+      val latexResults = subsectionedList 1 (map printableList x)
+      val outputFile = TextIO.openOut outputFile
+      val opening = "\\section*{Original construction}\n"
+      val resultText = "\\section*{Structure transfer results}\n"
+      val _ = Latex.outputDocument outputFile (opening ^ latexCT ^ "\n\n " ^ resultText ^ latexResults);
       val _ = TextIO.closeOut outputFile
   in ()
   end
