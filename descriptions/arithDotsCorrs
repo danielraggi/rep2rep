@@ -8,7 +8,7 @@
 (t:formula <- u:infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp],
  t':arrangement,
  [([n:numExp],[t':arrangement]) :: count, ([m:numExp],[t':arrangement]) :: count],
- ([t:formula],[t':arrangement]) :: firstArgumentIsValid)
+ ([t:formula],[t':arrangement]) :: originalConstructIsValid)
 
  (t:numExp <- u:frac:[numExp,numExp,div,numExp]
                  <-[t1:numExp,line:div,t2:2],

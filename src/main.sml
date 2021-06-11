@@ -60,9 +60,14 @@ fun main () =
             goal,
             limit,
             outputFile) = parseArgs ();
-      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 10000
+      val startTime = Time.now();
+      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 100;
+      val endTime = Time.now()
+      val _ = Logging.write ("structure transfer runtime: "^(LargeInt.toString (Time.toMilliseconds endTime - Time.toMilliseconds startTime)) ^ "\n")
       val comps = map State.patternCompOf (Seq.list_of results);
-      val rCons = List.take (map Composition.resultingConstructions comps,limit);
+      val nres = length comps
+      val _ = Logging.write ("number of results: " ^ Int.toString nres ^ "\n")
+      val rCons = List.take (map Composition.resultingConstructions comps, Int.min(limit,nres));
       val latexCT = Latex.construction (0.0,0.0) construction
       val x = map (map (Latex.construction (0.0,0.0))) rCons;
         fun printableList [] = ""

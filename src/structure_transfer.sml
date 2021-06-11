@@ -198,7 +198,7 @@ struct
         end
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sortNoRepetition unfoldState heuristic2 eq limit initialState
+      Search.sortNoRepetition unfoldState heuristic1 eq limit initialState
     end
 
 
