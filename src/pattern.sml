@@ -114,6 +114,12 @@ struct
     in (f, SOME g)
     end handle Undefined => (fn _ => NONE,NONE)
 
+  exception BadSplit
+  fun fullVertexUnsplit _ = ()
+
+
+
+
 (*)
   (* *)
   fun findMapAndGeneratorMatching T (Source t) (Source t') =
@@ -160,13 +166,13 @@ struct
 
 (*)
   fun findGeneratorMatchingForToken T ct p t =
-      if CSpace.sameTokens t (Construction.constructOf ct) then findGeneratorMatching T (Construction.fixInducedConstruction ct) p
+      if CSpace.sameTokens t (Construction.constructOf ct) then findGeneratorMatching T (Construction.fixLoops ct) p
       else (case ct of TCPair (_, cs) => findFirstSome (map (fn c => findGeneratorMatchingForToken T c p t) cs)
                                       | _ => NONE)*)
 
   fun findMapAndGeneratorMatchingForToken T ct p t =
       if CSpace.sameTokens t (Construction.constructOf ct)
-      then [findMapAndGeneratorMatching T (Construction.fixInducedConstruction ct) p]
+      then [findMapAndGeneratorMatching T (Construction.fixLoops ct) p]
       else (case ct of TCPair (_, cs) => filterSomes' (List.maps (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
                                   | _ => [])
 

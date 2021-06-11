@@ -7,7 +7,7 @@ import "IO.latex";
    (Alternatively, because disabled is the default logging state,
    you can just comment out the following line.)
 *)
-Logging.disable ();
+Logging.enable ();
 
 fun filesMatchingPrefix dir prefix =
     let
@@ -60,7 +60,7 @@ fun main () =
             goal,
             limit,
             outputFile) = parseArgs ();
-      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 100
+      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 10000
       val comps = map State.patternCompOf (Seq.list_of results);
       val rCons = List.take (map Composition.resultingConstructions comps,limit);
       val latexCT = Latex.construction (0.0,0.0) construction

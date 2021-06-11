@@ -24,7 +24,7 @@ sig
   val constructionsInComposition : composition -> construction list;
   val tokensOfComposition : composition -> CSpace.token list;
   val resultingConstructions : composition -> construction list;
-  val firstResultingConstruction : composition -> construction;
+  val pickICSfromAttachments : construction -> construction list -> construction list;
 
 end;
 
@@ -56,16 +56,29 @@ struct
 
   fun makePlaceholderComposition t = Composition {construct = t, attachments = []}
 
+
+  fun pickICSfromAttachments (Source _) [ct] = [ct]
+    | pickICSfromAttachments (Loop _) [ct] = [ct]
+    | pickICSfromAttachments (TCPair (_,cs)) (_::cts) =
+        let fun picsfa (c::L) icts = (case List.split(icts,length (fullVertexSequence c)) of
+                                          (cLx,cly) => pickICSfromAttachments c cLx @ picsfa L cly)
+              | picsfa [] _ = []
+        in picsfa cs cts
+        end
+    | pickICSfromAttachments _ _ = raise Match
+
   fun initFromConstruction ct =
-    Composition {construct = constructOf ct,
-                   attachments = [(ct,map makePlaceholderComposition (foundationSequence ct))]}
+    let val placeholders = map makePlaceholderComposition (fullVertexSequence ct)
+    in Composition {construct = constructOf ct,
+                    attachments = [(ct,placeholders)]}
+    end
 
   (* the following function doesn't assume anything about the names of vertices in
   the construction relative to the composition. *)
   fun attachConstructionAt (Composition {construct,attachments}) ct t =
     let fun aca (ct',Ds) = (ct',map (fn x => attachConstructionAt x ct t) Ds)
     in if CSpace.sameTokens t construct
-       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (foundationSequence ct)) :: attachments}
+       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (fullVertexSequence ct)) :: attachments}
        else Composition {construct = construct, attachments = map aca attachments}
     end
 
@@ -83,16 +96,11 @@ struct
 
   fun resultingConstructions (Composition {construct,attachments}) =
     let fun rc ((ct,comps)::A) = let val rr = List.listProduct (map resultingConstructions comps)
-                                     fun f x = Construction.unsplit(ct,x)
+                                     fun f L = Construction.unsplit(ct, pickICSfromAttachments ct L)
                                  in map f rr @ rc A
                                  end
           | rc [] = []
     in if null attachments then [Source construct] else rc attachments
     end
-
-  fun firstResultingConstruction (Composition {construct,attachments}) =
-    case attachments of
-      [] => Source construct
-    | ((ct,comps)::_) => Construction.unsplit (ct, map firstResultingConstruction comps)
 
 end;

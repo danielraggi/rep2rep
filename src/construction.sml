@@ -17,11 +17,11 @@ sig
   val CTS : construction -> trail list;
   val inducedConstruction : construction -> trail -> construction;
   val foundationSequence : construction -> CSpace.token list;
-  val vertexSequence : construction -> CSpace.token list;
+  val fullVertexSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
   val unsplit : (construction * construction list) -> construction;
-  val fixInducedConstruction : construction -> construction;
+  val fixLoops : construction -> construction;
   val attachAtSource : construction -> construction -> construction;
 
   val renameConstruct : construction -> CSpace.token -> construction;
@@ -157,10 +157,10 @@ struct
 
   fun foundationSequence c = map (tokenOfVertex o hd o rev) (CTS c);
 
-  fun vertexSequence (Source t) = [t]
-    | vertexSequence (Loop t) = [t]
-    | vertexSequence (TCPair ({token,configurator},cs)) =
-        token :: List.concat (map vertexSequence cs)
+  fun fullVertexSequence (Source t) = [t]
+    | fullVertexSequence (Loop t) = [t]
+    | fullVertexSequence (TCPair ({token,configurator},cs)) =
+        token :: List.concat (map fullVertexSequence cs)
 
   fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
     | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
@@ -198,21 +198,7 @@ struct
   exception NotASplit
   fun split c c' = map (inducedConstruction c) (CTS c')
 
-  (* The choice of how this function is built may seem strange, but it's made
-      so that if the split is not actually a split but something like a pattern split, where
-      the induced construction are specialisations, it uses the construct of the
-      specialisation instead of the original token *)
-  fun unsplit (Source _,[ct]) = ct
-    | unsplit (Loop _, [ct]) = Loop (constructOf ct)
-    | unsplit ((TCPair (ut,cs)), cts) =
-        let fun us (c::L) icts = (case List.split(icts, length (foundationSequence c)) of
-                                      (cLx,cly) => unsplit (c, cLx) :: us L cly)
-              | us [] _ = []
-        in TCPair (ut, us cs cts)
-        end
-    | unsplit _ = raise NotASplit
-
-  fun fixInducedConstruction c =
+  fun fixLoops c =
     let
       fun fic _ (Source t) = (Source t)
         | fic tr (Loop t) = if List.exists (fn x => #token x = t) tr then Loop t else Source t
@@ -220,6 +206,24 @@ struct
             TCPair (ut, map (fic (ut::tr)) cs)
     in fic [] c
     end
+
+  (* The choice of how this function is built may seem strange, but it's made
+      so that if the split is not actually a split but something like a pattern split, where
+      the induced construction are specialisations, it uses the construct of the
+      specialisation instead of the original token *)
+  fun unsplit x =
+    let fun unsplit' (Source _,[ct]) = ct
+          | unsplit' (Loop _, [ct]) = Loop (constructOf ct)
+          | unsplit' ((TCPair (ut,cs)), cts) =
+              let fun us (c::L) icts = (case List.split(icts, length (foundationSequence c)) of
+                                            (cLx,cly) => unsplit' (c, cLx) :: us L cly)
+                    | us [] _ = []
+              in TCPair (ut, us cs cts)
+              end
+          | unsplit' _ = raise NotASplit
+        val result = fixLoops (unsplit' x)
+      (*  val _ = if wellFormed T result then () else print "\n WARNING: " ^ toString result ^ " is malformed" *)
+    in result end
 
   fun isLoop (Loop _) = true
     | isLoop _ = false
