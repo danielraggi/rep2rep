@@ -5,6 +5,7 @@ sig
   type T;
   type relationship = CSpace.token list * CSpace.token list * T;
 
+  val nameOf : T -> string;
   val tupleOfRelationship : relationship -> CSpace.token list * CSpace.token list * T;
   val make : string -> T;
   val makeRelationship : CSpace.token list * CSpace.token list * T -> relationship;
@@ -13,6 +14,7 @@ sig
   val isAlwaysTrue : T -> bool;
   val same : T -> T -> bool;
   val sameRelationship : relationship -> relationship -> bool;
+  val stringOfRelationship : relationship -> string;
 end;
 
 structure Relation : RELATION =
@@ -36,4 +38,5 @@ struct
     andalso List.allZip CSpace.sameTokens ts2 ts2'
     andalso same R R'
 
+  fun stringOfRelationship (x,y,R) = "(" ^ List.toString CSpace.stringOfToken x ^ "," ^ List.toString CSpace.stringOfToken y ^ "," ^ nameOf R ^ ")"
 end;

@@ -127,7 +127,7 @@ struct
         fun attachInstantiatedLeaves [y] [yg] =
               if Composition.isPlaceholder patternComp
               then Composition.initFromConstruction (Pattern.Source y)
-              else Composition.attachConstructionAt patternComp (Pattern.Source y) yg
+              else (print ("hey " ^ CSpace.nameOfToken y ^ "\n");Composition.attachConstructionAt patternComp (Pattern.Source y) yg)
           | attachInstantiatedLeaves (y::Y) (yg::Yg) =
               Composition.attachConstructionAt (attachInstantiatedLeaves Y Yg) (Pattern.Source y) yg
           | attachInstantiatedLeaves _ _ = raise Error
@@ -196,9 +196,25 @@ struct
             val D' = State.patternCompOf st'
         in Int.compare ((length gs),(length gs'))
         end
+      fun opposite LESS = GREATER | opposite EQUAL = EQUAL | opposite GREATER = LESS
+      fun heuristic4 (st,st') =
+        let val gs = State.goalsOf st
+            val gs' = State.goalsOf st'
+            val gsn = length gs
+            val gsn' = length gs'
+            val D = State.patternCompOf st
+            val D' = State.patternCompOf st'
+            val P = Int.compare (Composition.size D',Composition.size D)
+        in if gsn = 0 andalso gsn' = 0 then opposite P
+           else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then P
+           else Int.compare (gsn,gsn')
+        (*in if ((gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)) andalso P <> EQUAL
+            then P
+            else Int.compare (gsl,gsl')*)
+        end
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sortNoRepetition unfoldState heuristic1 eq limit initialState
+      Search.sortNoRepetition unfoldState heuristic4 eq limit initialState
     end
 
 
