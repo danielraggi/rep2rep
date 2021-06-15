@@ -26,8 +26,8 @@ struct
     end
   fun relationship (x,y,R) =
     "(" ^ List.toString token x ^ "," ^
-          List.toString token y ^ "," ^
-          mathsf (Relation.nameOf R) ^ ")"
+          List.toString token y ^ ")" ^
+        "\\in " ^ mathsf (Relation.nameOf R) 
 
   fun realToString z =
     let val zs = Real.toString z

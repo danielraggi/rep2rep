@@ -63,33 +63,35 @@ fun main () =
       val startTime = Time.now();
       val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 100;
       val endTime = Time.now();
-      val _ = Logging.write ("structure transfer runtime: "^(LargeInt.toString (Time.toMilliseconds endTime - Time.toMilliseconds startTime)) ^ "\n");
-      val (listOfResults,_) = Seq.chop limit results;
+      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
+      val _ = Logging.write ("structure transfer runtime: "^ LargeInt.toString runtime ^ " ms \n");
       fun getCompsAndGoals [] = []
         | getCompsAndGoals (h::t) = (State.patternCompOf h, State.goalsOf h) :: getCompsAndGoals t
+      fun mkLatexGoals goals =
+        let val goalsS = String.concatWith "\\\\ \n " (map Latex.relationship goals)
+            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Goals}\\\\\n"^goalsS))
+        in Latex.environment "minipage" "[t]{0.25\\textwidth}" alignedGoals
+        end
+      fun mkLatexConstructions comp =
+        let val constructions = Composition.resultingConstructions comp
+        in map (Latex.construction (0.0,0.0)) constructions
+        end
+      fun mkLatexConstructionsAndGoals (comp,goals) =
+        let val latexConstructions = mkLatexConstructions comp
+            val latexGoals = mkLatexGoals goals
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.5 (latexConstructions @ [latexGoals]))
+        end
+      val (listOfResults,_) = Seq.chop limit results;
       val compsAndGoals = getCompsAndGoals listOfResults;
-      fun mkLatexCompsAndGoals [] = []
-        | mkLatexCompsAndGoals ((comp,goals)::L) =
-            let val constructions = Composition.resultingConstructions comp
-                val latexConstructions = map (Latex.construction (0.0,0.0)) constructions
-                val goalsS = String.concatWith "\\\\ \n " (map Latex.relationship goals)
-                val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Goals}\\\\\n"^goalsS))
-                val latexGoals = Latex.environment "minipage" "[t]{0.25\\textwidth}" alignedGoals
-            in Latex.printWithHSpace 0.7 (latexConstructions @ [latexGoals]) :: mkLatexCompsAndGoals L
-            end
-      val latexCompsAndGoals = Latex.printSubSections 1 (mkLatexCompsAndGoals compsAndGoals)
-      val compositions = map State.patternCompOf listOfResults;
-      val goals = map State.goalsOf listOfResults;
+      val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals)
       val nres = length (Seq.list_of results);
       val _ = Logging.write ("number of results: " ^ Int.toString nres ^ "\n");
-      val rCons = map Composition.resultingConstructions compositions;
-      val latexCT = Latex.construction (0.0,0.0) construction
-      val x = map (map (Latex.construction (0.0,0.0))) rCons;
-      val latexResults = Latex.printSubSections 1 (map (Latex.printWithHSpace 0.7) x)
+      val latexOriginalConsAndGoals = Latex.environment "center" "" ((Latex.construction (0.0,0.0) construction) ^ "\n " ^ (mkLatexGoals [goal]))
+      val latexCT = Latex.construction (0.0,0.0) construction;
       val outputFile = TextIO.openOut outputFile
       val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
-      val _ = Latex.outputDocument outputFile (opening ^ latexCT ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
+      val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
       val _ = TextIO.closeOut outputFile
   in ()
   end

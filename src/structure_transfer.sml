@@ -127,7 +127,7 @@ struct
         fun attachInstantiatedLeaves [y] [yg] =
               if Composition.isPlaceholder patternComp
               then Composition.initFromConstruction (Pattern.Source y)
-              else (print ("hey " ^ CSpace.nameOfToken y ^ "\n");Composition.attachConstructionAt patternComp (Pattern.Source y) yg)
+              else Composition.attachConstructionAt patternComp (Pattern.Source y) yg
           | attachInstantiatedLeaves (y::Y) (yg::Yg) =
               Composition.attachConstructionAt (attachInstantiatedLeaves Y Yg) (Pattern.Source y) yg
           | attachInstantiatedLeaves _ _ = raise Error
