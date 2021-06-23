@@ -26,6 +26,7 @@ sig
   val resultingConstructions : composition -> construction list;
   val pickICSfromAttachments : construction -> construction list -> construction list;
 
+  val applyPartialMorphismToComposition : (CSpace.token -> CSpace.token option) -> composition -> composition;
 end;
 
 structure Composition : COMPOSITION =
@@ -58,9 +59,9 @@ struct
 
 
   fun pickICSfromAttachments (Source _) [ct] = [ct]
-    | pickICSfromAttachments (Loop _) [ct] = [ct]
+    | pickICSfromAttachments (Loop _) [] = []
     | pickICSfromAttachments (TCPair (_,cs)) (_::cts) =
-        let fun picsfa (c::L) icts = (case List.split(icts,length (fullVertexSequence c)) of
+        let fun picsfa (c::L) icts = (case List.split(icts,length (fullTokenSequence c)) of
                                           (cLx,cly) => pickICSfromAttachments c cLx @ picsfa L cly)
               | picsfa [] _ = []
         in picsfa cs cts
@@ -68,7 +69,7 @@ struct
     | pickICSfromAttachments _ _ = raise Match
 
   fun initFromConstruction ct =
-    let val placeholders = map makePlaceholderComposition (fullVertexSequence ct)
+    let val placeholders = map makePlaceholderComposition (fullTokenSequence ct)
     in Composition {construct = constructOf ct,
                     attachments = [(ct,placeholders)]}
     end
@@ -78,7 +79,7 @@ struct
   fun attachConstructionAt (Composition {construct,attachments}) ct t =
     let fun aca (ct',Ds) = (ct',map (fn x => attachConstructionAt x ct t) Ds)
     in if CSpace.sameTokens t construct
-       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (fullVertexSequence ct)) :: attachments}
+       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (fullTokenSequence ct)) :: attachments}
        else Composition {construct = construct, attachments = map aca attachments}
     end
 
@@ -94,13 +95,31 @@ struct
     in coc attachments
     end
 
+  exception BadComposition
+
   fun resultingConstructions (Composition {construct,attachments}) =
     let fun rc ((ct,comps)::A) = let val rr = List.listProduct (map resultingConstructions comps)
-                                     fun f L = Construction.unsplit(ct, pickICSfromAttachments ct L)
-                                 in map f rr @ rc A
+                                     val VS = fullTokenSequence ct
+                                     fun f [] [] = [ct]
+                                       | f (t::tL) (c::cL) =
+                                            if Construction.same (Source t) c then (f tL cL) else
+                                              (List.maps (fn x => attachConstructionAtToken x t c) (f tL cL))
+                                       | f _ _ = raise (print "Bad composition!\n";BadComposition)
+                                     fun g L = f VS L
+                                 in ((List.maps g rr)) @ rc A
                                  end
           | rc [] = []
-    in if null attachments then [Source construct] else rc attachments
+        fun removeRedundant (ct::cts) =
+              if List.exists (fn x => subConstruction ct x) cts then removeRedundant cts
+              else ct :: removeRedundant (List.filter (fn x => not (subConstruction x ct)) cts)
+          | removeRedundant [] = []
+    in if null attachments then [Source construct] else removeRedundant (rc attachments)
     end
 
+  fun applyPartialMorphismToComposition f (Composition {construct,attachments}) =
+    let fun applyToAttachment (ct,C) = ((applyPartialMorphism f ct, map (applyPartialMorphismToComposition f) C))
+    in case f construct of
+          SOME t => Composition {construct = t, attachments = map applyToAttachment attachments}
+        | NONE => Composition {construct = construct, attachments = map applyToAttachment attachments}
+    end
 end;

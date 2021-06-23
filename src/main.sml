@@ -59,12 +59,13 @@ fun main () =
             construction,
             goal,
             limit,
-            outputFile) = parseArgs ();
+            outputFilePath) = parseArgs ();
+      val _ = Logging.write ("Applying structure transfer...");
       val startTime = Time.now();
       val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal 100;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
-      val _ = Logging.write ("structure transfer runtime: "^ LargeInt.toString runtime ^ " ms \n");
+      val _ = Logging.write ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       fun getCompsAndGoals [] = []
         | getCompsAndGoals (h::t) = (State.patternCompOf h, State.goalsOf h) :: getCompsAndGoals t
       fun mkLatexGoals goals =
@@ -73,7 +74,7 @@ fun main () =
         in Latex.environment "minipage" "[t]{0.25\\textwidth}" alignedGoals
         end
       fun mkLatexConstructions comp =
-        let val constructions = Composition.resultingConstructions comp
+        let val constructions = Composition.resultingConstructions comp;
         in map (Latex.construction (0.0,0.0)) constructions
         end
       fun mkLatexConstructionsAndGoals (comp,goals) =
@@ -81,17 +82,21 @@ fun main () =
             val latexGoals = mkLatexGoals goals
         in Latex.environment "center" "" (Latex.printWithHSpace 0.5 (latexConstructions @ [latexGoals]))
         end
+      val nres = length (Seq.list_of results);
+      val _ = Logging.write ("  number of results: " ^ Int.toString nres ^ "\n");
       val (listOfResults,_) = Seq.chop limit results;
       val compsAndGoals = getCompsAndGoals listOfResults;
-      val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals)
-      val nres = length (Seq.list_of results);
-      val _ = Logging.write ("number of results: " ^ Int.toString nres ^ "\n");
-      val latexOriginalConsAndGoals = Latex.environment "center" "" ((Latex.construction (0.0,0.0) construction) ^ "\n " ^ (mkLatexGoals [goal]))
+      val _ = Logging.write "Composing patterns and creating tikz figures...";
+      val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
       val latexCT = Latex.construction (0.0,0.0) construction;
-      val outputFile = TextIO.openOut outputFile
+      val _ = Logging.write "done\n";
+      val _ = Logging.write "Generating LaTeX document...";
+      val latexOriginalConsAndGoals = Latex.environment "center" "" (latexCT ^ "\n " ^ (mkLatexGoals [goal]));
+      val outputFile = TextIO.openOut outputFilePath
       val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
       val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
-      val _ = TextIO.closeOut outputFile
+      val _ = TextIO.closeOut outputFile;
+      val _ = Logging.write ("done!\n" ^ "  output file: "^outputFilePath^"\n");
   in ()
   end

@@ -80,6 +80,7 @@ sig
   include LIST
   val remove : ''a -> ''a list -> ''a list;
    val removeDuplicates : ''a list -> ''a list;
+   val removeRepetition : ('a -> 'a -> bool) -> 'a list -> 'a list;
    val inout : 'a list -> ('a * 'a list) list;
 
    val mergesort : ('a * 'a -> order) -> 'a list -> 'a list;
@@ -139,6 +140,10 @@ struct
 
   fun removeDuplicates [] = []
     | removeDuplicates (h::t) = h :: removeDuplicates (remove h t);
+
+  (* belongs in lists *)
+  fun removeRepetition eq (n::ns) = n :: removeRepetition eq (List.filter (fn x => not (eq x n)) ns)
+    | removeRepetition _ [] = []
 
   fun split (xs, i) =
       let

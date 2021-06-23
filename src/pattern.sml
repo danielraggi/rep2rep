@@ -16,6 +16,7 @@ sig
 
   val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
   val applyMorpism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
+  val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
 (*)  val trivial : TypeSystem.typ -> construction;*)
 end;
 
@@ -77,6 +78,11 @@ struct
     | applyMorpism f (TCPair ({token = t, configurator = u},cs)) =
         (case f t of NONE => raise Undefined
                    | SOME x => TCPair ({token = x, configurator = u}, map (applyMorpism f) cs))
+  fun applyPartialMorphism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
+    | applyPartialMorphism f (Loop t) = (case f t of NONE => Loop t | SOME x => Loop x)
+    | applyPartialMorphism f (TCPair ({token = t, configurator = u},cs)) =
+        (case f t of NONE => TCPair ({token = t, configurator = u}, map (applyPartialMorphism f) cs)
+                   | SOME x => TCPair ({token = x, configurator = u}, map (applyPartialMorphism f) cs))
 
   fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
     (case (f x, funUnion L x) of

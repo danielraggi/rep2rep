@@ -9,6 +9,7 @@ sig
   type trail;
 
   val same : construction -> construction -> bool;
+  val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
   val wellFormed : TypeSystem.typeSystem -> construction -> bool;
   val almostWellFormed : construction -> bool;
@@ -17,7 +18,7 @@ sig
   val CTS : construction -> trail list;
   val inducedConstruction : construction -> trail -> construction;
   val foundationSequence : construction -> CSpace.token list;
-  val fullVertexSequence : construction -> CSpace.token list;
+  val fullTokenSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   val split : construction -> construction -> construction list;
   val unsplit : (construction * construction list) -> construction;
@@ -25,6 +26,8 @@ sig
   val attachAtSource : construction -> construction -> construction;
 
   val renameConstruct : construction -> CSpace.token -> construction;
+
+  val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
 
   val tokensOfConstruction : construction -> CSpace.token list;
 
@@ -44,6 +47,13 @@ struct
   datatype vertex = Token of CSpace.token | Configurator of CSpace.configurator
   type trail = vertex list;
 
+  fun isTrivial (Source _) = true
+    | isTrivial _ = false
+
+  fun toString (Source t) = CSpace.stringOfToken t
+    | toString (Loop t) = CSpace.stringOfToken t
+    | toString (TCPair ({token,configurator}, cs)) =
+       CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConfigurator configurator ^ " <-" ^ (String.stringOfList toString cs)
 
   fun same (Source t) (Source t') = CSpace.sameTokens t t'
     | same (Loop t) (Loop t') = CSpace.sameTokens t t'
@@ -52,6 +62,14 @@ struct
         andalso List.allZip same cs cs'
     | same _ _ = false
     (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
+
+  fun subConstruction (Source t) (Source t') = CSpace.sameTokens t t'
+    | subConstruction (Loop t) (Loop t') = CSpace.sameTokens t t'
+    | subConstruction (TCPair ({token = t, configurator = u}, cs)) (TCPair ({token = t', configurator = u'}, cs')) =
+        CSpace.sameTokens t t' andalso CSpace.sameConfigurators u u'
+        andalso List.allZip subConstruction cs cs'
+    | subConstruction (Source t) (TCPair ({token = t', ...}, _)) = CSpace.sameTokens t t'
+    | subConstruction _ _ = false
 
   fun constructOf (Source t) = t
     | constructOf (Loop t) = t
@@ -157,10 +175,15 @@ struct
 
   fun foundationSequence c = map (tokenOfVertex o hd o rev) (CTS c);
 
-  fun fullVertexSequence (Source t) = [t]
-    | fullVertexSequence (Loop t) = [t]
-    | fullVertexSequence (TCPair ({token,configurator},cs)) =
-        token :: List.concat (map fullVertexSequence cs)
+  fun removeDuplicates eq [] = []
+    | removeDuplicates eq (h::t) = h :: removeDuplicates eq (List.filter (fn x => not(eq x h)) t)
+  fun fullTokenSequence ct =
+    let fun fvs (Source t) = [t]
+          | fvs (Loop t) = []
+          | fvs (TCPair ({token,configurator},cs)) =
+              token :: List.concat (map fvs cs)
+    in removeDuplicates CSpace.sameTokens (fvs ct)
+    end
 
   fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
     | isGenerator (Loop t) (Loop t') = CSpace.sameTokens t t'
@@ -247,20 +270,26 @@ struct
                 | TCPair ({token = t,configurator = u}, cs) => TCPair ({token = t',configurator = u}, map (rc t) cs)
     end
 
-
-  (* belongs in lists *)
-  fun removeRepetition eq (n::ns) = n :: removeRepetition eq (List.filter (fn x => not (eq x n)) ns)
-    | removeRepetition _ [] = []
+  fun attachConstructionAtToken (Source t) t' ct = if CSpace.sameTokens t t' then [ct] else [Source t]
+    | attachConstructionAtToken (Loop t) _ _ = [Loop t]
+    | attachConstructionAtToken (TCPair (tc, cs)) t ct =
+        if CSpace.sameTokens (#token tc) t
+        then (if subConstruction ct (TCPair (tc, cs))
+              then [TCPair (tc, cs)]
+              else if subConstruction (TCPair (tc, cs)) ct
+                   then [ct]
+                   else [TCPair (tc, cs), ct])
+        else
+          let val csr = map (fn x => attachConstructionAtToken x t ct) cs
+              fun mkNew xs = TCPair (tc, xs)
+          in map mkNew (List.listProduct csr)
+          end
 
   fun tokensOfConstruction ct =
     let fun toc (Source t) = [t]
           | toc (Loop _) = []
           | toc (TCPair ({token, ...}, cs)) = token :: List.maps toc cs
-    in removeRepetition CSpace.sameTokens (toc ct)
+    in List.removeRepetition CSpace.sameTokens (toc ct)
     end
 
-  fun toString (Source t) = CSpace.stringOfToken t
-    | toString (Loop t) = CSpace.stringOfToken t
-    | toString (TCPair ({token,configurator}, cs)) =
-       CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConfigurator configurator ^ " <-" ^ (String.stringOfList toString cs)
 end;
