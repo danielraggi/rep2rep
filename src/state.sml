@@ -6,12 +6,14 @@ sig
   val sourceTypeSystemOf : T -> TypeSystem.typeSystem;
   val targetTypeSystemOf : T -> TypeSystem.typeSystem;
   val constructionOf : T -> Construction.construction;
+  val originalGoalOf : T -> Relation.relationship;
   val goalsOf : T -> Relation.relationship list;
   val patternCompOf : T -> Composition.composition;
   val knowledgeOf : T -> Knowledge.base;
   val make : {sourceTypeSystem : TypeSystem.typeSystem,
               targetTypeSystem : TypeSystem.typeSystem,
               construction : Construction.construction,
+              originalGoal : Relation.relationship,
               goals : Relation.relationship list,
               composition : Composition.composition,
               knowledge : Knowledge.base} -> T;
@@ -28,6 +30,7 @@ struct
   type T = {sourceTypeSystem : TypeSystem.typeSystem,
             targetTypeSystem : TypeSystem.typeSystem,
             construction : Construction.construction,
+            originalGoal : Relation.relationship,
             goals : Relation.relationship list,
             composition : Composition.composition,
             knowledge : Knowledge.base};
@@ -35,6 +38,7 @@ struct
   fun sourceTypeSystemOf {sourceTypeSystem,...} = sourceTypeSystem;
   fun targetTypeSystemOf {targetTypeSystem,...} = targetTypeSystem;
   fun constructionOf {construction,...} = construction;
+  fun originalGoalOf {originalGoal,...} = originalGoal;
   fun goalsOf {goals,...} = goals;
   fun patternCompOf {composition,...} = composition;
   fun knowledgeOf {knowledge,...} = knowledge;
@@ -45,6 +49,7 @@ struct
            {sourceTypeSystem = #sourceTypeSystem st,
             targetTypeSystem = #targetTypeSystem st,
             construction = #construction st,
+            originalGoal = #originalGoal st,
             goals = #goals st,
             composition = d,
             knowledge = #knowledge st}
@@ -53,6 +58,7 @@ struct
            {sourceTypeSystem = #sourceTypeSystem st,
             targetTypeSystem = #targetTypeSystem st,
             construction = #construction st,
+            originalGoal = #originalGoal st,
             goals = gs,
             composition = #composition st,
             knowledge = #knowledge st}
@@ -74,6 +80,7 @@ struct
     in {sourceTypeSystem = #sourceTypeSystem st,
         targetTypeSystem = #targetTypeSystem st,
         construction = #construction st,
+        originalGoal = applyToRelationship (#originalGoal st),
         goals = map applyToRelationship (#goals st),
         composition = Composition.applyPartialMorphismToComposition f (#composition st),
         knowledge = #knowledge st}

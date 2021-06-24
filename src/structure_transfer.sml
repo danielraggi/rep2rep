@@ -180,6 +180,7 @@ struct
       val initialState = State.make {sourceTypeSystem = sourceT,
                                       targetTypeSystem = targetT,
                                       construction = ct,
+                                      originalGoal = goal,
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
