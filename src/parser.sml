@@ -96,9 +96,9 @@ struct
 
   fun splitLevelApply f L = splitLevelWithSeparatorApply f #"," L;
 
-  fun list f = splitLevelApply f o String.explode o String.removeSquareBrackets
-  fun finiteSet f = FiniteSet.ofList o splitLevelApply f o String.explode o String.removeBraces
-  fun set f = Set.ofList o splitLevelApply f o String.explode o String.removeBraces
+  fun list f x = if x = "[]" then [] else (splitLevelApply f o String.explode o String.removeSquareBrackets) x
+  fun finiteSet f x = if x= "{}" then FiniteSet.empty else (FiniteSet.ofList o splitLevelApply f o String.explode o String.removeBraces) x
+  fun set f x = if x= "{}" then Set.empty else (Set.ofList o splitLevelApply f o String.explode o String.removeBraces) x
   val typ = TypeSystem.typeOfString
   fun token s = case String.breakOn ":" (String.stripSpaces s) of
                   (ts,_,tys) => CSpace.makeToken ts (typ tys)

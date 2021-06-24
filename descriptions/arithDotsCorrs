@@ -2,20 +2,20 @@
                 <-[n:numExp,p:plus,m:numExp],
  t':arrangement <- u':join:[arrangement,arrangement,arrangement]
                     <-[a:arrangement,b:arrangement],
- [([n:numExp],[a:arrangement]) :: count, ([m:numExp],[b:arrangement]) :: count, ([a:arrangement],[b:arrangement]) :: disjoint],
+ [([n:numExp],[a:arrangement]) :: count, ([m:numExp],[b:arrangement]) :: count, ([],[a:arrangement,b:arrangement]) :: disjoint],
  ([t:numExp],[t':arrangement]) :: count)
 
 (t:formula <- u:infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp],
  t':arrangement,
  [([n:numExp],[t':arrangement]) :: count, ([m:numExp],[t':arrangement]) :: count],
- ([t:formula],[t':arrangement]) :: firstArgumentIsValid)
+ ([t:formula],[t':arrangement]) :: originalConstructIsValid)
 
  (t:numExp <- u:frac:[numExp,numExp,div,numExp]
                  <-[t1:numExp,line:div,t2:2],
   t':arrangement <- u':rotateX:[arrangement,arrangement]
                      <-[t1':arrangement <- u1':remove:[arrangement,arrangement,arrangement]
                                              <-[t2':arrangement,t':arrangement]],
-  [([t1:numExp],[t2':arrangement]) :: count, ([t':arrangement],[t2':arrangement]) :: subArrangement],
+  [([t1:numExp],[t2':arrangement]) :: count, ([],[t':arrangement,t2':arrangement]) :: subArrangement],
   ([t:numExp],[t':arrangement]) :: count)
 
 (t:numExp <- u:addParentheses:[numExp,oB,numExp,cB] <-[toB:oB,x:numExp,tcB:cB],
@@ -25,5 +25,5 @@
 
  (t:numExp <- u:implicitMult:[numExp,numExp,numExp] <-[t1:numExp,t2:numExp],
   t':arrangement <- u':makeRectangle:[arrangement,arrangement] <-[t1':arrangement,t2':arrangement],
-  [([t1:numExp],[t1':arrangement]) :: count, ([t2:numExp],[t2':arrangement]) :: count, ([t1':arrangement],[t2':arrangement]) :: canRectangulate],
+  [([t1:numExp],[t1':arrangement]) :: count, ([t2:numExp],[t2':arrangement]) :: count, ([],[t1':arrangement,t2':arrangement]) :: canRectangulate],
   ([t:numExp],[t':arrangement]) :: count)

@@ -3,6 +3,7 @@ import "util.sequence";
 signature FINITESET =
 sig
   type ''a set
+  val empty : ''a set;
   val ofList : ''a list -> ''a set;
   val listOf : ''a set -> ''a list;
   val elementOf : ''a -> ''a set -> bool;

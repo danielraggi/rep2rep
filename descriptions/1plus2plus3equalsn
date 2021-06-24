@@ -1,4 +1,4 @@
-t:1plus2plus3equal3oB3plus1cBdiv2 <- u:infixRel:[formula,numExp,binRel,numExp]
+t:formula <- u:infixRel:[formula,numExp,binRel,numExp]
                                         <-[t1:1plus2plus3 <- u1:infixOp:[numExp,numExp,binOp,numExp]
                                                                 <-[t11:1plus2 <- u11:infixOp:[numExp,numExp,binOp,numExp]
                                                                                     <-[t111:1,t112:plus,t113:2],

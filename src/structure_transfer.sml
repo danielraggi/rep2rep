@@ -15,16 +15,17 @@ struct
 
   exception CorrespondenceNotApplicable
   (*  *)
-  fun refreshNamesUpToConstruct ct D t =
+  fun refreshNamesOfConstruction ct D =
     let
       fun firstUnusedName Ns =
         let fun f n =
-              let val vcandidate = "v"^(Int.toString n)
-              in if List.exists (fn x => x = vcandidate) Ns then f (n+1) else "v"^(Int.toString n)
+              let val vcandidate = "v_{"^(Int.toString n)^"}"
+              in if List.exists (fn x => x = vcandidate) Ns then f (n+1) else "v_{"^(Int.toString n)^"}"
               end
         in f 0
         end
-      val tokensInConstruction = List.filter (fn x => not (CSpace.sameTokens t x)) (Construction.tokensOfConstruction ct)
+      (*val tokensInConstruction = List.filter (fn x => not (CSpace.sameTokens t x)) (Construction.tokensOfConstruction ct)*)
+      val tokensInConstruction = (Construction.tokensOfConstruction ct)
       val tokensInComposition = Composition.tokensOfComposition D
       val names = map CSpace.nameOfToken (tokensInComposition @ tokensInConstruction)
       fun mkRenameFunction _ [] = (fn _ => NONE)
@@ -34,8 +35,8 @@ struct
                         else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
             in f
             end
-      fun renameFunction x = if CSpace.sameTokens x t then SOME t else mkRenameFunction names tokensInConstruction x
-      val ct' = Construction.renameConstruct ct t
+      fun renameFunction x = (*if CSpace.sameTokens x t then SOME t else*) mkRenameFunction names tokensInConstruction x
+    (* val ct' = Construction.renameConstruct ct t*)
       val updatedConstruction = Pattern.applyMorpism renameFunction ct
     in (renameFunction, updatedConstruction)
     end
@@ -58,7 +59,7 @@ struct
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesUpToConstruct targetPattern patternComp targetToken
+      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesOfConstruction targetPattern patternComp
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
                 ((f,SOME x) :: _) => (f, x)
@@ -66,21 +67,22 @@ struct
       fun updateConstructR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
                                           map (Option.valOf o targetRenamingFunction) tfs,
                                           R)
-      fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
+  (*    fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
         (case (f x, funUnion L x) of
             (NONE,SOME y) => SOME y
           | (SOME y,NONE) => SOME y
           | (NONE,NONE) => NONE
           | (SOME y, SOME z) => if CSpace.sameTokens y z then SOME y else raise Undefined)
         | funUnion [] _ = NONE
-      val f = Pattern.funUnion [sourceRenamingFunction,targetRenamingFunction]
-      fun updateFoundationR (xfs,yfs,R) = (map (Option.valOf o f) xfs, map (Option.valOf o f) yfs, R)
+      val f = Pattern.funUnion [sourceRenamingFunction,targetRenamingFunction]*)
+      fun updateFoundationR (xfs,yfs,R) = (map (Option.valOf o sourceRenamingFunction) xfs, map (Option.valOf o targetRenamingFunction) yfs, R)
       val updatedFoundationRelationships = map updateFoundationR rfs
       val updatedConstructRelationship = updateConstructR rc
-    in Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
+    in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
+        Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
                                               foundationRels=updatedFoundationRelationships,
-                                              constructRel=updatedConstructRelationship}
+                                              constructRel=updatedConstructRelationship})
     end
 
   exception Error
@@ -91,19 +93,20 @@ struct
         val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of (_,([x],[y],R)) => (x,y,R) | _ => raise Error)
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
-        val instantiatedCorr = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
+        val (f,instantiatedCorr) = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
                                   andalso Pattern.tokenMatches sT sourceToken stcs (* check order *)
                                   andalso Pattern.tokenMatches tT ttcs targetToken
                                then instantiateCorrForStateAndGoal corr st goal
                                else raise CorrespondenceNotApplicable
         val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
+      (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
         val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr
         val patternComp = State.patternCompOf st
         val updatedPatternComp = if Composition.isPlaceholder patternComp
                                  then Composition.initFromConstruction targetPattern
                                  else Composition.attachConstructionAt patternComp targetPattern targetToken
         val stateWithUpdatedGoals = State.replaceGoal st goal rfs
-    in State.updatePatternComp stateWithUpdatedGoals updatedPatternComp
+    in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedGoals updatedPatternComp)
     end
 
   fun applyCorrespondence st corr =
@@ -120,9 +123,14 @@ struct
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         val _ = if Knowledge.subRelation (State.knowledgeOf st) R Rg
-                   andalso List.allZip (Pattern.tokenMatches sT) xs xgs  (* check that this line makes sense semantically. I think it does if you interpret relations as being universally quantified on the source relative to the type. *)
+                   andalso List.allZip (Pattern.tokenMatches sT) xs xgs
                    andalso List.allZip (Pattern.tokenMatches tT) ys ygs
                 then () else raise RelationNotApplicable
+        fun makePartialMorphism (t::ts) (t'::ts') x =
+              if CSpace.sameTokens x t then SOME t' else makePartialMorphism ts ts' x
+          | makePartialMorphism [] [] _ = NONE
+          | makePartialMorphism _ _ _ = (print"impossible!";raise Error)
+        val f = makePartialMorphism ygs ys
         val patternComp = State.patternCompOf st
         fun attachInstantiatedLeaves [y] [yg] =
               if Composition.isPlaceholder patternComp
@@ -130,10 +138,10 @@ struct
               else Composition.attachConstructionAt patternComp (Pattern.Source y) yg
           | attachInstantiatedLeaves (y::Y) (yg::Yg) =
               Composition.attachConstructionAt (attachInstantiatedLeaves Y Yg) (Pattern.Source y) yg
-          | attachInstantiatedLeaves _ _ = raise Error
+          | attachInstantiatedLeaves _ _ = (print"what?!";raise Error)
         val updatedPatternComp = attachInstantiatedLeaves ys ygs
         val stateWithUpdatedGoals = State.replaceGoal st goal []
-    in State.updatePatternComp stateWithUpdatedGoals updatedPatternComp
+    in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedGoals updatedPatternComp)
     end
 
   fun applyRelationship st rel =
@@ -196,9 +204,25 @@ struct
             val D' = State.patternCompOf st'
         in Int.compare ((length gs),(length gs'))
         end
+      fun opposite LESS = GREATER | opposite EQUAL = EQUAL | opposite GREATER = LESS
+      fun heuristic4 (st,st') =
+        let val gs = State.goalsOf st
+            val gs' = State.goalsOf st'
+            val gsn = length gs
+            val gsn' = length gs'
+            val D = State.patternCompOf st
+            val D' = State.patternCompOf st'
+            val P = Int.compare (Composition.size D',Composition.size D)
+        in if gsn = 0 andalso gsn' = 0 then opposite P
+           else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then P
+           else Int.compare (gsn,gsn')
+        (*in if ((gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)) andalso P <> EQUAL
+            then P
+            else Int.compare (gsl,gsl')*)
+        end
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sortNoRepetition unfoldState heuristic2 eq limit initialState
+      Search.sortNoRepetition unfoldState heuristic4 eq limit initialState
     end
 
 

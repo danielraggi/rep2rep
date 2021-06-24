@@ -19,6 +19,7 @@ sig
   val updateGoals : T -> Relation.relationship list -> T
   val replaceGoal : T -> Relation.relationship -> Relation.relationship list -> T
   val removeGoal : T -> Relation.relationship -> T
+  val applyPartialMorphismToCompAndGoals : (CSpace.token -> CSpace.token option) -> T -> T;
 
 end;
 
@@ -66,5 +67,16 @@ struct
     end
 
   fun removeGoal st g = replaceGoal st g []
+
+  fun applyPartialMorphismToCompAndGoals f st =
+    let fun applyPartialF t = (case f t of SOME t' => t' | NONE => t)
+        fun applyToRelationship (ss,ts,R) = (map applyPartialF ss, map applyPartialF ts, R)
+    in {sourceTypeSystem = #sourceTypeSystem st,
+        targetTypeSystem = #targetTypeSystem st,
+        construction = #construction st,
+        goals = map applyToRelationship (#goals st),
+        composition = Composition.applyPartialMorphismToComposition f (#composition st),
+        knowledge = #knowledge st}
+    end
 
 end;

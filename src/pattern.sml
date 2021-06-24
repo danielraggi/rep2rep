@@ -16,6 +16,7 @@ sig
 
   val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
   val applyMorpism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
+  val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
 (*)  val trivial : TypeSystem.typ -> construction;*)
 end;
 
@@ -77,6 +78,11 @@ struct
     | applyMorpism f (TCPair ({token = t, configurator = u},cs)) =
         (case f t of NONE => raise Undefined
                    | SOME x => TCPair ({token = x, configurator = u}, map (applyMorpism f) cs))
+  fun applyPartialMorphism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
+    | applyPartialMorphism f (Loop t) = (case f t of NONE => Loop t | SOME x => Loop x)
+    | applyPartialMorphism f (TCPair ({token = t, configurator = u},cs)) =
+        (case f t of NONE => TCPair ({token = t, configurator = u}, map (applyPartialMorphism f) cs)
+                   | SOME x => TCPair ({token = x, configurator = u}, map (applyPartialMorphism f) cs))
 
   fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
     (case (f x, funUnion L x) of
@@ -113,6 +119,12 @@ struct
         val g = applyMorpism f ct'
     in (f, SOME g)
     end handle Undefined => (fn _ => NONE,NONE)
+
+  exception BadSplit
+  fun fullVertexUnsplit _ = ()
+
+
+
 
 (*)
   (* *)
@@ -160,13 +172,13 @@ struct
 
 (*)
   fun findGeneratorMatchingForToken T ct p t =
-      if CSpace.sameTokens t (Construction.constructOf ct) then findGeneratorMatching T (Construction.fixInducedConstruction ct) p
+      if CSpace.sameTokens t (Construction.constructOf ct) then findGeneratorMatching T (Construction.fixLoops ct) p
       else (case ct of TCPair (_, cs) => findFirstSome (map (fn c => findGeneratorMatchingForToken T c p t) cs)
                                       | _ => NONE)*)
 
   fun findMapAndGeneratorMatchingForToken T ct p t =
       if CSpace.sameTokens t (Construction.constructOf ct)
-      then [findMapAndGeneratorMatching T (Construction.fixInducedConstruction ct) p]
+      then [findMapAndGeneratorMatching T (Construction.fixLoops ct) p]
       else (case ct of TCPair (_, cs) => filterSomes' (List.maps (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
                                   | _ => [])
 

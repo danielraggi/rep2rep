@@ -153,8 +153,8 @@ sig
   (*val try: ('a -> 'b) -> 'a -> 'b seq*)
   val hd: 'a seq -> 'a
   val tl: 'a seq -> 'a seq
-  (*val chop: int -> 'a seq -> 'a list * 'a seq
-  val take: int -> 'a seq -> 'a seq*)
+  val chop: int -> 'a seq -> 'a list * 'a seq
+  (*val take: int -> 'a seq -> 'a seq*)
   val list_of: 'a seq -> 'a list
   val of_list: 'a list -> 'a seq
   val append: 'a seq -> 'a seq -> 'a seq
@@ -253,6 +253,13 @@ fun take n xq =
   if n <= (0 : int) then empty
   else make (fn () =>
     (Option.map o apsnd) (take (n - 1)) (pull xq));*)
+exception Negative
+fun chop 0 xq = ([],xq)
+  | chop n xq =
+    if n < 0 then raise Negative else
+      (case pull xq of
+        NONE => ([],empty)
+      | SOME (x, xq') => let val (wL,wS) = chop (n-1) xq' in (x::wL,wS) end);
 
 (*conversion from sequence to list*)
 fun list_of xq =

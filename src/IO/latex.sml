@@ -2,13 +2,32 @@ import "composition";
 
 signature LATEX =
 sig
+  val typ : TypeSystem.typ -> string;
+  val token : CSpace.token -> string;
+  val relationship : Relation.relationship -> string;
+  val sectionTitle : bool -> string -> string;
   val construction : real * real -> Construction.construction -> string;
   val mkDocument : string -> string;
   val outputDocument : TextIO.outstream -> string -> unit;
+  val printWithHSpace : real -> string list -> string;
+  val printSubSections : int -> string list -> string;
+  val environment : string -> string -> string -> string;
 end;
 
 structure Latex : LATEX =
 struct
+
+  fun mathsf s = "\\mathsf{" ^ s ^ "}"
+  fun typ ty = mathsf (TypeSystem.nameOfType ty)
+  fun token t =
+    let val tok = CSpace.nameOfToken t
+        val ty = typ (CSpace.typeOfToken t)
+    in tok ^ " : " ^ ty
+    end
+  fun relationship (x,y,R) =
+    "(" ^ List.toString token x ^ "," ^
+          List.toString token y ^ ")" ^
+        "\\in " ^ mathsf (Relation.nameOf R) 
 
   fun realToString z =
     let val zs = Real.toString z
@@ -63,9 +82,9 @@ struct
 
   fun quickWidthEstimate (Construction.Source t) =
         let val sizeOfToken = real (String.size (CSpace.nameOfToken t))
-            val sizeOfType = 0.75 * real (String.size (TypeSystem.nameOfType (CSpace.typeOfToken t)))
+            val sizeOfType = 0.8 * real (String.size (TypeSystem.nameOfType (CSpace.typeOfToken t)))
         (*in Real.max(0.75,0.1*real (Int.max(sizeOfToken,sizeOfType)))*)
-        in Real.max(0.75,0.12* (Real.max(sizeOfToken, sizeOfType)))
+        in Real.max(0.7,0.11* (Real.max(sizeOfToken, sizeOfType)))
         end
     | quickWidthEstimate (Construction.Loop _) = 0.0
     | quickWidthEstimate (Construction.TCPair (_,cs)) = List.sumMap quickWidthEstimate cs
@@ -83,7 +102,7 @@ struct
             val cn = configuratorNode (x,y-1.0) configurator token
             val configuratorNodeName = nodeNameOfConfigurator configurator token
             val cn2tn = arrow configuratorNodeName (nodeNameOfToken token)
-            val widthEstimates = map (fn x => (Math.pow(quickWidthEstimate x,0.75))) cs
+            val widthEstimates = map (fn x => (Math.pow(quickWidthEstimate x,0.9))) cs
             fun mkIntervals _ [] = []
               | mkIntervals _ [h] = []
               | mkIntervals p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: mkIntervals p' (h2::t))
@@ -107,7 +126,7 @@ struct
     end
 
   fun mkDocument content =
-    let val opening = "\\documentclass[a4paper,10pt]{article}\n "^
+    let val opening = "\\documentclass[a2paper,10pt]{article}\n "^
                       "\\usepackage[margin=2.5cm]{geometry}\n "^
                       "\\input{commands.sty}\n"^
                       "\\tikzset{align at top/.style={baseline=(current bounding box.north)}}\n\n"^
@@ -119,5 +138,17 @@ struct
   fun outputDocument file content =
     let val _ = TextIO.output(file, mkDocument content)
     in () end
+
+  fun sectionTitle b s = "\\section" ^ (if b then "" else "*") ^ "{" ^ s ^ "}"
+  fun subSectionTitle b s = "\\subsection" ^ (if b then "" else "*") ^ "{" ^ s ^ "}"
+
+  fun printWithHSpace _ [] = ""
+    | printWithHSpace r (h::t) = h ^ "\n \\hspace{" ^ Real.toString r ^ "cm} \n " ^ printWithHSpace r t;
+
+  fun printSubSections _ [] = ""
+    | printSubSections i (h::t) = "\\subsection*{Result "^Int.toString i^"}\n" ^ h ^ printSubSections (i+1) t;
+
+  fun environment name parameters content =
+    "\\begin{"^name^"}"^parameters^"\n"^content^"\n \\end{"^name^"}"
 
 end;
