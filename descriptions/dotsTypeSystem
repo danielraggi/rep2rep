@@ -1,4 +1,10 @@
-({dot,arrangement},
- {(dot,arrangement),
-  (arrangement2,arrangement),
-  (arrangement3,arrangement)})
+({\crc,\oo,\ooo,\oooo,\ooooo,\ooV,\oooV,\ooooV,\oooooV,arrangement},
+ {(\crc,arrangement),
+  (\oo,arrangement),
+  (\ooo,arrangement),
+  (\oooo,arrangement),
+  (\ooooo,arrangement),
+  (\ooV,arrangement),
+  (\oooV,arrangement),
+  (\ooooV,arrangement),
+  (\oooooV,arrangement)})

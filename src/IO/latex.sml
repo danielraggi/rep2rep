@@ -27,7 +27,7 @@ struct
   fun relationship (x,y,R) =
     "(" ^ List.toString token x ^ "," ^
           List.toString token y ^ ")" ^
-        "\\in " ^ mathsf (Relation.nameOf R) 
+        "\\in " ^ mathsf (Relation.nameOf R)
 
   fun realToString z =
     let val zs = Real.toString z
@@ -43,13 +43,14 @@ struct
     | lines (h::t) = h ^ "\n " ^ lines t
     | lines _ = raise Empty
 
-  fun nodeNameOfToken t = String.addParentheses (CSpace.nameOfToken t ^ "" ^ TypeSystem.nameOfType (CSpace.typeOfToken t))
+  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\") (String.explode (CSpace.nameOfToken t ^ "" ^ TypeSystem.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
         val c = CSpace.constructorOfConfigurator u
         val nc = CSpace.nameOfConstructor c
         val tn = (CSpace.nameOfToken t ^ "" ^ TypeSystem.nameOfType (CSpace.typeOfToken t))
-    in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn)
+        val tn' = String.implode (List.filter (fn x => x <> #"\\") (String.explode tn))
+    in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn')
     end
 
   fun coordinates (x,y) = String.addParentheses (realToString x ^ "," ^ realToString y)
@@ -126,7 +127,7 @@ struct
     end
 
   fun mkDocument content =
-    let val opening = "\\documentclass[a2paper,10pt]{article}\n "^
+    let val opening = "\\documentclass[a3paper,10pt]{article}\n "^
                       "\\usepackage[margin=2.5cm]{geometry}\n "^
                       "\\input{commands.sty}\n"^
                       "\\tikzset{align at top/.style={baseline=(current bounding box.north)}}\n\n"^

@@ -53,7 +53,7 @@ struct
       val corrBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val corrChars = normaliseLineBreaks (String.explode corrBulk)
-      val corrList = Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
+      val corrList = if corrChars = [] then [] else Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
     in FiniteSet.ofList corrList
     end
 
@@ -62,8 +62,8 @@ struct
       val file = TextIO.openIn ("descriptions/"^filename)
       val relBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
-      val relChars = case rev (String.explode relBulk) of #"\n"::L => rev L | L => rev L
-      val relList = Parser.splitLevelWithSeparatorApply (Parser.relationship o removeLineBreaks) #"\n" relChars
+      val relChars = normaliseLineBreaks (String.explode relBulk)
+      val relList = if relChars = [] then [] else Parser.splitLevelWithSeparatorApply Parser.relationship #"\n" relChars
     in FiniteSet.ofList relList
     end;
 

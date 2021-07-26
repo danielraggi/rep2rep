@@ -27,3 +27,38 @@
   t':arrangement <- u':makeRectangle:[arrangement,arrangement] <-[t1':arrangement,t2':arrangement],
   [([t1:numExp],[t1':arrangement]) :: count, ([t2:numExp],[t2':arrangement]) :: count, ([],[t1':arrangement,t2':arrangement]) :: canRectangulate],
   ([t:numExp],[t':arrangement]) :: count)
+
+(t:1,
+ t':\crc,
+ [],
+ ([t:1],[t':\crc]) :: count)
+
+(t:2,
+ t':\oo,
+ [],
+ ([t:2],[t':\oo]) :: count)
+
+(t:3,
+ t':\ooo,
+ [],
+ ([t:3],[t':\ooo]) :: count)
+
+(t:4,
+ t':\oooo,
+ [],
+ ([t:4],[t':\oooo]) :: count)
+
+(t:2,
+ t':\ooV,
+ [],
+ ([t:2],[t':\ooV]) :: count)
+
+(t:3,
+ t':\oooV,
+ [],
+ ([t:3],[t':\oooV]) :: count)
+
+(t:4,
+ t':\ooooV,
+ [],
+ ([t:4],[t':\ooooV]) :: count)
