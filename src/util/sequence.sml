@@ -154,7 +154,7 @@ sig
   val hd: 'a seq -> 'a
   val tl: 'a seq -> 'a seq
   val chop: int -> 'a seq -> 'a list * 'a seq
-  (*val take: int -> 'a seq -> 'a seq*)
+  val take: int -> 'a seq -> 'a seq
   val list_of: 'a seq -> 'a list
   val of_list: 'a list -> 'a seq
   val append: 'a seq -> 'a seq -> 'a seq
@@ -195,7 +195,9 @@ sig
   val insert : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertMany : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertNoRepetition : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
+  val insertNoRepetitionLimited : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> int -> 'a seq
   val insertManyNoRepetition : 'a seq -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
+  val insertManyNoRepetitionLimited : 'a seq -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> int -> 'a seq
   val findFirst : ('a -> bool) -> 'a seq -> 'a option
   val exists : ('a -> bool) -> 'a seq -> bool
 end;
@@ -260,6 +262,13 @@ fun chop 0 xq = ([],xq)
       (case pull xq of
         NONE => ([],empty)
       | SOME (x, xq') => let val (wL,wS) = chop (n-1) xq' in (x::wL,wS) end);
+fun take 0 xq = empty
+  | take n xq =
+      if n < 0 then raise Negative else
+        make (fn () =>
+          (case pull xq of
+              NONE => NONE
+            | SOME (x, xq') => SOME (x, take (n-1) xq')));
 
 (*conversion from sequence to list*)
 fun list_of xq =
@@ -452,6 +461,20 @@ fun insertNoRepetition x xq f eq =
                      else if eq(x,x') then SOME (x',q)
                           else SOME (x',insertNoRepetition x q f eq));
 
+fun insertNoRepetitionLimited x xq f eq n =
+  let
+    fun inrl xx xxq i =
+      make (fn () =>
+        if i = n then NONE else
+          case pull xxq of
+            NONE => SOME (xx,empty)
+          | SOME (x',q) => if f(xx,x') = GREATER then SOME (x',insertNoRepetitionLimited xx q f eq (i+1))
+                           else if f(xx,x') = LESS then SOME (xx,xxq)
+                           else if eq(xx,x') then SOME (x',q)
+                                else SOME (x',insertNoRepetitionLimited xx q f eq (i+1)));
+  in inrl x xq 0
+  end
+
 fun insertMany xq yq f =
   (case pull xq of
     NONE => yq
@@ -461,6 +484,11 @@ fun insertManyNoRepetition xq yq f eq =
   (case pull xq of
     NONE => yq
   | SOME (x,q) => insertNoRepetition x (insertManyNoRepetition q yq f eq) f eq);
+
+fun insertManyNoRepetitionLimited xq yq f eq n =
+  (case pull xq of
+    NONE => yq
+  | SOME (x,q) => insertNoRepetitionLimited x (insertManyNoRepetitionLimited q yq f eq n) f eq n);
 
 fun findFirst f xq =
   (case pull xq of

@@ -221,7 +221,7 @@ struct
             then P
             else Int.compare (gsl,gsl')*)
         end
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
+      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
     in
       Search.sortNoRepetition unfoldState heuristic4 eq limit initialState
     end

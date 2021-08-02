@@ -14,6 +14,7 @@ sig
   val isAlwaysTrue : T -> bool;
   val same : T -> T -> bool;
   val sameRelationship : relationship -> relationship -> bool;
+  val stronglyMatchingRelationships : relationship -> relationship -> bool;
   val stringOfRelationship : relationship -> string;
 end;
 
@@ -36,6 +37,11 @@ struct
   fun sameRelationship (ts1,ts2,R) (ts1',ts2',R') =
     List.allZip CSpace.sameTokens ts1 ts1'
     andalso List.allZip CSpace.sameTokens ts2 ts2'
+    andalso same R R'
+
+  fun stronglyMatchingRelationships (ts1,ts2,R) (ts1',ts2',R') =
+    List.allZip CSpace.tokensHaveSameType ts1 ts1'
+    andalso List.allZip CSpace.tokensHaveSameType ts2 ts2'
     andalso same R R'
 
   fun stringOfRelationship (x,y,R) = "(" ^ List.toString CSpace.stringOfToken x ^ "," ^ List.toString CSpace.stringOfToken y ^ "," ^ nameOf R ^ ")"

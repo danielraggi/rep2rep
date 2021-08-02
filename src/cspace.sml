@@ -24,6 +24,7 @@ sig
   val sameConstructors : constructor -> constructor -> bool
   val sameConfigurators : configurator -> configurator -> bool
   val sameTokens : token -> token -> bool
+  val tokensHaveSameType : token -> token -> bool
   val nameOfToken : token -> string
   val typeOfToken : token -> TypeSystem.typ
   val stringOfToken : token -> string
@@ -57,6 +58,7 @@ struct
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso TypeSystem.equal ty ty');
   fun nameOfToken (t,_) = t;
   fun typeOfToken (_,ty) = ty;
+  fun tokensHaveSameType (_,ty) (_,ty') = TypeSystem.equal ty ty';
 
   fun stringOfToken (t,ty) = t ^ ":" ^ (TypeSystem.nameOfType ty)
   fun stringOfConstructor (c,(tys,ty)) = c ^ ":" ^ (String.stringOfList TypeSystem.nameOfType (ty::tys))
