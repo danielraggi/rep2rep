@@ -5,7 +5,7 @@ import "parser";
 
 signature INPUT =
 sig
-  val loadTypeSystem : string -> TypeSystem.typeSystem
+  val loadTypeSystem : string -> Type.typeSystem
   val loadCorrespondences : string -> Correspondence.corr FiniteSet.set
   val loadRelations : string -> Relation.relationship FiniteSet.set
   val loadKnowledge : string -> string -> Knowledge.base
