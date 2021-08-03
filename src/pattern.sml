@@ -6,18 +6,18 @@ sig
   type pattern;
 
   val configuratorMatches : CSpace.configurator -> CSpace.configurator -> bool
-  val tokenMatches : TypeSystem.typeSystem -> CSpace.token -> CSpace.token -> bool
-  (*val matches : TypeSystem.typeSystem -> construction -> pattern -> bool;*)
-  (*val generatorMatches : TypeSystem.typeSystem -> construction -> pattern -> bool;*)
-  (*val findGeneratorMatching : TypeSystem.typeSystem -> construction -> pattern -> construction option;*)
-  val findMapFromPatternToGenerator : TypeSystem.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option);
-  val findMapAndGeneratorMatching : TypeSystem.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
-  val findMapAndGeneratorMatchingForToken : TypeSystem.typeSystem -> construction -> pattern -> CSpace.token -> ((CSpace.token -> CSpace.token option) * construction option) list;
+  val tokenMatches : Type.typeSystem -> CSpace.token -> CSpace.token -> bool
+  (*val matches : Type.typeSystem -> construction -> pattern -> bool;*)
+  (*val generatorMatches : Type.typeSystem -> construction -> pattern -> bool;*)
+  (*val findGeneratorMatching : Type.typeSystem -> construction -> pattern -> construction option;*)
+  val findMapFromPatternToGenerator : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option);
+  val findMapAndGeneratorMatching : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
+  val findMapAndGeneratorMatchingForToken : Type.typeSystem -> construction -> pattern -> CSpace.token -> ((CSpace.token -> CSpace.token option) * construction option) list;
 
   val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
   val applyMorpism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
-(*)  val trivial : TypeSystem.typ -> construction;*)
+(*)  val trivial : Type.typ -> construction;*)
 end;
 
 structure Pattern : PATTERN =

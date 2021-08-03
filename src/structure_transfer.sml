@@ -6,7 +6,7 @@ sig
   val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
   val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
   val unfoldState : State.T -> State.T Seq.seq
-  val structureTransfer : Knowledge.base -> TypeSystem.typeSystem -> TypeSystem.typeSystem -> Construction.construction -> Relation.relationship -> int -> State.T Seq.seq
+  val structureTransfer : Knowledge.base -> Type.typeSystem -> Type.typeSystem -> Construction.construction -> Relation.relationship -> int -> State.T Seq.seq
 
 end;
 

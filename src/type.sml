@@ -1,6 +1,6 @@
 import "util.set";
 
-signature TYPESYSTEM =
+signature TYPE =
 sig
   type typ
   type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool}
@@ -16,7 +16,7 @@ sig
   val respectAnyClosure : typeSystem -> typeSystem;
   val fixSubTypeFunction : typeSystem -> typeSystem;
 
-  (* finiteTypeSystem is only a bridge for checking things about finite type systems.
+  (* finiteType is only a bridge for checking things about finite type systems.
     The type used as a representation of type systems in the rest of the code is typeSystem *)
   type finiteTypeSystem = {Ty : typ FiniteSet.set, subType : typ * typ -> bool}
 
@@ -34,7 +34,7 @@ sig
 
 end;
 
-structure TypeSystem : TYPESYSTEM =
+structure Type : TYPE =
 struct
   type typ = string;
   type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};

@@ -11,7 +11,7 @@ sig
 
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
-  val wellFormedComposition : TypeSystem.typeSystem -> composition -> bool;
+  val wellFormedComposition : Type.typeSystem -> composition -> bool;
 
   val initFromConstruction : construction -> composition;
   val attachConstructionAt : composition -> construction -> CSpace.token -> composition;

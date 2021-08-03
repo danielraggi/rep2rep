@@ -3,15 +3,15 @@ import "knowledge";
 signature STATE =
 sig
   type T;
-  val sourceTypeSystemOf : T -> TypeSystem.typeSystem;
-  val targetTypeSystemOf : T -> TypeSystem.typeSystem;
+  val sourceTypeSystemOf : T -> Type.typeSystem;
+  val targetTypeSystemOf : T -> Type.typeSystem;
   val constructionOf : T -> Construction.construction;
   val originalGoalOf : T -> Relation.relationship;
   val goalsOf : T -> Relation.relationship list;
   val patternCompOf : T -> Composition.composition;
   val knowledgeOf : T -> Knowledge.base;
-  val make : {sourceTypeSystem : TypeSystem.typeSystem,
-              targetTypeSystem : TypeSystem.typeSystem,
+  val make : {sourceTypeSystem : Type.typeSystem,
+              targetTypeSystem : Type.typeSystem,
               construction : Construction.construction,
               originalGoal : Relation.relationship,
               goals : Relation.relationship list,
@@ -27,8 +27,8 @@ end;
 
 structure State : STATE =
 struct
-  type T = {sourceTypeSystem : TypeSystem.typeSystem,
-            targetTypeSystem : TypeSystem.typeSystem,
+  type T = {sourceTypeSystem : Type.typeSystem,
+            targetTypeSystem : Type.typeSystem,
             construction : Construction.construction,
             originalGoal : Relation.relationship,
             goals : Relation.relationship list,

@@ -2,7 +2,7 @@ import "composition";
 
 signature LATEX =
 sig
-  val typ : TypeSystem.typ -> string;
+  val typ : Type.typ -> string;
   val token : CSpace.token -> string;
   val relationship : Relation.relationship -> string;
   val sectionTitle : bool -> string -> string;
@@ -18,7 +18,7 @@ structure Latex : LATEX =
 struct
 
   fun mathsf s = "\\mathsf{" ^ s ^ "}"
-  fun typ ty = mathsf (TypeSystem.nameOfType ty)
+  fun typ ty = mathsf (Type.nameOfType ty)
   fun token t =
     let val tok = CSpace.nameOfToken t
         val ty = typ (CSpace.typeOfToken t)
@@ -43,12 +43,12 @@ struct
     | lines (h::t) = h ^ "\n " ^ lines t
     | lines _ = raise Empty
 
-  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\") (String.explode (CSpace.nameOfToken t ^ "" ^ TypeSystem.nameOfType (CSpace.typeOfToken t)))))
+  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\") (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
         val c = CSpace.constructorOfConfigurator u
         val nc = CSpace.nameOfConstructor c
-        val tn = (CSpace.nameOfToken t ^ "" ^ TypeSystem.nameOfType (CSpace.typeOfToken t))
+        val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
         val tn' = String.implode (List.filter (fn x => x <> #"\\") (String.explode tn))
     in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn')
     end
@@ -64,7 +64,7 @@ struct
     end
 
   fun tokenNode isSource coor t =
-    let val typn = "$\\mathsf{"^TypeSystem.nameOfType (CSpace.typeOfToken t)^"}$"
+    let val typn = "$\\mathsf{"^Type.nameOfType (CSpace.typeOfToken t)^"}$"
         val tokn = "$"^CSpace.nameOfToken t^"$"
         val att = if isSource then "termS" else "term"
     in "\\node["^att^" = " ^ String.addBraces typn ^ "] " ^ nodeNameOfToken t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces tokn ^ ";"
@@ -83,7 +83,7 @@ struct
 
   fun quickWidthEstimate (Construction.Source t) =
         let val sizeOfToken = real (String.size (CSpace.nameOfToken t))
-            val sizeOfType = 0.8 * real (String.size (TypeSystem.nameOfType (CSpace.typeOfToken t)))
+            val sizeOfType = 0.8 * real (String.size (Type.nameOfType (CSpace.typeOfToken t)))
         (*in Real.max(0.75,0.1*real (Int.max(sizeOfToken,sizeOfType)))*)
         in Real.max(0.7,0.11* (Real.max(sizeOfToken, sizeOfType)))
         end

@@ -5,16 +5,16 @@ sig
   val list : (string -> 'a) -> string -> 'a list
   val finiteSet : (string -> ''a) -> string -> ''a FiniteSet.set
   val set : (string -> ''a) -> string -> ''a Set.set
-  val typ : string -> TypeSystem.typ
+  val typ : string -> Type.typ
   val token : string -> CSpace.token
-  val ctyp : string -> (TypeSystem.typ list * TypeSystem.typ)
+  val ctyp : string -> (Type.typ list * Type.typ)
   val constructor : string -> CSpace.constructor
   val configurator : string -> CSpace.configurator
   val tcpair : string -> {token : CSpace.token, configurator : CSpace.configurator}
   val splitLevelWithSeparatorApply : (string -> 'a) -> char -> char list -> 'a list
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
-  val finiteTypeSystem : string -> TypeSystem.typeSystem
+  val finiteTypeSystem : string -> Type.typeSystem
   val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
@@ -99,7 +99,7 @@ struct
   fun list f x = if x = "[]" then [] else (splitLevelApply f o String.explode o String.removeSquareBrackets) x
   fun finiteSet f x = if x= "{}" then FiniteSet.empty else (FiniteSet.ofList o splitLevelApply f o String.explode o String.removeBraces) x
   fun set f x = if x= "{}" then Set.empty else (Set.ofList o splitLevelApply f o String.explode o String.removeBraces) x
-  val typ = TypeSystem.typeOfString
+  val typ = Type.typeOfString
   fun token s = case String.breakOn ":" (String.stripSpaces s) of
                   (ts,_,tys) => CSpace.makeToken ts (typ tys)
   fun ctyp s = case list typ (String.stripSpaces s) of
@@ -137,9 +137,9 @@ struct
                             | _ => raise ParseError (s ^ " not a type system"))
         val finTy = finiteSet typ Tys
         val Ty = set typ Tys
-        fun eq (x,y) (x',y') = TypeSystem.equal x x' andalso TypeSystem.equal y y'
+        fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
         val subType' = boolfun eq (pair (typ,typ)) subTys
-        val {subType,...} = TypeSystem.fixFiniteSubTypeFunction {Ty = finTy, subType = subType'}
+        val {subType,...} = Type.fixFiniteSubTypeFunction {Ty = finTy, subType = subType'}
     in {Ty = Ty, subType = subType}
     end;
 

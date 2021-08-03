@@ -4,7 +4,7 @@ import "relation";
 signature CORRESPONDENCE =
 sig
   type corr;
-  val wellFormed : TypeSystem.typeSystem -> TypeSystem.typeSystem -> corr -> bool;
+  val wellFormed : Type.typeSystem -> Type.typeSystem -> corr -> bool;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
   val ofRelationship : Relation.relationship -> corr;
