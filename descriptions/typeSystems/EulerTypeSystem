@@ -1,0 +1,2 @@
+({A|B,C|CD|D,A|B|C|CD|D,EulerDiagram},
+ {(A|B,EulerDiagram),(C|CD|D,EulerDiagram),(A|B|C|CD|D,EulerDiagram)})

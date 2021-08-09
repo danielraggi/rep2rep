@@ -39,7 +39,7 @@ struct
 
   fun loadTypeSystem filename =
     let
-      val file = TextIO.openIn ("descriptions/"^filename)
+      val file = TextIO.openIn ("descriptions/typeSystems/"^filename)
       val TBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val TChars = normaliseLineBreaks (String.explode TBulk)
@@ -49,21 +49,23 @@ struct
 
   fun loadCorrespondences filename =
     let
-      val file = TextIO.openIn ("descriptions/"^filename)
+      val file = TextIO.openIn ("descriptions/correspondences/"^filename)
       val corrBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val corrChars = normaliseLineBreaks (String.explode corrBulk)
-      val corrList = if corrChars = [] then [] else Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
+      val corrList = if corrChars = [] then []
+                     else Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
     in FiniteSet.ofList corrList
     end
 
   fun loadRelations filename =
     let
-      val file = TextIO.openIn ("descriptions/"^filename)
+      val file = TextIO.openIn ("descriptions/correspondences/"^filename)
       val relBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val relChars = normaliseLineBreaks (String.explode relBulk)
-      val relList = if relChars = [] then [] else Parser.splitLevelWithSeparatorApply Parser.relationship #"\n" relChars
+      val relList = if relChars = [] then []
+                    else Parser.splitLevelWithSeparatorApply Parser.relationship #"\n" relChars
     in FiniteSet.ofList relList
     end;
 
@@ -74,7 +76,7 @@ struct
     end
 
   fun loadConstruction filename =
-    let val file = TextIO.openIn ("descriptions/"^filename)
+    let val file = TextIO.openIn ("descriptions/constructions/"^filename)
         val ctBulk = TextIO.inputAll file
         val _ = TextIO.closeIn file
         val ctString = removeLineBreaks ctBulk

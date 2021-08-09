@@ -1,30 +1,30 @@
-(t:numExp <- u:infixOp:[numExp,numExp,binOp,numExp]
+(t:numExp <- infixOp:[numExp,numExp,binOp,numExp]
                 <-[n:numExp,p:plus,m:numExp],
- t':arrangement <- u':join:[arrangement,arrangement,arrangement]
+ t':arrangement <- join:[arrangement,arrangement,arrangement]
                     <-[a:arrangement,b:arrangement],
  [([n:numExp],[a:arrangement]) :: count, ([m:numExp],[b:arrangement]) :: count, ([],[a:arrangement,b:arrangement]) :: disjoint],
  ([t:numExp],[t':arrangement]) :: count)
 
-(t:formula <- u:infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp],
+(t:formula <- infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp],
  t':arrangement,
  [([n:numExp],[t':arrangement]) :: count, ([m:numExp],[t':arrangement]) :: count],
  ([t:formula],[t':arrangement]) :: formulaIsValid)
 
- (t:numExp <- u:frac:[numExp,numExp,div,numExp]
+ (t:numExp <- frac:[numExp,numExp,div,numExp]
                  <-[t1:numExp,line:div,t2:2],
-  t':arrangement <- u':rotateX:[arrangement,arrangement]
-                     <-[t1':arrangement <- u1':remove:[arrangement,arrangement,arrangement]
+  t':arrangement <- rotateX:[arrangement,arrangement]
+                     <-[t1':arrangement <- remove:[arrangement,arrangement,arrangement]
                                              <-[t2':arrangement,t':arrangement]],
   [([t1:numExp],[t2':arrangement]) :: count, ([],[t':arrangement,t2':arrangement]) :: subArrangement],
   ([t:numExp],[t':arrangement]) :: count)
 
-(t:numExp <- u:addParentheses:[numExp,oB,numExp,cB] <-[toB:oB,x:numExp,tcB:cB],
+(t:numExp <- addParentheses:[numExp,oB,numExp,cB] <-[toB:oB,x:numExp,tcB:cB],
  t':arrangement,
  [([x:numExp],[t':arrangement])::count],
  ([t:numExp],[t':arrangement])::count)
 
- (t:numExp <- u:implicitMult:[numExp,numExp,numExp] <-[t1:numExp,t2:numExp],
-  t':arrangement <- u':makeRectangle:[arrangement,arrangement] <-[t1':arrangement,t2':arrangement],
+ (t:numExp <- implicitMult:[numExp,numExp,numExp] <-[t1:numExp,t2:numExp],
+  t':arrangement <- makeRectangle:[arrangement,arrangement] <-[t1':arrangement,t2':arrangement],
   [([t1:numExp],[t1':arrangement]) :: count, ([t2:numExp],[t2':arrangement]) :: count, ([],[t1':arrangement,t2':arrangement]) :: canRectangulate],
   ([t:numExp],[t':arrangement]) :: count)
 
@@ -48,17 +48,17 @@
  [],
  ([t:4],[t':\oooo]) :: count)
 
-(t:2,
+ (t:2,
  t':\ooV,
  [],
  ([t:2],[t':\ooV]) :: count)
 
-(t:3,
+ (t:3,
  t':\oooV,
  [],
  ([t:3],[t':\oooV]) :: count)
 
-(t:4,
+ (t:4,
  t':\ooooV,
  [],
  ([t:4],[t':\ooooV]) :: count)

@@ -1,0 +1,4 @@
+(t:formula <- infixRel:[formula,formula,binRel,formula] <-[t1:formula,t2:\wedge,t3:formula],
+ t':\top <- AND:[bool,bool,bool] <-[t1':\top,t2':\top],
+ [([t1:formula],[\t1':\top]) :: LogicalEval, ([t3:formula],[t2':\top]) :: LogicalEval],
+ ([t:formula],[t':\top]) :: LogicalEval)

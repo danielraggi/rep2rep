@@ -1,0 +1,22 @@
+t:formula <- infixRel:[formula,numExp,binRel,numExp]
+                <-[t1:1plus2plus3plus4 <- infixOp:[numExp,numExp,binOp,numExp]
+                                        <-[t11:1plus2plus3 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                <-[t111:1plus2 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                                    <-[t1111:1,t1112:plus,t1113:2],
+                                                                   t112:plus,
+                                                                   t113:3],
+                                           t12:plus,
+                                           t13:4],
+                   t2:equal,
+                   t3:4oB4plus1cBdiv2 <- frac:[numExp,numExp,div,numExp]
+                                            <-[t31:4oB4plus1cB <- implicitMult:[numExp,numExp,numExp]
+                                                                      <-[t311:4,
+                                                                         t312:oB3plus1cB <- addParentheses:[numExp,oB,numExp,cB]
+                                                                                                  <-[t3121:oB,
+                                                                                                     t3122:4plus1 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                                                                            <-[t31221:4,
+                                                                                                                               t31222:plus,
+                                                                                                                               t31223:1],
+                                                                                                     t3123:cB]],
+                                               t32:div,
+                                               t33:2]]
