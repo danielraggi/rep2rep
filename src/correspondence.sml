@@ -46,9 +46,9 @@ struct
         val sP = Pattern.Source sPc
         val tP = Pattern.Source tPc
     in {sourcePattern = sP,
-      targetPattern = tP,
-      foundationRels = [],
-      constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
+        targetPattern = tP,
+        foundationRels = [],
+        constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
     end;
 
 end;

@@ -43,14 +43,21 @@ struct
     | lines (h::t) = h ^ "\n " ^ lines t
     | lines _ = raise Empty
 
-  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\") (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
+  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
         val c = CSpace.constructorOfConfigurator u
         val nc = CSpace.nameOfConstructor c
         val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
-        val tn' = String.implode (List.filter (fn x => x <> #"\\") (String.explode tn))
+        val tn' = String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode tn))
     in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn')
+    end
+
+  fun nodeNameOfConstructor c t =
+    let val nc = CSpace.nameOfConstructor c
+        val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
+        val tn' = String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode tn))
+    in String.addParentheses (nc ^ "_" ^ tn')
     end
 
   fun coordinates (x,y) = String.addParentheses (realToString x ^ "," ^ realToString y)
@@ -61,6 +68,12 @@ struct
         val nc = "$\\mathit{"^CSpace.nameOfConstructor c^"}$"
         val nodeString = ""
     in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConfigurator u t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
+    end
+
+  fun constructorNode coor c t =
+    let val nc = "$\\mathit{"^CSpace.nameOfConstructor c^"}$"
+        val nodeString = ""
+    in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConstructor c t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
     end
 
   fun tokenNode isSource coor t =
@@ -98,11 +111,11 @@ struct
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
         | SOME pn => if i = 1 then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,195)] else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,~15)])
-    | construction' (x,y) parentName i (Construction.TCPair ({configurator,token},cs)) =
+    | construction' (x,y) parentName i (Construction.TCPair ({constructor,token},cs)) =
         let val tn = tokenNode false (x,y) token
-            val cn = configuratorNode (x,y-1.0) configurator token
-            val configuratorNodeName = nodeNameOfConfigurator configurator token
-            val cn2tn = arrow configuratorNodeName (nodeNameOfToken token)
+            val cn = constructorNode (x,y-1.0) constructor token
+            val constructorNodeName = nodeNameOfConstructor constructor token
+            val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
             val widthEstimates = map (fn x => (Math.pow(quickWidthEstimate x,0.9))) cs
             fun mkIntervals _ [] = []
               | mkIntervals _ [h] = []
@@ -111,7 +124,7 @@ struct
             val cssize = List.last intervals
             fun calcX j = ~cssize/2.0 + List.nth(intervals,j)
             fun crec _ [] = []
-              | crec j (ct::cts) = construction' (x + (calcX j), y-2.0) (SOME configuratorNodeName) (j+1) ct :: crec (j+1) cts
+              | crec j (ct::cts) = construction' (x + (calcX j), y-2.0) (SOME constructorNodeName) (j+1) ct :: crec (j+1) cts
         in (case parentName of
               NONE => lines ([tn,cn,cn2tn] @ (crec 0 cs))
             | SOME pn =>

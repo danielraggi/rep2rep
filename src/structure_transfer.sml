@@ -223,7 +223,9 @@ struct
         end
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
     in
-      Search.sortNoRepetition unfoldState heuristic4 eq limit initialState
+      (*Search.sortNoRepetition unfoldState heuristic4 eq limit initialState*)
+      (*Search.depthFirst unfoldState limit initialState*)
+      Search.graphDepthFirstSorting unfoldState heuristic4 eq limit initialState
     end
 
 

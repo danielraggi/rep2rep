@@ -10,7 +10,7 @@ sig
   val ctyp : string -> (Type.typ list * Type.typ)
   val constructor : string -> CSpace.constructor
   val configurator : string -> CSpace.configurator
-  val tcpair : string -> {token : CSpace.token, configurator : CSpace.configurator}
+  val tcpair : string -> {token : CSpace.token, constructor : CSpace.constructor}
   val splitLevelWithSeparatorApply : (string -> 'a) -> char -> char list -> 'a list
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
@@ -110,7 +110,7 @@ struct
   fun configurator s = case String.breakOn ":" (String.stripSpaces s) of
                          (us,_,ccs) => CSpace.makeConfigurator (us, constructor ccs)
   fun tcpair s = case String.breakOn "<-" (String.stripSpaces s) of
-                    (ts,_,cfgs) => {token = token ts, configurator = configurator cfgs}
+                    (ts,_,cfgs) => {token = token ts, constructor = constructor cfgs}
 
   fun pair (f,g) s =
     case splitLevel (String.explode (String.removeParentheses s)) of

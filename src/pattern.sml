@@ -75,14 +75,14 @@ struct
   exception Undefined
   fun applyMorpism f (Source t) = (case f t of NONE => raise Undefined | SOME x => Source x)
     | applyMorpism f (Loop t) = (case f t of NONE => raise Undefined | SOME x => Loop x)
-    | applyMorpism f (TCPair ({token = t, configurator = u},cs)) =
+    | applyMorpism f (TCPair ({token = t, constructor = c},cs)) =
         (case f t of NONE => raise Undefined
-                   | SOME x => TCPair ({token = x, configurator = u}, map (applyMorpism f) cs))
+                   | SOME x => TCPair ({token = x, constructor = c}, map (applyMorpism f) cs))
   fun applyPartialMorphism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
     | applyPartialMorphism f (Loop t) = (case f t of NONE => Loop t | SOME x => Loop x)
-    | applyPartialMorphism f (TCPair ({token = t, configurator = u},cs)) =
-        (case f t of NONE => TCPair ({token = t, configurator = u}, map (applyPartialMorphism f) cs)
-                   | SOME x => TCPair ({token = x, configurator = u}, map (applyPartialMorphism f) cs))
+    | applyPartialMorphism f (TCPair ({token = t, constructor = c},cs)) =
+        (case f t of NONE => TCPair ({token = t, constructor = c}, map (applyPartialMorphism f) cs)
+                   | SOME x => TCPair ({token = x, constructor = c}, map (applyPartialMorphism f) cs))
 
   fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
     (case (f x, funUnion L x) of
@@ -101,8 +101,8 @@ struct
         if tokenMatches T t t'
         then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
         else (fn _ => NONE)
-    | findMapFromPatternToGenerator T (TCPair ({token = t, configurator = u},cs)) (TCPair ({token = t', configurator = u'},cs')) =
-        if configuratorMatches u u' andalso tokenMatches T t t'
+    | findMapFromPatternToGenerator T (TCPair ({token = t, constructor = c},cs)) (TCPair ({token = t', constructor = c'},cs')) =
+        if CSpace.sameConstructors c c' andalso tokenMatches T t t'
         then
           let val CHfunctions = List.funZip (findMapFromPatternToGenerator T) cs cs'
 
