@@ -74,7 +74,7 @@ struct
       fun updateR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
                                  map (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) tfs,
                                  R)
-      (*****)
+      (*****) 
       fun funUnion (f::L) x =
         (case (f x, funUnion L x) of
             (NONE,SOME y) => SOME y
