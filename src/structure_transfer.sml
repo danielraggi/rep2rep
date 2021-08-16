@@ -74,7 +74,7 @@ struct
       fun updateR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
                                  map (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) tfs,
                                  R)
-      (*****) 
+      (*****)
       fun funUnion (f::L) x =
         (case (f x, funUnion L x) of
             (NONE,SOME y) => SOME y
@@ -98,7 +98,9 @@ struct
     let val (sourceToken,targetToken,Rg) = (case Relation.tupleOfRelationship goal of
                                               ([x],[y],R) => (x,y,R)
                                             | _ => raise CorrespondenceNotApplicable)
-        val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of (_,([x],[y],R)) => (x,y,R) | _ => raise Error)
+        val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of
+                                (_,([x],[y],R)) => (x,y,R)
+                              | _ => raise Error)
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         fun minType typSys (ty1,ty2) =

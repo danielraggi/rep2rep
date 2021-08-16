@@ -101,17 +101,19 @@ struct
         if tokenMatches T t t'
         then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
         else (fn _ => NONE)
-    | findMapFromPatternToGenerator T (TCPair ({token = t, constructor = c},cs)) (TCPair ({token = t', constructor = c'},cs')) =
+    | findMapFromPatternToGenerator T (TCPair ({token = t, constructor = c},cs))
+                                      (TCPair ({token = t', constructor = c'},cs')) =
         if CSpace.sameConstructors c c' andalso tokenMatches T t t'
         then
           let val CHfunctions = List.funZip (findMapFromPatternToGenerator T) cs cs'
-
               fun nodeFunction x = if CSpace.sameTokens x t' then SOME t else NONE
           in funUnion (nodeFunction :: CHfunctions)
           end
         else (fn _ => NONE)
     | findMapFromPatternToGenerator T (TCPair ({token = t, ...},_)) (Source t') =
-        if tokenMatches T t t' then (fn x => if CSpace.sameTokens x t' then SOME t else NONE) else (fn _ => NONE)
+        if tokenMatches T t t'
+        then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+        else (fn _ => NONE)
     | findMapFromPatternToGenerator _ _ _ = (fn _ => NONE)
 
   fun findMapAndGeneratorMatching T ct ct' =
