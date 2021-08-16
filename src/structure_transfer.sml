@@ -35,8 +35,7 @@ struct
                         else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
             in f
             end
-      fun renameFunction x = (*if CSpace.sameTokens x t then SOME t else*) mkRenameFunction names tokensInConstruction x
-    (* val ct' = Construction.renameConstruct ct t*)
+      fun renameFunction x = mkRenameFunction names tokensInConstruction x
       val updatedConstruction = Pattern.applyMorpism renameFunction ct
     in (renameFunction, updatedConstruction)
     end
@@ -49,7 +48,7 @@ struct
      to rename the relationships between the vertices of the source specified by the correspondence.
      It will also rename the vertices of the target pattern so that they don't clash with the
      vertices in the composition.  *)
-  fun instantiateCorrForStateAndGoal corr st goal =
+  fun instantiateCorrForStateAndGoal corr st goal targetType =
     let
       val (sourceToken,targetToken) = (case Relation.tupleOfRelationship goal of
                                           ([x],[y],_) => (x,y)
@@ -59,25 +58,34 @@ struct
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
       val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
-      val (targetRenamingFunction, updatedTargetPattern) = refreshNamesOfConstruction targetPattern patternComp
+      val targetConstructWithUpdatedType =
+            CSpace.makeToken (CSpace.nameOfToken (Pattern.constructOf targetPattern)) targetType
+      fun partialMorphism x = if CSpace.sameTokens x (Pattern.constructOf targetPattern)
+                              then SOME targetConstructWithUpdatedType
+                              else NONE
+      val targetPattern' = Pattern.applyPartialMorphism partialMorphism targetPattern
+      val (targetRenamingFunction, updatedTargetPattern) =
+            refreshNamesOfConstruction targetPattern' patternComp
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
                 ((f,SOME x) :: _) => (f, x)
               | _ => raise CorrespondenceNotApplicable)
-      fun updateConstructR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
-                                          map (Option.valOf o targetRenamingFunction) tfs,
-                                          R)
-  (*    fun funUnion (f::L) x = (* Here there's a check that the map is compatible on all the subconstructions *)
+      fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
+      fun updateR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
+                                 map (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) tfs,
+                                 R)
+      (*****)
+      fun funUnion (f::L) x =
         (case (f x, funUnion L x) of
             (NONE,SOME y) => SOME y
           | (SOME y,NONE) => SOME y
           | (NONE,NONE) => NONE
           | (SOME y, SOME z) => if CSpace.sameTokens y z then SOME y else raise Undefined)
         | funUnion [] _ = NONE
-      val f = Pattern.funUnion [sourceRenamingFunction,targetRenamingFunction]*)
-      fun updateFoundationR (xfs,yfs,R) = (map (Option.valOf o sourceRenamingFunction) xfs, map (Option.valOf o targetRenamingFunction) yfs, R)
-      val updatedFoundationRelationships = map updateFoundationR rfs
-      val updatedConstructRelationship = updateConstructR rc
+      val f = Pattern.funUnion [sourceRenamingFunction,targetRenamingFunction]
+      (*****)
+      val updatedFoundationRelationships = map updateR rfs
+      val updatedConstructRelationship = updateR rc
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
@@ -93,11 +101,15 @@ struct
         val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of (_,([x],[y],R)) => (x,y,R) | _ => raise Error)
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
-        val (f,instantiatedCorr) = if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
-                                  andalso Pattern.tokenMatches sT sourceToken stcs (* check order *)
-                                  andalso Pattern.tokenMatches tT ttcs targetToken
-                               then instantiateCorrForStateAndGoal corr st goal
-                               else raise CorrespondenceNotApplicable
+        fun minType typSys (ty1,ty2) =
+              if (#subType typSys) (ty1,ty2) then ty1
+              else if (#subType typSys) (ty2,ty1) then ty2
+              else raise CorrespondenceNotApplicable
+        val (f,instantiatedCorr) =
+              if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
+                 andalso Pattern.tokenMatches sT sourceToken stcs
+              then instantiateCorrForStateAndGoal corr st goal (minType tT (CSpace.typeOfToken targetToken, CSpace.typeOfToken ttcs))
+              else raise CorrespondenceNotApplicable
         val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
         val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr

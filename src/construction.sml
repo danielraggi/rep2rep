@@ -25,7 +25,7 @@ sig
   val fixLoops : construction -> construction;
   val attachAtSource : construction -> construction -> construction;
 
-  val renameConstruct : construction -> CSpace.token -> construction;
+  val replaceConstruct : construction -> CSpace.token -> construction;
 
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
 
@@ -261,7 +261,7 @@ struct
 
 
   exception BadConstruction
-  fun renameConstruct ct t' =
+  fun replaceConstruct ct t' =
     let fun rc _ (Source t)  = Source t
           | rc originalConstruct (Loop t) = if CSpace.sameTokens t originalConstruct then Loop t' else Loop t
           | rc originalConstruct (TCPair (tc, cs)) = TCPair (tc, map (rc originalConstruct) cs)
