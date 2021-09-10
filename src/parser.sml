@@ -275,19 +275,19 @@ struct
           | stringifyC [] = ""
         val C = contentForKeywords transferKeywords ws
         fun getSourceTySys [] = raise ParseError "no source type system for transfer"
-          | getSourceTySys ((x,[c])::L) =
+          | getSourceTySys ((x,c)::L) =
               if x = SOME "sourceTypeSystem"
-              then findTypeSystemWithName DC c
+              then findTypeSystemWithName DC (String.concat c)
               else getSourceTySys L
         fun getTargetTySys [] = raise ParseError "no target type system for transfer"
-          | getTargetTySys ((x,[c])::L) =
+          | getTargetTySys ((x,c)::L) =
               if x = SOME "targetTypeSystem"
-              then findTypeSystemWithName DC c
+              then findTypeSystemWithName DC (String.concat c)
               else getTargetTySys L
         fun getConstruction [] = raise ParseError "no construction to transfer"
-          | getConstruction ((x,[c])::L) =
+          | getConstruction ((x,c)::L) =
               if x = SOME "sourceConstruction"
-              then findConstructionWithName DC c
+              then findConstructionWithName DC (String.concat c)
               else getConstruction L
         fun getGoal [] = raise ParseError "no goal for transfer"
           | getGoal ((x,c)::L) =
