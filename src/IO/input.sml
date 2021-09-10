@@ -6,11 +6,13 @@ import "parser";
 signature INPUT =
 sig
   val loadTypeSystem : string -> Type.typeSystem
-  val loadCorrespondences : string -> Correspondence.corr FiniteSet.set
+  val loadCorrespondences : string -> Correspondence.corr Seq.seq
   val loadRelations : string -> Relation.relationship FiniteSet.set
-  val loadKnowledge : string -> string -> Knowledge.base
+  val loadKnowledge : string -> Knowledge.base
   val loadConstruction : string -> Construction.construction
   val loadGoal : string -> Relation.relationship
+  val loadDocument : string -> Parser.documentContent
+  val structureTransfer : string -> string -> string -> string -> string -> int -> State.T Seq.seq
 end;
 
 structure Input : INPUT =
@@ -55,7 +57,7 @@ struct
       val corrChars = normaliseLineBreaks (String.explode corrBulk)
       val corrList = if corrChars = [] then []
                      else Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
-    in FiniteSet.ofList corrList
+    in Seq.of_list corrList
     end
 
   fun loadRelations filename =
@@ -69,10 +71,10 @@ struct
     in FiniteSet.ofList relList
     end;
 
-  fun loadKnowledge corrfilename relfilename =
-    let val rels = loadRelations relfilename
+  fun loadKnowledge corrfilename (*relfilename*) =
+    let (*val rels = loadRelations relfilename*)
         val corrs = loadCorrespondences corrfilename
-    in Knowledge.make rels corrs
+    in Knowledge.make corrs
     end
 
   fun loadConstruction filename =
@@ -90,4 +92,22 @@ struct
         val rString = removeLineBreaks rBulk
     in Parser.relationship rString
     end
+
+  fun loadDocument filename =
+    let (*val file = TextIO.openIn ("descriptions/"^filename)
+        val s = TextIO.inputAll file
+        val _ = TextIO.closeIn file*)
+    in Parser.document filename
+    end
+
+  fun structureTransfer docName sourceTySysName targetTySysName constructionName goalString i =
+    let val DC = loadDocument docName
+        val KB = Parser.knowledgeOf DC
+        val sourceTySys = Parser.findTypeSystemWithName DC sourceTySysName
+        val targetTySys = Parser.findTypeSystemWithName DC targetTySysName
+        val ct = Parser.findConstructionWithName DC constructionName
+        val goal = Parser.relationship goalString
+    in Transfer.structureTransfer KB sourceTySys targetTySys ct goal i
+    end
+
 end;

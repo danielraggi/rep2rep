@@ -6,7 +6,13 @@ sig
   val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
   val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
   val unfoldState : State.T -> State.T Seq.seq
-  val structureTransfer : Knowledge.base -> Type.typeSystem -> Type.typeSystem -> Construction.construction -> Relation.relationship -> int -> State.T Seq.seq
+  val structureTransfer : Knowledge.base
+                            -> Type.typeSystem
+                            -> Type.typeSystem
+                            -> Construction.construction
+                            -> Relation.relationship
+                            -> int
+                            -> State.T Seq.seq
 
 end;
 
@@ -71,9 +77,9 @@ struct
                 ((f,SOME x) :: _) => (f, x)
               | _ => raise CorrespondenceNotApplicable)
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
-      fun updateR (sfs,tfs,R) = (map (Option.valOf o sourceRenamingFunction) sfs,
-                                 map (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) tfs,
-                                 R)
+      fun srFun x = (Option.valOf o sourceRenamingFunction) x
+      fun trFun x = (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) x
+      fun updateR (sfs,tfs,R) = (map srFun sfs, map trFun tfs, R)
       (*****)
       fun funUnion (f::L) x =
         (case (f x, funUnion L x) of
@@ -87,9 +93,10 @@ struct
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
-        Correspondence.declareCorrespondence {sourcePattern=matchingGenerator,
+        Correspondence.declareCorrespondence {name = #name corr,
+                                              sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
-                                              foundationRels=updatedFoundationRelationships,
+                                              tokenRels=updatedFoundationRelationships,
                                               constructRel=updatedConstructRelationship})
     end
 
@@ -100,7 +107,7 @@ struct
                                             | _ => raise CorrespondenceNotApplicable)
         val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of
                                 (_,([x],[y],R)) => (x,y,R)
-                              | _ => raise Error)
+                              | _ => (print "oh no!";raise Error))
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         fun minType typSys (ty1,ty2) =
@@ -119,8 +126,10 @@ struct
         val updatedPatternComp = if Composition.isPlaceholder patternComp
                                  then Composition.initFromConstruction targetPattern
                                  else Composition.attachConstructionAt patternComp targetPattern targetToken
-        val stateWithUpdatedGoals = State.replaceGoal st goal rfs
-    in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedGoals updatedPatternComp)
+        val transferProof = State.transferProofOf st
+        val updatedTransferProof = TransferProof.attachCorrAt instantiatedCorr goal transferProof
+        val stateWithUpdatedProof = State.updateTransferProof (State.replaceGoal st goal rfs) updatedTransferProof
+    in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
     end
 
   fun applyCorrespondence st corr =
@@ -130,6 +139,7 @@ struct
     in ac (State.goalsOf st)
     end
 
+    (*
   exception RelationNotApplicable
   fun applyRelationshipForGoal st rel goal =
     let val (xgs,ygs,Rg) = Relation.tupleOfRelationship goal
@@ -164,7 +174,7 @@ struct
                             handle RelationNotApplicable => ar gs)
     in ar (State.goalsOf st)
     end
-
+*)
   (*
   fun quickCorrFilter KB rships corrs =
     let fun f [] corr = false
@@ -176,11 +186,11 @@ struct
   *)
 
   fun unfoldState st =
-    let val KB = State.knowledgeOf st
-        val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
-        val rels = FiniteSet.toSeq (Knowledge.relationshipsOf KB)
+    let val corrs = (*FiniteSet.toSeq*) #correspondences (State.knowledgeOf st)
+        (*val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
+        val rels = FiniteSet.toSeq (Knowledge.relationshipsOf KB)*)
         (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
-    in Seq.append (Seq.maps (applyRelationship st) rels)
+    in (*Seq.append (Seq.maps (applyRelationship st) rels)*)
                   (Seq.maps (applyCorrespondence st) corrs) (*the returned sequence states is disjunctive; one must be satisfied *)
     end
 
@@ -193,6 +203,7 @@ struct
                 | _ => raise BadGoal)
       val initialState = State.make {sourceTypeSystem = sourceT,
                                       targetTypeSystem = targetT,
+                                      transferProof = TransferProof.ofRelationship goal,
                                       construction = ct,
                                       originalGoal = goal,
                                       goals = [goal],

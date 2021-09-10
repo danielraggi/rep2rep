@@ -3,7 +3,7 @@ import "util.set";
 signature TYPE =
 sig
   type typ
-  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool}
+  type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool}
   exception undefined
 
   val typeOfString : string -> typ
@@ -18,7 +18,7 @@ sig
 
   (* finiteType is only a bridge for checking things about finite type systems.
     The type used as a representation of type systems in the rest of the code is typeSystem *)
-  type finiteTypeSystem = {Ty : typ FiniteSet.set, subType : typ * typ -> bool}
+  type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool}
 
   val reflexive : finiteTypeSystem -> bool;
   val transitive : finiteTypeSystem -> bool;
@@ -37,8 +37,8 @@ end;
 structure Type : TYPE =
 struct
   type typ = string;
-  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};
-  type finiteTypeSystem = {Ty : typ FiniteSet.set, subType : typ * typ -> bool};
+  type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool};
+  type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool};
   exception undefined;
 
   fun typeOfString x = x
@@ -46,24 +46,24 @@ struct
   fun equal x y = (x = y)
 
 
-  fun reflexive {Ty,subType} = FiniteSet.all (fn x => subType (x,x)) Ty;
-  fun transitive {Ty,subType} = FiniteSet.all (fn x => FiniteSet.all (fn y => FiniteSet.all (fn z => not (subType (x,y) andalso subType (y,z)) orelse subType (x,z)) Ty) Ty) Ty;
-  fun antisymmetric {Ty,subType} = FiniteSet.all (fn x => FiniteSet.all (fn y => not (subType (x,y) andalso subType (y,x)) orelse x = y) Ty) Ty;
-  fun respectsAny {Ty,subType} = FiniteSet.all (fn x => subType (x,any)) Ty
+  fun reflexive {Ty,subType,...} = FiniteSet.all (fn x => subType (x,x)) Ty;
+  fun transitive {Ty,subType,...} = FiniteSet.all (fn x => FiniteSet.all (fn y => FiniteSet.all (fn z => not (subType (x,y) andalso subType (y,z)) orelse subType (x,z)) Ty) Ty) Ty;
+  fun antisymmetric {Ty,subType,...} = FiniteSet.all (fn x => FiniteSet.all (fn y => not (subType (x,y) andalso subType (y,x)) orelse x = y) Ty) Ty;
+  fun respectsAny {Ty,subType,...} = FiniteSet.all (fn x => subType (x,any)) Ty
 
   fun wellDefined T =
     reflexive T andalso transitive T andalso antisymmetric T;
 
-  fun reflexiveClosure T = {Ty = #Ty T, subType = (fn (x,y) => equal x y orelse (#subType T) (x,y))}
-  fun finiteReflexiveClosure T = {Ty = #Ty T, subType = (fn (x,y) => equal x y orelse (#subType T) (x,y))}
+  fun reflexiveClosure T = {name = #name T, Ty = #Ty T, subType = (fn (x,y) => equal x y orelse (#subType T) (x,y))}
+  fun finiteReflexiveClosure T = {name = #name T, Ty = #Ty T, subType = (fn (x,y) => equal x y orelse (#subType T) (x,y))}
 
-  fun transitiveClosure {Ty,subType} =
+  fun transitiveClosure {name,Ty,subType} =
     let fun subType' (x,y) = (subType (x,y) orelse FiniteSet.exists (fn z => subType (x,z) andalso subType (z,y)) Ty)
-    in if FiniteSet.all (fn x => FiniteSet.all (fn y => subType (x,y) = subType' (x,y)) Ty) Ty then {Ty = Ty, subType = subType} else transitiveClosure {Ty=Ty,subType=subType'}
+    in if FiniteSet.all (fn x => FiniteSet.all (fn y => subType (x,y) = subType' (x,y)) Ty) Ty then {name = name, Ty = Ty, subType = subType} else transitiveClosure {name=name,Ty=Ty,subType=subType'}
     end
 
-  fun respectAnyClosure {Ty,subType} = {Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
-  fun finiteRespectAnyClosure {Ty,subType} = {Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
+  fun respectAnyClosure {name,Ty,subType} = {name = name, Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
+  fun finiteRespectAnyClosure {name,Ty,subType} = {name = name, Ty = Ty,subType = (fn (x,y) => (y = any orelse subType(x,y)))}
 
   val fixSubTypeFunction = respectAnyClosure o reflexiveClosure;
   val fixFiniteSubTypeFunction = finiteRespectAnyClosure o finiteReflexiveClosure o transitiveClosure;

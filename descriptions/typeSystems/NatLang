@@ -1,4 +1,5 @@
-({sentence,
+(natlang,
+ {sentence,
   name,
   isToTheLeftOf,
   AisToTheLeftOfA,

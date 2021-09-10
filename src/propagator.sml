@@ -1,21 +1,24 @@
-import "cspace";
+import "construction";
 
 signature PROPAGATOR =
 sig
-  type 'a tokenAttribute = CSpace.token -> 'a
-  type 'a typeAttribute = CSpace.typ -> 'a
-  type 'a tokenPropagator = 'a tokenAttribute -> CSpace.constructor -> ('a list -> 'a)
-  type 'a typePropagator = 'a typeAttribute -> CSpace.constructor -> ('a list -> 'a)
-  val propagateFromTypeSequence : 'a typePropagator -> 'a typeAttribute -> CSpace.constructor -> (CSpace.typ list) -> 'a
-  val propagateFromTokenSequence : 'a typePropagator -> 'a tokeneAttribute -> CSpace.constructor -> (CSpace.token list) -> 'a
+  val getPropagator : CSpace.constructor -> (string * ('a list -> 'a option)) list -> ('a list -> 'a option) option
+
+  type propagator = CSpace.constructor -> ('a list -> 'a) option
 end;
 
 structure Propagator : PROPAGATOR =
 struct
-  type 'a tokenAttribute = CSpace.token -> 'a
-  type 'a typeAttribute = CSpace.type -> 'a
-  type 'a tokenPropagator = 'a tokenAttribute -> CSpace.constructor -> ('a list -> 'a)
-  type 'a typePropagator = 'a typeAttribute -> CSpace.constructor -> ('a list -> 'a)
-  fun propagateFromTypeSequence ppg att c T = ppg att c (map att T)
-  fun propagateFromTokenSequence ppg att c T = ppg att c (map att T)
+
+  fun nameOfPropagator (n,_) = n
+  fun funOfPropagator (_,p) = p
+
+  fun applyOption f (SOME x) = SOME (f x)
+    | applyOption _ NONE = NONE
+
+  fun getPropagator c P =
+    applyOption funOfPropagator (List.find (fn x => CSpace.nameOfConstructor c = nameOfPropagator x) P)
+
+  fun propagateTokens
+
 end;
