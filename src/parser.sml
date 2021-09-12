@@ -1,6 +1,7 @@
 import "structure_transfer";
 import "util.logging";
 import "IO.latex";
+import "propagation";
 
 Logging.enable ();
 
@@ -245,22 +246,25 @@ struct
 
   val bigKeywords = ["import","typeSystem","correspondence","construction","transfer","comment"]
   val typeKeywords = ["types","order"]
-  val corrKeywords = ["target","source","tokenRels","constructRel"]
-  val transferKeywords = ["sourceTypeSystem","targetTypeSystem","sourceConstruction","goal","output","limit"]
+  val corrKeywords = ["target","source","tokenRels","constructRel","strength"]
+  val transferKeywords = ["sourceTypeSystem","targetTypeSystem","sourceConstruction","goal","output","limit","IS"]
 
   type documentContent = {typeSystems : Type.typeSystem list,
                           knowledge : Knowledge.base,
                           constructions : (string * Construction.construction) FiniteSet.set,
-                          transferRequests : (string list) list}
+                          transferRequests : (string list) list,
+                          strengths : string -> real option}
   val emptyDocContent = {typeSystems = [],
                          knowledge = Knowledge.empty,
                          constructions = FiniteSet.empty,
-                         transferRequests = []}
+                         transferRequests = [],
+                         strengths = (fn _ => NONE)}
 
   val typeSystemsOf = #typeSystems
   val knowledgeOf = #knowledge
   val constructionsOf = #constructions
   val transferRequestsOf = #transferRequests
+  val strengthsOf = #strengths
 
   fun findTypeSystemWithName DC n =
     valOf (List.find (fn x => #name x = n) (typeSystemsOf DC))
@@ -268,7 +272,6 @@ struct
     (#2 o valOf) (FiniteSet.find (fn x => #1 x = n) (constructionsOf DC))
   fun findCorrespondenceWithName DC n =
     valOf (Knowledge.findCorrespondenceWithName (knowledgeOf DC) n)
-
 
   fun parseTransfer DC ws =
     let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
@@ -335,14 +338,20 @@ struct
           end
         fun mkLatexConstructionsAndGoals (comp,tproof,goal,goals) =
           let val latexConstructions = mkLatexConstructions comp
-              val latexProof = mkLatexProof tproof
+            (*)  val latexProof = mkLatexProof tproof*)
               val latexGoals = mkLatexGoals (goal,goals)
-          in Latex.environment "center" "" (Latex.printWithHSpace 0.5 (latexConstructions @ [latexProof,latexGoals]))
+          in Latex.environment "center" "" (Latex.printWithHSpace 0.5 (latexConstructions @ [(*latexProof,*)latexGoals]))
           end
         val nres = length (Seq.list_of results);
         val _ = Logging.write ("  number of results: " ^ Int.toString nres ^ "\n");
         val (listOfResults,_) = Seq.chop limit results;
         val compsAndGoals = getCompsAndGoals listOfResults;
+        val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
+        fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
+        val E = Propagation.mkISEvaluator readCorrStrengths
+        val is = (Propagation.evaluate E) (hd tproofConstruction)
+      (*  val _ = Logging.write (Construction.toString  (hd tproofConstruction))*)
+        val _ = Logging.write ("Informational Suitability score: " ^ Real.toString (valOf is) ^ "\n")
         val _ = Logging.write "Composing patterns and creating tikz figures...";
         val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
         val latexCT = Latex.construction (0.0,0.0) construction;
@@ -387,7 +396,8 @@ struct
     in {typeSystems = typSys :: (#typeSystems dc),
         knowledge = #knowledge dc,
         constructions = #constructions dc,
-        transferRequests = #transferRequests dc}
+        transferRequests = #transferRequests dc,
+        strengths = #strengths dc}
     end
 
   fun addCorrespondence (name,cs) dc =
@@ -407,15 +417,22 @@ struct
               if x = SOME "constructRel"
               then relationship (String.concat crs)
               else getConstructRel L
+        fun getStrength [] = raise ParseError ("no construct rel in correspondence " ^ String.concat cs)
+          | getStrength ((x,ss) :: L) =
+              if x = SOME "strength"
+              then Real.fromString (String.concat ss)
+              else getStrength L
         val corr = {name = name,
                     sourcePattern = getPattern "source" blocks,
                     targetPattern = getPattern "target" blocks,
                     tokenRels = getTokenRels blocks,
                     constructRel = getConstructRel blocks}
+        fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
     in {typeSystems = #typeSystems dc,
         knowledge = Knowledge.addCorrespondence (#knowledge dc) corr,
         constructions = #constructions dc,
-        transferRequests = #transferRequests dc}
+        transferRequests = #transferRequests dc,
+        strengths = strengthsUpd}
     end
 
   fun addConstruction (name, cts) dc =
@@ -423,26 +440,25 @@ struct
     in {typeSystems = #typeSystems dc,
         knowledge = #knowledge dc,
         constructions = FiniteSet.insert (name,ct) (#constructions dc),
-        transferRequests = #transferRequests dc}
+        transferRequests = #transferRequests dc,
+        strengths = #strengths dc}
     end
 
-  fun joinDocumentContents ({typeSystems = ts, knowledge = kb, constructions = cs, transferRequests = tr} :: L) =
-    (case joinDocumentContents L of {typeSystems = ts', knowledge = kb', constructions = cs', transferRequests = tr'} =>
+  fun joinDocumentContents ({typeSystems = ts, knowledge = kb, constructions = cs, transferRequests = tr, strengths = st} :: L) =
+    (case joinDocumentContents L of {typeSystems = ts', knowledge = kb', constructions = cs', transferRequests = tr', strengths = st'} =>
         {typeSystems = ts @ ts',
          knowledge = Knowledge.join kb kb',
          constructions = FiniteSet.union cs cs',
-         transferRequests = tr @ tr'})
-    | joinDocumentContents [] =
-        {typeSystems = [],
-         knowledge = Knowledge.empty,
-         constructions = FiniteSet.empty,
-         transferRequests = []}
+         transferRequests = tr @ tr',
+         strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
+    | joinDocumentContents [] = emptyDocContent
 
   fun addTransferRequests ws dc =
      {typeSystems = #typeSystems dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
-      transferRequests = ws :: #transferRequests dc}
+      transferRequests = ws :: #transferRequests dc,
+      strengths = #strengths dc}
 
   fun document filename =
     let val file = TextIO.openIn ("descriptions/"^filename)

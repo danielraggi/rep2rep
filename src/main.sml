@@ -36,10 +36,10 @@ fun parseArgs () =
 fun main () =
   let val today = Date.fmt "%Y-%m-%d" (Date.fromTimeLocal (Time.now()));
       val version = "rep2rep-" ^ REP2REP_VERSION;
-      val _ = Logging.write ("BEGIN algorithm-trace-"
+  (*)    val _ = Logging.write ("BEGIN algorithm-trace-"
                                ^ today
                                ^ " with "
-                               ^ version ^ "\n");
+                               ^ version ^ "\n");*)
       val documentName = parseArgs ();
       val _ = Parser.document documentName
   in ()
