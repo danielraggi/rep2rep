@@ -1,4 +1,5 @@
 import "knowledge";
+import "transfer_proof";
 
 signature STATE =
 sig
@@ -10,8 +11,10 @@ sig
   val goalsOf : T -> Relation.relationship list;
   val patternCompOf : T -> Composition.composition;
   val knowledgeOf : T -> Knowledge.base;
+  val transferProofOf : T -> TransferProof.tproof;
   val make : {sourceTypeSystem : Type.typeSystem,
               targetTypeSystem : Type.typeSystem,
+              transferProof : TransferProof.tproof,
               construction : Construction.construction,
               originalGoal : Relation.relationship,
               goals : Relation.relationship list,
@@ -19,6 +22,7 @@ sig
               knowledge : Knowledge.base} -> T;
   val updatePatternComp : T -> Composition.composition -> T
   val updateGoals : T -> Relation.relationship list -> T
+  val updateTransferProof : T -> TransferProof.tproof -> T
   val replaceGoal : T -> Relation.relationship -> Relation.relationship list -> T
   val removeGoal : T -> Relation.relationship -> T
   val applyPartialMorphismToCompAndGoals : (CSpace.token -> CSpace.token option) -> T -> T;
@@ -29,6 +33,7 @@ structure State : STATE =
 struct
   type T = {sourceTypeSystem : Type.typeSystem,
             targetTypeSystem : Type.typeSystem,
+            transferProof : TransferProof.tproof,
             construction : Construction.construction,
             originalGoal : Relation.relationship,
             goals : Relation.relationship list,
@@ -42,12 +47,14 @@ struct
   fun goalsOf {goals,...} = goals;
   fun patternCompOf {composition,...} = composition;
   fun knowledgeOf {knowledge,...} = knowledge;
+  fun transferProofOf {transferProof,...} = transferProof;
 
   fun make st = st
 
   fun updatePatternComp st d =
            {sourceTypeSystem = #sourceTypeSystem st,
             targetTypeSystem = #targetTypeSystem st,
+            transferProof = #transferProof st,
             construction = #construction st,
             originalGoal = #originalGoal st,
             goals = #goals st,
@@ -57,11 +64,23 @@ struct
   fun updateGoals st gs =
            {sourceTypeSystem = #sourceTypeSystem st,
             targetTypeSystem = #targetTypeSystem st,
+            transferProof = #transferProof st,
             construction = #construction st,
             originalGoal = #originalGoal st,
             goals = gs,
             composition = #composition st,
             knowledge = #knowledge st}
+
+  fun updateTransferProof st tp =
+           {sourceTypeSystem = #sourceTypeSystem st,
+            targetTypeSystem = #targetTypeSystem st,
+            transferProof = tp,
+            construction = #construction st,
+            originalGoal = #originalGoal st,
+            goals = #goals st,
+            composition = #composition st,
+            knowledge = #knowledge st}
+
 
   fun replaceGoal st g gs =
     let fun r [] = []
@@ -79,6 +98,7 @@ struct
         fun applyToRelationship (ss,ts,R) = (map applyPartialF ss, map applyPartialF ts, R)
     in {sourceTypeSystem = #sourceTypeSystem st,
         targetTypeSystem = #targetTypeSystem st,
+        transferProof = TransferProof.applyTokenMorph f (#transferProof st),
         construction = #construction st,
         originalGoal = applyToRelationship (#originalGoal st),
         goals = map applyToRelationship (#goals st),

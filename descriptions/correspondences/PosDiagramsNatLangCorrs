@@ -1,54 +1,65 @@
-(t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
+(containsObserve,
+ t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
  t':sentence <- conc:[sentence,name,isToTheLeftOf,name] <-[t1':name,t2':isToTheLeftOf,t3':name],
  [([t1:posDiagram],[t1':name]) :: contains, ([t2:posDiagram],[t3':name]) :: contains],
  ([t:posDiagram],[t':sentence]) :: observe)
 
-(t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
+(observeLeft,
+ t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
  t':sentence <- conc:[sentence,name,isToTheLeftOf,name] <-[t1':name,t2':isToTheLeftOf,t3':name],
  [([t1:posDiagram],[t':sentence]) :: observe],
  ([t:posDiagram],[t':sentence]) :: observe)
 
-(t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
+(observeRight,
+ t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
  t':sentence <- conc:[sentence,name,isToTheLeftOf,name] <-[t1':name,t2':isToTheLeftOf,t3':name],
  [([t2:posDiagram],[t':sentence]) :: observe],
  ([t:posDiagram],[t':sentence]) :: observe)
 
-(t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
+(containsLeft,
+ t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
  t':name,
  [([t1:posDiagram],[t':name]) :: contains],
  ([t:posDiagram],[t':name]) :: contains)
 
-(t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
+(containsRight,
+ t:posDiagram <- juxt:[posDiagram,posDiagram,posDiagram] <-[t1:posDiagram,t2:posDiagram],
  t':name,
  [([t2:posDiagram],[t':name]) :: contains],
  ([t:posDiagram],[t':name]) :: contains)
 
-(t:A,
+(containsA,
+ t:A,
  t':A,
  [],
  ([t:A],[t':A]) :: contains)
 
-(t:B,
+(containsB,
+ t:B,
  t':B,
  [],
  ([t:B],[t':B]) :: contains)
 
-(t:C,
+(containsC,
+ t:C,
  t':C,
  [],
  ([t:C],[t':C]) :: contains)
 
-(t:D,
+(containsD,
+ t:D,
  t':D,
  [],
  ([t:D],[t':D]) :: contains)
 
-(t:E,
+(containsE,
+ t:E,
  t':E,
  [],
  ([t:E],[t':E]) :: contains)
 
-(t:F,
+(containsF,
+ t:F,
  t':F,
  [],
  ([t:F],[t':F]) :: contains)

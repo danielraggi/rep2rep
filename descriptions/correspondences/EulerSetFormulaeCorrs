@@ -1,14 +1,17 @@
-(t:EulerDiagram <- disjointMerge:[EulerDiagram,EulerDiagram,EulerDiagram] <-[t1:EulerDiagram,t2:EulerDiagram],
+(observeLeft,
+ t:EulerDiagram <- disjointMerge:[EulerDiagram,EulerDiagram,EulerDiagram] <-[t1:EulerDiagram,t2:EulerDiagram],
  t':formula,
  [([t1:EulerDiagram],[t':formula]) :: observe],
  ([t:EulerDiagram],[t':formula]) :: observe)
 
- (t:EulerDiagram <- disjointMerge:[EulerDiagram,EulerDiagram,EulerDiagram] <-[t1:EulerDiagram,t2:EulerDiagram],
+ (observeRight,
+  t:EulerDiagram <- disjointMerge:[EulerDiagram,EulerDiagram,EulerDiagram] <-[t1:EulerDiagram,t2:EulerDiagram],
   t':formula,
   [([t2:EulerDiagram],[t':formula]) :: observe],
   ([t:EulerDiagram],[t':formula]) :: observe)
 
-(t:A|B,
+(observeAB,
+ t:A|B,
  t':AcapBeqEmpty,
  [],
  ([t:A|B],[t':AcapBeqEmpty]) :: observe)

@@ -1,4 +1,5 @@
-({name,posDiagram,A,AB,ABC,ABCD,ABCDE,ABCDEF,B,BC,BCD,BCDE,BCDEF,C,CD,CDE,CDEF,D,DE,DEF,E,EF,F},
+(pos,
+ {name,posDiagram,A,AB,ABC,ABCD,ABCDE,ABCDEF,B,BC,BCD,BCDE,BCDEF,C,CD,CDE,CDEF,D,DE,DEF,E,EF,F},
  {(name,posDiagram),
   (A,name),
   (AB,posDiagram),

@@ -43,21 +43,23 @@ struct
     | lines (h::t) = h ^ "\n " ^ lines t
     | lines _ = raise Empty
 
-  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
+
+  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #","
+  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
         val c = CSpace.constructorOfConfigurator u
         val nc = CSpace.nameOfConstructor c
         val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
-        val tn' = String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode tn))
+        val tn' = String.implode (List.filter nodeNameCharFilter (String.explode tn))
     in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn')
     end
 
   fun nodeNameOfConstructor c t =
     let val nc = CSpace.nameOfConstructor c
         val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
-        val tn' = String.implode (List.filter (fn x => x <> #"\\" andalso x <> #"|") (String.explode tn))
-    in String.addParentheses (nc ^ "_" ^ tn')
+        val nn = String.implode (List.filter nodeNameCharFilter (String.explode (nc ^ "_" ^ tn)))
+    in String.addParentheses nn
     end
 
   fun coordinates (x,y) = String.addParentheses (realToString x ^ "," ^ realToString y)
@@ -92,7 +94,11 @@ struct
   fun arrowLabelled nodeName parentName i =
     "\\path[->] " ^ nodeName ^ " edge node[index label] " ^ String.addBraces (intToString i) ^ " " ^ parentName ^ ";"
   fun arrowLabelledBent nodeName parentName i (ix,ox)=
-    "\\path[->,in=" ^intToString ix^",out="^intToString ox ^ "] " ^ nodeName ^ " edge node[index label] " ^ String.addBraces (intToString i) ^ " " ^ parentName ^ ";"
+    String.concat ["\\path[->,in=", intToString ix, ",out="^intToString ox ^ "] ",
+                   nodeName,
+                   " edge node[index label] ", String.addBraces (intToString i), " ",
+                   parentName,
+                   ";"]
 
   fun quickWidthEstimate (Construction.Source t) =
         let val sizeOfToken = real (String.size (CSpace.nameOfToken t))
@@ -110,7 +116,9 @@ struct
     | construction' _ parentName i (Construction.Loop t) =
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
-        | SOME pn => if i = 1 then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,195)] else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,~15)])
+        | SOME pn => if i = 1
+                     then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,195)]
+                     else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,~15)])
     | construction' (x,y) parentName i (Construction.TCPair ({constructor,token},cs)) =
         let val tn = tokenNode false (x,y) token
             val cn = constructorNode (x,y-1.0) constructor token

@@ -7,6 +7,7 @@ sig
   val ofList : ''a list -> ''a set;
   val listOf : ''a set -> ''a list;
   val elementOf : ''a -> ''a set -> bool;
+  val insert : ''a -> ''a set -> ''a set;
   val minus : ''a set -> ''a set -> ''a set;
   val union : ''a set -> ''a set -> ''a set;
   val intersection : ''a set -> ''a set -> ''a set;
@@ -28,6 +29,8 @@ struct
   fun listOf L = L;
 
   fun elementOf x S = List.exists (fn y => x = y) S
+
+  fun insert x S = if elementOf x S then S else x :: S
   fun minus S1 S2 = List.filter (fn x => not (List.exists (fn y => x = y) S2)) S1
   fun intersection S1 S2 = List.filter (fn x => (List.exists (fn y => x = y) S1)) S2
   fun union S1 S2 = S1 @ (minus S2 S1)

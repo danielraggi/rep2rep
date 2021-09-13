@@ -1,0 +1,79 @@
+typeSystem arith =
+    types 1,2,3,4,5,6,7,8,x,y,z,a,b,c,n,m,var,numeral,1plus2,1plus2plus3,3plus1,oB3plus1cB,3oB3plus1cB,3oB3plus1cBdiv2,1plus2plus3equal3oB3plus1cBdiv2,numExp,formula,plus,binOp,equal,binRel,div,oB,cB
+    order var < numExp,
+          numeral < numExp,
+          1 < numeral,
+          2 < numeral,
+          3 < numeral,
+          4 < numeral,
+          5 < numeral,
+          6 < numeral,
+          7 < numeral,
+          8 < numeral,
+          x < var,
+          y < var,
+          z < var,
+          a < var,
+          b < var,
+          c < var,
+          1plus2 < numExp,
+          1plus2plus3 < numExp,
+          1plus2plus3plus4 < numExp,
+          3plus1 < numExp,
+          4plus1 < numExp,
+          oB3plus1cB < numExp,
+          oB4plus1cB < numExp,
+          3oB3plus1cB < numExp,
+          4oB4plus1cB < numExp,
+          3oB3plus1cBdiv2 < numExp,
+          4oB4plus1cBdiv2 < numExp,
+          1plus2plus3equal3oB3plus1cBdiv2 < formula,
+          1plus2plus3plu4equal4oB4plus1cBdiv2 < formula,
+          plus < binOp,
+          equal < binRel
+
+typeSystem dotDiagrams =
+    types \crc, \oo,\oo,\ooo,\oooo,\ooooo,\ooV,\oooV,\ooooV,\oooooV,arrangement
+    order \crc < arrangement,
+        \oo < arrangement,
+        \ooo < arrangement,
+        \oooo < arrangement,
+        \ooooo < arrangement,
+        \ooV < arrangement,
+        \oooV < arrangement,
+        \ooooV < arrangement,
+        \oooooV < arrangement
+
+import correspondences/arithDots
+
+construction 1plus2plus3plus4equalsStuff =
+    t:formula <- infixRel:[formula,numExp,binRel,numExp]
+                    <-[t1:1plus2plus3plus4 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                <-[t11:1plus2plus3 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                        <-[t111:1plus2 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                                            <-[t1111:1,t1112:plus,t1113:2],
+                                                                           t112:plus,
+                                                                           t113:3],
+                                                   t12:plus,
+                                                   t13:4],
+                       t2:equal,
+                       t3:4oB4plus1cBdiv2 <- frac:[numExp,numExp,div,numExp]
+                                                <-[t31:4oB4plus1cB <- implicitMult:[numExp,numExp,numExp]
+                                                                          <-[t311:4,
+                                                                             t312:oB3plus1cB <- addParentheses:[numExp,oB,numExp,cB]
+                                                                                                  <-[t3121:oB,
+                                                                                                     t3122:4plus1 <- infixOp:[numExp,numExp,binOp,numExp]
+                                                                                                                        <-[t31221:4,
+                                                                                                                           t31222:plus,
+                                                                                                                           t31223:1],
+                                                                                                     t3123:cB]],
+                                                   t32:div,
+                                                   t33:2]]
+
+transfer
+    sourceTypeSystem arith
+    targetTypeSystem dotDiagrams
+    sourceConstruction 1plus2plus3plus4equalsStuff
+    goal ([t:formula],[t':arrangement]) :: formulaIsValid
+    output test
+    limit 10
