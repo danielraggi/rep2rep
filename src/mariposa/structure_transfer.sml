@@ -1,5 +1,5 @@
-import "search";
-import "state";
+import "mariposa.search";
+import "mariposa.state";
 
 signature TRANSFER =
 sig

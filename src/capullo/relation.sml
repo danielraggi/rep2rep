@@ -1,4 +1,4 @@
-import "cspace";
+import "capullo.cspace";
 
 signature RELATION =
 sig

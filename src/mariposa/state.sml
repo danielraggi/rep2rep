@@ -1,5 +1,5 @@
-import "knowledge";
-import "transfer_proof";
+import "mariposa.knowledge";
+import "mariposa.transfer_proof";
 
 signature STATE =
 sig

@@ -1,4 +1,4 @@
-import "construction";
+import "capullo.construction";
 
 signature PATTERN =
 sig

@@ -1,5 +1,8 @@
 typeSystem arith =
-    types 1,2,3,4,5,6,7,8,x,y,z,a,b,c,n,m,var,numeral,1plus2,1plus2plus3,3plus1,oB3plus1cB,3oB3plus1cB,3oB3plus1cBdiv2,1plus2plus3equal3oB3plus1cBdiv2,numExp,formula,plus,binOp,equal,binRel,div,oB,cB
+    types 1,2,3,4,5,6,7,8,x,y,z,a,b,c,n,m,var,numeral,
+            1plus2,1plus2plus3,3plus1,oB3plus1cB,
+            3oB3plus1cB,3oB3plus1cBdiv2,1plus2plus3equal3oB3plus1cBdiv2,
+            numExp,formula,plus,binOp,equal,binRel,div,oB,cB
     order var < numExp,
           numeral < numExp,
           1 < numeral,
@@ -33,16 +36,16 @@ typeSystem arith =
           equal < binRel
 
 typeSystem dotDiagrams =
-    types \crc, \oo,\oo,\ooo,\oooo,\ooooo,\ooV,\oooV,\ooooV,\oooooV,arrangement
+    types \crc, \oo,\ooo,\oooo,\ooooo,\ooV,\oooV,\ooooV,\oooooV,arrangement
     order \crc < arrangement,
-        \oo < arrangement,
-        \ooo < arrangement,
-        \oooo < arrangement,
-        \ooooo < arrangement,
-        \ooV < arrangement,
-        \oooV < arrangement,
-        \ooooV < arrangement,
-        \oooooV < arrangement
+            \oo < arrangement,
+            \ooo < arrangement,
+            \oooo < arrangement,
+            \ooooo < arrangement,
+            \ooV < arrangement,
+            \oooV < arrangement,
+            \ooooV < arrangement,
+            \oooooV < arrangement
 
 import correspondences/arithDots
 

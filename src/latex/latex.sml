@@ -1,4 +1,4 @@
-import "composition";
+import "mariposa.knowledge";
 
 signature LATEX =
 sig

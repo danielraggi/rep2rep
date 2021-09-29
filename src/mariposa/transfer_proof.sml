@@ -1,4 +1,4 @@
-import "correspondence";
+import "capullo.correspondence";
 
 signature TRANSFER_PROOF =
 sig

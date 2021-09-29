@@ -1,4 +1,4 @@
-import "construction";
+import "capullo.construction";
 
 signature PROPAGATION =
 sig
@@ -30,7 +30,7 @@ struct
 
   val trueT = CSpace.makeToken "" (Type.typeOfString "true")
   fun optionSum [] = 0.0
-    | optionSum (NONE::t) = optionSum t
+    | optionSum (NONE::t) = optionSum t - 1.0
     | optionSum (SOME x :: t) = x + optionSum t
   fun mkISEvaluator cf =
       {name = "IS",
