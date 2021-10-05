@@ -139,12 +139,14 @@ struct
       val _ = Logging.write ("  number of results: " ^ Int.toString nres ^ "\n");
       val (listOfResults,_) = Seq.chop limit results;
       val compsAndGoals = getCompsAndGoals listOfResults;
+      val transferProofs = map State.transferProofOf listOfResults
       val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
       fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
-      val E = Propagation.mkISEvaluator readCorrStrengths
+      val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
       val is = (Propagation.evaluate E) (hd tproofConstruction)
+      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs))
     (*  val _ = Logging.write (Construction.toString  (hd tproofConstruction))*)
-      val _ = Logging.write ("  informational suitability score: " ^ Real.toString (valOf is) ^ "\n")
+      val _ = Logging.write ("  informational suitability score: " ^ Real.toString (valOf is') ^ "\n")
       val _ = Logging.write "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
       val latexCT = Latex.construction (0.0,0.0) construction;

@@ -1,7 +1,6 @@
 import "mariposa.structure_transfer";
 import "util.logging";
-(*import "latex.latex";*)
-import "capullo.propagation";
+import "mariposa.propagation";
 
 Logging.enable ();
 
