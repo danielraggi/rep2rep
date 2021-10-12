@@ -1,5 +1,5 @@
-import "pattern";
-import "relation";
+import "core.pattern";
+import "core.relation";
 
 signature CORRESPONDENCE =
 sig

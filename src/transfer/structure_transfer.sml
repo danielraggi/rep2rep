@@ -1,5 +1,5 @@
-import "search";
-import "state";
+import "transfer.search";
+import "transfer.state";
 
 signature TRANSFER =
 sig

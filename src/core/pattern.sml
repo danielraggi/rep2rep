@@ -1,4 +1,4 @@
-import "construction";
+import "core.construction";
 
 signature PATTERN =
 sig

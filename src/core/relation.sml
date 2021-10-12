@@ -1,4 +1,4 @@
-import "cspace";
+import "core.cspace";
 
 signature RELATION =
 sig

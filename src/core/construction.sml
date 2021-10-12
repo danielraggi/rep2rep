@@ -1,4 +1,4 @@
-import "cspace";
+import "core.cspace";
 
 signature CONSTRUCTION =
 sig
@@ -6,7 +6,7 @@ sig
   datatype construction = TCPair of tc * construction list
                         | Loop of CSpace.token
                         | Source of CSpace.token ;
-  type trail;
+  type walk;
 
   val same : construction -> construction -> bool;
   val subConstruction : construction -> construction -> bool;
@@ -15,8 +15,8 @@ sig
   val almostWellFormed : construction -> bool;
   val grounded : construction -> bool;
 
-  val CTS : construction -> trail list;
-  val inducedConstruction : construction -> trail -> construction;
+  val CTS : construction -> walk list;
+  val inducedConstruction : construction -> walk -> construction;
   val foundationSequence : construction -> CSpace.token list;
   val fullTokenSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
@@ -45,7 +45,7 @@ struct
     | Loop of CSpace.token
     | Source of CSpace.token ;
   datatype vertex = Token of CSpace.token | Constructor of CSpace.constructor
-  type trail = vertex list;
+  type walk = vertex list;
 
   fun isTrivial (Source _) = true
     | isTrivial _ = false
@@ -141,17 +141,17 @@ struct
      The following function makes sure that they are well formed, by checking that Loops
      are actually loops and that non-Loops are not forming loops.*)
   fun wellFormed T c =
-    let fun correctLoopsAndTypes tr (Source t) = not (List.exists (fn x => #token x = t) tr)
-          | correctLoopsAndTypes tr (Loop t) = List.exists (fn x => #token x = t) tr
-          | correctLoopsAndTypes tr (TCPair (tc, cs)) =
+    let fun correctLoopsAndTypes wk (Source t) = not (List.exists (fn x => #token x = t) wk)
+          | correctLoopsAndTypes wk (Loop t) = List.exists (fn x => #token x = t) wk
+          | correctLoopsAndTypes wk (TCPair (tc, cs)) =
             let val typesOfInducedConstructs = map (CSpace.typeOfToken o constructOf) cs
                 val (typesOfConstructor,ty) = CSpace.spec (#constructor tc)
                 val typeOfConstruct = CSpace.typeOfToken (#token tc)
             in (#subType T) (typeOfConstruct, ty)
                 andalso specialises T (typesOfInducedConstructs) typesOfConstructor
                 andalso List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))
-                                  andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) tr
-                andalso List.all (correctLoopsAndTypes (tc :: tr)) cs
+                                  andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) wk
+                andalso List.all (correctLoopsAndTypes (tc :: wk)) cs
             end
     in correctLoopsAndTypes [] c andalso coherent c
     end;
@@ -161,12 +161,12 @@ struct
     well formed, in the sense that there may be potential references to loops where
     the loop is not within the induced construction, but otherwise it's fine. *)
   fun almostWellFormed c =
-    let fun correctLoops tr (Source t) = not (List.exists (fn x => #token x = t) tr)
+    let fun correctLoops wk (Source t) = not (List.exists (fn x => #token x = t) wk)
           | correctLoops _ (Loop _) = true
-          | correctLoops tr (TCPair (tc, cs)) =
+          | correctLoops wk (TCPair (tc, cs)) =
               List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))
-                        andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) tr
-              andalso List.all (correctLoops (tc :: tr)) cs
+                        andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) wk
+              andalso List.all (correctLoops (tc :: wk)) cs
     in correctLoops [] c andalso coherent c
     end;
 
@@ -205,11 +205,11 @@ struct
         if CSpace.sameTokens t t'
         then Source t
         else raise badTrail
-    | inducedConstruction (TCPair ({token = token, constructor = constructor}, cs)) (Token token'::Constructor constructor'::tr) =
+    | inducedConstruction (TCPair ({token = token, constructor = constructor}, cs)) (Token token'::Constructor constructor'::wk) =
         if CSpace.sameTokens token token' andalso CSpace.sameConstructors constructor constructor'
-        then let fun ic (c::C) = (inducedConstruction c tr handle badTrail => ic C)
+        then let fun ic (c::C) = (inducedConstruction c wk handle badTrail => ic C)
                    | ic [] = raise badTrail
-             in if null tr then TCPair ({token = token, constructor = constructor}, cs) else ic cs
+             in if null wk then TCPair ({token = token, constructor = constructor}, cs) else ic cs
              end
         else raise badTrail
     | inducedConstruction (TCPair ({token = token, constructor = constructor}, cs)) [Token t'] =
@@ -224,9 +224,9 @@ struct
   fun fixLoops c =
     let
       fun fic _ (Source t) = (Source t)
-        | fic tr (Loop t) = if List.exists (fn x => #token x = t) tr then Loop t else Source t
-        | fic tr (TCPair (tc, cs)) =
-            TCPair (tc, map (fic (tc::tr)) cs)
+        | fic wk (Loop t) = if List.exists (fn x => #token x = t) wk then Loop t else Source t
+        | fic wk (TCPair (tc, cs)) =
+            TCPair (tc, map (fic (tc::wk)) cs)
     in fic [] c
     end
 

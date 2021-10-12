@@ -1,4 +1,4 @@
-import "composition";
+import "transfer.knowledge";
 
 signature LATEX =
 sig

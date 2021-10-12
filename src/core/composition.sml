@@ -1,4 +1,4 @@
-import "pattern";
+import "core.pattern";
 
 signature COMPOSITION =
 sig
@@ -17,7 +17,7 @@ sig
   val attachConstructionAt : composition -> construction -> CSpace.token -> composition;
 
   val makePlaceholderComposition : CSpace.token -> composition;
-  
+
   val constructionsInComposition : composition -> construction list;
   val tokensOfComposition : composition -> CSpace.token list;
   val resultingConstructions : composition -> construction list;

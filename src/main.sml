@@ -1,6 +1,6 @@
 import "util.logging";
-import "IO.input";
-import "IO.latex";
+import "latex.latex";
+import "oruga.document";
 
 (* To see a full trace of the algorithm, we enable logging.
    If this seems too 'noisy', you can use `Logging.disable ()`.
@@ -41,6 +41,6 @@ fun main () =
                                ^ " with "
                                ^ version ^ "\n");*)
       val documentName = parseArgs ();
-      val _ = Parser.document documentName
+      val _ = Document.read documentName
   in ()
   end

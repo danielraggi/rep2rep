@@ -1,5 +1,5 @@
-import "knowledge";
-import "transfer_proof";
+import "transfer.knowledge";
+import "transfer.transfer_proof";
 
 signature STATE =
 sig

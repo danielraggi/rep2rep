@@ -1,4 +1,4 @@
-import "type";
+import "core.type";
 
 
 (* An underlying assumption of having token = string * type is that two tokens in a
@@ -63,5 +63,5 @@ struct
   fun stringOfToken (t,ty) = t ^ ":" ^ (Type.nameOfType ty)
   fun stringOfConstructor (c,(tys,ty)) = c ^ ":" ^ (String.stringOfList Type.nameOfType (ty::tys))
   fun stringOfConfigurator (u,cc) = u ^ ":" ^ stringOfConstructor cc
-  
+
 end;

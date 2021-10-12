@@ -1,7 +1,7 @@
 import "util.logging";
 import "util.sequence";
 
-import "parser";
+import "oruga.parser";
 
 signature INPUT =
 sig

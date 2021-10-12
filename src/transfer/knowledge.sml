@@ -1,5 +1,5 @@
-import "correspondence";
-import "composition";
+import "core.correspondence";
+import "core.composition";
 
 signature KNOWLEDGE =
 sig
