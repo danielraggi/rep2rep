@@ -1,4 +1,4 @@
-import "mariposa.knowledge";
+import "transfer.knowledge";
 
 signature LATEX =
 sig

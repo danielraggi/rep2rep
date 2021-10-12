@@ -1,4 +1,4 @@
-import "capullo.pattern";
+import "core.pattern";
 
 signature COMPOSITION =
 sig

@@ -1,4 +1,4 @@
-import "capullo.cspace";
+import "core.cspace";
 
 signature CONSTRUCTION =
 sig

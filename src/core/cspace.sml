@@ -1,4 +1,4 @@
-import "capullo.type";
+import "core.type";
 
 
 (* An underlying assumption of having token = string * type is that two tokens in a

@@ -1,6 +1,6 @@
-import "mariposa.structure_transfer";
+import "transfer.structure_transfer";
 import "util.logging";
-import "mariposa.propagation";
+import "transfer.propagation";
 
 Logging.enable ();
 

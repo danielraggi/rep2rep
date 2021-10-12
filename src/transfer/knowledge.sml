@@ -1,5 +1,5 @@
-import "capullo.correspondence";
-import "capullo.composition";
+import "core.correspondence";
+import "core.composition";
 
 signature KNOWLEDGE =
 sig
