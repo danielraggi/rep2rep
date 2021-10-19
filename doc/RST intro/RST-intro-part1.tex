@@ -1,0 +1,839 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsthm,amssymb}
+\usepackage{enumitem}
+\usepackage{alltt}
+
+\input{CommandsForACM.sty}
+\input{exampleCommands.sty}
+\input{dotAndFOAcommands.tex}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\title{An introduction to Representational System Theory: Part 1}
+\author{Daniel Raggi}
+\begin{document}
+	\maketitle
+	
+	The purpose of Representational System Theory (RST) is to understand rigorously what \textit{representations} are, what we mean when we talk about their structure, and their relations to one another.
+	
+	This document is an introduction to RST. Something which the team (especially Gem and I) have been developing for a while. There's a long technical paper associated with it, but we are still in the process of finishing writing it up. Moreover, that paper contains way more technical stuff than needed for this introduction, where I plan to introduce intuitively the concepts of RST.
+	
+	In this document (Part 1) I will introduce \textit{type systems}, \textit{construction spaces}, \textit{representational systems}, \textit{constructions}, and \textit{decompositions}, amongst other auxiliary concepts.
+	
+	I assume a bit of knowledge about of logic and graph theory, but nothing too fancy. At the end of this document (section~\ref{appendix}) there is a technical appendix, for some basic definitions.
+	
+%	The main concepts associated with RST are: \textit{token}, \textit{type}, \textit{type system}, \textit{constructor}, \textit{structure graph}, \textit{construction space}, \textit{representational system}, \textit{construction}, \textit{pattern}, \textit{matching \& embedding}, \textit{correspondence}, and \textit{structural transformation}.
+	
+	\section{Representational Systems}
+	To define representational systems, we will start with \textit{type systems}. Roughly, type systems characterise the conceptual hierarchies of representations. Then we define \textit{construction spaces}, which consist of graphs where the vertices are either \textit{tokens} (concrete representations) or \textit{configurators} (the `glue' that puts tokens together to form other tokens). Types classify tokens and, similarly, \textit{constructors} classify configurators.
+	\subsection{Types \& Tokens}
+		The numeral $1$ is a token. In computer science we would generally say that the type of token $1$ is something like \textit{nat}, \textit{number}, \textit{real} or something else, depending on the context. This makes sense given the use of type systems in computer science (we call this the \textit{term/type} paradigm). However, for the study of $1$ as a representation, we might have higher ambitions regarding its classification into types. For example, in semiotics/linguistics it wouldn't be unusual to refer to $1$ as a token of type $1$ (we call this the \textit{token/type} paradigm). This is meant to discern that some expression such as $1+1$ has \textit{two} tokens of type $1$ --- that is, it has two \textit{occurrences} of the \textit{same} symbol. What `same' means in this context is not clear, and RST does not commit to a definition of `sameness'. Instead, RST allows us to assign types to tokens however we want, with the stipulation that a \textit{subtype} relation (which partially orders the types) is also part of a type system. Thus, we can say that the tokens shown above are of type $1$, while also acknowledging that type $1$ is a subtype of type \textit{number}, or anything we might want the subtype order to be.
+		
+		Thus RST unifies the term/type paradigm of computer science and the token/type paradigm of semiotics into one.
+		
+		\begin{definition}\label{defn:typeSystem}
+			A \textit{type system}, $\tsystemn$,  is a pair, $\tsystemn=\tsystem$,
+			where
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+				%
+				\item $\types$ is a set whose elements are called \textit{types}, and
+				%
+				\item $\leq$ is a partial order over $\types$.
+				%
+			\end{enumerate}
+			If $\tau_1\leq \tau_2$ then $\tau_1$ is a \textit{subtype} of $\tau_2$ and, respectively, $\tau_2$ is a \textit{supertype} of $\tau_1$.
+		\end{definition}
+	
+		The definition above gives us liberty to declare type systems however we like. The assignment of types to tokens is done with a function $\tokenl$, which will be formally introduced in section 1.2, after an example of how one could define a type system for formal arithmetic.
+		
+		\subsubsection*{Example: a type system for first order arithmetic (FOA)}
+		We denote our small version of FOA by $\rsystemn_{\FOA}$. We can define one type for each symbol in $\rsystemn_{\FOA}$ as follows:
+		\begin{center}
+			\begin{tikzpicture}[node distance = 0.5cm,outer sep = -0.025cm,inner sep = 0.09cm]
+			\node[] (n1) at (-0.7,-0.05) {\textsf{1}};
+			\node[right = of n1,xshift=-0.2cm] (n2) {\textsf{2}};
+			\node[right = of n2,xshift=-0.2cm] (n3) {\textsf{3}};
+			\node[right = of n3,xshift=-0.3cm,yshift = -0.03cm] (ndots) {$\cdots$};
+			\node[right = of ndots,xshift=-0.3cm,yshift = 0.03cm] (n21) {\textsf{21}};
+			\node[right = of n21,xshift=-0.3cm,yshift = -0.03cm] (ndots') {$\cdots$};
+			\node[right = of ndots',yshift = 0.03cm] (x) {\textsf{x}};
+			\node[right = of x,yshift = -0.03cm] (y) {\textsf{y}};
+			\node[right = of y] (+) {\textsf{pl}};
+			\node[right = of +] (-) {\textsf{mi}};
+			\node[right = of -,yshift = -0.03cm] (gr) {\textsf{gr}};
+			\node[right = of gr] (eq) {\textsf{eq}};
+			\node[right = of eq,yshift = 0.03cm] (openB) {\FOAopenb};
+			\node[right = of openB,yshift = 0.03cm] (closeB) {\FOAcloseb};
+			\draw[rounded corners, black!30, thick] (-1,-0.4) rectangle node[xshift = 4.2cm,yshift = 0.25cm,black!50] {some types for primitives} (11.6,0.6);
+			\draw[rounded corners, black!30, thick] (-1,-1.75) rectangle node[xshift = 5.5cm,yshift = 0.2cm,black!50] {tokens} (11.6,-0.95);
+			\coordinate (formula1) at (2.5,-1.45) ;
+			\coordinate (formula2) at (7.5,-1.45) ;
+			\node[at = (formula1),fill=darkgold, text=black, fill opacity = 0.25, text opacity=1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.63cm,yshift = 0.04cm] (n3t) {\large$3$};
+			\node[at = (formula1),fill=darkgreen,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm, xshift = -0.34cm,yshift = 0.025cm] (+t) {\large$+$};
+			\node[at = (formula1),fill=cyan!80,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.089cm, xshift = -0.05cm,yshift = 0.01cm] (xt) {\large$x$};
+			\node[at = (formula1),fill=darkblue,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.28cm,yshift = 0.03cm] (grt) {\large$>$};
+			\node[at = (formula1),fill=darkpurple,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.625cm,yshift = -0.03cm] (yt) {\large$y$};
+			%
+			\node[at = (formula2),fill=darkred,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = -1.15cm,yshift = 0.02cm] (n21t) {\large$21$};
+			\node[at = (formula2),fill=orange,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.755cm,yshift = 0.02cm] (-t) {\large\vphantom{\%}$-$};
+			\node[at = (formula2),fill=darkgray!60,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.475cm,yshift = 0.0cm] (openBt) {\large$($};
+			\node[at = (formula2),fill=cyan!80,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = -0.29cm,yshift = -0.02cm] (xt') {\large$x$};
+			\node[at = (formula2),fill=darkgreen,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.05=2cm,yshift = -0.0cm] (+t') {\large$+$};
+			\node[at = (formula2),fill=darkblue,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.29cm,yshift = 0.02cm] (n2t) {\large$2$};
+			\node[at = (formula2),fill=darkgray,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.46cm,yshift = 0.00cm] (closeBt) {\large$)$};
+			\node[at = (formula2),fill=darkpurple,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.75cm,yshift = 0.02cm] (eqt) {\large\vphantom{l\%,}$=$};
+			\node[at = (formula2),fill=darkred,text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 1.149cm,yshift = 0.02cm] (n21t') {\large$21$};
+			\draw[-,darkgold,in=-45,out=120] (n3t) edge (n3);
+			\draw[-,darkgreen,in=-140,out=70] (+t) edge (+);
+			\draw[-,cyan!80,in=-130,out=60] (xt) edge (x);
+			\draw[-,darkblue,in=-130,out=50] (grt) edge (gr);
+			\draw[-,darkpurple,in=-120,out=40] (yt) edge (y);
+			\draw[-,darkred,in=-60,out=160] (n21t) edge (n21);
+			\draw[-,orange,in=-80,out=100] (-t) edge (-);
+			\draw[-,darkgray!60,in=-160,out=75] (openBt) edge (openB);
+			\draw[-,cyan!80,in=-45,out=99] (xt') edge (x);
+			\draw[-,darkgreen,in=-60,out=120] (+t') edge (+);
+			\draw[-,darkblue,in=-30,out=135] (n2t) edge (n2);
+			\draw[-,darkgray,in=-160,out=60] (closeBt) edge (closeB);
+			\draw[-,darkpurple,in=-85,out=95] (eqt) edge (eq);
+			\draw[-,darkred,in=-45,out=125] (n21t') edge (n21);
+			\end{tikzpicture}
+		\end{center}
+		Note that we even include types for parentheses, as an analysis of representations in first order arithmetic may need to take this into account to consider, say, cognitive factors.
+		
+		We also need types for \textit{composite} tokens. In this encoding of FOA, all composite tokens are \textit{directly built} from three other tokens. For example, $\forall x \thinspace 3=x$ is directly built from $\forall$, $x$ and $3=x$. The name of the type we assign to $\forall x \thinspace 3=x$ is, essentially, a composition of the names of the types assigned to $\forall$, $x$ and $3=x$, namely $\FOAquant\_\textsf{x}\_\textsf{3}\_\FOAeq\_\textsf{x}$. In general, given a composite token, $t_1t_2t_3$, in $\rsystemn_{\FOA}$ its type is defined to be $\mathit{type}(t_1)\_\mathit{type}(t_2)\_\type(t_3)$. The diagram below shows how all \textit{composite} parts of $3+x>y$ and $21-(x+2)=21$ are assigned types:
+		
+		\begin{center}
+			\begin{tikzpicture}[node distance = 0.2cm and 0cm,outer sep = -0.01cm,inner sep = 0.09cm]
+			\node[] (3+x) at (-0.8,1) {\textsf{3\_pl\_x}};
+			\node[below right = of 3+x,xshift=-0.3cm] (3+x>y) {\textsf{3\_pl\_x\_gr\_y}};
+			\node[above right = of 3+x>y,xshift=-0.cm] (x+2) {\textsf{x\_pl\_2}};
+			\node[below right = of x+2,xshift=-0.cm] (x+2B) {\textsf{oB\_x\_pl\_2\_cB}};
+			\node[above right = of x+2B,xshift=-0.3cm] (21-x+2) {\textsf{21\_mi\_oB\_x\_pl\_2\_cB}};
+			\node[below right = of 21-x+2,xshift=-0.3cm] (21-x+2=21) {\textsf{21\_mi\_oB\_x\_pl\_2\_cB\_eq\_21}};
+			\draw[rounded corners, black!30, thick] (-1.5,0) rectangle node[xshift = 4.8cm,yshift = 0.45cm,black!50] {some types for composites} (12.3,1.4);
+			\draw[rounded corners, black!30, thick] (-1.5,-1.55) rectangle node[xshift = 6.25cm,yshift = 0.3cm,black!50] {tokens} (12.3,-0.45);
+			\coordinate (formula1) at (1.5,-1) ;
+			\coordinate (formula2) at (6,-1) ;
+			\node[at = (formula1), text=black, fill opacity = 0.25, text opacity=1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.63cm,yshift = 0.04cm] (n3t) {\large$3$};
+			\node[at = (formula1), text=black, draw=orange, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm, xshift = -0.34cm,yshift = 0.025cm] (3+xt) {$\phantom{3}+\phantom{x}$};
+			\node[at = (formula1), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.089cm, xshift = -0.05cm,yshift = 0.01cm] (xt) {\large$x$};
+			\node[at = (formula1), text=black, draw=darkpurple, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.12cm, xshift = -0.0cm,yshift = 0.02cm] (3+x>yt) {\phantom{$3+x>y$}};
+			\node[at = (formula1), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.28cm,yshift = 0.03cm] (grt) {\large$>$};
+			\node[at = (formula1), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.625cm,yshift = -0.03cm] (yt) {\large$y$};
+			%
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = -1.15cm,yshift = 0.02cm] (n21t) {\large$21$};
+			\node[at = (formula2), fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.755cm,yshift = 0.02cm] (-t) {\large\vphantom{\%}$-$};
+			\node[at = (formula2), fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = -0.475cm,yshift = 0.0cm] (openBt) {\large$($};
+			\node[at = (formula2), fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = -0.29cm,yshift = -0.02cm] (xt') {\large$x$};
+			\node[at = (formula2), fill opacity = 0.25, draw=darkblue, text opacity = 1, rectangle, rounded corners,inner sep =0.16cm,xshift = -0.395cm,yshift = -0.0cm] (21-x+2t) {$\phantom{21-(x+2)\!\!\!}$};
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.0cm,yshift = -0.0cm] (+t') {\large$+$};
+			\node[at = (formula2), text=black,draw=darkgold, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.06cm,xshift = -0.01cm,yshift = -0.0cm] (x+2t) {$\phantom{x+2\!}$};
+			\node[at = (formula2), text=black,draw=darkgreen, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.08cm,xshift = -0.01cm,yshift = -0.0cm] (x+2Bt) {$\phantom{(x+2)\!\!}$};
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.079cm,xshift = 0.29cm,yshift = 0.02cm] (n2t) {\large$2$};
+			\node[at = (formula2), text=black,draw=darkred, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.24cm,xshift = 0.0cm,yshift = 0.0cm] (21-x+2=21t) {$\phantom{21-(x+2)=21\!\!\!}$};
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.46cm,yshift = 0.00cm] (closeBt) {\large$)$};
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 0.75cm,yshift = 0.02cm] (eqt) {\vphantom{l\%,}$=$};
+			\node[at = (formula2), text=black, fill opacity = 0.25, text opacity = 1, rectangle, rounded corners,inner sep =0.069cm,xshift = 1.149cm,yshift = 0.02cm] (n21t') {\large$21$};
+			%
+			\draw[-,orange,out=140,in=-100] (3+xt) edge (3+x);
+			\draw[-,darkpurple,out=105,in=-75] (3+x>yt) edge (3+x>y);
+			\draw[-,darkgold,out=160,in=-85] (x+2t) edge (x+2);
+			\draw[-,darkgreen,out=150,in=-60] (x+2Bt) edge (x+2B);
+			\draw[-,darkblue,out=90,in=-90] (21-x+2t) edge (21-x+2);
+			\draw[-,darkred,out=40,in=-130] (21-x+2=21t) edge (21-x+2=21);
+			\end{tikzpicture}
+		\end{center}
+		The types for primitive and composite tokens are complemented by further useful types.
+		\begin{center}
+		\begin{multicols}{2}%
+			\begin{itemize}[itemsep=2pt]
+				%\begin{minipage}[t]{0.48\linewidth}
+				\item[-] \FOAnum\ (numeral),
+				%
+				\item[-] \FOAvar\ (variable),
+				%
+				\item[-] \FOAnumexp\ (numerical expression),
+				%
+				%\end{minipage}
+				%\hfill
+				%\begin{minipage}[t]{0.48\linewidth}
+				\item[-]  \FOAbop\ (binary operator)
+				%
+				\item[-] \FOAbrel\ (binary relation)\footnote{The types \FOAbop\ and \FOAbrel\ are \textit{composites}, and we note the more standard convention of writing $\FOAnumexp\times \FOAnumexp \to \FOAnumexp$ and $\FOAnumexp\times \FOAnumexp \to \FOAform$.},
+				%
+				\item[-] $\FOApar$ (parentheses)
+				\item[-] \FOAform\ (formula)\footnote{An alternative encoding of $\rsystemn_{\FOA}$ could include additional types such as (with illustrative tokens): $\FOAsum$, tokens: $1+2$, $3+26$; and $\FOAdifference$, tokens: $1-2$, $3-26$. This gives a finer-grained encoding, distinguishing tokens that exploit different operators such as $1+2$ and $1-2$. Types that distinguish tokens formed from different binary relations, $\textsf{bgr}$ and $\textsf{beq}$ to distinguish $1>2$ and $1=2$, may also be of use.}.
+				\item[]
+				%\end{minipage}
+			\end{itemize}
+		\end{multicols}
+	\end{center}
+		Furthermore, the diagram illustrates the partial order, $\leq$, over the set, $\types$, of FOA types, including some of the types assigned to primitives and composites.
+	\begin{center}
+		\begin{tikzpicture}[node distance = 0.5cm and 0.8cm]
+		\node[] (numExp) {$\FOAnumexp$};
+		\node[below left = of numExp, xshift = -0.2cm] (var) {$\FOAvar$};
+		\node[below = of numExp, xshift = -0.55cm] (num) {$\FOAnum$};
+		\node[below left = of var, xshift = 0.9cm] (x) {\textsf{x}};
+		\node[below = of var, xshift = -0.0cm,yshift=0.15cm] (y) {\textsf{y}};
+		\node[below = of var, xshift = 0.55cm,yshift=0.35cm] (vardots) {\rotatebox{20}{$\cdots$}};
+		\node[below left = of num, xshift = 1cm,yshift=-0.1cm] (0) {\textsf0};
+		\node[below = of num, xshift = -0.05cm,yshift=0.02cm] (1) {\textsf{1}};
+		\node[below = of num, xshift = 0.35cm,yshift=0.15cm] (2) {\textsf{2}};
+		\node[below right = of num, xshift = -0.8cm,yshift=0.35cm] (numdots) {\rotatebox{25}{$\cdots$}};
+		\node[below right = 1.45cm and -0.15cm of numExp] (x-1) {\textsf{x\_mi\_1}};
+		\node[below right = 0.9cm and 0.5cm of numExp] (2+y) {\textsf{2\_pl\_y}};
+		\node[at = (2+y), yshift = 0.5cm, xshift = 0.45cm] (numExpdots) {\rotatebox{45}{$\cdots$}};
+		%
+		\node[right = 2.6cm of numExp,yshift=-0.45cm] (bop) {\textsf{bop}};
+		\node[below left = 0.5cm and -0.35cm of bop] (pl) {\textsf{pl}};
+		\node[below right = 0.9cm and -0.35cm of bop] (mi) {\textsf{mi}};
+		%
+		\node[right = 0.55cm of bop, yshift = 0.4cm] (brel) {\textsf{brel}};
+		\node[below left = 0.6cm and -0.3cm of brel] (eq) {\textsf{eq}};
+		\node[below right = 0.6cm and -0.2cm of brel] (gr) {\textsf{gr}};
+		%
+		\node[right = 0.55cm of brel,yshift=-0.45cm] (par) {\textsf{par}};
+		\node[below left = 0.9cm and -0.35cm of par] (oB) {\textsf{oB}};
+		\node[below right = 0.5cm and -0.35cm of par] (cB) {\textsf{cB}};
+		%
+		\node[right = 1.2cm of par, yshift = 0.3cm] (form) {\textsf{form}};
+		\node[below left = 1.2cm and -0.6cm of form] (1eq2) {\textsf{1\_eq\_2}};
+		\node[below right = 0.7cm and -0.7cm of form] (3xy) {\textsf{3\_pl\_x\_gr\_y}};
+		\node[at  = (3xy),xshift = 0.8cm,yshift = 0.5cm] () {\rotatebox{30}{$\cdots$}};
+		
+		\draw[rounded corners, black!30, thick] (-3,-2.3) rectangle node[xshift = 6.2cm,yshift = 1cm,black!50] {$\tsystem$} (10.7,0.3);
+		\coordinate (formula1) at (-0.5,-3.2) ;
+		\draw[->] (var) edge (numExp);
+		\draw[->] (num) edge (numExp);
+		\draw[->] (x-1) edge (numExp);
+		\draw[->] (2+y) edge (numExp);
+		\draw[->] (x) edge (var);
+		\draw[->] (y) edge (var);
+		\draw[->] (0) edge (num);
+		\draw[->] (1) edge (num);
+		\draw[->] (2) edge (num);
+		%
+		\draw[->] (pl) edge (bop);
+		\draw[->] (mi) edge (bop);
+		\draw[->] (eq) edge (brel);
+		\draw[->] (gr) edge (brel);
+		\draw[->] (oB) edge (par);
+		\draw[->] (cB) edge (par);
+		\draw[->] (1eq2) edge (form);
+		\draw[->] (3xy) edge (form);
+		\end{tikzpicture}
+	\end{center}
+		
+	\subsection{Construction Spaces}
+		Construction spaces are abstractions meant capture:
+		\begin{enumerate}[itemsep=2pt]
+			\item how a representation is formed by (or relates to) its parts/aspects, \label{g}
+			\item how a representation is entailed by (or results from the manipulation of) other representations,\label{e}
+			\item the properties/attributes of a representation.\label{i}
+		\end{enumerate} 
+	
+		In a representational system, all of the above will be captured by different construction spaces; namely, a \textit{grammatical space} (\ref{g}), a \textit{syntactic entailment space} (\ref{e}), and an \textit{identification space} (\ref{i}).
+		Each of these construction spaces will be different, but is essentially captured by the same abstraction.
+		
+		\subsubsection{Constructors \& Configurators}
+		A constructor captures the \textit{manner} in which tokens stick together to form another one. For example, the constructor $\mathit{infixRel}$ captures how a relation symbol (such as $=$) is placed in infix notation between two numerical expressions. Below left is the general pattern for the use of $\mathit{infixRel}$, and below right is a specific use of it:
+		\begin{center}
+			\begin{tikzpicture}[construction]
+			\node[typeE = {\textsf{form}}] (t) {};
+			\node[constructor = {$\mathsf{infixRel}$},below = 0.7cm of t] (c) {};
+			\node[typeS = {\textsf{numExp}},below left = 0.6cm and 1cm of c] (t1) {};
+			\node[typeS = {\textsf{binRel}},below = 0.8cm of c] (t2) {\vphantom{\footnotesize i}};
+			\node[typeS = {\textsf{numExp}},below right = 0.6cm and 1cm of c] (t3) {};
+			\path[->] (c) edge (t);
+			\path[->] (t1) edge node[index label] {$1$} (c);
+			\path[->] (t2) edge node[index label] {$2$} (c);
+			\path[->] (t3) edge node[index label] {$3$} (c);
+			\end{tikzpicture}\hspace{2cm}
+		\begin{tikzpicture}[construction]
+			\node[termrep] (t) {$1+1=2$};
+			\node[constructor = {$\mathsf{infixRel}$},below = 0.7cm of t] (c) {};
+			\node[termrep,below left = 0.6cm and 1cm of c] (t1) {$1+1$};
+			\node[termS,below = 0.8cm of c] (t2) {\vphantom{\footnotesize i}$=$};
+			\node[termrep,below right = 0.6cm and 1cm of c] (t3) {$2$};
+			\path[->] (c) edge (t);
+			\path[->] (t1) edge node[index label] {$1$} (c);
+			\path[->] (t2) edge node[index label] {$2$} (c);
+			\path[->] (t3) edge node[index label] {$3$} (c);
+		\end{tikzpicture}
+		\end{center}
+		To declare a constructor, we need to declare its sequence of \textit{input types}, and its \textit{output type}. This is captured by the $\spec$ function (defined below), which returns a constructor's type information.
+		
+		\begin{definition}\label{defn:constructionSpecification}
+			A \textit{constructor specification}, $\cspecificationn$, over type system $\tsystemn=\tsystem$ is a pair, $\cspecificationn=(\constructors, \spec)$,  where
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+				\item $\constructors$ is a set, disjoint from $\types$, whose elements are called \textit{constructors}, and
+				%
+				\item $\spec\colon \constructors \to \sequence(\types)\times \types$ is a function that returns, for each constructor, $c$, a \textit{signature}, $\spec(c)=([\tau_1,\ldots,\tau_n], \tau)$, where $[\tau_1,\ldots,\tau_n]$ is non-empty.
+				%
+			\end{enumerate}
+			The \textit{input type-sequence} and the \textit{output type} for $c$, denoted $\inputsty{c}$ and $\outputsty{c}$ respectively, are $\inputsty{c}=[\tau_1,\ldots,\tau_n]$ and  $\outputsty{c}=\tau$.
+		\end{definition}
+	
+	
+	\subsubsection*{Example: grammatical constructors for FOA}
+	We now exemplify the \textit{constructors} that are used in $\rsystemn_{\FOA}$'s grammatical space. For each way of building tokens, embodied by their inductive construction, there is a constructor in the system: $\FOAcinfixop$, $\FOAcaddPar$, $\FOAcinfixrel$, and $\FOAcquantify$\footnote{Note, as with types, we adopt the convention of using \textsf{Sans} font for constructor names: in examples, the vertices in graphs will consistently use \textsf{Sans} font for their labels. Specifically to this example, the constructor $\FOAcinfixop$ does not impose the presence of parentheses, reflecting the typical informal use of such expressions in practice. Therefore, $\rsystemn_{\FOA}$ includes a bracketing constructor, $\FOAcaddPar$. If $\rsystemn_{\FOA}$ included additional types, such as $\FOAsum$, then more constructors could be included. One example is the constructor $\FOAcsum$ with input type-sequence $[\FOAnumexp,\FOAplus,\FOAnumexp]$ and output type $\FOAsum$.}. For instance, $\FOAcinfixop$ will build tokens such as $1+3$ and has \textit{input type-sequence} $[\FOAnumexp,\FOAbop,\FOAnumexp]$ and \textit{output type} $\FOAnumexp$. The constructors' visualizations, where the \textit{indexed} arrows indicate the order of their sources' labels in the input type-sequence, are:
+	%
+	\begin{center}
+		% \begin{minipage}[c][3cm]{0.2\textwidth}    % numerical expression
+		\begin{tikzpicture}[construction,yscale=0.9]
+		\node[typeE={$\FOAnumexp$}] (v) at (3.2,4.2) {};
+		\node[constructorNW={$\FOAcinfixop$}] (u) at (3.2,3.2) {};
+		\node[typeS={$\FOAnumexp$}] (v2) at (2.2,2.2) {};
+		\node[typeS={$\FOAbop$}] (v3) at (3.2,2.2) {};
+		\node[typeS={$\FOAnumexp$}] (v4) at (4.2,2.2) {};
+		%\node[termS={$\FOAopenb$}] (v1) at (1.6,2.2) {};
+		%\node[termS={$\FOAcloseb$}] (v5) at (4.8,2.2) {};
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		%(v1) edge[bend right = -20] node[index label] {1} (u)
+		(v2) edge[bend right = -10] node[index label] {1} (u)
+		(v3) edge[bend right = 0] node[index label] {2} (u)
+		(v4) edge[bend right = 10] node[index label] {3} (u)
+		%(v5) edge[bend right = 20] node[index label] {5} (u)
+		;
+		\end{tikzpicture}
+		% \end{minipage}
+		%
+		\hfill
+		%
+		% \begin{minipage}[c][3cm]{0.2\textwidth}    % brackets
+		\begin{tikzpicture}[construction,yscale=0.9]
+		\node[typeE={$\FOAnumexp$}] (v) at (3.2,4.2) {};
+		\node[constructorNW={$\FOAcaddPar$}] (u) at (3.2,3.2) {};
+		\node[typeS={$\FOAopenb$}] (v2) at (2.2,2.2) {};
+		\node[typeS={$\FOAnumexp$}] (v3) at (3.2,2.2) {};
+		\node[typeS={$\FOAcloseb$}] (v4) at (4.2,2.2) {};
+		%\node[termS={$\FOAopenb$}] (v1) at (1.6,2.2) {};
+		%\node[termS={$\FOAcloseb$}] (v5) at (4.8,2.2) {};
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		%(v1) edge[bend right = -20] node[index label] {1} (u)
+		(v2) edge[bend right = -10] node[index label] {1} (u)
+		(v3) edge[bend right = 0] node[index label] {2} (u)
+		(v4) edge[bend right = 10] node[index label] {3} (u)
+		%(v5) edge[bend right = 20] node[index label] {5} (u)
+		;
+		\end{tikzpicture}
+		% \end{minipage}
+		%
+		\hfill
+		%
+		% \begin{minipage}[c][3cm]{0.2\textwidth} % binary relation formulae
+		\begin{tikzpicture}[construction,yscale=0.9]
+		\node[typeE={$\FOAform$}] (v) at (3.2,4.2) {};
+		\node[constructorNW={$\FOAcinfixrel$}] (u) at (3.2,3.2) {};
+		\node[typeS={$\FOAnumexp$}] (v2) at (2.2,2.2) {};
+		\node[typeS={$\FOAbrel$}] (v3) at (3.2,2.2) {};
+		\node[typeS={$\FOAnumexp$}] (v4) at (4.2,2.2) {};
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		(v2) edge[bend right = -10] node[index label] {1} (u)
+		(v3) edge[bend right = 0] node[index label] {2} (u)
+		(v4) edge[bend right = 10] node[index label] {3} (u)
+		;
+		\end{tikzpicture}
+		% \end{minipage}
+		%
+		\hfill
+		%
+		% \begin{minipage}[c][3cm]{0.2\textwidth} %quantified formula
+		\begin{tikzpicture}[construction,yscale=0.9]
+		\node[typeE={$\FOAform$}] (v) at (3.2,4.2) {};
+		\node[constructorNW={$\FOAcquantify$}] (u) at (3.2,3.2) {};
+		\node[typeS={$\FOAquant$}] (v2) at (2.2,2.2) {};
+		\node[typeS={$\FOAvar$}] (v3) at (3.2,2.2) {};
+		\node[typeS={$\FOAform$}] (v4) at (4.2,2.2) {};
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		(v2) edge[bend right = -10] node[index label] {1} (u)
+		(v3) edge[bend right = 0] node[index label] {2} (u)
+		(v4) edge[bend right = 10] node[index label] {3} (u);
+		\end{tikzpicture}
+		% \end{minipage}
+	\end{center}
+	% \end{itemize}
+	
+	Once we have a constructor specification we can start to talk about the instantiation of the types of a constructor with \textit{tokens}. Such an instantiation is called a \textit{configuration}. A configuration is a graph like the diagram above (right). Such basic graphs are important because the more complex \textit{structure graphs} and \textit{constructions} consist precisely of many configurations joined together\footnote{Some of the notation used for graph theory concepts can be found in the technical appendix~\ref{appendix}.}. The definition above looks a bit intimidating, but it's actually quite simple: a configuration is a labelled directed bipartite (tokens and configurators) graph where the tokens are labelled by types, the configurator is labelled by a constructor, and the input arrows are labelled with the numbers $\{1,\ldots,n\}$ to given them an order.
+	
+	\begin{definition}\label{defn:configuration}
+		Let $\cspecificationn=\cspecification$ be a constructor specification over $\tsystemn=\tsystem$. Let $c\in \constructors$ where
+		$\spec(c) =([\tau_1,\ldots,\tau_n], \tau)$.  A \textit{configuration} of $c$ is a labelled directed bipartite graph, $$\graphn=\graph,$$ where
+		%
+		\begin{enumerate}[itemsep=0pt,topsep=4pt]
+			\item $\pb$ contains a single vertex, $u$, called a $c$-\textit{configurator}: $\pb=\{u\}$,
+			%
+			\item the vertices in $\pa$, called \textit{tokens}, are all adjacent to $u$: $\pa=\inV{u}\cup \outV{u}$,
+			%
+			\item $u$ has exactly one outgoing arrow, $a_{0}$: $\outA{u}=\{a_{0}\}$,
+			%
+			\item $u$ has exactly $n$ incoming arrows: $\inA{u}=\{a_1,\ldots,a_n\}$,
+			%
+			\item $\arrowl\colon \arrows\to \{0,1,\ldots,n\}$ is a bijection that labels each arrow $a_{i}$ with $i$,
+			%
+			\item $\tokenl\colon \pa \to \types$ is a function that labels each token with a type, such that for all $t\in \pa$,
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=2pt]
+				%
+				\item if $\tar{a_{0}}=t$  then $\tokenl(t)\leq \tau$, and
+				%
+				\item the vertex-label sequence $[\tokenl(\sor{a_1}),\ldots,\tokenl(\sor{a_n})]$ is a specialisation of $[\tau_1,\ldots,\tau_n]$.
+			\end{enumerate}
+			and
+			%
+			\item $\consl\colon \pb \to \constructors$ is a function where $\consl(u)=c$
+			
+		\end{enumerate}
+		The \textit{output token}, $\tar{a_0}$, of $u$, is denoted $\outputsto{u}$ and the \textit{output type} of $u$ is $\outputsty{u}=\tokenl(\tar{a_0})$. We further define:
+		%
+		\begin{enumerate}[itemsep=0pt,topsep=4pt]
+			\item the \textit{input arrow-sequence} of $u$, denoted $\inputsA{u}$, to be the sequence of arrows in $\inA{u}$ ordered by their indices: $\inputsA{u} = [\arrowl^{-1}(1),\ldots,\arrowl^{-1}(n)] = [a_1,\ldots,a_n]$,
+			%
+			\item the \textit{input token-sequence} of $u$, denoted $\inputsto{u}$, replaces each arrow in $\inputsA{u}$ with its source: $\inputsto{u} = [\sor{a_1},\ldots,\sor{a_n}]$, and
+			%
+			\item the \textit{input type-sequence} of $u$, denoted $\inputsty{u}$, replaces each token in $\inputsto{u}$ with its assigned type: $\inputsty{u} = [\tokenl(\sor{a_1}),\ldots,\tokenl(\sor{a_n})]$.
+		\end{enumerate}
+	\end{definition}
+
+	Note that the inputs and output in a configuration need not be distinct, as demonstrated by the examples below, of a constructor which takes a pair of vector visualisations and returns the vector visualisation of their sum (left) and subtraction (right):
+	\begin{center}
+		\adjustbox{valign=c}{%
+		\begin{tikzpicture}[construction,yscale=0.9]
+		\begin{scope}[rotate=-90]
+		\node[termrep] (vi) at (0,0.1) {\scalebox{.6}{\vectorVis{(1,1)}{0.4}}};
+		\node[constructorIpos={$\GRVcvecadd$}{70}{0.2cm}] (u) at (0,1.9) {$u$};
+		\node[termrep] (vo) at (0,3.5) {\scalebox{.6}{\vectorVis{(2,2)}{0.4}}};
+		\end{scope}
+		\path[->]
+		(u) edge[bend right = 0] (vo)
+		(vi) edge[bend right = 20] node[index label] {2} (u)
+		(vi) edge[bend right = -20] node[index label] {1} (u);
+		\end{tikzpicture}}\hspace{3cm}
+		\adjustbox{valign=c}{%
+	\begin{tikzpicture}[construction,yscale=0.8]
+	\node[termrep] (v1) at (-0.8,1) {\scalebox{.6}{\vectorVis{(2,2)}{0.4}}};
+	\node[termrep] (v2) at (3,1) {\scalebox{.6}{\vectorVis{(1,1)}{0.4}}};
+	\node[constructorIpos={$\GRVcvecsub$}{75}{0.2cm}] (u) at (1,1) {$u$};
+	\path[->]
+	(u) edge[bend right = 0] (v2)
+	(v1) edge[out = 10, in = 170] node[index label] {1} (u)
+	(v2) edge[out = 210, in = -45] node[index label] {2} (u);
+	\end{tikzpicture}}
+	\end{center}
+	
+	A structure graph, defined below, is simply the result of joining a bunch (possibly infinite) of configurations for a given type system and constructor specification:
+	\begin{definition}\label{defn:structureGraph}
+		A \textit{structure graph}, $\graphn=\graph$, for a constructor specification $\cspecificationn=(\constructors, \spec)$ is a graph where for all $u\in \pb$, $\consl(u)$ is in $\constructors$ and $\neigh{u}$ is a configuration of $\consl(u)$.
+		The elements of $\pb$ are called \textit{configurators}.
+	\end{definition}
+
+	A construction space, defined below, is just the collection of a type system, a constructor specification, and a structure graph.
+	\begin{definition}\label{defn:constructionSpace}
+		A \textit{construction space} is a triple, $\cspacen=\cspace$, where %
+		%
+		\begin{enumerate}[itemsep=0pt,topsep=4pt]
+			\item $\tsystemn=\tsystem$ is a type system,
+			%
+			\item $\cspecificationn=\cspecification$ is a constructor specification over $\tsystemn$, and
+			%
+			\item $\graphn=\graph$ is a structure graph for $\cspecificationn$.
+		\end{enumerate}
+		We say that $\cspacen$ is a construction space \textit{formed over} $\tsystemn$.
+	\end{definition}
+
+	Now I'll introduce informally a couple of useful concepts.
+		\paragraph{Determinism and totality}
+		Even though constructors are roughly analogous to functions, they need not behave like such. In particular, note that a token $1$ at the top left of a page, a token $+$ at the bottom right, and a token $2$ at the bottom left of the page, do not form $1+2$. That means that the constructors of FOA are \textit{not token-total}. However, the constructors of FOA are \textit{type-total}, because for any types \textit{matching} the inputs of a constructor, there will exist a configurator of it. For example, for constructor $\textsf{infixOp}$ and any subtypes of its input sequence $[\textsf{numExp},\textsf{binRel},\textsf{numExp}]$ (e.g., \textsf{1}, \textsf{pl} and \textsf{2}), there exists a configurator that takes that as input (and outputs $1+2$).
+		
+		The constructors of FOA shown above also happen to be \textit{token-deterministic} and \textit{type-deterministic}, which means that given some inputs to a constructor, the output is determined. In fact, as we will see, determinism is a \textbf{requirement} for the {grammatical} aspect of a representational system, but not for other aspects (like {sytnactic entailment}).
+		
+		\paragraph{Compatibility}
+		Two type systems are compatible if their union is a type system (that is, if the union of the subtype relations remains a partial order). Similarly, we will say that two construction spaces are compatible if their type systems are compatible, their constructor specifications don't \textit{clash}, and the result of joining their structure graphs is a structure graph. 
+		
+	\subsection{Representational Systems}
+	Having defined construction spaces, now it is possible to define representational systems. As mentioned before, a representational system will consist of three construction spaces: grammatical, syntactic entailment, and identification. The identification space, meant to capture properties of tokens, needs the addition of \textit{meta-tokens} which are labelled by \textit{meta-types}.
+		
+	\begin{definition}\label{defn:identificationSpace}
+		An \textit{identification space} is a construction space, $\ispacen=\ispace$, such that $\tsystemn=\tsystem$ and $\mpsystemn=\mpsystem$ are compatible type systems. The type system $\mpsystemn$ is the \textit{meta-type system} of $\ispacen$. We say that $\ispacen$ is \textit{formed over} $\tsystemn$ and $\mpsystemn$.
+	\end{definition}
+
+	The identification space is meant to capture properties of tokens that go beyond their construction. For example, a constructor $\FOAcprovable$, can describe whether a token is represents a valid formula or not:
+	\begin{center}
+		\begin{tikzpicture}[construction]
+		\begin{scope}[rotate = -90]
+		\node[termrep] (v4) at (3.2,3.8) {\scriptsize$\forall x \thinspace x> x-1$};
+		\node[constructorIpos={\FOAcprovable}{90}{.15cm}] (u) at (3.2,5.8) {$u_1$};
+		\node[termIrep] (v) at (3.2,6.8) {\scriptsize$\top$};
+		\end{scope}
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		(v4) edge[bend right = 0] node[index label] {1} (u);
+		\end{tikzpicture}
+		%
+		\hspace{1.5cm}
+		%
+		\begin{tikzpicture}[construction]
+		\begin{scope}[rotate = -90]
+		\node[termrep] (v4) at (3.2,3.8) {\scriptsize$1+(7-4)=22$};
+		\node[constructorIpos={\FOAcprovable}{90}{.15cm}] (u) at (3.2,5.8) {$u_2$};
+		\node[termIrep] (v) at (3.2,6.8) {\scriptsize$\bot$};
+		\end{scope}
+		\path[->]
+		(u) edge[bend right = 0] (v)
+		(v4) edge[bend right = 0] node[index label] {1} (u);
+		\end{tikzpicture}
+	\end{center}
+	Let us define representational systems now.
+
+	\begin{definition}\label{defn:representationalSystem}
+		A \textit{representational system} is a triple, $\rsystemn= \rsystem$, \textit{formed over} type system, $\tsystemn$, and meta-type system, $\mpsystemn$, where:
+		\begin{enumerate}[itemsep=0pt,topsep=4pt]
+			\item $\gspacen=(\tsystemn,\cspecificationn_{\gspacen},\graphn_{\gspacen})$ is a deterministic construction space,
+			%
+			\item $\espacen=(\tsystemn, \cspecificationn_{\espacen},\graphn_{\espacen})$ is a construction space such that every token in $\espacen$ is also a token in $\gspacen$,
+			%
+			\item $\ispacen=(\tsystemn\cup \mpsystemn, \cspecificationn_{\ispacen},\graphn_{\ispacen})$ is an identification space formed over $\tsystemn$ and $\mpsystemn$ %given $\pb_{\mpsystemn}$
+			such that for every token, $t$, in $\ispacen$:
+			\begin{enumerate}[itemsep=0pt,topsep=2pt]
+				\item if $t$ is not in $\gspacen$ then the label of $t$ is a meta-type in $\mpsystemn$, and
+				%
+				\item if $t$ is the output of a configurator in $\graphn_{\ispacen}$ then $t$ is not in $\gspacen$, and
+			\end{enumerate}
+			\item $\gspacen$, $\espacen$ and $\ispacen$ are pairwise compatible and their sets of constructors are pairwise disjoint.
+		\end{enumerate}
+		The spaces $\gspacen$, $\espacen$ and $\ispacen$ are called the \textit{grammatical}, \textit{entailment} and \textit{identification} spaces of $\rsystemn$. We denote the components of the structure graphs $\graphn_\gspacen$, $\graphn_\espacen$, and $\graphn_\ispacen$ by
+		%
+		\begin{enumerate}[itemsep=0pt,topsep=4pt]
+			\item $\graphn_{\gspacen}=\graphp{\gspacen}$,
+			%
+			\item $\graphn_{\espacen}=\graphp{\espacen}$, and
+			%
+			\item $\graphn_{\ispacen}=\graphp{\ispacen}$, respectively.
+		\end{enumerate}
+		%The set of  \textit{meta-tokens} in $\rsystemn$ is $\metatokens_{\rsystemn}=\pa_{\ispacen}\backslash \pa_{\gspacen}$.
+		The \textit{meta-tokens} in $\rsystemn$ are the elements of $\pa_{\ispacen}\backslash \pa_{\gspacen}$.
+		We say that $\tsystemn$ and $\mpsystemn$ are, respectively, the type system and meta-type system of $\rsystemn$.
+	\end{definition}
+
+	We often will want to mix the construction spaces of a representational system, which is why compatibility between the three layers are required. 
+	
+	\begin{definition}\label{defn:universalSpace}
+		Let  $\rsystemn= \rsystem$, be a representational system. The \textit{universal space} of $\rsystemn$, denoted $\uspace{\rsystemn}$, is defined to be the construction space $\gspacen\cup \espacen\cup \ispacen$. The structure graph of $\uspace{\rsystemn}$, which we denote by $\ugraph{\rsystemn}$, is called the \textit{universal structure graph} for $\rsystemn$.
+	\end{definition}
+
+	\begin{center}
+		\begin{tikzpicture}[construction, node distance = 0.3cm and 0.1cm, yscale=0.8]
+		\begin{scope}[rotate = -90]
+		\node[termrep] (v4) at (3.2,4.2) {\scriptsize$1+2=3$};
+		\node[termrep] (v1) at (2.2,1.4) {\scriptsize$1+2$};
+		\node[constructorGpos={$\FOAcinfixrel$}{45}{0.18cm}] (u1) at (3.2,2.5) {$u_4$};
+		\node[termrep] (v3) at (4.2,1.4) {\scriptsize$3$};
+		\node[constructorIN={\FOAcprovable}] (u) at (3.2,5.8) {$u_3$};
+		\node[termIrep] (v) at (3.2,6.8) {\scriptsize$\top$};
+		\node[termrep] (v2) at (3.2,1.4) {\scriptsize$=$};
+		\end{scope}
+		\path[->]
+		(u1) edge[bend right = 0] (v4)
+		(v1) edge[bend right = -10] node[index label] {1} (u1)
+		(v3) edge[bend right = 10] node[index label] {3} (u1)
+		(u) edge[bend right = 0] (v)
+		(v4) edge[bend right = 0] node[index label] {1} (u)
+		(v2) edge[bend right = 0] node[index label] {2} (u1);
+		\coordinate[above right = of v4, yshift = 0.3cm] (x1) ;
+		\coordinate[below right = of v4, yshift = -0.3cm] (x2) ;
+		\coordinate[below left = of v3,xshift = -0.1cm, yshift = 0.15cm] (x3) ;
+		\coordinate[above left = of v1,xshift = -0.1cm, yshift = -0.1cm] (x4) ;
+		\draw[rounded corners=10,thick, draw opacity = .30, fill opacity = .20, text opacity = 1] (x1) -- (x2) -- (x3) -- node[xshift = 0.5cm, yshift= 1.2cm, text width = 3cm] {\footnotesize grammatical\\[-1ex] space} (x4) -- cycle;
+		\coordinate[above right = of v,yshift = 0.1cm] (y1) ;
+		\coordinate[below right = of v,yshift = -0.1cm] (y2) ;
+		\coordinate[below left = of v4,yshift = -0.1cm, xshift=-0.1cm] (y3) ;
+		\coordinate[above left = of v4,yshift = 0.1cm, xshift=-0.1cm] (y4) ;
+		\draw[rounded corners=10, double,thick, draw opacity = .30, fill opacity = .20, text opacity = 1] (y1) --node[xshift = 0.5cm, yshift= 1cm, text width = 3cm] {\footnotesize identification\\[-1.5ex] space} (y2) -- (y3) -- (y4) -- cycle;
+		\end{tikzpicture}
+	\end{center}
+
+	We depict the configurators for grammatical constructors as \scalebox{0.8}{\tikz[construction,baseline=-0.12cm]{\node[constructorGrep] {};}}, configurators for entailment constructors as \scalebox{0.8}{\tikz[construction,baseline=-0.12cm]{\node[constructorErep] {};}}, and configurators for identification constructors as \scalebox{0.8}{\tikz[construction,baseline=-0.12cm]{\node[constructorIrep] {};}}.
+
+		\subsubsection{Constructions \& Decompositions}
+		A structure graph may capture \textit{many} ways of constructing the same token. For example, the graph below shows two ways of constructing token $1+2+3$.
+		\begin{center}
+			\begin{tikzpicture}[construction]\small
+			\node[termrep] (v) {$1+2+3$};
+			\node[constructor = {\textsf{infixOp}}, below left = of v,xshift =0.5cm,yshift=0.2cm] (u) {};
+			\node[termrep, below left = of u,xshift =0.5cm,yshift=0.1cm] (v1) {$1+2$};
+			\node[constructor = {\textsf{infixOp}}, below = of v1,yshift=0.2cm] (u1) {};
+			\node[termrep] (v11) at (-3.5,-4) {$1$};
+			\node[termrep] (v12) at (-1.75,-4) {$+$};
+			\node[termrep] (v13) at (0,-4) {$2$};
+			\path[->]
+			(v1) edge node[index label] {1} (u)
+			(u) edge (v)
+			(v11) edge node[index label] {1} (u1)
+			(v12) edge node[index label] {2} (u1)
+			(v13) edge node[index label] {3} (u1)
+			(u1) edge (v1);
+			%
+			\node[constructorNE = {\textsf{infixOp}}, below right = of v,xshift =-0.5cm,yshift=0.2cm] (u') {};
+			\node[termrep, below right = of u',xshift =-0.5cm,yshift=0.1cm] (v3') {$2+3$};
+			\node[constructorNE = {\textsf{infixOp}}, below = of v3',yshift=0.2cm] (u3') {};
+			\node[termrep] (v32) at (1.75,-4) {$+$};
+			\node[termrep] (v33) at (3.5,-4) {$3$};
+			\path[->]
+			(v11) edge node[index label] {1} (u')
+			(v12) edge node[index label] {2} (u')
+			(v3') edge node[index label] {3} (u')
+			(v32) edge node[index label] {2} (u)
+			(v33) edge node[index label] {3} (u)
+			(u') edge (v)
+			(v13) edge node[index label] {1} (u3')
+			(v32) edge node[index label] {2} (u3')
+			(v33) edge node[index label] {3} (u3')
+			(u3') edge (v3');
+			\end{tikzpicture}
+		\end{center}
+	And the following graph encodes multiple ways of constructing a few vector visualisations.
+		\begin{center}
+			\begin{tikzpicture}[construction]
+			\begin{scope}[rotate=-90]
+			\node[termpos={$t_3$}{90}{0.15cm},inner sep = 1.5pt] (v) at (3.2,5.6) {\scalebox{.5}{\vectorVis{(1,1.5)}{0.4}}};
+			\node[termpos={$t_4$}{20}{0.17cm},inner sep = 1.5pt] (v1) at (2.4,2.6) {\scalebox{.5}{\vectorVis{(3,4)}{0.4}}};
+			\node[termpos={$t_5$}{-20}{0.17cm},inner sep = 1.5pt] (v2) at (4.0,2.6) {\scalebox{.5}{\vectorVis{(2,2.5)}{0.4}}};
+			\node[constructorEpos={$\GRVcvecsub$}{60}{0.17cm}] (u) at (3.2,4.1) {$u$};
+			\node[constructorEpos={$\GRVcvecadd$}{80}{0.18cm}] (u1) at (2.4,1.2) {$u_2$};
+			\node[constructorEpos={$\GRVcvecadd$}{80}{0.18cm}] (u2) at (4,1.2) {$u_1$};
+			\node[termpos={$t_2$}{160}{0.17cm},inner sep = 1.5pt] (v3) at (2.4,-0.5) {\scalebox{.5}{\vectorVis{(2,3)}{0.4}}};
+			\node[termpos={$t_1$}{200}{0.17cm},inner sep = 1.5pt] (v4) at (4,-0.5) {\scalebox{.5}{\vectorVis{(1,1)}{0.4}}};
+			\node[termpos={$t_6$}{20}{0.17cm},inner sep = 1.5pt] (v6) at (2.4,8.7) {\scalebox{.5}{\vectorVis{(3,2)}{0.4}}};
+			\node[termpos={$t_7$}{-20}{0.17cm},inner sep = 1.5pt] (v7) at (4.0,8.7) {\scalebox{.5}{\vectorVis{(2,0.5)}{0.4}}};
+			\node[constructorEpos={$\GRVcvecsub$}{120}{0.17cm}] (up) at (3.2,7.1) {$u'$};
+			\end{scope}
+			\path[->]
+			(u) edge[bend right = 0] (v)
+			(v1) edge[bend right = -10] node[index label] {1} (u)
+			(v2) edge[bend right = 10] node[index label] {2} (u)
+			(v3) edge[bend right = -10] node[index label] {2} (u1)
+			(v4) edge[bend right = 10] node[index label] {1} (u2)
+			(u1) edge[bend right = 0] (v1)
+			(u2) edge[bend right = 0] (v2)
+			(v4) edge[bend right = 10] node[index label] {1} (u1)
+			(v) edge[in = -85, out = 240, looseness=0.72] node[index label] {2} (u2)
+			(up) edge[bend right = 0] (v)
+			(v6) edge[bend right = 10] node[index label] {1} (up)
+			(v7) edge[bend right = -10] node[index label] {2} (up)
+			;
+			\end{tikzpicture}\vspace{-0.55cm}
+		\end{center}
+		Intuitively, a \textit{construction} is a structure graph that captures \textit{exactly one way of constructing a token}. If we remove one part of the graph above, we can turn it into a construction. See the following graph below:
+		\begin{center}
+			\vectorsCon
+		\end{center}
+		However, you might still wonder: what does it construct? $t_3$ or $t_5$? To disambiguate, when we specify a construction we need to specify a graph (with certain properties) and a token in that graph.
+		
+		\begin{definition}\label{defn:uniStructured}
+			A structure graph, $\graphn$, is \textit{uni-structured} provided for every token, $t$, in $\graphn$ there is at most one arrow, $a$, in $\graphn$ such that $\tar{a}= t$.
+		\end{definition}
+	
+		
+		\begin{definition}\label{defn:construction}
+			A \textit{construction} is a pair, $\cpair$, where
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+				\item  $\cgraphn$ is a finite, uni-structured structure graph, and
+				%
+				\item $t$ is a token in $\cgraphn$ such that each vertex in $\cgraphn$ is the source of a trail in $\cgraphn$ that targets $t$.
+			\end{enumerate}
+			Given a construction, $\cpair$, we say that $\cgraphn$ \textit{constructs} $t$ and that $t$ is the \textit{construct} of $\cpair$. If $t$ is the only vertex in $\cgraphn$ then $\cpair$ is \textit{trivial}. If $\cpair$ contains exactly one configurator then $\cpair$ is \textit{basic}.
+		\end{definition}
+		
+%		\begin{definition}\label{defn:setOfConstructions}
+%			Let $\rsystemn=\rsystem$ be a representational system. A construction, $\cpair$, is a \textit{construction in $\rsystemn$} provided for each configurator, $u$, in $\cgraphn$, $\neigh{u,\cgraphn}=\neigh{u,\ugraph{\rsystemn}}$. The set of constructions in $\rsystemn$ is denoted $\allconstructions{\rsystemn}$.
+%		\end{definition}
+	
+		In spite of the potential existence of loops, constructions are well behaved. In particular, it's easy to understand them recursively, from \textit{the top} down, starting from the construct, the label of its configurator, and then constructions `inputting' that configurator, all the way down to the \textit{foundations} (see the standard ML code below).
+\begin{alltt}
+type tc = \{token : CSpace.token, constructor : CSpace.constructor\}
+datatype construction = TCPair of tc * construction list
+                      | Loop of CSpace.token
+                      | Source of CSpace.token ;
+\end{alltt}
+		Informally, elements of the above datatype are considered well-formed if Loops are really loops and repetition of tokens is coherent across the element (we don't need to go into details at the moment).
+		
+		\paragraph{Foundations} From a construction, we can obtain its \textit{foundations}. The foundations are a sequence of tokens which we obtain by going from the construct in opposite direction of the arrows until we either find a cycle (a Loop), or we find a token which is not constructed from anything else (a Source). The formal definition is a bit more complex as it requires us to understand the construction in terms of its \textit{trails}, but it's not necessary to go there for our purposes.\\
+
+		Now, of particular importance when understanding constructions, is the concept of a \textit{generator}, which is essentially just a sub-construction of a construction that constructs the same token.
+		
+		\begin{definition}
+			Let $\cpair$ be a construction. A \textit{generator} of $\cpair$ is a construction, $\genpair$, such that $\cgraphn'\subseteq \cgraphn$.
+		\end{definition}
+	
+		And from a generator, we can obtain a \textit{split}, which consists of the generator plus the remaining constructions (one for each of the foundations of the generator).
+	
+		\begin{definition}\label{defn:split}
+			Let $\cpair$ be a construction. A \textit{split} of $\cpair$ is a pair, $\csplit$, where
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+				\item $\genpair$ is a generator of $\cpair$, and
+				%
+				\item $\ics$ is the induced construction sequence obtained by extending trails in $\ctsequence{\cgraphn',t}$ in $\cpair$:  $\ics=\icsequence{\ctsequence{\cgraphn',t},\cpair}$.
+			\end{enumerate}
+			We write $\cpair\splitarrow \csplit$ to mean that $\csplit$ is a split of $\cpair$.
+		\end{definition}
+	
+		And even better, we can split recursively to obtain a decomposition. First, we define its characteristic structure and then we define what it means for it to be the decomposition of a construction.
+	
+		\begin{definition}\label{defn:decompositionTree}
+			A \textit{decomposition tree} is a directed arrow-labelled rooted in-tree\footnote{That is, the arrows are directed \textit{towards} the root: the tree is an anti-arborescence.},
+			%
+			\begin{displaymath}
+			\decompositionn=(V,\arrows, \incVert\colon \arrows\to V\times V, \arrowl\colon \arrows \to \mathbb{N})
+			\end{displaymath}
+			such that for each vertex, $v$, in $V$, the function $\arrowl$ with its domain restricted to $\inA{v}$ is a bijection with codomain $\{1,\ldots,|\inA{v}|\}$.
+		\end{definition}
+		\begin{definition}\label{defn:decomposition}
+			Let $\cpair$ be a construction. A \textit{decomposition} of a $\cpair$ is a directed labelled rooted tree, $\decompositionn=\decomposition$, such that $(V,\arrows, \incVert, \arrowl)$ is a decomposition tree and either
+			%
+			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+				\item $\decompositionn$ contains only $\treeroot{\decompositionn}$ and $\labc(\treeroot{\decompositionn})=\cpair$, or
+				%
+				\item there exists a split $(\genpair,[(\cgraphn_1,t_1),\ldots,(\cgraphn_n,t_n)])$ of $\cpair$, where the following hold:
+				%
+				\begin{enumerate}[itemsep=0pt,topsep=2pt]
+					\item the construction that labels $\treeroot{\decompositionn}$ is $\genpair$: $\labc(\treeroot{\decompositionn})=\genpair$,
+					%
+					\item given $\dsequence{\treeroot{\decompositionn}}=[\videctree{v_1},\ldots,\videctree{v_n}]$, each $\videctree{v_i}$ is a decomposition of $(\cgraphn_i,t_i)$.
+				\end{enumerate}
+			\end{enumerate}
+			Such a split is said to \textit{comply} with $\decompositionn$.
+		\end{definition}
+	
+		And, ultimately, to reconstruct the construction from a given decomposition, we simply join the graphs of the decomposition:
+		\begin{definition}\label{defn:constructionOfD}
+			Let $\decompositionn=\decomposition$ be a decomposition, and let $t$ be the construct of $\labc(\treeroot{\decompositionn})$. The \textit{construction of} $\decompositionn$, denoted $\constructionofD{\decompositionn}$, is the construction
+			%
+			\begin{displaymath}
+			\constructionofD{\decompositionn}=\bigg(\bigcup \{\cgraphn_v: \exists v\in V \thinspace \exists t_v \thickspace \labc(v)=(\cgraphn_v,t_v)\},t\bigg),
+			\end{displaymath}
+		\end{definition}
+	
+		The implementation of decompositions in Standard ML is actually a bit more general. We call it \textit{composition} to differentiate.
+		\begin{alltt}
+datatype composition = 
+             Composition of \{construct : CSpace.token,
+                             attachments : (construction * composition list) list\}
+		\end{alltt}
+		If we take exactly one \textit{attachment} per recursive step (and other constraints), we have a decomposition as formally defined.
+		
+		Compositions/decompositions are useful because they are what allows us to do structure transfer. In practice, what we obtain from the structure transfer algorithm is a composition. Ultimately, compositions allow us express/compute transformations between large constructions based on much simpler transformations (or correspondences), as the graphs below show intuitively:
+	
+		\begin{center}\label{ex:decompositionOfPatternsForLater}
+			\adjustbox{scale=\myscale}{%
+				\begin{tikzpicture}[decomposition,yscale=0.9]
+				\node[draw=darkgreen, rounded corners, label=180:{\Large$d_1$}] (dv1) at (0,-0.1) {\begin{tikzpicture}\foavtwo\end{tikzpicture}};
+				\node[draw=darkblue, rounded corners, label=180:{\Large$d_2$}] (dv2) at (0,-3) {\begin{tikzpicture}\foavtwo \foavfive \foavsix \foavseven \foautwo \end{tikzpicture}};
+				\node[draw=darkblue, rounded corners, label=180:{\Large$d_3$}] (dv3) at (-1.7,-7) {\begin{tikzpicture}\foavfive \foaveleven \foavtwelve \foavthirteen \foaufive\end{tikzpicture}};
+				\node[draw=darkred, rounded corners, label=270:{\Large$d_4$}] (dv4) at (0.6,-7) {\begin{tikzpicture}\foavsix\end{tikzpicture}};
+				\node[draw=darkred, rounded corners, label=270:{\Large$d_5$}] (dv5) at (1.7,-7) {\begin{tikzpicture}\foavseven\end{tikzpicture}};
+				%
+				\path[->]
+				([xshift=0.6cm]dv2.north) edge[out = 90, in = -90] node[decomp arrow label] {1} ([xshift=0.1cm]dv1.south)
+				(dv3) edge[out = 90, in = -120] node[decomp arrow label] {1} ([xshift = -1.1cm]dv2.south)
+				(dv4) edge[out = 90, in = -95] node[decomp arrow label] {2} ([xshift = 0.2cm]dv2.south)
+				(dv5) edge[out = 90, in = -80] node[decomp arrow label] {3} ([xshift = 1.4cm]dv2.south)
+				;
+			\end{tikzpicture}
+		}\hspace{1.7cm}
+		%
+		\adjustbox{scale=\myscale}{%
+			\begin{tikzpicture}[decomposition,yscale=0.9]
+			\node[draw=darkgreen, rounded corners, label=180:{\Large$d_1'$}] (dv1) at (0,0) {\begin{tikzpicture}\dotsvone\end{tikzpicture}};
+			\node[draw=darkblue, rounded corners, label=180:{\Large$d_2'$}] (dv2) at (0,-3) {\begin{tikzpicture}\dotsvone \dotsvthree \dotsvfour \dotsuone \end{tikzpicture}};
+			\node[draw=darkblue, rounded corners, label=180:{\Large$d_3'$}] (dv3) at (-1.3,-7) {\begin{tikzpicture}\dotsvthree \dotsvsix \dotsvseven \dotsuthree\end{tikzpicture}};
+			\node[draw=darkred, rounded corners, label=270:{\Large$d_4'$}] (dv4) at (1.2,-7) {\begin{tikzpicture}\dotsvfour\end{tikzpicture}};
+			%
+			\path[->]
+			([xshift=0.1cm]dv2.north) edge[out = 90, in = -90] node[decomp arrow label] {1} ([xshift=0.1cm]dv1.south)
+			(dv3) edge[out = 90, in = -110] node[decomp arrow label] {1} ([xshift=-0.9cm]dv2.south)
+			(dv4) edge[out = 90, in = -80] node[decomp arrow label] {2} ([xshift=1.1cm]dv2.south)
+			;
+		\end{tikzpicture}
+	}
+\end{center}
+	
+		\section{Summary}
+		The key concepts introduced in this note are \textit{type systems}, \textit{constructions spaces}, \textit{representational systems}, \textit{constructions}, and \textit{decompositions}. It is a lot of information, both for me to write and for you to digest, so I will have a part 2 where I'll introduce \textit{patterns}, \textit{correspondences}, \textit{structure transfer}, and some notes on implementation.
+		
+%		\subsubsection{Patterns \& Descriptions}
+%		definitions: pattern, match, embedding\\
+%		\begin{definition}\label{defn:embeddingPattern}
+%			Let  $\cspacen=\cspace$ and $\pspacen=\pspace$ be construction spaces where $\tsystemn=\tsystem$. Let $\cpair$ and $\ppair$ be constructions in $\cspacen$ and $\pspacen$ respectively. We say that $\cpair$ is a \textit{specialisation} of $\ppair$, denoted $\cpair\matches \ppair$, provided there exists an isomorphism, $f\colon \cgraphn \to \pgraphn$, such that
+%			%
+%			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+%				%
+%				\item $t$ maps to $v$: $f(t)=v$,
+%				%
+%				\item the sub-type relation is respected by $f$: for all $t'\in \pa$, the vertex-labelling functions, $\tokenl$ and $\tokenl'$, ensure that $\tokenl(t')\leq \tokenl'(f(t'))$,
+%				%
+%				\item the constructors assigned to configurators match: for all $u\in \pb$, $\consl(u)=\consl'(f(u))$, and
+%				%
+%				\item the arrow indices are identical: for all $a\in \arrows$, the arrow-labelling functions, $\arrowl$ and $\arrowl'$, ensure that  $\arrowl(a)=\arrowl'(f(a))$.
+%				%
+%			\end{enumerate}
+%			Such an isomorphism is called an \textit{embedding}.
+%		\end{definition}
+%		
+%		
+%		\begin{definition}\label{defn:patternSpace}
+%			A \textit{pattern space} for a construction space, $\cspacen=\cspace$, is a construction space, $\pspacen=\pspace$, such that for each construction, $\cpair$, in $\cspacen$ there exists a construction, $\ppair$, in $\pspacen$ where $\cpair$ specialises $\ppair$.
+%		\end{definition}
+%	
+%		\begin{definition}\label{defn:matchAndDescribe}
+%			Let $\cspacen$ be a construction space. A \textit{pattern} for $\cspacen$  is a
+%			construction, $(\pgraphn,v)$, in some pattern space for $\cspacen$. A construction, $\cpair$, in $\cspacen$ \textit{matches} $\ppair$ provided $\cpair$ specialises $\ppair$. Whenever $\cpair$ matches $\ppair$ we say that $\ppair$ \textit{describes} $\cpair$.
+%		\end{definition}
+%		\begin{definition}\label{defn:decompositionMatchesPattern}
+%			Let $\cspacen$ be a construction space. Let $\decompositionn$ and $\pdecompositionn$ be decompositions of some construction in $\cspacen$ and some pattern for $\cspacen$, respectively. Then $\decompositionn$ \textit{matches} $\pdecompositionn$ provided there exists an isomorphism, $f\colon \decompositionn \to \pdecompositionn$, where
+%			%
+%			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+%				\item the root of $\decompositionn$ maps to the root of $\pdecompositionn$: $f(\treeroot{\decompositionn})=\treeroot{\pdecompositionn}$, and
+%				%
+%				\item the arrow indices are identical: for all $a\in \arrows$, the arrow-labelling functions, $\arrowl$ and $\arrowl'$, are such that $\arrowl(a)=\arrowl'(f(a))$, and
+%				
+%				%
+%				\item there exists an embedding, $h \colon \constructionofD{\decompositionn} \to \constructionofD{\pdecompositionn}$, such that for all vertices, $v_i$, in $\decompositionn$, given the vertex-labelling functions, $\labc$ and $\labp$, for $\decompositionn$ and $\pdecompositionn$, the function $h_i\colon \labc(v_i)\to \labp(f(v_i))$ obtained by restricting the domain of $h$ to $\labc(v_i)$ is an embedding.
+%			\end{enumerate}
+%			Such an isomorphism, $f\colon \decompositionn \to \pdecompositionn$, is called an \textit{embedding}. Whenever $\decompositionn$ matches $\pdecompositionn$ we say that $\pdecompositionn$ \textit{describes} $\decompositionn$.
+%		\end{definition}
+%	
+%		implementation note: matching, show syntax
+%	\section{Inter-RS encodings}
+%		\subsection{Relations \& Correspondences}
+%		definitions: correspondence\\
+%		implementation note: code example of correspondences
+%		\subsection{Structure Transfer}
+%		definition: structural transformation\\
+%		implementation: structure transfer and applications
+		\newpage
+	\section{Technical appendix} \label{appendix}
+	\begin{paragraph}{Sequence notations}
+		A \textit{finite sequence}, $\genSeqn$, of \textit{length} $n$ over a set $A$ is a function, $\genSeqn\colon \{1,\ldots,n\}\to A$, which we write, informally, as a list: $\genSeqn=[a_1,\ldots,a_n]$. The \textit{empty sequence}, $[]$, has length 0. An element, $a$, \textit{occurs} in $\genSeqn=[a_1,\ldots,a_n]$, denoted $a\in \genSeqn$,  provided $a=a_i$ for some $1\leq i \leq n$. The set of all sequences over $A$ is denoted $\sequence(A)$. The \textit{concatenation} of sequences $\genSeqn_1=[a_1,\ldots,a_n]$ and $\genSeqn_2=[b_1,\ldots,b_m]$, denoted $\genSeqn_1\oplus \genSeqn_2$, is $[a_1,\ldots,a_n,b_1,\ldots,b_m]$. We write $\genSeqn_1\oplus \cdots\oplus \genSeqn_n$ to mean the concatenation of $n$ sequences; when $n=0$, $\genSeqn_1\oplus \cdots\oplus \genSeqn_n=[]$. Given a sequence of sequences, $[\genSeqn_1,\ldots,\genSeqn_n]$, and a sequence $\genSeqn$, the \textit{right product} of $[\genSeqn_1,\ldots,\genSeqn_n]$ with $\genSeqn$,  denoted $[\genSeqn_1,\ldots,\genSeqn_n]\triangleleft \genSeqn$, is defined to be $[\genSeqn_1\oplus \genSeqn,\ldots,\genSeqn_n\oplus \genSeqn]$.
+	\end{paragraph}
+	
+	
+	\begin{paragraph}{Graph notations}
+		A \textit{directed labelled bipartite graph}, which we will simply call a \textit{graph}, is a tuple, $\graphn=\graph$, where: $\pa$ and $\pb$ are two disjoint sets of \textit{vertices}, $A$ is a set of \textit{arrows}, $\incVert\colon A \to (\pa\times \pb) \cup (\pb \times \pa)$ is a function that identifies a pair of \textit{incident vertices} for each arrow, and $\arrowl\colon \arrows \to \mathbb{N}$ is a function that assigns a label, called an \textit{index}, to each arrow. The functions $\tokenl$ and $\consl$ assign a label to each vertex in $\pa$ and, resp., $\pb$. Notably, graphs can have multiple edges and need not be simple. Vertices in $\pa$ (resp. $\pb$) will typically be denoted by $t$, $t'$, $t_1$ and so forth (resp. $u$, $u'$, $u_1$). Vertices in either $\pa$ or $\pb$ are denoted $v$, $v'$, $v_1$ and we set $V=\pa\cup \pb$.  Given any arrow, $a$, if $\incVert(a)=(v_1,v_2)$ then the \textit{source} (resp. \textit{target}) of $a$, denoted $\sor{a}$ (resp. $\tar{a}$), is $v_1$ (resp. $v_2$). Given any vertex, $v$: the set of \textit{incoming arrows} (resp. \textit{outgoing arrows}), denoted $\inA{v}$ (resp. $\outA{v}$), is $\{a\in A \colon  \tar{a} =v\}$ (resp. $\{a\in A \colon \sor{a} =v\}$), and the set of \textit{input vertices} (resp. \textit{ouput vertices}), denoted $\inV{v}$ (resp. $\outV{v}$),  is $\{\sor{a}\colon a\in \inA{v}\}$ (resp. $\{\tar{a}\colon a\in \outA{v}\}$). Given a graph, $\graphn$, the \textit{neighbourhood} of vertex $v$, denoted  $\neigh{v}$, is the largest subgraph of $\graphn$ whose vertex set is $\inV{v}\cup \outV{v}\cup \{v\}$.
+	\end{paragraph}
+	
+%	\begin{paragraph}{Isomorphisms}
+%		If graphs $\graphn$ and $\graphn'$ are isomorphic and the corresponding bijections from the vertices and arrows in $\graphn$ to those in $\graphn'$ are such that the vertex and arrow labels are preserved then the isomorphism is \textit{label-preserving} and $\graphn$ and $\graphn'$ are \textit{label-isomorphic}. Sometimes we want an isomorphism to preserve some particular labels but not others. We will specify which elements do not necessarily have matching labels by saying that $\graphn=\graph$ and $\graphn'$, are \textit{label-isomorphic up to $X$}, where $X\subseteq \pa\cup \pb \cup \arrows$. That is, the labels of elements in $X$ do not necessarily match under the isomorphism, whereas the labels of elements in $(\pa\cup \pb \cup \arrows)\backslash X$ are preserved.
+%	\end{paragraph}
+\end{document}
