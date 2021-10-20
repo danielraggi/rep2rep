@@ -1,4 +1,5 @@
 import "oruga.parser";
+import "latex.latex";
 
 signature DOCUMENT =
 sig
@@ -13,7 +14,7 @@ sig
   val findConstructionWithName : documentContent -> string -> Construction.construction
   val findCorrespondenceWithName : documentContent -> string -> Correspondence.corr
 
-end
+end;
 
 structure Document : DOCUMENT =
 struct
@@ -115,11 +116,17 @@ struct
       val _ = Logging.write ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       fun getCompsAndGoals [] = []
         | getCompsAndGoals (h::t) = (State.patternCompOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
-      fun mkLatexGoals (goal,goals) =
+      fun mkLatexGoals (goal,goals,tproof) =
         let val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map Latex.relationship goals)
             val originalGoalS = Latex.relationship goal ^ "\\\\ \n"
-            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"^originalGoalS^"\\\\ \\mathbf{Open\\ goals}\\\\\n"^goalsS))
-        in Latex.environment "minipage" "[t]{0.25\\textwidth}" alignedGoals
+            val IS = TransferProof.multiplicativeIS (strengthsOf DC) tproof
+            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"
+                                                                      ^ originalGoalS
+                                                                      ^ "\\\\ \\mathbf{Open\\ goals}\\\\\n"
+                                                                      ^ goalsS ^ "\\\\"
+                                                                      ^ "\\\\ \\mathbf{IS\\ score}\\\\\n"
+                                                                      ^ Real.toString IS))
+        in alignedGoals
         end
       fun mkLatexProof tproof =
         let val construction = TransferProof.toConstruction tproof;
@@ -131,9 +138,10 @@ struct
         end
       fun mkLatexConstructionsAndGoals (comp,tproof,goal,goals) =
         let val latexConstructions = mkLatexConstructions comp
-          (*)  val latexProof = mkLatexProof tproof*)
-            val latexGoals = mkLatexGoals (goal,goals)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.5 (latexConstructions @ [(*latexProof,*)latexGoals]))
+            val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
+            val latexGoals = mkLatexGoals (goal,goals,tproof)
+            val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*, latexProof*)]))
         end
       val nres = length (Seq.list_of results);
       val _ = Logging.write ("  number of results: " ^ Int.toString nres ^ "\n");
@@ -168,26 +176,40 @@ struct
       | (x,">",y) => (y,x)
       | _ => raise ParseError s)
 
+  (* The function below not only parses a type from a string, but if in notation _:t it makes it a subtype of t (and of any supertype of t) *)
+  fun parseTyp subType s =
+    case String.breakOn ":" s of
+        ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
+                               fn (x,y) => (String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y)))
+      | _ => (fn x => x = Type.typeOfString s, subType)
+
   fun addTypeSystem (name, tss) dc =
   let val blocks = contentForKeywords typeKeywords tss
-      fun getTyps [] = []
-        | getTyps ((x,c)::L) =
+      fun getTyps _ [] = []
+        | getTyps subType ((x,c)::L) =
             if x = SOME "types"
-            then map Parser.typ (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
-            else getTyps L
+            then map (parseTyp subType) (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
+            else getTyps subType L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME "order"
             then map inequality (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
             else getOrder L
       val ordList = getOrder blocks
-      val TyList = getTyps blocks
-      val finTy = FiniteSet.ofList TyList
-      val Ty = Set.ofList TyList
+      fun getTypsInOrdList ((x,y)::L) = FiniteSet.insert (Type.typeOfString x) (FiniteSet.insert (Type.typeOfString y) (getTypsInOrdList L))
+        | getTypsInOrdList [] = FiniteSet.empty
+      val typsInOrdList = getTypsInOrdList ordList
       fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-      fun subType' x = List.exists (eq x) ordList
-      val {subType,...} = Type.fixFiniteSubTypeFunction {name = name, Ty = finTy, subType = subType'}
-      val typSys = {name = name, Ty = Ty, subType = subType}
+      fun subType_raw x = List.exists (eq x) ordList
+      val subType' = Type.fixFiniteSubTypeFunction typsInOrdList subType_raw
+
+      fun processTys ((typs,subty)::L) = (case processTys L of (Ty,subtype) => (fn x => typs x orelse Ty x, fn (x,y) => subty (x,y) orelse subtype (x,y)))
+        | processTys [] = (fn _ => false, fn _ => false)
+
+      val TypsAndSubTypeList = getTyps subType' blocks
+      val (Ty,subType) = processTys TypsAndSubTypeList
+
+      val typSys = {name = name, Ty = Ty, subType = subType }
   in {typeSystems = typSys :: (#typeSystems dc),
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -232,6 +254,7 @@ struct
 
   fun addConstruction (name, cts) dc =
   let val ct = Parser.construction cts
+      val _ = Construction.wellFormed
   in {typeSystems = #typeSystems dc,
       knowledge = #knowledge dc,
       constructions = FiniteSet.insert (name,ct) (#constructions dc),

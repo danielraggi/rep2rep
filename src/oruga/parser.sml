@@ -21,7 +21,7 @@ sig
   val splitLevelWithSeparatorApply' : (string -> 'a) -> (char -> bool) -> char list -> 'a list
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
-  val finiteTypeSystem : string -> Type.typeSystem
+(*)  val finiteTypeSystem : string -> Type.typeSystem*)
   val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
@@ -153,6 +153,7 @@ struct
     | functionFromPairs (f,g) eq [] x = raise undefined
 
   fun boolfun eq f s x = (List.exists (eq x) o splitLevelApply f o String.explode o String.removeBraces) s
+  (*
   fun finiteTypeSystem s =
     let val s' = String.stripSpaces s
         val L = if String.isPrefix "(" s'
@@ -167,7 +168,7 @@ struct
         val subType' = boolfun eq (pair (typ,typ)) subTys
         val {subType,...} = Type.fixFiniteSubTypeFunction {name = name, Ty = finTy, subType = subType'}
     in {name = name, Ty = Ty, subType = subType}
-    end;
+    end;*)
 
   fun construction s =
     let

@@ -18,7 +18,7 @@ correspondence doubleCounting =
 
 correspondence div2symmetry =
     source t:numExp <- frac:[numExp,numExp,div,numExp]
-                 <-[t1:numExp,line:div,t2:2]
+                 <-[t1:numExp,line:div,t2:2:numeral]
     target t':arrangement <- rotateX:[arrangement,arrangement]
                         <-[t1':arrangement <- remove:[arrangement,arrangement,arrangement]
                                                 <-[t2':arrangement,t':arrangement]]
@@ -41,50 +41,50 @@ correspondence multRectangle =
     strength 1.0
 
 correspondence oneCirc =
-    source t:1
+    source t:1:numeral
     target t':\crc
     tokenRels
-    constructRel ([t:1],[t':\crc]) :: count
+    constructRel ([t:1:numeral],[t':\crc]) :: count
     strength 1.0
 
 correspondence twoHorizontal =
-    source t:2
+    source t:2:numeral
     target t':\oo
     tokenRels
-    constructRel ([t:2],[t':\oo]) :: count
+    constructRel ([t:2:numeral],[t':\oo]) :: count
     strength 1.0
 
 correspondence threeHorizontal =
-    source t:3
+    source t:3:numeral
     target t':\ooo
     tokenRels
-    constructRel ([t:3],[t':\ooo]) :: count
+    constructRel ([t:3:numeral],[t':\ooo]) :: count
     strength 1.0
 
 correspondence fourHorizontal =
-    source t:4
+    source t:4:numeral
     target t':\oooo
     tokenRels
-    constructRel ([t:4],[t':\oooo]) :: count
+    constructRel ([t:4:numeral],[t':\oooo]) :: count
     strength 1.0
 
 correspondence twoVertical =
-    source t:2
+    source t:2:numeral
     target t':\ooV
     tokenRels
-    constructRel ([t:3],[t':\ooV]) :: count
+    constructRel ([t:3:numeral],[t':\ooV]) :: count
     strength 1.0
 
 correspondence threeVertical =
-    source t:3
+    source t:3:numeral
     target t':\oooV
     tokenRels
-    constructRel ([t:3],[t':\oooV]) :: count
+    constructRel ([t:3:numeral],[t':\oooV]) :: count
     strength 1.0
 
 correspondence fourVertical =
-    source t:4
+    source t:4:numeral
     target t':\ooooV
     tokenRels
-    constructRel ([t:4],[t':\ooooV]) :: count
+    constructRel ([t:4:numeral],[t':\ooooV]) :: count
     strength 1.0
