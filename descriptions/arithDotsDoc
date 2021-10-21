@@ -11,16 +11,8 @@ typeSystem arith =
           cB < par
 
 typeSystem dotDiagrams =
-    types \crc, \oo,\ooo,\oooo,\ooooo,\ooV,\oooV,\ooooV,\oooooV,arrangement
-    order \crc < arrangement,
-            \oo < arrangement,
-            \ooo < arrangement,
-            \oooo < arrangement,
-            \ooooo < arrangement,
-            \ooV < arrangement,
-            \oooV < arrangement,
-            \ooooV < arrangement,
-            \oooooV < arrangement
+    types _:arr
+    order
 
 import correspondences/arithDots
 
@@ -52,6 +44,6 @@ transfer
     sourceTypeSystem arith
     targetTypeSystem dotDiagrams
     sourceConstruction 1plus2plus3plus4equalsStuff
-    goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arrangement]) :: formulaIsValid
+    goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 10

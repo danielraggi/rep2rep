@@ -1,90 +1,90 @@
 correspondence plusJoin =
     source t:numExp <- infixOp:[numExp,numExp,binOp,numExp]
                     <-[n:numExp,p:plus,m:numExp]
-    target t':arrangement <- join:[arrangement,arrangement,arrangement]
-                       <-[a:arrangement,b:arrangement]
-    tokenRels ([n:numExp],[a:arrangement]) :: count,
-              ([m:numExp],[b:arrangement]) :: count,
-              ([],[a:arrangement,b:arrangement]) :: disjoint
-    constructRel ([t:numExp],[t':arrangement]) :: count
+    target t':arr <- join:[arr,arr,arr]
+                       <-[a:arr,b:arr]
+    tokenRels ([n:numExp],[a:arr]) :: count,
+              ([m:numExp],[b:arr]) :: count,
+              ([],[a:arr,b:arr]) :: disjoint
+    constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
 correspondence doubleCounting =
     source t:formula <- infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp]
-    target t':arrangement
-    tokenRels ([n:numExp],[t':arrangement]) :: count, ([m:numExp],[t':arrangement]) :: count
-    constructRel ([t:formula],[t':arrangement]) :: formulaIsValid
+    target t':arr
+    tokenRels ([n:numExp],[t':arr]) :: count, ([m:numExp],[t':arr]) :: count
+    constructRel ([t:formula],[t':arr]) :: formulaIsValid
     strength 1.0
 
 correspondence div2symmetry =
     source t:numExp <- frac:[numExp,numExp,div,numExp]
                  <-[t1:numExp,line:div,t2:2:numeral]
-    target t':arrangement <- rotateX:[arrangement,arrangement]
-                        <-[t1':arrangement <- remove:[arrangement,arrangement,arrangement]
-                                                <-[t2':arrangement,t':arrangement]]
-    tokenRels ([t1:numExp],[t2':arrangement]) :: count
-    constructRel ([t:numExp],[t':arrangement]) :: count
+    target t':arr <- rotateX:[arr,arr]
+                        <-[t1':arr <- remove:[arr,arr,arr]
+                                                <-[t2':arr,t':arr]]
+    tokenRels ([t1:numExp],[t2':arr]) :: count
+    constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
 correspondence parenthesesSuperfluous =
     source t:numExp <- addParentheses:[numExp,oB,numExp,cB] <-[toB:oB,x:numExp,tcB:cB]
-    target t':arrangement
-    tokenRels ([x:numExp],[t':arrangement])::count
-    constructRel ([t:numExp],[t':arrangement])::count
+    target t':arr
+    tokenRels ([x:numExp],[t':arr])::count
+    constructRel ([t:numExp],[t':arr])::count
     strength 1.0
 
 correspondence multRectangle =
     source t:numExp <- implicitMult:[numExp,numExp,numExp] <-[t1:numExp,t2:numExp]
-    target t':arrangement <- makeRectangle:[arrangement,arrangement] <-[t1':arrangement,t2':arrangement]
-    tokenRels ([t1:numExp],[t1':arrangement]) :: count, ([t2:numExp],[t2':arrangement]) :: count, ([],[t1':arrangement,t2':arrangement]) :: canRectangulate
-    constructRel ([t:numExp],[t':arrangement]) :: count
+    target t':arr <- makeRectangle:[arr,arr] <-[t1':arr,t2':arr]
+    tokenRels ([t1:numExp],[t1':arr]) :: count, ([t2:numExp],[t2':arr]) :: count, ([],[t1':arr,t2':arr]) :: canRectangulate
+    constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
 correspondence oneCirc =
     source t:1:numeral
-    target t':\crc
+    target t':\crc:arr
     tokenRels
-    constructRel ([t:1:numeral],[t':\crc]) :: count
+    constructRel ([t:1:numeral],[t':\crc:arr]) :: count
     strength 1.0
 
 correspondence twoHorizontal =
     source t:2:numeral
-    target t':\oo
+    target t':\oo:arr
     tokenRels
-    constructRel ([t:2:numeral],[t':\oo]) :: count
+    constructRel ([t:2:numeral],[t':\oo:arr]) :: count
     strength 1.0
 
 correspondence threeHorizontal =
     source t:3:numeral
-    target t':\ooo
+    target t':\ooo:arr
     tokenRels
-    constructRel ([t:3:numeral],[t':\ooo]) :: count
+    constructRel ([t:3:numeral],[t':\ooo:arr]) :: count
     strength 1.0
 
 correspondence fourHorizontal =
     source t:4:numeral
-    target t':\oooo
+    target t':\oooo:arr
     tokenRels
-    constructRel ([t:4:numeral],[t':\oooo]) :: count
+    constructRel ([t:4:numeral],[t':\oooo:arr]) :: count
     strength 1.0
 
 correspondence twoVertical =
     source t:2:numeral
-    target t':\ooV
+    target t':\ooV:arr
     tokenRels
-    constructRel ([t:3:numeral],[t':\ooV]) :: count
+    constructRel ([t:3:numeral],[t':\ooV:arr]) :: count
     strength 1.0
 
 correspondence threeVertical =
     source t:3:numeral
-    target t':\oooV
+    target t':\oooV:arr
     tokenRels
-    constructRel ([t:3:numeral],[t':\oooV]) :: count
+    constructRel ([t:3:numeral],[t':\oooV:arr]) :: count
     strength 1.0
 
 correspondence fourVertical =
     source t:4:numeral
-    target t':\ooooV
+    target t':\ooooV:arr
     tokenRels
-    constructRel ([t:4:numeral],[t':\ooooV]) :: count
+    constructRel ([t:4:numeral],[t':\ooooV:arr]) :: count
     strength 1.0
