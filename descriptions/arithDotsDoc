@@ -1,49 +1,34 @@
-typeSystem arith =
-    types _:numeral, _:var, _:numExp, _:formula, plus, minus, times, div, binOp, equal, binRel, oB, cB, par
-    order var < numExp,
-          numeral < numExp,
-          plus < binOp,
-          minus < binOp,
-          times < binOp,
-          div < binOp,
-          equal < binRel,
-          oB < par,
-          cB < par
-
-typeSystem dotDiagrams =
-    types _:arr
-    order
-
 import correspondences/arithDots
 
-construction 1plus2plus3plus4equalsStuff =
-    t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula <- infixRel:[formula,numExp,binRel,numExp]
-                    <-[t1:1plus2plus3plus4:numExp <- infixOp:[numExp,numExp,binOp,numExp]
-                                                <-[t11:1plus2plus3:numExp <- infixOp:[numExp,numExp,binOp,numExp]
-                                                                        <-[t111:1plus2:numExp <- infixOp:[numExp,numExp,binOp,numExp]
-                                                                                            <-[t1111:1:numeral,t1112:plus,t1113:2:numeral],
-                                                                           t112:plus,
-                                                                           t113:3:numeral],
-                                                   t12:plus,
-                                                   t13:4:numeral],
+construction 1plus2plus3plus4equalsStuff:arith =
+    t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula
+        <- infixRel <-[t1:1plus2plus3plus4:numExp
+                            <- infixOp <-[t11:1plus2plus3:numExp
+                                            <- infixOp <-[t111:1plus2:numExp
+                                                            <- infixOp <-[t1111:1:numeral,
+                                                                          t1112:plus,
+                                                                          t1113:2:numeral],
+                                                          t112:plus,
+                                                          t113:3:numeral],
+                                          t12:plus,
+                                          t13:4:numeral],
                        t2:equal,
-                       t3:4oB4plus1cBdiv2:numExp <- frac:[numExp,numExp,div,numExp]
-                                                <-[t31:4oB4plus1cB:numExp <- implicitMult:[numExp,numExp,numExp]
-                                                                          <-[t311:4:numeral,
-                                                                             t312:oB3plus1cB:numExp <- addParentheses:[numExp,oB,numExp,cB]
-                                                                                                  <-[t3121:oB,
-                                                                                                     t3122:4plus1:numExp <- infixOp:[numExp,numExp,binOp,numExp]
-                                                                                                                        <-[t31221:4:numeral,
-                                                                                                                           t31222:plus,
-                                                                                                                           t31223:1:numeral],
-                                                                                                     t3123:cB]],
-                                                   t32:div,
-                                                   t33:2:numeral]]
+                       t3:4oB4plus1cBdiv2:numExp
+                            <- frac <-[t31:4oB4plus1cB:numExp
+                                            <- implicitMult <-[t311:4:numeral,
+                                                               t312:oB3plus1cB:numExp
+                                                                    <- addParentheses <-[t3121:oB,
+                                                                                         t3122:4plus1:numExp
+                                                                                            <- infixOp <-[t31221:4:numeral,
+                                                                                                          t31222:plus,
+                                                                                                          t31223:1:numeral],
+                                                                                         t3123:cB]],
+                                       t32:div,
+                                       t33:2:numeral]]
 
 transfer
-    sourceTypeSystem arith
-    targetTypeSystem dotDiagrams
     sourceConstruction 1plus2plus3plus4equalsStuff
+    targetTypeSystem dotDiagrams
     goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 10

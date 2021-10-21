@@ -1,0 +1,17 @@
+typeSystem arith =
+    types _:numeral, _:var, _:numExp, _:formula, plus, minus, times, div, binOp, equal, binRel, oB, cB, par
+    order var < numExp,
+          numeral < numExp,
+          plus < binOp,
+          minus < binOp,
+          times < binOp,
+          equal < binRel,
+          oB < par,
+          cB < par
+
+conSpec arith:arith =
+    infixOp : [numExp,binOp,numExp] -> numExp,
+    infixRel : [numExp,binRel,numExp] -> formula,
+    frac : [numExp,div,numExp] -> numExp,
+    implicitMult : [numExp,numExp] -> numExp,
+    addParentheses : [oB,numExp,cB] -> numExp
