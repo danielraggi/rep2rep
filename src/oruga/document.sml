@@ -21,10 +21,33 @@ struct
 
   val ParseError = Parser.ParseError;
 
-  val bigKeywords = ["import","typeSystem","correspondence","construction","transfer","comment"]
-  val typeKeywords = ["types","order"]
-  val corrKeywords = ["target","source","tokenRels","constructRel","strength"]
-  val transferKeywords = ["sourceTypeSystem","targetTypeSystem","sourceConstruction","goal","output","limit","IS"]
+  val importKW = "import"
+  val typeSystemKW = "typeSystem"
+  val correspondenceKW = "correspondence"
+  val constructionKW = "construction"
+  val transferKW = "transfer"
+  val commentKW = "comment"
+  val bigKeywords = [importKW,typeSystemKW,correspondenceKW,constructionKW,transferKW,commentKW]
+
+  val typesKW = "types"
+  val subTypeKW = "order"
+  val typeKeywords = [typesKW,subTypeKW]
+
+  val targetKW = "target"
+  val sourceKW = "source"
+  val tokenRelsKW = "tokenRels"
+  val constructRelKW = "constructRel"
+  val strengthKW = "strength"
+  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,strengthKW]
+
+  val sourceTypeSystemKW = "sourceTypeSystem"
+  val targetTypeSystemKW = "targetTypeSystem"
+  val sourceConstructionKW = "sourceConstruction"
+  val goalKW = "goal"
+  val outputKW = "output"
+  val limitKW = "limit"
+  val ISKW = "IS"
+  val transferKeywords = [sourceTypeSystemKW,targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,ISKW]
 
 
   fun breakOn s [] = ([],"",[])
@@ -73,32 +96,32 @@ struct
       val C = contentForKeywords transferKeywords ws
       fun getSourceTySys [] = raise ParseError "no source type system for transfer"
         | getSourceTySys ((x,c)::L) =
-            if x = SOME "sourceTypeSystem"
+            if x = SOME sourceTypeSystemKW
             then findTypeSystemWithName DC (String.concat c)
             else getSourceTySys L
       fun getTargetTySys [] = raise ParseError "no target type system for transfer"
         | getTargetTySys ((x,c)::L) =
-            if x = SOME "targetTypeSystem"
+            if x = SOME targetTypeSystemKW
             then findTypeSystemWithName DC (String.concat c)
             else getTargetTySys L
       fun getConstruction [] = raise ParseError "no construction to transfer"
         | getConstruction ((x,c)::L) =
-            if x = SOME "sourceConstruction"
+            if x = SOME sourceConstructionKW
             then findConstructionWithName DC (String.concat c)
             else getConstruction L
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
-            if x = SOME "goal"
+            if x = SOME goalKW
             then Parser.relationship (String.concat c)
             else getGoal L
       fun getOutput [] = raise ParseError "no output file name for transfer"
         | getOutput ((x,c)::L) =
-            if x = SOME "output"
+            if x = SOME outputKW
             then "output/latex/"^(String.concat c)^".tex"
             else getOutput L
       fun getLimit [] = raise ParseError "no limit for transfer output file"
         | getLimit ((x,c)::L) =
-            if x = SOME "limit"
+            if x = SOME limitKW
             then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
             else getLimit L
       val sourceTypeSystem = getSourceTySys C  handle Match => (print "sourceTS!";raise Match)
@@ -180,19 +203,19 @@ struct
   fun parseTyp subType s =
     case String.breakOn ":" s of
         ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
-                               fn (x,y) => (String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y)))
-      | _ => (fn x => x = Type.typeOfString s, subType)
+                               fn (x,y) => String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y))
+      | _ => (fn x => x = Type.typeOfString s, fn _ => false)
 
   fun addTypeSystem (name, tss) dc =
   let val blocks = contentForKeywords typeKeywords tss
       fun getTyps _ [] = []
         | getTyps subType ((x,c)::L) =
-            if x = SOME "types"
+            if x = SOME typesKW
             then map (parseTyp subType) (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
             else getTyps subType L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
-            if x = SOME "order"
+            if x = SOME subTypeKW
             then map inequality (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
             else getOrder L
       val ordList = getOrder blocks
@@ -203,13 +226,13 @@ struct
       fun subType_raw x = List.exists (eq x) ordList
       val subType' = Type.fixFiniteSubTypeFunction typsInOrdList subType_raw
 
-      fun processTys ((typs,subty)::L) = (case processTys L of (Ty,subtype) => (fn x => typs x orelse Ty x, fn (x,y) => subty (x,y) orelse subtype (x,y)))
-        | processTys [] = (fn _ => false, fn _ => false)
+      fun processTys ((typs,subty)::L) = (case processTys L of (Ty,subtype) => (fn x => typs x orelse Ty x, fn (x,y) => subtype (x,y) orelse subty (x,y)))
+        | processTys [] = (fn _ => false, subType')
 
       val TypsAndSubTypeList = getTyps subType' blocks
       val (Ty,subType) = processTys TypsAndSubTypeList
 
-      val typSys = {name = name, Ty = Ty, subType = subType }
+      val typSys = {name = name, Ty = Ty, subType = subType}
   in {typeSystems = typSys :: (#typeSystems dc),
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -226,22 +249,22 @@ struct
             else getPattern k L
       fun getTokenRels [] = raise ParseError ("no token rels in correspondence " ^ String.concat cs)
         | getTokenRels ((x,trss) :: L) =
-            if x = SOME "tokenRels"
+            if x = SOME tokenRelsKW
             then Parser.relaxedList Parser.relationship (String.concat trss)
             else getTokenRels L
       fun getConstructRel [] = raise ParseError ("no construct rel in correspondence " ^ String.concat cs)
         | getConstructRel ((x,crs) :: L) =
-            if x = SOME "constructRel"
+            if x = SOME constructRelKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
       fun getStrength [] = raise ParseError ("no construct rel in correspondence " ^ String.concat cs)
         | getStrength ((x,ss) :: L) =
-            if x = SOME "strength"
+            if x = SOME strengthKW
             then Real.fromString (String.concat ss)
             else getStrength L
       val corr = {name = name,
-                  sourcePattern = getPattern "source" blocks,
-                  targetPattern = getPattern "target" blocks,
+                  sourcePattern = getPattern sourceKW blocks,
+                  targetPattern = getPattern targetKW blocks,
                   tokenRels = getTokenRels blocks,
                   constructRel = getConstructRel blocks}
       fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
@@ -284,23 +307,21 @@ struct
       val _ = TextIO.closeIn file
       val words = String.tokens (fn x => x = #"\n" orelse x = #" ") s
       val blocks = contentForKeywords bigKeywords words
-      val nonImported = List.filter (fn (x,_) => x <> SOME "import") blocks
+      val nonImported = List.filter (fn (x,_) => x <> SOME importKW) blocks
       fun distribute [] = emptyDocContent
         | distribute ((x,c)::L) =
           let val dc = distribute L
               val (n,eq,ws) = breakOn "=" c
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
-          in (case x of
-                SOME "typeSystem" => addTypeSystem (hd n,ws) dc
-              | SOME "correspondence" => addCorrespondence (hd n,ws) dc
-              | SOME "construction" => addConstruction (hd n,String.concat ws) dc
-              | SOME "transfer" => addTransferRequests c dc
-              | SOME "comment" => dc
-              | _ => dc)
+          in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
+             if x = SOME correspondenceKW then addCorrespondence (hd n,ws) dc else
+             if x = SOME constructionKW then addConstruction (hd n,String.concat ws) dc else
+             if x = SOME transferKW then addTransferRequests c dc else
+             if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"
           end handle Bind => raise ParseError "expected name = content, found multiple words before ="
 
       val C = distribute nonImported
-      val importFilenames = List.filter (fn (x,_) => x = SOME "import") blocks
+      val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
       val importedContents = map (read o String.concat o #2) importFilenames
       val allContent = joinDocumentContents (C::importedContents)
       val _ = map (parseTransfer allContent) (#transferRequests allContent)

@@ -28,7 +28,6 @@ sig
   val wellDefined : finiteTypeSystem -> bool;
 
   val transitiveClosure : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool);
-  val finiteRespectAnyClosure : (typ * typ -> bool) -> (typ * typ -> bool);
   val fixFiniteSubTypeFunction : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool);
 
 end;
@@ -61,9 +60,8 @@ struct
     end
 
   fun respectAnyClosure subType = (fn (x,y) => (y = any orelse subType(x,y)))
-  fun finiteRespectAnyClosure subType = (fn (x,y) => (y = any orelse subType(x,y)))
 
   val fixSubTypeFunction = respectAnyClosure o reflexiveClosure;
-  fun fixFiniteSubTypeFunction Ty = finiteRespectAnyClosure o reflexiveClosure o (transitiveClosure Ty);
+  fun fixFiniteSubTypeFunction Ty = respectAnyClosure o reflexiveClosure o (transitiveClosure Ty);
   fun nameOfType x = x
 end;
