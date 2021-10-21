@@ -135,22 +135,23 @@ struct
     end
 
   fun specialises T [] [] = true
-    | specialises T (ty::tys) (ty'::tys') = (#subType T) (ty, ty') andalso specialises T tys tys'
+    | specialises T (ty::tys) (ty'::tys') = if (#subType T) (ty, ty') then specialises T tys tys' else (print "herehereherehereherehere\n\n";false)
     | specialises _ _ _ = false
   (* the datatype construction itself is not a perfect representation of constructions.
      The following function makes sure that they are well formed, by checking that Loops
-     are actually loops and that non-Loops are not forming loops.*)
+     are actually loops, that non-Loops are not forming loops, that induced constructions
+     are actually induced constructions and that the inputs and outputs
+     match the signature of the constructors.*)
   fun wellFormed T c =
     let fun correctLoopsAndTypes wk (Source t) = not (List.exists (fn x => #token x = t) wk)
           | correctLoopsAndTypes wk (Loop t) = List.exists (fn x => #token x = t) wk
           | correctLoopsAndTypes wk (TCPair (tc, cs)) =
             let val typesOfInducedConstructs = map (CSpace.typeOfToken o constructOf) cs
-                val (typesOfConstructor,ty) = CSpace.spec (#constructor tc)
+                val (typesOfConstructor,ty) = CSpace.csig (#constructor tc)
                 val typeOfConstruct = CSpace.typeOfToken (#token tc)
             in (#subType T) (typeOfConstruct, ty)
                 andalso specialises T (typesOfInducedConstructs) typesOfConstructor
-                andalso List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))
-                                  andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) wk
+                andalso List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))) wk
                 andalso List.all (correctLoopsAndTypes (tc :: wk)) cs
             end
     in correctLoopsAndTypes [] c andalso coherent c

@@ -7,6 +7,7 @@ Logging.enable ();
 signature PARSER =
 sig
   val ParseError : string -> exn;
+  val breakOnClosingDelimiter : (char * char) -> string -> (char list * char list)
   val list : (string -> 'a) -> string -> 'a list
   val relaxedList : (string -> 'a) -> string -> 'a list
   val finiteSet : (string -> ''a) -> string -> ''a FiniteSet.set
@@ -17,6 +18,7 @@ sig
   val constructor : string -> CSpace.constructor
   val configurator : string -> CSpace.configurator
   val tcpair : string -> {token : CSpace.token, constructor : CSpace.constructor}
+  val splitLevelApply : (string -> 'a) -> char list -> 'a list
   val splitLevelWithSeparatorApply : (string -> 'a) -> char -> char list -> 'a list
   val splitLevelWithSeparatorApply' : (string -> 'a) -> (char -> bool) -> char list -> 'a list
   val splitLevel : char list -> string list

@@ -1,88 +1,86 @@
-correspondence plusJoin =
-    source t:numExp <- infixOp:[numExp,numExp,binOp,numExp]
-                    <-[n:numExp,p:plus,m:numExp]
-    target t':arr <- join:[arr,arr,arr]
-                       <-[a:arr,b:arr]
+import arith
+import dotDiagrams
+
+correspondence plusJoin:(arith,dotDiagrams) =
+    source t:numExp <- infixOp <-[n:numExp,p:plus,m:numExp]
+    target t':arr <- join <-[a:arr,b:arr]
     tokenRels ([n:numExp],[a:arr]) :: count,
               ([m:numExp],[b:arr]) :: count,
               ([],[a:arr,b:arr]) :: disjoint
     constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
-correspondence doubleCounting =
-    source t:formula <- infixRel:[formula,numExp,binRel,numExp] <-[n:numExp,e:equal,m:numExp]
+correspondence doubleCounting:(arith,dotDiagrams) =
+    source t:formula <- infixRel <-[n:numExp,e:equal,m:numExp]
     target t':arr
     tokenRels ([n:numExp],[t':arr]) :: count, ([m:numExp],[t':arr]) :: count
     constructRel ([t:formula],[t':arr]) :: formulaIsValid
     strength 1.0
 
-correspondence div2symmetry =
-    source t:numExp <- frac:[numExp,numExp,div,numExp]
-                 <-[t1:numExp,line:div,t2:2:numeral]
-    target t':arr <- rotateX:[arr,arr]
-                        <-[t1':arr <- remove:[arr,arr,arr]
-                                                <-[t2':arr,t':arr]]
+correspondence div2symmetry:(arith,dotDiagrams) =
+    source t:numExp <- frac <-[t1:numExp,line:div,t2:2:numeral]
+    target t':arr <- rotateX <-[t1':arr <- remove <-[t2':arr,t':arr]]
     tokenRels ([t1:numExp],[t2':arr]) :: count
     constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
-correspondence parenthesesSuperfluous =
-    source t:numExp <- addParentheses:[numExp,oB,numExp,cB] <-[toB:oB,x:numExp,tcB:cB]
+correspondence parenthesesSuperfluous:(arith,dotDiagrams) =
+    source t:numExp <- addParentheses <-[toB:oB,x:numExp,tcB:cB]
     target t':arr
     tokenRels ([x:numExp],[t':arr])::count
     constructRel ([t:numExp],[t':arr])::count
     strength 1.0
 
-correspondence multRectangle =
-    source t:numExp <- implicitMult:[numExp,numExp,numExp] <-[t1:numExp,t2:numExp]
-    target t':arr <- makeRectangle:[arr,arr] <-[t1':arr,t2':arr]
+correspondence multRectangle:(arith,dotDiagrams) =
+    source t:numExp <- implicitMult <-[t1:numExp,t2:numExp]
+    target t':arr <- makeRectangle <-[t1':arr,t2':arr]
     tokenRels ([t1:numExp],[t1':arr]) :: count, ([t2:numExp],[t2':arr]) :: count, ([],[t1':arr,t2':arr]) :: canRectangulate
     constructRel ([t:numExp],[t':arr]) :: count
     strength 1.0
 
-correspondence oneCirc =
+correspondence oneCirc:(arith,dotDiagrams) =
     source t:1:numeral
     target t':\crc:arr
     tokenRels
     constructRel ([t:1:numeral],[t':\crc:arr]) :: count
     strength 1.0
 
-correspondence twoHorizontal =
+correspondence twoHorizontal:(arith,dotDiagrams) =
     source t:2:numeral
     target t':\oo:arr
     tokenRels
     constructRel ([t:2:numeral],[t':\oo:arr]) :: count
     strength 1.0
 
-correspondence threeHorizontal =
+correspondence threeHorizontal:(arith,dotDiagrams) =
     source t:3:numeral
     target t':\ooo:arr
     tokenRels
     constructRel ([t:3:numeral],[t':\ooo:arr]) :: count
     strength 1.0
 
-correspondence fourHorizontal =
+correspondence fourHorizontal:(arith,dotDiagrams) =
     source t:4:numeral
     target t':\oooo:arr
     tokenRels
     constructRel ([t:4:numeral],[t':\oooo:arr]) :: count
     strength 1.0
 
-correspondence twoVertical =
+correspondence twoVertical:(arith,dotDiagrams) =
     source t:2:numeral
     target t':\ooV:arr
     tokenRels
     constructRel ([t:3:numeral],[t':\ooV:arr]) :: count
     strength 1.0
 
-correspondence threeVertical =
+correspondence threeVertical:(arith,dotDiagrams) =
     source t:3:numeral
     target t':\oooV:arr
     tokenRels
     constructRel ([t:3:numeral],[t':\oooV:arr]) :: count
     strength 1.0
 
-correspondence fourVertical =
+correspondence fourVertical:(arith,dotDiagrams) =
     source t:4:numeral
     target t':\ooooV:arr
     tokenRels
