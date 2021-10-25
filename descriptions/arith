@@ -9,7 +9,7 @@ typeSystem arith =
           oB < par,
           cB < par
 
-conSpec arith:arith =
+conSpec arithG:arith =
     infixOp : [numExp,binOp,numExp] -> numExp,
     infixRel : [numExp,binRel,numExp] -> formula,
     frac : [numExp,div,numExp] -> numExp,

@@ -292,7 +292,7 @@ struct
   fun parseConstruction s cspec =
     let
       fun c tacc s' =
-        case String.breakOn "<-[" (String.removeParentheses s') of
+        case String.breakOn "[" (String.removeParentheses s') of
           (ts,"",_) =>
             let val tok = Parser.token ts
             in if List.exists (CSpace.sameTokens tok) tacc
@@ -358,7 +358,8 @@ struct
       val cspec = findConSpecWithName dc cspecN
       val ct = parseConstruction cts cspec
       val T = findTypeSystemWithName dc (#typeSystem cspec)
-      val _ = if Construction.wellFormed T ct then print ("construction " ^ name ^ " is well formed") else print ("WARNING: construction "^name^" is not well formed")
+      (*val _ = if Construction.wellFormed T ct then print ("construction " ^ name ^ " is well formed")
+                else print ("WARNING: construction "^name^" is not well formed")*)
       val ctRecord = {name = name, conSpec = cspecN, construction = ct}
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,

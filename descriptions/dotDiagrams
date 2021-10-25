@@ -2,7 +2,7 @@ typeSystem dotDiagrams =
     types _:arr
     order
 
-conSpec dotDiagrams:dotDiagrams =
+conSpec dotDiagramsG:dotDiagrams =
     join : [arr,arr] -> arr,
     rotateX : [arr] -> arr,
     remove : [arr,arr] -> arr,
