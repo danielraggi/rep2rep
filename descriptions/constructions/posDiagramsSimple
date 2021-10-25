@@ -1,3 +1,1 @@
-t:ABC <- juxt:[posDiagram,posDiagram,posDiagram]
-                    <-[t1:AB <- juxt:[posDiagram,posDiagram,posDiagram]
-                                        <-[t11:A,t12:B],t2:C]
+t:ABC <- juxt[t1:AB <- juxt[t11:A,t12:B],t2:C]
