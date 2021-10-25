@@ -1,1 +1,0 @@
-t:ABC <- juxt[t1:AB <- juxt[t11:A,t12:B],t2:C]

@@ -1,1 +1,0 @@
-t:A|B|C|CD|D <- disjointMerge[t1:A|B,t2:C|CD|D]
