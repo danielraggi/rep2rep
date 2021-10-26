@@ -41,7 +41,7 @@ struct
 
   fun loadTypeSystem filename =
     let
-      val file = TextIO.openIn ("descriptions/typeSystems/"^filename)
+      val file = TextIO.openIn ("input/typeSystems/"^filename)
       val TBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val TChars = normaliseLineBreaks (String.explode TBulk)
@@ -51,7 +51,7 @@ struct
 
   fun loadCorrespondences filename =
     let
-      val file = TextIO.openIn ("descriptions/correspondences/"^filename)
+      val file = TextIO.openIn ("input/correspondences/"^filename)
       val corrBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val corrChars = normaliseLineBreaks (String.explode corrBulk)
@@ -62,7 +62,7 @@ struct
 
   fun loadRelations filename =
     let
-      val file = TextIO.openIn ("descriptions/correspondences/"^filename)
+      val file = TextIO.openIn ("input/correspondences/"^filename)
       val relBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val relChars = normaliseLineBreaks (String.explode relBulk)
@@ -78,7 +78,7 @@ struct
     end
 
   fun loadConstruction filename =
-    let val file = TextIO.openIn ("descriptions/constructions/"^filename)
+    let val file = TextIO.openIn ("input/constructions/"^filename)
         val ctBulk = TextIO.inputAll file
         val _ = TextIO.closeIn file
         val ctString = removeLineBreaks ctBulk
@@ -86,7 +86,7 @@ struct
     end
 
   fun loadGoal filename =
-    let val file = TextIO.openIn ("descriptions/"^filename)
+    let val file = TextIO.openIn ("input/"^filename)
         val rBulk = TextIO.inputAll file
         val _ = TextIO.closeIn file
         val rString = removeLineBreaks rBulk

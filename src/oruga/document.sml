@@ -388,7 +388,7 @@ struct
       strengths = #strengths dc}
 
   fun read filename =
-  let val file = TextIO.openIn ("descriptions/"^filename)
+  let val file = TextIO.openIn ("input/"^filename)
       val s = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val words = String.tokens (fn x => x = #"\n" orelse x = #" ") s

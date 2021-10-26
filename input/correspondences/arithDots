@@ -1,5 +1,5 @@
 import arith
-import dotDiagramsG
+import dotDiagrams
 
 correspondence plusJoin:(arithG,dotDiagramsG) =
     source t:numExp <- infixOp[n:numExp,p:plus,m:numExp]
