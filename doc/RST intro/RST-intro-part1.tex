@@ -676,64 +676,63 @@ datatype construction = TCPair of tc * construction list
 			Let $\cpair$ be a construction. A \textit{generator} of $\cpair$ is a construction, $\genpair$, such that $\cgraphn'\subseteq \cgraphn$.
 		\end{definition}
 	
-		And from a generator, we can obtain a \textit{split}, which consists of the generator plus the remaining constructions (one for each of the foundations of the generator).
+%		And from a generator, we can obtain a \textit{split}, which consists of the generator plus the remaining constructions (one for each of the foundations of the generator).
+%	
+%		\begin{definition}\label{defn:split}
+%			Let $\cpair$ be a construction. A \textit{split} of $\cpair$ is a pair, $\csplit$, where
+%			%
+%			\begin{enumerate}[itemsep=0pt,topsep=4pt]
+%				\item $\genpair$ is a generator of $\cpair$, and
+%				%
+%				\item $\ics$ is the induced construction sequence obtained by extending trails in $\ctsequence{\cgraphn',t}$ in $\cpair$:  $\ics=\icsequence{\ctsequence{\cgraphn',t},\cpair}$.
+%			\end{enumerate}
+%			We write $\cpair\splitarrow \csplit$ to mean that $\csplit$ is a split of $\cpair$.
+%		\end{definition}
+%	
+%		And even better, we can split recursively to obtain a decomposition. First, we define its characteristic structure and then we define what it means for it to be the decomposition of a construction.
 	
-		\begin{definition}\label{defn:split}
-			Let $\cpair$ be a construction. A \textit{split} of $\cpair$ is a pair, $\csplit$, where
-			%
-			\begin{enumerate}[itemsep=0pt,topsep=4pt]
-				\item $\genpair$ is a generator of $\cpair$, and
-				%
-				\item $\ics$ is the induced construction sequence obtained by extending trails in $\ctsequence{\cgraphn',t}$ in $\cpair$:  $\ics=\icsequence{\ctsequence{\cgraphn',t},\cpair}$.
-			\end{enumerate}
-			We write $\cpair\splitarrow \csplit$ to mean that $\csplit$ is a split of $\cpair$.
-		\end{definition}
-	
-		And even better, we can split recursively to obtain a decomposition. First, we define its characteristic structure and then we define what it means for it to be the decomposition of a construction.
+		Furthermore, a construction can \textit{decomposed} recursively, starting with a generator, to obtain a \textit{decomposition}. To understand the structure of such decompositions we need another definition first.
 	
 		\begin{definition}\label{defn:decompositionTree}
-			A \textit{decomposition tree} is a directed arrow-labelled rooted in-tree\footnote{That is, the arrows are directed \textit{towards} the root: the tree is an anti-arborescence.},
+			A \textit{DRI tree} is a directed rooted in-tree\footnote{That is, the arrows are directed \textit{towards} the root: the tree is an anti-arborescence.},
 			%
-			\begin{displaymath}
-			\decompositionn=(V,\arrows, \incVert\colon \arrows\to V\times V, \arrowl\colon \arrows \to \mathbb{N})
-			\end{displaymath}
-			such that for each vertex, $v$, in $V$, the function $\arrowl$ with its domain restricted to $\inA{v}$ is a bijection with codomain $\{1,\ldots,|\inA{v}|\}$.
+			$
+			D=(V,\arrows, \incVert: \arrows\to V\times V).
+			$
 		\end{definition}
-		\begin{definition}\label{defn:decomposition}
-			Let $\cpair$ be a construction. A \textit{decomposition} of a $\cpair$ is a directed labelled rooted tree, $\decompositionn=\decomposition$, such that $(V,\arrows, \incVert, \arrowl)$ is a decomposition tree and either
-			%
-			\begin{enumerate}[itemsep=0pt,topsep=4pt]
-				\item $\decompositionn$ contains only $\treeroot{\decompositionn}$ and $\labc(\treeroot{\decompositionn})=\cpair$, or
-				%
-				\item there exists a split $(\genpair,[(\cgraphn_1,t_1),\ldots,(\cgraphn_n,t_n)])$ of $\cpair$, where the following hold:
-				%
-				\begin{enumerate}[itemsep=0pt,topsep=2pt]
-					\item the construction that labels $\treeroot{\decompositionn}$ is $\genpair$: $\labc(\treeroot{\decompositionn})=\genpair$,
-					%
-					\item given $\dsequence{\treeroot{\decompositionn}}=[\videctree{v_1},\ldots,\videctree{v_n}]$, each $\videctree{v_i}$ is a decomposition of $(\cgraphn_i,t_i)$.
-				\end{enumerate}
-			\end{enumerate}
-			Such a split is said to \textit{comply} with $\decompositionn$.
-		\end{definition}
+	\begin{definition}
+		Given a DRI tree $D$ and a vertex $v$ in $D$, the \textit{$v$-branch} of $D$ is the maximal subtree of $D$ which has $v$ as root. Moreover, the set of DRI trees that result from removing $v$ (and all of its incident arrows) from the $v$-branch is denoted by $D \smallsetminus v$ .
+	\end{definition}
+	The next definition takes a DRI tree, and labels the vertices with constructions in such a way that they \textit{fit} together.
+	\begin{definition}
+		Let $D = (V,A,\incVert,\labc)$ be a directed labelled rooted tree such that $(V,A,\incVert)$ is a DRI tree, and $\labc$ is a function that labels the vertices with constructions from some construction space. Let $t$ be a token. Then \textit{$D$ is a composition that constructs $t$} if
+		\begin{enumerate}[itemsep=2pt]
+			\item the root of $D$ is labelled by a construction of $t$,
+			\item every element in $D \smallsetminus \treeroot{D}$ is a composition that constructs some token in $\labc(\treeroot{D})$.
+		\end{enumerate}
+	\end{definition}
+	It's important to notice that in general, the union of constructions is not necessarily a construction, and in particular, the union of the constructions that label the vertices of a composition is not necessarily a construction. However, when it is a construction we say that the composition is a \textit{decomposition} of the construction.
+		
 	
-		And, ultimately, to reconstruct the construction from a given decomposition, we simply join the graphs of the decomposition:
 		\begin{definition}\label{defn:constructionOfD}
-			Let $\decompositionn=\decomposition$ be a decomposition, and let $t$ be the construct of $\labc(\treeroot{\decompositionn})$. The \textit{construction of} $\decompositionn$, denoted $\constructionofD{\decompositionn}$, is the construction
+			Let $D = (V,A,\incVert,\labc)$ be a composition and let $(g,t)$ be a construction. We say that \textit{$D$ is a decomposition of $(g,t)$} if $D$ constructs $t$ and 
 			%
 			\begin{displaymath}
-			\constructionofD{\decompositionn}=\bigg(\bigcup \{\cgraphn_v: \exists v\in V \thinspace \exists t_v \thickspace \labc(v)=(\cgraphn_v,t_v)\},t\bigg),
+			g=\bigcup \{\cgraphn_v: \exists v\in V \thinspace \exists t_v \thickspace \labc(v)=(\cgraphn_v,t_v)\},
 			\end{displaymath}
 		\end{definition}
 	
-		The implementation of decompositions in Standard ML is actually a bit more general. We call it \textit{composition} to differentiate.
+		The datatype in Standard ML that we use to encode compositions looks as follows:
 		\begin{alltt}
 datatype composition = 
              Composition of \{construct : CSpace.token,
                              attachments : (construction * composition list) list\}
 		\end{alltt}
-		If we take exactly one \textit{attachment} per recursive step (and other constraints), we have a decomposition as formally defined.
+	It looks slightly different to the mathematical definition given above, but it is built like this for convenience. A token always stands out as the construct of the composition, and the attachments are potentially different ways of constructing it, with their respective attachments.
+	
+	For a structure of this datatype to actually be a composition it just needs to satisfy the property that every construction actually constructs the given token, and that the compositions in the recursion construct tokens in the construction `above' them.
 		
-		Compositions/decompositions are useful because they are what allows us to do structure transfer. In practice, what we obtain from the structure transfer algorithm is a composition. Ultimately, compositions allow us express/compute transformations between large constructions based on much simpler transformations (or correspondences), as the graphs below show intuitively:
+	Compositions/decompositions are useful because they are what allows us to do structure transfer. In practice, a construction is decomposed in a way that allows us to transfer the parts of the decomposition, and what we obtain as a result of the structure transfer algorithm is a composition (that may or may not collapse into a single construction). Ultimately, compositions allow us express/compute transformations between large constructions based on much simpler transformations (or correspondences), as the graphs below show intuitively:
 	
 		\begin{center}\label{ex:decompositionOfPatternsForLater}
 			\adjustbox{scale=\myscale}{%
