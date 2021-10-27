@@ -691,17 +691,15 @@ datatype construction = TCPair of tc * construction list
 %	
 %		And even better, we can split recursively to obtain a decomposition. First, we define its characteristic structure and then we define what it means for it to be the decomposition of a construction.
 	
-		Furthermore, a construction can \textit{decomposed} recursively, starting with a generator, to obtain a \textit{decomposition}. To understand the structure of such decompositions we need another definition first.
+		Furthermore, a construction can \textit{decomposed} recursively, starting with a generator, to obtain a \textit{decomposition}. To understand the structure of such decompositions we need another couple of definitions first.
 	
 		\begin{definition}\label{defn:decompositionTree}
 			A \textit{DRI tree} is a directed rooted in-tree\footnote{That is, the arrows are directed \textit{towards} the root: the tree is an anti-arborescence.},
-			%
-			$
-			D=(V,\arrows, \incVert: \arrows\to V\times V).
-			$
+			$D=(V,\arrows, \incVert),$ with $\incVert : \arrows\to V\times V$.
 		\end{definition}
+	
 	\begin{definition}
-		Given a DRI tree $D$ and a vertex $v$ in $D$, the \textit{$v$-branch} of $D$ is the maximal subtree of $D$ which has $v$ as root. Moreover, the set of DRI trees that result from removing $v$ (and all of its incident arrows) from the $v$-branch is denoted by $D \smallsetminus v$ .
+		Given a DRI tree, $D$, and a vertex $v$ in $D$, the \textit{$v$-branch} of $D$ is the maximal subtree of $D$ which has $v$ as root. Moreover, the set of DRI trees that result from removing $v$ (and all of its incident arrows) from the $v$-branch is denoted by $D \smallsetminus v$ .
 	\end{definition}
 	The next definition takes a DRI tree, and labels the vertices with constructions in such a way that they \textit{fit} together.
 	\begin{definition}
