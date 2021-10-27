@@ -110,6 +110,8 @@ struct
                               | _ => (print "oh no!";raise Error))
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
+        val typeOfTargetTokenInGoal = CSpace.typeOfToken targetToken
+        val typeOfTargetConstructInCorr = CSpace.typeOfToken ttcs
         fun minType typSys (ty1,ty2) =
               if (#subType typSys) (ty1,ty2) then ty1
               else if (#subType typSys) (ty2,ty1) then ty2
@@ -117,7 +119,7 @@ struct
         val (f,instantiatedCorr) =
               if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
                  andalso Pattern.tokenMatches sT sourceToken stcs
-              then instantiateCorrForStateAndGoal corr st goal (minType tT (CSpace.typeOfToken targetToken, CSpace.typeOfToken ttcs))
+              then instantiateCorrForStateAndGoal corr st goal (minType tT (typeOfTargetTokenInGoal, typeOfTargetConstructInCorr))
               else raise CorrespondenceNotApplicable
         val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
