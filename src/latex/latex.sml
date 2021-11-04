@@ -106,14 +106,14 @@ struct
         (*in Real.max(0.75,0.1*real (Int.max(sizeOfToken,sizeOfType)))*)
         in Real.max(0.7,0.11* (Real.max(sizeOfToken, sizeOfType)))
         end
-    | quickWidthEstimate (Construction.Loop _) = 0.0
+    | quickWidthEstimate (Construction.Reference _) = 0.0
     | quickWidthEstimate (Construction.TCPair (_,cs)) = List.sumMap quickWidthEstimate cs
 
   fun construction' coor parentName i (Construction.Source t) =
         (case parentName of
           NONE => lines [tokenNode true coor t]
         | SOME pn => lines [tokenNode true coor t, arrowLabelled (nodeNameOfToken t) pn i])
-    | construction' _ parentName i (Construction.Loop t) =
+    | construction' _ parentName i (Construction.Reference t) =
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
         | SOME pn => if i = 1

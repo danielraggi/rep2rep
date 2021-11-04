@@ -179,7 +179,7 @@ struct
           (ts,"",_) =>
             let val tok = token ts
             in if List.exists (CSpace.sameTokens tok) tacc
-               then Construction.Loop tok
+               then Construction.Reference tok
                else Construction.Source tok
             end
         | (tcps,_,ss) =>
@@ -190,7 +190,7 @@ struct
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
-    in c [] (String.stripSpaces s)
+    in Construction.fixReferences (c [] (String.stripSpaces s))
     end;
   fun pattern s = construction s;
 

@@ -72,13 +72,13 @@ struct
   type documentContent = {typeSystems : Type.typeSystem list,
                           conSpecs : CSpace.conSpec list,
                           knowledge : Knowledge.base,
-                          constructions : {name : string, conSpec : string, construction : Construction.construction} FiniteSet.set,
+                          constructions : {name : string, conSpec : string, construction : Construction.construction} list,
                           transferRequests : (string list) list,
                           strengths : string -> real option}
   val emptyDocContent = {typeSystems = [],
                          conSpecs = [],
                          knowledge = Knowledge.empty,
-                         constructions = FiniteSet.empty,
+                         constructions = [],
                          transferRequests = [],
                          strengths = (fn _ => NONE)}
 
@@ -174,6 +174,9 @@ struct
         end
       fun mkLatexConstructionsAndGoals (comp,tproof,goal,goals) =
         let val latexConstructions = mkLatexConstructions comp
+            val _ = if Composition.wellFormedComposition targetTypeSystem comp
+                    then ()
+                    else print ("\nWARNING! some decomposition is not well formed!")
             val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals (goal,goals,tproof)
             val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
@@ -296,7 +299,7 @@ struct
           (ts,"",_) =>
             let val tok = Parser.token ts
             in if List.exists (CSpace.sameTokens tok) tacc
-               then Construction.Loop tok
+               then Construction.Reference tok
                else Construction.Source tok
             end
         | (tcps,_,ss) =>
@@ -307,7 +310,7 @@ struct
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, Parser.splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
-    in c [] (String.stripSpaces s)
+    in Construction.fixReferences (c [] (String.stripSpaces s))
     end;
 
   fun addCorrespondence (nn,cs) dc =
@@ -358,13 +361,18 @@ struct
       val cspec = findConSpecWithName dc cspecN
       val ct = parseConstruction cts cspec
       val T = findTypeSystemWithName dc (#typeSystem cspec)
-      (*val _ = if Construction.wellFormed T ct then print ("construction " ^ name ^ " is well formed")
-                else print ("WARNING: construction "^name^" is not well formed")*)
+      val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
+      val startTime = Time.now();
+      val _ = if Construction.wellFormed  T ct then Logging.write ("\n  "^ name ^ " is well formed\n")
+                else print ("\n  WARNING: "^ name ^" is not well formed\n")
+      val endTime = Time.now();
+      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
+      val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
       val ctRecord = {name = name, conSpec = cspecN, construction = ct}
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
-      constructions = FiniteSet.insert ctRecord (#constructions dc),
+      constructions = ctRecord :: (#constructions dc),
       transferRequests = #transferRequests dc,
       strengths = #strengths dc}
   end
@@ -374,7 +382,7 @@ struct
       {typeSystems = ts @ ts',
        conSpecs = sp @ sp',
        knowledge = Knowledge.join kb kb',
-       constructions = FiniteSet.union cs cs',
+       constructions = cs @ cs',
        transferRequests = tr @ tr',
        strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
   | joinDocumentContents [] = emptyDocContent

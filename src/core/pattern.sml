@@ -34,12 +34,12 @@ struct
 
   exception Undefined
   fun applyMorpism f (Source t) = (case f t of NONE => raise Undefined | SOME x => Source x)
-    | applyMorpism f (Loop t) = (case f t of NONE => raise Undefined | SOME x => Loop x)
+    | applyMorpism f (Reference t) = (case f t of NONE => raise Undefined | SOME x => Reference x)
     | applyMorpism f (TCPair ({token = t, constructor = c},cs)) =
         (case f t of NONE => raise Undefined
                    | SOME x => TCPair ({token = x, constructor = c}, map (applyMorpism f) cs))
   fun applyPartialMorphism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
-    | applyPartialMorphism f (Loop t) = (case f t of NONE => Loop t | SOME x => Loop x)
+    | applyPartialMorphism f (Reference t) = (case f t of NONE => Reference t | SOME x => Reference x)
     | applyPartialMorphism f (TCPair ({token = t, constructor = c},cs)) =
         (case f t of NONE => TCPair ({token = t, constructor = c}, map (applyPartialMorphism f) cs)
                    | SOME x => TCPair ({token = x, constructor = c}, map (applyPartialMorphism f) cs))
@@ -53,28 +53,36 @@ struct
     | funUnion [] _ = NONE
 
   (* *)
-  fun findMapFromPatternToGenerator T (Source t) (Source t') =
-        if tokenMatches T t t'
-        then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-        else (fn _ => NONE)
-    | findMapFromPatternToGenerator T (Loop t) (Loop t') =
-        if tokenMatches T t t'
-        then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-        else (fn _ => NONE)
-    | findMapFromPatternToGenerator T (TCPair ({token = t, constructor = c},cs))
-                                      (TCPair ({token = t', constructor = c'},cs')) =
-        if CSpace.sameConstructors c c' andalso tokenMatches T t t'
-        then
-          let val CHfunctions = List.funZip (findMapFromPatternToGenerator T) cs cs'
-              fun nodeFunction x = if CSpace.sameTokens x t' then SOME t else NONE
-          in funUnion (nodeFunction :: CHfunctions)
-          end
-        else (fn _ => NONE)
-    | findMapFromPatternToGenerator T (TCPair ({token = t, ...},_)) (Source t') =
-        if tokenMatches T t t'
-        then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-        else (fn _ => NONE)
-    | findMapFromPatternToGenerator _ _ _ = (fn _ => NONE)
+  fun findMapFromPatternToGenerator T ct ct' =
+  let
+    fun findMapFromPatternToGenerator' (Source t) (Source t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+          else (fn _ => NONE)
+      | findMapFromPatternToGenerator' (Reference t) (Reference t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+          else (fn _ => NONE)
+      | findMapFromPatternToGenerator' (TCPair ({token = t, constructor = c},cs))
+                                        (TCPair ({token = t', constructor = c'},cs')) =
+          if CSpace.sameConstructors c c' andalso tokenMatches T t t'
+          then
+            let val CHfunctions = List.funZip (findMapFromPatternToGenerator') cs cs'
+                fun nodeFunction x = if CSpace.sameTokens x t' then SOME t else NONE
+            in funUnion (nodeFunction :: CHfunctions)
+            end
+          else (fn _ => NONE)
+      | findMapFromPatternToGenerator' (TCPair ({token = t, ...},_)) (Source t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+          else (fn _ => NONE)
+      | findMapFromPatternToGenerator' (Reference t) ctx =
+          if tokenMatches T t (constructOf ctx)
+          then findMapFromPatternToGenerator' (findAndExpandSubConstruction ct t) ctx
+          else (fn _ => NONE)
+      | findMapFromPatternToGenerator' _ _ = (fn _ => NONE)
+  in findMapFromPatternToGenerator' ct ct'
+  end
 
   fun findMapAndGeneratorMatching T ct ct' =
     let val f = findMapFromPatternToGenerator T ct ct'
@@ -91,7 +99,7 @@ struct
 
   fun findMapAndGeneratorMatchingForToken T ct p t =
       if CSpace.sameTokens t (Construction.constructOf ct)
-      then [findMapAndGeneratorMatching T (Construction.fixLoops ct) p]
+      then [findMapAndGeneratorMatching T (Construction.fixReferences ct) p]
       else (case ct of TCPair (_, cs) => filterSomes' (List.maps (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
                                   | _ => [])
 

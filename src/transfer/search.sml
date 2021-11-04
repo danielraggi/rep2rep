@@ -4,7 +4,7 @@ signature SEARCH =
 sig
   val depthFirst : ('a -> 'a Seq.seq) -> int -> 'a -> 'a Seq.seq;
   val graphDepthFirst : ('a -> 'a Seq.seq) -> ('a * 'a -> bool) -> int -> 'a -> 'a Seq.seq;
-  val graphDepthFirstSorting : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a -> bool) -> int -> 'a -> 'a Seq.seq;
+  val graphDepthFirstSorting : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a -> bool) -> ('a -> bool) -> int -> 'a -> 'a Seq.seq;
 end;
 
 structure Search : SEARCH =
@@ -41,13 +41,13 @@ struct
     in Seq.append new old
     end
 
-  fun graphDepthFirstSorting next h eq n state =
+  fun graphDepthFirstSorting next h eq stop n state =
     let fun gdf s i acc =
           if i < n then
             (case Seq.pull s of
               NONE => (s,s)
             | SOME (st,s') =>
-                if List.exists (fn x => eq (x,st)) acc then
+                if stop st orelse List.exists (fn x => eq (x,st)) acc then
                   gdf s' (i+1) acc
                 else
                   (case Seq.pull (next st) of

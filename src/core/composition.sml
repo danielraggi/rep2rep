@@ -11,7 +11,7 @@ sig
 
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
-  val wellFormedComposition : Type.typeSystem -> composition -> bool;
+  val wellFormedComposition : (*CSpace.conSpec ->*) Type.typeSystem -> composition -> bool;
 
   val initFromConstruction : construction -> composition;
   val attachConstructionAt : composition -> construction -> CSpace.token -> composition;
@@ -39,24 +39,24 @@ struct
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
 
-  fun wellFormedComposition T (Composition {construct,attachments}) =
+  fun wellFormedComposition  T (Composition {construct,attachments}) =
     let
       fun wfds ((ct,Ds)::L) =
             Construction.wellFormed T ct
-            andalso List.allZip CSpace.sameTokens (foundationSequence ct) (map constructOfComposition Ds)
-            andalso List.all (wellFormedComposition T) Ds
+            andalso CSpace.sameTokens construct (constructOf ct)
+            andalso List.all (fn x => List.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (fullTokenSequence ct)) Ds
+            andalso List.all (wellFormedComposition  T) Ds
             andalso wfds L
         | wfds [] =  true
-      val constructsOfAttachments = map (constructOf o #1) attachments
-    in
-      List.all (CSpace.sameTokens construct) constructsOfAttachments andalso wfds attachments
+      val result = wfds attachments
+    in result
     end
 
   fun makePlaceholderComposition t = Composition {construct = t, attachments = []}
 
 
   fun pickICSfromAttachments (Source _) [ct] = [ct]
-    | pickICSfromAttachments (Loop _) [] = []
+    | pickICSfromAttachments (Reference _) [] = []
     | pickICSfromAttachments (TCPair (_,cs)) (_::cts) =
         let fun picsfa (c::L) icts = (case List.split(icts,length (fullTokenSequence c)) of
                                           (cLx,cly) => pickICSfromAttachments c cLx @ picsfa L cly)
@@ -81,7 +81,7 @@ struct
     end
 
   fun tokensOfComposition (Composition {attachments,...}) =
-    let fun tokensOfAttachments ((ct,DS)::L) = tokensOfConstruction ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
+    let fun tokensOfAttachments ((ct,DS)::L) = fullTokenSequence ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
           | tokensOfAttachments [] = []
     in tokensOfAttachments attachments
     end

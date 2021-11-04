@@ -8,7 +8,7 @@ sig
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
                constructRel : Relation.relationship};
-  val wellFormed : Type.typeSystem -> Type.typeSystem -> corr -> bool;
+  val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> corr -> bool;
   val nameOf : corr -> string;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
@@ -29,16 +29,18 @@ struct
                constructRel : Relation.relationship};
 
   exception badForm
-  fun wellFormed sT tT {name,sourcePattern,targetPattern,tokenRels,constructRel} =
-    let fun inFoundations (t::L) fseq = List.exists (CSpace.sameTokens t) fseq andalso inFoundations L fseq
-          | inFoundations [] _ = true
-        fun okAtFoundations ((sfseq,tfseq,_)::rfs) = inFoundations (sfseq @ tfseq) ((Pattern.foundationSequence sourcePattern) @ (Pattern.foundationSequence targetPattern))
-                                                      andalso okAtFoundations rfs
-          | okAtFoundations [] = true
-       fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern) andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
+  fun wellFormed  sT  tT {name,sourcePattern,targetPattern,tokenRels,constructRel} =
+    let fun inTokens (t::L) tseq = List.exists (CSpace.sameTokens t) tseq andalso inTokens L tseq
+          | inTokens [] _ = true
+        fun okAtTokens ((sfseq,tfseq,_)::rfs) = inTokens sfseq (Pattern.fullTokenSequence sourcePattern)
+                                         andalso inTokens tfseq (Pattern.fullTokenSequence targetPattern)
+                                         andalso okAtTokens rfs
+          | okAtTokens [] = true
+       fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern)
+                                 andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false
-    in Pattern.wellFormed sT sourcePattern andalso Pattern.wellFormed tT targetPattern
-        andalso okAtConstructs constructRel andalso okAtFoundations tokenRels
+    in Pattern.wellFormed  sT sourcePattern andalso Pattern.wellFormed  tT targetPattern
+        andalso okAtConstructs constructRel andalso okAtTokens tokenRels
     end
 
   fun nameOf {name,...} = name;

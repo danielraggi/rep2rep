@@ -21,7 +21,7 @@ struct
 
 
   fun evaluate E (Construction.Source t) = #seedFun E t
-    | evaluate E (Construction.Loop t) = #seedFun E t
+    | evaluate E (Construction.Reference t) = #seedFun E t
     | evaluate E (Construction.TCPair (tc,cs)) =
         (case (#seedFun E) (#token tc) of
             SOME a => (SOME a)
