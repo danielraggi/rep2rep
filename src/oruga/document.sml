@@ -420,7 +420,7 @@ struct
           end handle Bind => raise ParseError "expected name = content, found multiple words before ="
 
       val nonImported = List.filter (fn (x,_) => x <> SOME importKW) blocks
-      val allContent = distribute nonImported
+      val allContent = distribute (rev nonImported)
       val _ = map (parseTransferRequests allContent) (#transferRequests allContent)
   in allContent
   end
