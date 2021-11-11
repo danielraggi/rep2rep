@@ -5,7 +5,7 @@ import "core.type";
   cspace are different if and only if their string type pairs are different.*)
 signature CSPACE =
 sig
-  type ctyp
+  type ctyp = Type.typ list * Type.typ
   type constructor
   (*datatype atom = Token of string | Variable of string;*)
   type token(* = string * Type.typ;*)

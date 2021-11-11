@@ -30,8 +30,7 @@ struct
               end
         in f 0
         end
-      (*val tokensInConstruction = List.filter (fn x => not (CSpace.sameTokens t x)) (Construction.tokensOfConstruction ct)*)
-      val tokensInConstruction = (Construction.tokensOfConstruction ct)
+      val tokensInConstruction = (Construction.fullTokenSequence ct)
       val tokensInComposition = Composition.tokensOfComposition D
       val names = map CSpace.nameOfToken (tokensInComposition @ tokensInConstruction)
       fun mkRenameFunction _ [] = (fn _ => NONE)
@@ -248,11 +247,12 @@ struct
             then P
             else Int.compare (gsl,gsl')*)
         end
+      fun stop st = List.length (#goals st) > 20
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
     in
       (*Search.sortNoRepetition unfoldState heuristic4 eq limit initialState*)
       (*Search.depthFirst unfoldState limit initialState*)
-      Search.graphDepthFirstSorting unfoldState heuristic4 eq limit initialState
+      Search.graphDepthFirstSorting unfoldState heuristic4 eq stop limit initialState
     end
 
 
