@@ -227,12 +227,12 @@ struct
       fun getTyps _ [] = []
         | getTyps subType ((x,c)::L) =
             if x = SOME typesKW
-            then map (parseTyp subType) (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
+            then map (parseTyp subType) (String.tokens (fn x => x = #",") (String.concat c))
             else getTyps subType L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME subTypeKW
-            then map inequality (String.tokens (fn x => x = #"\n" orelse x = #",") (String.concat c))
+            then map inequality (String.tokens (fn x => x = #",") (String.concat c))
             else getOrder L
       val ordList = getOrder blocks
       fun getTypsInOrdList ((x,y)::L) = FiniteSet.insert (Type.typeOfString x) (FiniteSet.insert (Type.typeOfString y) (getTypsInOrdList L))
@@ -271,7 +271,7 @@ struct
   let val (name,x,typeSystemN) = String.breakOn ":" r
       (*val _ = if x = ":" then () else raise ParseError "no type system specified for conSpec"*)
       val chars = List.concat (map String.explode tss)
-      val crs = map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #"\n" orelse x = #",") chars)
+      val crs = map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") chars)
       val _ = Logging.write ("\nAdding constructors for constructor specification " ^ name ^ " of type system " ^ typeSystemN ^ "...\n")
       val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) crs
       val _ = Logging.write "...done\n"
