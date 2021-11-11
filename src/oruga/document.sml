@@ -146,7 +146,7 @@ struct
       val KB = knowledgeOf DC
       val _ = print ("\nApplying structure transfer...");
       val startTime = Time.now();
-      val results = Transfer.structureTransfer KB (sourceTypeSystem) targetTypeSystem construction goal 1000;
+      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");

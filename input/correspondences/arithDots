@@ -70,7 +70,7 @@ correspondence twoVertical:(arithG,dotDiagramsG) =
     source t:2:numeral
     target t':\ooV:arr
     tokenRels
-    constructRel ([t:3:numeral],[t':\ooV:arr]) :: count
+    constructRel ([t:2:numeral],[t':\ooV:arr]) :: count
     strength 1.0
 
 correspondence threeVertical:(arithG,dotDiagramsG) =

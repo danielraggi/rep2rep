@@ -11,7 +11,6 @@ sig
                             -> Type.typeSystem
                             -> Construction.construction
                             -> Relation.relationship
-                            -> int
                             -> State.T Seq.seq
 
 end;
@@ -197,7 +196,7 @@ struct
 
   exception BadGoal
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-  fun structureTransfer KB sourceT targetT ct goal limit =
+  fun structureTransfer KB sourceT targetT ct goal =
     let
       val t = (case Relation.tupleOfRelationship goal of
                   (_,[x],_) => x
@@ -247,12 +246,14 @@ struct
             then P
             else Int.compare (gsl,gsl')*)
         end
-      fun stop st = List.length (#goals st) > 20
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
+      fun ign (st,L) = List.length (#goals st) > 50 orelse length L > 9999 orelse List.exists (fn x => eq (x,st)) L
     in
-      (*Search.sortNoRepetition unfoldState heuristic4 eq limit initialState*)
       (*Search.depthFirst unfoldState limit initialState*)
-      Search.graphDepthFirstSorting unfoldState heuristic4 eq stop limit initialState
+      (*Search.graphDepthFirst unfoldState eq limit initialState*)
+      (*Search.breadthFirstSortAndIgnore unfoldState heuristic4 ign initialState*)
+      (*Search.depthFirstSortAndIgnore unfoldState heuristic4 ign initialState*)
+      Search.bestFirstSortAndIgnore unfoldState heuristic4 ign initialState
     end
 
 

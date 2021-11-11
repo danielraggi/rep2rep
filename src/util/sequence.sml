@@ -193,6 +193,7 @@ sig
   val DETERM: ('a -> 'b seq) -> 'a -> 'b seq
   (*added by draggi*)
   val insert : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
+  val sort : 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertMany : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertNoRepetition : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
   val insertNoRepetitionLimited : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> int -> 'a seq
@@ -451,6 +452,12 @@ fun insert x xq f =
     case pull xq of
       NONE => SOME (x,empty)
     | SOME (x',q) => if f(x,x') = GREATER then SOME (x',insert x q f) else SOME (x,xq));
+
+fun sort xq f =
+  case pull xq of
+    NONE => empty
+  | SOME (x,q) => insert x (sort q f) f;
+
 
 fun insertNoRepetition x xq f eq =
   make (fn () =>
