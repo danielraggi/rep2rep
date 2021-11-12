@@ -76,7 +76,9 @@ struct
               | _ => raise CorrespondenceNotApplicable)
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
       fun srFun x = (Option.valOf o sourceRenamingFunction) x
+          handle Option => (Logging.write "\nERROR: source renaming function\n"; raise Option)
       fun trFun x = (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) x
+          handle Option => (Logging.write "\nERROR: target renaming function\n"; raise Option)
       fun updateR (sfs,tfs,R) = (map srFun sfs, map trFun tfs, R)
       (*****)
       fun funUnion (f::L) x =
@@ -252,8 +254,8 @@ struct
       (*Search.depthFirst unfoldState limit initialState*)
       (*Search.graphDepthFirst unfoldState eq limit initialState*)
       (*Search.breadthFirstSortAndIgnore unfoldState heuristic4 ign initialState*)
-      (*Search.depthFirstSortAndIgnore unfoldState heuristic4 ign initialState*)
-      Search.bestFirstSortAndIgnore unfoldState heuristic4 ign initialState
+      Search.depthFirstSortAndIgnore unfoldState heuristic4 ign initialState
+      (*Search.bestFirstSortAndIgnore unfoldState heuristic4 ign initialState*)
     end
 
 

@@ -319,34 +319,50 @@ struct
       val (sourceCSpecN,y,targetCSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
       val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source and target cspecs")
       val sourceCSpec = findConSpecWithName dc sourceCSpecN
+      val sourceTySys = findTypeSystemWithName dc (#typeSystem sourceCSpec)
       val targetCSpec = findConSpecWithName dc targetCSpecN
-      fun getPattern k [] = raise ParseError ("no " ^ k ^ " in correspondence " ^ String.concat cs)
+      val targetTySys = findTypeSystemWithName dc (#typeSystem targetCSpec)
+      val _ = Logging.write ("\nAdding correspondence " ^ name ^ "...")
+      fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
+                              raise ParseError ("no " ^ k ^ " in correspondence " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
             then parseConstruction (String.concat ps) (if k = sourceKW then sourceCSpec else targetCSpec)
             else getPattern k L
-      fun getTokenRels [] = raise ParseError ("no token rels in correspondence " ^ String.concat cs)
+      fun getTokenRels [] = (Logging.write ("  ERROR: token relation not specified");
+                              raise ParseError ("no token rels in correspondence " ^ String.concat cs))
         | getTokenRels ((x,trss) :: L) =
             if x = SOME tokenRelsKW
             then Parser.relaxedList Parser.relationship (String.concat trss)
             else getTokenRels L
-      fun getConstructRel [] = raise ParseError ("no construct rel in correspondence " ^ String.concat cs)
+      fun getConstructRel [] = (Logging.write ("  ERROR: construct relation not specified");
+                                raise ParseError ("no construct rel in correspondence " ^ String.concat cs))
         | getConstructRel ((x,crs) :: L) =
             if x = SOME constructRelKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
-      fun getStrength [] = raise ParseError ("no construct rel in correspondence " ^ String.concat cs)
+      fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
+                            raise ParseError ("no strength in correspondence " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
             then Real.fromString (String.concat ss)
             else getStrength L
       val blocks = contentForKeywords corrKeywords cs
+      val sPatt = getPattern sourceKW blocks
+      val tPatt = getPattern targetKW blocks
+      val _ = if Construction.wellFormed sourceTySys sPatt
+              then Logging.write "\n  source pattern is well formed"
+              else Logging.write "\n  WARNING: source pattern is not well formed"
+      val _ = if Construction.wellFormed targetTySys tPatt
+              then Logging.write "\n  target pattern is well formed\n"
+              else Logging.write "\n  WARNING: target pattern is not well formed\n"
       val corr = {name = name,
-                  sourcePattern = getPattern sourceKW blocks,
-                  targetPattern = getPattern targetKW blocks,
+                  sourcePattern = sPatt,
+                  targetPattern = tPatt,
                   tokenRels = getTokenRels blocks,
                   constructRel = getConstructRel blocks}
       fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
+      val _ = Logging.write ("done\n")
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
       knowledge = Knowledge.addCorrespondence (#knowledge dc) corr,

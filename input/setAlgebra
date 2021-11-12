@@ -1,0 +1,24 @@
+typeSystem setAlgebra =
+    types _:var, _:formula, _:bset, _:set, \emptyset, \in, \cup, \cap, \subseteq,
+          \powerset, =, binaryOp, binaryRel, unaryOp,
+          \{, \}, \comma, and, not, binaryLogical, unaryLogical
+    order var < set,
+          bset < set,
+          \emptyset < set,
+          \in < binaryRel,
+          = < binaryRel,
+          \subseteq < binaryRel,
+          \cup < binaryOp,
+          \cap < binaryOp,
+          \powerset < unaryOp,
+          and < binaryLogical,
+          not < unaryLogical
+
+conSpec setAlgebraG:setAlgebra =
+    infixRel : [set,binaryRel,set] -> formula,
+    infixOp : [set,binaryOp,set] -> set,
+    unaryOpApp : [unaryOp,set] -> set,
+    singleton : [\{,set,\}] -> bset,
+    insert : [set,\comma,bset] -> bset,
+    infixLogical : [formula,binaryLogical,formula] -> formula,
+    applyUnaryLogical : [unaryLogical,formula] -> formula
