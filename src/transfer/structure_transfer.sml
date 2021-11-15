@@ -1,5 +1,6 @@
 import "transfer.search";
 import "transfer.state";
+import "util.logging";
 
 signature TRANSFER =
 sig
