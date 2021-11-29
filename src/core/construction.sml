@@ -12,6 +12,7 @@ sig
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> construction -> bool;
+  val size : construction -> int;
   (*val almostWellFormed : construction -> bool;*)
 (*)
   val CTS : construction -> walk list;
@@ -159,6 +160,10 @@ struct
             end handle Option => (false,[])
     in #1 (wf ct [])
     end
+
+  fun size (Source t) = 1
+    | size (Reference t) = 0
+    | size (TCPair (_,cs)) = 1 + List.foldl (fn (x,y) => size x + y) 0 cs
 
   exception BadConstruction
 (*)
