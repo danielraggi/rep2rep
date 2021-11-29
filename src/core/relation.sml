@@ -12,6 +12,9 @@ sig
 
   val alwaysTrue : T;
   val isAlwaysTrue : T -> bool;
+  val alwaysFalse : T;
+  val isAlwaysFalse : T -> bool;
+  val relationshipIsFalse : relationship -> bool;
   val same : T -> T -> bool;
   val sameRelationship : relationship -> relationship -> bool;
   val stronglyMatchingRelationships : relationship -> relationship -> bool;
@@ -29,8 +32,11 @@ struct
 
   fun nameOf s = s;
 
-  val alwaysTrue = "alwaysTrue";
-  fun isAlwaysTrue R = (nameOf R = "alwaysTrue");
+  val alwaysTrue = "alwaysTrue"
+  fun isAlwaysTrue R = (nameOf R = alwaysTrue)
+  val alwaysFalse = "FALSE"
+  fun isAlwaysFalse R =  (nameOf R = alwaysFalse)
+  fun relationshipIsFalse (_,_,R) = isAlwaysFalse R
 
   fun same n n' = (n = n')
 

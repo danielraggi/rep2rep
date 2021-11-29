@@ -2,10 +2,9 @@ import "core.pattern";
 
 signature COMPOSITION =
 sig
-  include PATTERN;
   type composition;
 
-  val dataOfComposition : composition -> {construct : CSpace.token, attachments : (construction * composition list) list};
+  val dataOfComposition : composition -> {construct : CSpace.token, attachments : (Construction.construction * composition list) list};
 
   val size : composition -> int;
 
@@ -13,61 +12,83 @@ sig
   val constructOfComposition : composition -> CSpace.token;
   val wellFormedComposition : (*CSpace.conSpec ->*) Type.typeSystem -> composition -> bool;
 
-  val initFromConstruction : construction -> composition;
-  val attachConstructionAt : composition -> construction -> CSpace.token -> composition;
+  val unistructured : composition -> bool;
+  val unistructurable : Type.typeSystem -> composition -> bool;
+
+  val initFromConstruction : Construction.construction -> composition;
+  val attachConstructionAt : composition -> Construction.construction -> CSpace.token -> composition;
 
   val makePlaceholderComposition : CSpace.token -> composition;
 
-  val constructionsInComposition : composition -> construction list;
+  val constructionsInComposition : composition -> Construction.construction list;
   val tokensOfComposition : composition -> CSpace.token list;
-  val resultingConstructions : composition -> construction list;
-  val pickICSfromAttachments : construction -> construction list -> construction list;
+  val resultingConstructions : composition -> Construction.construction list;
+  val pickICSfromAttachments : Construction.construction -> Construction.construction list -> Construction.construction list;
 
   val applyPartialMorphismToComposition : (CSpace.token -> CSpace.token option) -> composition -> composition;
 end;
 
 structure Composition : COMPOSITION =
 struct
-  open Pattern
-  datatype composition = Composition of {construct : CSpace.token, attachments : (construction * composition list) list};
+
+  datatype composition = Composition of {construct : CSpace.token, attachments : (Construction.construction * composition list) list};
 
   fun dataOfComposition (Composition {construct, attachments}) = {construct = construct, attachments = attachments}
   fun size (Composition {attachments = (c,D::DL)::L, construct}) = size D + size (Composition {attachments = (c,DL)::L, construct=construct})
-    | size (Composition {attachments = (_,[])::L, construct}) = 1+size (Composition {attachments = L, construct=construct})
-    | size (Composition {attachments = [], ...}) = 1
+    | size (Composition {attachments = (c,[])::L, construct}) = Construction.size c - 1 + size (Composition {attachments = L, construct=construct})
+    | size (Composition {attachments = [], ...}) = 0
 
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
 
   fun wellFormedComposition  T (Composition {construct,attachments}) =
     let
-      fun wfds ((ct,Ds)::L) =
+      fun wfds [] =  true
+        | wfds ((ct,Ds)::L) =
             Construction.wellFormed T ct
-            andalso CSpace.sameTokens construct (constructOf ct)
-            andalso List.all (fn x => List.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (fullTokenSequence ct)) Ds
+            andalso CSpace.sameTokens construct (Construction.constructOf ct)
+            andalso List.all (fn x => List.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (Construction.fullTokenSequence ct)) Ds
             andalso List.all (wellFormedComposition  T) Ds
             andalso wfds L
-        | wfds [] =  true
       val result = wfds attachments
     in result
     end
 
+  fun subsumingAttachments T (ct,DL) (ct',DL') =
+    (case (ct,ct') of
+        (Construction.Source t,ct') =>
+          #subType T ((CSpace.typeOfToken (Construction.constructOf ct')), (CSpace.typeOfToken t))
+          (*andalso List.all (subsumingAttachments T (ct',DL')) (List.concat (map (#attachments o dataOfComposition) DL)) *)
+      | (ct,Construction.Source t') =>
+          #subType T ((CSpace.typeOfToken (Construction.constructOf ct)), (CSpace.typeOfToken t'))
+          (*andalso List.all (subsumingAttachments T (ct,DL)) (List.concat (map (#attachments o dataOfComposition) DL'))*)
+      | _ => false)
+
+  fun unistructured (Composition {attachments = [(_,DL)], ...}) = List.all unistructured DL
+    | unistructured (Composition {attachments = [], ...}) = true
+    | unistructured _ = false
+
+  fun unistructurable T (Composition {attachments = (ct,DL)::L, construct}) =
+        List.all (unistructurable T) DL andalso
+        List.all (subsumingAttachments T (ct,DL)) L andalso
+        unistructurable T (Composition {attachments = L, construct = construct})
+    | unistructurable T (Composition {attachments = [], ...}) = true
+
   fun makePlaceholderComposition t = Composition {construct = t, attachments = []}
 
-
-  fun pickICSfromAttachments (Source _) [ct] = [ct]
-    | pickICSfromAttachments (Reference _) [] = []
-    | pickICSfromAttachments (TCPair (_,cs)) (_::cts) =
-        let fun picsfa (c::L) icts = (case List.split(icts,length (fullTokenSequence c)) of
+  fun pickICSfromAttachments (Construction.Source _) [ct] = [ct]
+    | pickICSfromAttachments (Construction.Reference _) [] = []
+    | pickICSfromAttachments (Construction.TCPair (_,cs)) (_::cts) =
+        let fun picsfa (c::L) icts = (case List.split(icts,length (Construction.fullTokenSequence c)) of
                                           (cLx,cly) => pickICSfromAttachments c cLx @ picsfa L cly)
               | picsfa [] _ = []
         in picsfa cs cts
         end
-    | pickICSfromAttachments _ _ = raise Match
+    | pickICSfromAttachments _ _ = (print"hey";raise Match)
 
   fun initFromConstruction ct =
-    let val placeholders = map makePlaceholderComposition (fullTokenSequence ct)
-    in Composition {construct = constructOf ct,
+    let val placeholders = map makePlaceholderComposition (Construction.fullTokenSequence ct)
+    in Composition {construct = Construction.constructOf ct,
                     attachments = [(ct,placeholders)]}
     end
 
@@ -76,12 +97,12 @@ struct
   fun attachConstructionAt (Composition {construct,attachments}) ct t =
     let fun aca (ct',Ds) = (ct',map (fn x => attachConstructionAt x ct t) Ds)
     in if CSpace.sameTokens t construct
-       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (fullTokenSequence ct)) :: attachments}
+       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (Construction.fullTokenSequence ct)) :: attachments}
        else Composition {construct = construct, attachments = map aca attachments}
     end
 
   fun tokensOfComposition (Composition {attachments,...}) =
-    let fun tokensOfAttachments ((ct,DS)::L) = fullTokenSequence ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
+    let fun tokensOfAttachments ((ct,DS)::L) = Construction.fullTokenSequence ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
           | tokensOfAttachments [] = []
     in tokensOfAttachments attachments
     end
@@ -96,25 +117,25 @@ struct
 
   fun resultingConstructions (Composition {construct,attachments}) =
     let fun rc ((ct,comps)::A) = let val rr = List.listProduct (map resultingConstructions comps)
-                                     val VS = fullTokenSequence ct
+                                     val VS = Construction.fullTokenSequence ct
                                      fun f [] [] = [ct]
                                        | f (t::tL) (c::cL) =
-                                            if Construction.same (Source t) c then (f tL cL) else
-                                              (List.maps (fn x => attachConstructionAtToken x t c) (f tL cL))
+                                            if Construction.same (Construction.Source t) c then (f tL cL) else
+                                              (List.maps (fn x => Construction.attachConstructionAtToken x t c) (f tL cL))
                                        | f _ _ = raise (print "Bad composition!\n";BadComposition)
                                      fun g L = f VS L
                                  in ((List.maps g rr)) @ rc A
                                  end
           | rc [] = []
         fun removeRedundant (ct::cts) =
-              if List.exists (fn x => subConstruction ct x) cts then removeRedundant cts
-              else ct :: removeRedundant (List.filter (fn x => not (subConstruction x ct)) cts)
+              if List.exists (fn x => Construction.subConstruction ct x) cts then removeRedundant cts
+              else ct :: removeRedundant (List.filter (fn x => not (Construction.subConstruction x ct)) cts)
           | removeRedundant [] = []
-    in if null attachments then [Source construct] else removeRedundant (rc attachments)
+    in if null attachments then [Construction.Source construct] else removeRedundant (rc attachments)
     end
 
   fun applyPartialMorphismToComposition f (Composition {construct,attachments}) =
-    let fun applyToAttachment (ct,C) = ((applyPartialMorphism f ct, map (applyPartialMorphismToComposition f) C))
+    let fun applyToAttachment (ct,C) = ((Pattern.applyPartialMorphism f ct, map (applyPartialMorphismToComposition f) C))
     in case f construct of
           SOME t => Composition {construct = t, attachments = map applyToAttachment attachments}
         | NONE => Composition {construct = construct, attachments = map applyToAttachment attachments}
