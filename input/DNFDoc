@@ -1,0 +1,28 @@
+import correspondences/DNFDNF
+
+construction c1:propDNFG = t:AB:nonliteral <- conj[t1:B:var,t2:A:var]
+
+construction cc1:propDNFG = t1:AB:clause <- conj[t11:A:var,t12:B:var]
+construction cc2:propDNFG = t2:-AB:clause <- conj[t21:-A:literal <- neg[t211:A:var],t22:B:var]
+construction cc3:propDNFG =
+    t2:-AB|-A-B:dnf
+        <- disj[t21:-AB:clause <- conj[t211:-A:literal <- neg[t2111:A:var],
+                                       t212:B:var],
+                t22:-A-B:clause <- conj[t221:-A:literal <- neg[t2211:A:var],
+                                        t222:-B:literal <- neg[t2221:B:var]]]
+construction c2:propDNFG =
+    t:AB|-AB|-A-B:nonclause
+        <- disj[t1:AB:nonliteral <- conj[t11:A:var,
+                                     t12:B:var],
+                t2:-AB|-A-B:nonclause
+                     <- disj[t21:-AB:nonliteral <- conj[t211:-A:nonvar <- neg[t2111:A:var],
+                                                    t212:B:var],
+                             t22:-A-B:nonliteral <- conj[t221:-A:nonvar <- neg[t2211:A:var],
+                                                     t222:-B:nonvar <- neg[t2221:B:var]]]]
+
+transfer
+    sourceConstruction c2
+    targetTypeSystem propDNF
+    goal ([t:AB|-AB|-A-B:nonclause],[t':nonclause]) :: entails
+    output propTest
+    limit 10

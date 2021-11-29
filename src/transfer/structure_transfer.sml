@@ -94,13 +94,21 @@ struct
       (*****)
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
+      val updatedPullList = map (fn (R,t) => (R, Option.valOf (targetRenamingFunction t))) (#pullList corr)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         Correspondence.declareCorrespondence {name = #name corr,
                                               sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
                                               tokenRels=updatedFoundationRelationships,
-                                              constructRel=updatedConstructRelationship})
+                                              constructRel=updatedConstructRelationship,
+                                              pullList = updatedPullList})
     end
+
+  fun applyPullItem [] _ _ = []
+    | applyPullItem ((x,y,R)::gs) t (R',t') =
+    if Relation.same R R'
+    then (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R) :: applyPullItem gs t (R',t')
+    else (x,y,R)::applyPullItem gs t (R',t')
 
   exception Error
   fun applyCorrespondenceForGoal st corr goal =
@@ -132,7 +140,11 @@ struct
                                  else Composition.attachConstructionAt patternComp targetPattern targetToken
         val transferProof = State.transferProofOf st
         val updatedTransferProof = TransferProof.attachCorrAt instantiatedCorr goal transferProof
-        val stateWithUpdatedProof = State.updateTransferProof (State.replaceGoal st goal rfs) updatedTransferProof
+        fun applyPullList [] = State.goalsOf (State.replaceGoal st goal rfs)
+          | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
+        val updatedGoals = applyPullList (#pullList instantiatedCorr)
+        val stateWithUpdatedGoals = State.updateGoals st updatedGoals
+        val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
     in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
     end
 
@@ -244,7 +256,7 @@ struct
             val D' = State.patternCompOf st'
             val P = Int.compare (Composition.size D',Composition.size D)
         in if gsn = 0 andalso gsn' = 0 then opposite P
-           else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then P
+           else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P
            else Int.compare (gsn,gsn')
         end
       fun heuristic5 _ =
@@ -253,34 +265,31 @@ struct
             fun le x = List.all (fn y => x < y) X2
         in if le x1 then LESS else GREATER
         end
-
       fun heuristic6 (st,st') =
-        let val gsn = length (#goals st)
-            val gsn' = length (#goals st')
+        let val gsn = length (State.goalsOf st)
+            val gsn' = length (State.goalsOf st')
         in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
            else Int.compare (gsn,gsn')
         end
       val limit = 9999
-
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (#goals st) (#goals st')
-      fun ign (st,L) = List.length (#goals st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
-      fun ign' (st,L) =
-            List.length (#goals st) > 10
-            orelse length L > limit
-            orelse Composition.size (#composition st) > 3
-            orelse not (Composition.unistructurable targetT (#composition st))
-            orelse List.exists Relation.relationshipIsFalse (#goals st)
-            (*orelse List.exists (fn x => eq (x,st)) L*)
-      fun forget st = List.length (#goals st) < 0
+      fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
+      fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
+      fun ign' (st,L) = List.length (State.goalsOf st) > 10
+                  orelse length L > limit
+                  orelse Composition.size (State.patternCompOf st) > 4
+                  orelse not (Composition.unistructurable targetT (State.patternCompOf st))
+                  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)
+                  orelse List.exists (fn x => eq (x,st)) L
+      fun forget st = List.length (State.goalsOf st) < 0
     in
       (*Search.depthFirst unfoldState limit initialState*)
       (*Search.graphDepthFirst unfoldState eq limit initialState*)
       (*Search.breadthFirstSortAndIgnore unfoldState heuristic6 ign' initialState*)
-      (*Search.breadthFirstSortIgnoreForget unfoldState heuristic6 ign' forget initialState*)
+      (*Search.breadthFirstSortIgnoreForget unfoldState heuristic4 ign' forget initialState*)
       (*Search.depthFirstSortAndIgnore unfoldState heuristic4 ign' initialState*)
       (*Search.depthFirstSortIgnoreForget unfoldState heuristic6 ign' forget initialState*)
       (*Search.bestFirstSortAndIgnore unfoldState heuristic6 ign' initialState*)
-      Search.bestFirstSortIgnoreForget unfoldState heuristic4 ign forget initialState
+      Search.bestFirstSortIgnoreForget unfoldState heuristic6 ign' forget initialState
     end
 
 

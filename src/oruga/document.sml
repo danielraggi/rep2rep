@@ -40,8 +40,9 @@ struct
   val sourceKW = "source"
   val tokenRelsKW = "tokenRels"
   val constructRelKW = "constructRel"
+  val pullListKW = "pull"
   val strengthKW = "strength"
-  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,strengthKW]
+  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,pullListKW,strengthKW]
 
   val sourceTypeSystemKW = "sourceTypeSystem"
   val targetTypeSystemKW = "targetTypeSystem"
@@ -190,8 +191,8 @@ struct
       val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
       fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
       val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
-      val is = (Propagation.evaluate E) (hd tproofConstruction)
-      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs))
+      val is = (Propagation.evaluate E) (hd tproofConstruction) handle Empty => (SOME 0.0)
+      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
     (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
       val _ = print ("  informational suitability score: " ^ Real.toString (valOf is') ^ "\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
@@ -341,6 +342,15 @@ struct
             if x = SOME constructRelKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
+      fun parsePull s =
+        (case String.breakOn " to " s of
+          (Rs," to ",tks) => (Parser.relation (String.stripSpaces Rs), Parser.token tks)
+        | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
+      fun getPullList [] = []
+        | getPullList ((x,pl) :: L) =
+            if x = SOME pullListKW
+            then Parser.relaxedList parsePull (Parser.deTokenise " " pl)
+            else getPullList L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in correspondence " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
@@ -360,7 +370,8 @@ struct
                   sourcePattern = sPatt,
                   targetPattern = tPatt,
                   tokenRels = getTokenRels blocks,
-                  constructRel = getConstructRel blocks}
+                  constructRel = getConstructRel blocks,
+                  pullList = getPullList blocks}
       fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
       val _ = Logging.write ("done\n")
   in {typeSystems = #typeSystems dc,
