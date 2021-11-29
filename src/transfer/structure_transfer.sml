@@ -260,7 +260,11 @@ struct
         in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
            else Int.compare (gsn,gsn')
         end
+<<<<<<< HEAD
       val limit = 9999
+=======
+      val limit = 99999
+>>>>>>> 95f6c399d3ddcb6e5487a5fd213f356ed5dcbe55
 
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (#goals st) (#goals st')
       fun ign (st,L) = List.length (#goals st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
