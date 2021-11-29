@@ -255,23 +255,23 @@ struct
         end
 
       fun heuristic6 (st,st') =
-        let val gsn = length (#goals st)
-            val gsn' = length (#goals st')
+        let val gsn = length (State.goalsOf st)
+            val gsn' = length (State.goalsOf st')
         in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
            else Int.compare (gsn,gsn')
         end
       val limit = 9999
 
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (#goals st) (#goals st')
-      fun ign (st,L) = List.length (#goals st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
+      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
+      fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
       fun ign' (st,L) =
-            List.length (#goals st) > 10
+            List.length (State.goalsOf st) > 10
             orelse length L > limit
-            orelse Composition.size (#composition st) > 3
-            orelse not (Composition.unistructurable targetT (#composition st))
-            orelse List.exists Relation.relationshipIsFalse (#goals st)
+            orelse Composition.size (State.patternCompOf st) > 3
+            orelse not (Composition.unistructurable targetT (State.patternCompOf st))
+            orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)
             (*orelse List.exists (fn x => eq (x,st)) L*)
-      fun forget st = List.length (#goals st) < 0
+      fun forget st = List.length (State.goalsOf st) < 0
     in
       (*Search.depthFirst unfoldState limit initialState*)
       (*Search.graphDepthFirst unfoldState eq limit initialState*)
