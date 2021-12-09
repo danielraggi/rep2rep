@@ -51,6 +51,10 @@ signature RPC = sig
                   (* convert: old -> old_to_new -> new_to_old -> new *)
                   val convert: 'a t -> ('a -> 'b) -> ('b -> 'a) -> 'b t
 
+                  (* If the datatype is recursive, guard the recursion inside `recur`
+                     and a unit function. *)
+                  val recur: (unit -> 'a t) -> 'a t
+
                   val unit: unit t
                   val bool: bool t
                   val int: int t
@@ -72,14 +76,17 @@ signature RPC = sig
                   val eitherN: (int * data) t
               end
 
+    type ('a, 'b) functype = string * 'a Datatype.t * 'b Datatype.t
     type endpoint
     type service
 
-    (* provide: identifier * param_type * return_type * function -> endpoint *)
-    val provide: (string * 'a Datatype.t * 'b Datatype.t * ('a -> 'b)) -> endpoint
-
     (* create: address * port -> service *)
     val create: (string * int) -> service
+
+    (* provide: signature * function -> endpoint *)
+    val provide: ('a, 'b) functype -> ('a -> 'b) -> endpoint
+    (* require: service -> signature -> function *)
+    val require: service -> ('a, 'b) functype -> ('a -> 'b)
 
     val serve: service -> endpoint list -> unit
 end;
@@ -92,7 +99,7 @@ exception RpcError;
 type data = Word8Vector.vector
 
 structure Datatype = struct
-type 'a t = {
+type 'a t = unit -> {
     reader: data -> 'a,
     writer: 'a -> data
 }
@@ -121,23 +128,28 @@ datatype ('a, 'b, 'c, 'd, 'e) t = FST of 'a
 end;
 
 
-fun read t d = (#reader t) d;
-fun write t d = (#writer t) d;
+fun read t d = (#reader (t ())) d;
+fun write t d = (#writer (t ())) d;
 
 fun convert t read_conv write_conv =
-    {
+    fn () => {
       reader = fn bytes => read_conv (read t bytes),
       writer = fn x => write t (write_conv x)
     }
 
+fun recur f = fn () => {
+                  reader = read (f ()),
+                  writer = write (f ())
+              }
+
 val empty = Word8Vector.fromList [];
 
-val unit = {
+val unit = fn () => {
     reader = fn _ => (),
     writer = fn _ => empty
 };
 
-val bool = {
+val bool = fn () => {
     reader = fn w => case Word8.toInt (Word8Vector.sub (w, 0)) of
                          1 => true
                        | 0 => false
@@ -179,17 +191,17 @@ val int =
                (unshift (b7, 48)) +
                (unshift (b8, 56))
             end;
-    in {
+    in fn () => {
     reader = unpackInt,
     writer = packInt
     } end;
 
-val real = {
+val real = fn () => {
     reader = PackRealBig.fromBytes,
     writer = PackRealBig.toBytes
 };
 
-val string = {
+val string = fn () => {
     reader = Byte.bytesToString,
     writer = Byte.stringToBytes
 };
@@ -213,7 +225,7 @@ fun tupleN n =
         fun writeTuple bytelist =
             let val lens = List.map ((write int) o Word8Vector.length) bytelist;
             in Word8Vector.concat (lens @ bytelist) end;
-    in {
+    in fn () => {
         reader = readTuple,
         writer = writeTuple
     } end;
@@ -248,7 +260,7 @@ val eitherN =
             in (Word8.toInt (Word8Vector.sub (bytes, 0)), getBytes bytes 1 len) end;
         fun writeEither (idx, data) =
             Word8Vector.concat [Word8Vector.fromList [Word8.fromInt idx], data];
-    in {
+    in fn () => {
         reader = readEither,
         writer = writeEither
     } end;
@@ -325,12 +337,14 @@ fun list at =
                                                          in Word8Vector.concat [len_b, b] end)
                                                 xs;
             in Word8Vector.concat (len_bytes::encoded_elements) end;
-    in {
+    in fn () => {
         reader = listReader,
         writer = listWriter
     } end;
 
 end;
+
+type ('a, 'b) functype = string * 'a Datatype.t * 'b Datatype.t
 
 type endpoint = {
     identifier: string,
@@ -342,31 +356,60 @@ type service = {
     address: INetSock.sock_addr
 }
 
-fun provide (name, param, return, callback) = {
+fun create (host, port) = {
+    socket = INetSock.TCP.socket (),
+    address = INetSock.toAddr (Option.valOf (NetHostDB.fromString host), port)
+};
+
+fun provide (name, param, return) callback = {
     identifier = name,
     callback = fn data => let val input = Datatype.read param data;
                               val output = callback input;
                           in Datatype.write return output end
 };
 
-fun create (host, port) = {
-    socket = INetSock.TCP.socket (),
-    address = INetSock.toAddr (Option.valOf (NetHostDB.fromString host), port)
-};
+fun get_input sock' =
+    let fun f ans =
+            let val inv = Socket.recvVec (sock', 1024); in
+                if Word8Vector.length inv < 1024
+                then Word8Vector.concat (List.rev (inv::ans))
+                else f (inv::ans)
+            end
+    in f [] end;
+
+
+fun require {socket = _, address = addr} (name, param, return) =
+    fn input =>
+       let val sock = INetSock.TCP.socket ();
+           val () = Socket.connect (sock, addr);
+           fun make_request data =
+               let val len = Word8Vector.length data;
+                   val header = String.concat [
+                           "POST /" ^ name ^ " HTTP/1.1\r\n",
+                           "Content-Length: " ^ (Int.toString len) ^ "\r\n",
+                           "Content-Type: application/octet-stream\r\n",
+                           "\r\n"
+                       ];
+                   val header_bytes = Byte.stringToBytes header;
+               in Word8Vector.concat [header_bytes, data] end;
+           fun parse_response vec =
+               let val req = Byte.bytesToString vec;
+                   val lines = String.fields (fn c => c = #"\n") req;
+                   val data = List.last lines;
+               in Byte.stringToBytes data end;
+           val data = Datatype.write param input;
+           val request = make_request data;
+           val _ = Socket.sendVec (sock, Word8VectorSlice.full request);
+           val response = get_input sock;
+           val output = parse_response response;
+           val () = Socket.close sock;
+       in Datatype.read return output end;
 
 (* This function is a mess -- needs rewriting. *)
 fun serve {socket = sock, address = addr} endpoints =
     let val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 5);
         fun forever f = (f () handle _ => (); forever f);
-        fun get_input sock' =
-            let fun f ans =
-                    let val inv = Socket.recvVec (sock', 1024); in
-                        if Word8Vector.length inv < 1024
-                        then Word8Vector.concat (List.rev (inv::ans))
-                        else f (inv::ans)
-                    end
-            in f [] end;
         fun find_endpoint req =
             case List.find (fn ep => (#identifier ep) = req) endpoints of
                 NONE => {identifier = req,
@@ -401,6 +444,7 @@ fun serve {socket = sock, address = addr} endpoints =
                     ];
                 val header_bytes = Byte.stringToBytes header;
             in Word8Vector.concat [header_bytes, data] end;
+        val _ = print ("Running...\n");
     in
         forever (fn () =>
                     let val (sock', remote_addr) = Socket.accept sock;
