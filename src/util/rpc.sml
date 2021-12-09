@@ -8,9 +8,9 @@ tuple and either types, then using "convert".
 The Rpc structure also provides a way to create and start an RPC server, as well as provide
 the endpoints that consumers might like to connect to.
 
-Note that this structure only allows for _providing_ RPC endpoints, not calling them.
-The "calling" end is from JavaScript/ReScript, located elsewhere. The serialisation format
-must be kept in sync between the two languages.
+While this structure allows for providing and calling RPC endpoints, it is primarily targetted
+at providing endpoints. The "calling" end is from JavaScript/ReScript, located elsewhere.
+The serialisation format must be kept in sync between the two languages.
 *)
 
 signature RPC = sig
@@ -44,6 +44,14 @@ signature RPC = sig
                                                                 | FOR of 'd
                                                                 | FIF of 'e
                             end;
+                  structure Either6: sig
+                                datatype ('a, 'b, 'c, 'd, 'e, 'f) t = FST of 'a
+                                                                    | SND of 'b
+                                                                    | THD of 'c
+                                                                    | FOR of 'd
+                                                                    | FIF of 'e
+                                                                    | SIX of 'f
+                            end;
 
                   val read: 'a t -> data -> 'a
                   val write: 'a t -> 'a -> data
@@ -67,12 +75,14 @@ signature RPC = sig
                   val tuple3: ('a t * 'b t * 'c t) -> ('a * 'b * 'c) t
                   val tuple4: ('a t * 'b t * 'c t * 'd t) -> ('a * 'b * 'c * 'd) t
                   val tuple5: ('a t * 'b t * 'c t * 'd t * 'e t) -> ('a * 'b * 'c * 'd * 'e) t
+                  val tuple6: ('a t * 'b t * 'c t * 'd t * 'e t * 'f t) -> ('a * 'b * 'c * 'd * 'e * 'f) t
                   val tupleN: int -> data list t
 
                   val either2: ('a t * 'b t) -> ('a, 'b) Either2.t t
                   val either3: ('a t * 'b t * 'c t) -> ('a, 'b, 'c) Either3.t t
                   val either4: ('a t * 'b t * 'c t * 'd t) -> ('a, 'b, 'c, 'd) Either4.t t
                   val either5: ('a t * 'b t * 'c t * 'd t * 'e t) -> ('a, 'b, 'c, 'd, 'e) Either5.t t
+                  val either6: ('a t * 'b t * 'c t * 'd t * 'e t * 'f t) -> ('a, 'b, 'c, 'd, 'e, 'f) Either6.t t
                   val eitherN: (int * data) t
               end
 
@@ -126,6 +136,15 @@ datatype ('a, 'b, 'c, 'd, 'e) t = FST of 'a
                                 | FOR of 'd
                                 | FIF of 'e
 end;
+structure Either6 = struct
+datatype ('a, 'b, 'c, 'd, 'e, 'f) t = FST of 'a
+                                    | SND of 'b
+                                    | THD of 'c
+                                    | FOR of 'd
+                                    | FIF of 'e
+                                    | SIX of 'f
+end;
+
 
 
 fun read t d = (#reader t) d;
@@ -253,6 +272,13 @@ fun tuple5 (at, bt, ct, dt, et) =
             | _ => raise RpcError)
             (fn (a, b, c, d, e) => [write at a, write bt b, write ct c, write dt d, write et e]);
 
+fun tuple6 (at, bt, ct, dt, et, ft) =
+    convert (tupleN 6)
+            (fn [a, b, c, d, e, f] => (read at a, read bt b, read ct c, read dt d, read et e, read ft f)
+            | _ => raise RpcError)
+            (fn (a, b, c, d, e, f) => [write at a, write bt b, write ct c, write dt d, write et e, write ft f]);
+
+
 val eitherN =
     let fun readEither bytes =
             let val len = Word8Vector.length bytes - 1;
@@ -307,6 +333,22 @@ fun either5 (at, bt, ct, dt, et) =
             | (Either5.THD c) => (2, write ct c)
             | (Either5.FOR d) => (3, write dt d)
             | (Either5.FIF e) => (4, write et e));
+
+fun either6 (at, bt, ct, dt, et, ft) =
+    convert eitherN
+            (fn (0, a) => Either6.FST (read at a)
+            | (1, b) => Either6.SND (read bt b)
+            | (2, c) => Either6.THD (read ct c)
+            | (3, d) => Either6.FOR (read dt d)
+            | (4, e) => Either6.FIF (read et e)
+            | (5, f) => Either6.SIX (read ft f)
+            | _ => raise RpcError)
+            (fn (Either6.FST a) => (0, write at a)
+            | (Either6.SND b) => (1, write bt b)
+            | (Either6.THD c) => (2, write ct c)
+            | (Either6.FOR d) => (3, write dt d)
+            | (Either6.FIF e) => (4, write et e)
+            | (Either6.SIX f) => (5, write ft f));
 
 fun option at =
     convert (either2 (at, unit))
