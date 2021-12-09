@@ -133,7 +133,7 @@ sig
   val maps : ('a -> 'b list) -> 'a list -> 'b list;
 end;
 
-structure List =
+structure List : LIST =
 struct
   open List;
   fun remove needle haystack = List.filter (fn x => x <> needle) haystack;
@@ -345,7 +345,7 @@ sig
     val listOfString : (string -> 'a) -> string -> 'a list
 end;
 
-structure String =
+structure String : STRING =
 struct
 open String;
 
