@@ -99,7 +99,7 @@ exception RpcError;
 type data = Word8Vector.vector
 
 structure Datatype = struct
-type 'a t = unit -> {
+type 'a t = {
     reader: data -> 'a,
     writer: 'a -> data
 }
@@ -128,28 +128,27 @@ datatype ('a, 'b, 'c, 'd, 'e) t = FST of 'a
 end;
 
 
-fun read t d = (#reader (t ())) d;
-fun write t d = (#writer (t ())) d;
+fun read t d = (#reader t) d;
+fun write t d = (#writer t) d;
 
-fun convert t read_conv write_conv =
-    fn () => {
-      reader = fn bytes => read_conv (read t bytes),
-      writer = fn x => write t (write_conv x)
-    }
+fun convert t read_conv write_conv = {
+    reader = fn bytes => read_conv (read t bytes),
+    writer = fn x => write t (write_conv x)
+}
 
-fun recur f = fn () => {
-                  reader = read (f ()),
-                  writer = write (f ())
-              }
+fun recur f = {
+    reader = fn bytes => (#reader (f ())) bytes,
+    writer = fn value => (#writer (f ())) value
+}
 
 val empty = Word8Vector.fromList [];
 
-val unit = fn () => {
+val unit = {
     reader = fn _ => (),
     writer = fn _ => empty
 };
 
-val bool = fn () => {
+val bool = {
     reader = fn w => case Word8.toInt (Word8Vector.sub (w, 0)) of
                          1 => true
                        | 0 => false
@@ -191,17 +190,17 @@ val int =
                (unshift (b7, 48)) +
                (unshift (b8, 56))
             end;
-    in fn () => {
-    reader = unpackInt,
-    writer = packInt
+    in {
+        reader = unpackInt,
+        writer = packInt
     } end;
 
-val real = fn () => {
+val real = {
     reader = PackRealBig.fromBytes,
     writer = PackRealBig.toBytes
 };
 
-val string = fn () => {
+val string = {
     reader = Byte.bytesToString,
     writer = Byte.stringToBytes
 };
@@ -225,7 +224,7 @@ fun tupleN n =
         fun writeTuple bytelist =
             let val lens = List.map ((write int) o Word8Vector.length) bytelist;
             in Word8Vector.concat (lens @ bytelist) end;
-    in fn () => {
+    in {
         reader = readTuple,
         writer = writeTuple
     } end;
@@ -260,7 +259,7 @@ val eitherN =
             in (Word8.toInt (Word8Vector.sub (bytes, 0)), getBytes bytes 1 len) end;
         fun writeEither (idx, data) =
             Word8Vector.concat [Word8Vector.fromList [Word8.fromInt idx], data];
-    in fn () => {
+    in {
         reader = readEither,
         writer = writeEither
     } end;
@@ -337,7 +336,7 @@ fun list at =
                                                          in Word8Vector.concat [len_b, b] end)
                                                 xs;
             in Word8Vector.concat (len_bytes::encoded_elements) end;
-    in fn () => {
+    in {
         reader = listReader,
         writer = listWriter
     } end;
