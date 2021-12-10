@@ -111,16 +111,23 @@ struct
   let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
         | stringifyC [] = ""
       val C = contentForKeywords transferKeywords ws
-      fun getTargetTySys [] = raise ParseError "no target type system for transfer"
-        | getTargetTySys ((x,c)::L) =
-            if x = SOME targetTypeSystemKW
-            then findTypeSystemWithName DC (String.concat c)
-            else getTargetTySys L
+
       fun getConstruction [] = raise ParseError "no construction to transfer"
         | getConstruction ((x,c)::L) =
             if x = SOME sourceConstructionKW
             then findConstructionWithName DC (String.concat c)
             else getConstruction L
+      val constructionRecord = getConstruction C
+      val construction = #construction constructionRecord
+      val sourceConSpecN = #conSpec constructionRecord
+      val sourceConSpec = findConSpecWithName DC sourceConSpecN
+      val sourceTypeSystem = findTypeSystemWithName DC (#typeSystem sourceConSpec)
+
+      fun getTargetTySys [] = sourceTypeSystem
+        | getTargetTySys ((x,c)::L) =
+            if x = SOME targetTypeSystemKW
+            then findTypeSystemWithName DC (String.concat c)
+            else getTargetTySys L
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
             if x = SOME goalKW
@@ -142,11 +149,6 @@ struct
             then true
             else getIterative L
       val targetTypeSystem = getTargetTySys C
-      val constructionRecord = getConstruction C
-      val construction = #construction constructionRecord
-      val sourceConSpecN = #conSpec constructionRecord
-      val sourceConSpec = findConSpecWithName DC sourceConSpecN
-      val sourceTypeSystem = findTypeSystemWithName DC (#typeSystem sourceConSpec)
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
