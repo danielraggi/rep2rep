@@ -7,13 +7,18 @@ signature TRANSFER =
 sig
   val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
   val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
-  val unfoldState : State.T -> State.T Seq.seq
+  val singleStepTransfer : State.T -> State.T Seq.seq
   val structureTransfer : Knowledge.base
                             -> Type.typeSystem
                             -> Type.typeSystem
                             -> Construction.construction
                             -> Relation.relationship
                             -> State.T Seq.seq
+  val iterativeStructureTransfer : Knowledge.base
+                                    -> Type.typeSystem
+                                    -> Construction.construction
+                                    -> Relation.relationship
+                                    -> State.T Seq.seq
 
 end;
 
@@ -42,7 +47,7 @@ struct
             in f
             end
       fun renameFunction x = mkRenameFunction names tokensInConstruction x
-      val updatedConstruction = Pattern.applyMorpism renameFunction ct
+      val updatedConstruction = Pattern.applyMorphism renameFunction ct
     in (renameFunction, updatedConstruction)
     end
 
@@ -74,13 +79,13 @@ struct
             refreshNamesOfConstruction targetPattern' patternComp
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
-                ((f,SOME x) :: _) => (f, x)
+                ((f,SOME x) ) => (f, x)
               | _ => raise CorrespondenceNotApplicable)
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
       fun srFun x = (Option.valOf o sourceRenamingFunction) x
-          handle Option => (Logging.write "\nERROR: source renaming function\n"; raise Option)
+          handle Option => (Logging.write ("\nERROR: source renaming function\n"); raise Option)
       fun trFun x = (Option.valOf o (partialFunComp targetRenamingFunction partialMorphism)) x
-          handle Option => (Logging.write "\nERROR: target renaming function\n"; raise Option)
+          handle Option => (Logging.write ("\nERROR: target renaming function\n"); raise Option)
       fun updateR (sfs,tfs,R) = (map srFun sfs, map trFun tfs, R)
       (*****)
       fun funUnion (f::L) x =
@@ -94,7 +99,7 @@ struct
       (*****)
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
-      val updatedPullList = map (fn (R,t) => (R, Option.valOf (targetRenamingFunction t))) (#pullList corr)
+      val updatedPullList = map (fn (R,R',t) => (R,R',Option.valOf (targetRenamingFunction t))) (#pullList corr)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         Correspondence.declareCorrespondence {name = #name corr,
                                               sourcePattern=matchingGenerator,
@@ -105,10 +110,10 @@ struct
     end
 
   fun applyPullItem [] _ _ = []
-    | applyPullItem ((x,y,R)::gs) t (R',t') =
+    | applyPullItem ((x,y,R)::gs) t (R',R'',t') =
     if Relation.same R R'
-    then (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R) :: applyPullItem gs t (R',t')
-    else (x,y,R)::applyPullItem gs t (R',t')
+    then (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'') :: applyPullItem gs t (R',R'',t')
+    else (x,y,R)::applyPullItem gs t (R',R'',t')
 
   exception Error
   fun applyCorrespondenceForGoal st corr goal =
@@ -139,158 +144,209 @@ struct
                                  then Composition.initFromConstruction targetPattern
                                  else Composition.attachConstructionAt patternComp targetPattern targetToken
         val transferProof = State.transferProofOf st
-        val updatedTransferProof = TransferProof.attachCorrAt instantiatedCorr goal transferProof
-        fun applyPullList [] = State.goalsOf (State.replaceGoal st goal rfs)
+        val updatedTransferProof' = TransferProof.attachCorrAt instantiatedCorr goal transferProof
+        val updatedTransferProof = TransferProof.attachCorrPulls instantiatedCorr targetToken updatedTransferProof'
+        val gs' = State.goalsOf (State.replaceGoal st goal rfs)
+        fun applyPullList [] = gs'
           | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
         val updatedGoals = applyPullList (#pullList instantiatedCorr)
+        val _ = if not (null (#pullList instantiatedCorr)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
+                then raise CorrespondenceNotApplicable else ()
         val stateWithUpdatedGoals = State.updateGoals st updatedGoals
         val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
     in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
     end
 
+  (* The function idempotencyOnGoals assumes that the relations being dumped are type-deterministic *)
+  fun idempotencyOnGoals st =
+    let fun isomorphic (x,y,R) (x',y',R') = List.allZip CSpace.sameTokens y y' andalso
+                                            List.allZip CSpace.tokensHaveSameType x x' andalso
+                                            Relation.same R R'
+        fun rg (g::gs) =
+            let val (keep,dump) = rg gs
+            in if List.exists (isomorphic g) keep
+               then (keep,g::dump)
+               else (g::keep,dump)
+            end
+          | rg [] = ([],[])
+        fun updateTransferProof (g::gs) = TransferProof.dump g (updateTransferProof gs)
+          | updateTransferProof [] = State.transferProofOf st
+        val (keep,dump) = rg (State.goalsOf st)
+        val stateWithUpdatedGoals = State.updateGoals st keep
+    in State.updateTransferProof stateWithUpdatedGoals (updateTransferProof dump)
+    end
+
   fun applyCorrespondence st corr =
-    let fun ac [] = Seq.empty
-          | ac (g::gs) = (Seq.cons (applyCorrespondenceForGoal st corr g) (ac gs)
+    let val newSt = idempotencyOnGoals st
+        fun ac [] = Seq.empty
+          | ac (g::gs) = (Seq.cons (applyCorrespondenceForGoal newSt corr g) (ac gs)
                             handle CorrespondenceNotApplicable => ac gs)
-    in ac (State.goalsOf st)
+        (***)
+    in ac (State.goalsOf newSt)
     end
 
-    (*
-  exception RelationNotApplicable
-  fun applyRelationshipForGoal st rel goal =
-    let val (xgs,ygs,Rg) = Relation.tupleOfRelationship goal
-        val (xs,ys,R) = Relation.tupleOfRelationship rel
-        val sT = #sourceTypeSystem st
-        val tT = #targetTypeSystem st
-        val _ = if Knowledge.subRelation (State.knowledgeOf st) R Rg
-                   andalso List.allZip (Pattern.tokenMatches sT) xs xgs
-                   andalso List.allZip (Pattern.tokenMatches tT) ys ygs
-                then () else raise RelationNotApplicable
-        fun makePartialMorphism (t::ts) (t'::ts') x =
-              if CSpace.sameTokens x t then SOME t' else makePartialMorphism ts ts' x
-          | makePartialMorphism [] [] _ = NONE
-          | makePartialMorphism _ _ _ = (print"impossible!";raise Error)
-        val f = makePartialMorphism ygs ys
-        val patternComp = State.patternCompOf st
-        fun attachInstantiatedLeaves [y] [yg] =
-              if Composition.isPlaceholder patternComp
-              then Composition.initFromConstruction (Pattern.Source y)
-              else Composition.attachConstructionAt patternComp (Pattern.Source y) yg
-          | attachInstantiatedLeaves (y::Y) (yg::Yg) =
-              Composition.attachConstructionAt (attachInstantiatedLeaves Y Yg) (Pattern.Source y) yg
-          | attachInstantiatedLeaves _ _ = (print"what?!";raise Error)
-        val updatedPatternComp = attachInstantiatedLeaves ys ygs
-        val stateWithUpdatedGoals = State.replaceGoal st goal []
-    in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedGoals updatedPatternComp)
-    end
-
-  fun applyRelationship st rel =
-    let fun ar [] = Seq.empty
-          | ar (g::gs) = (Seq.cons (applyRelationshipForGoal st rel g) (ar gs)
-                            handle RelationNotApplicable => ar gs)
-    in ar (State.goalsOf st)
-    end
-*)
-  (*
-  fun quickCorrFilter KB rships corrs =
-    let fun f [] corr = false
-          | f ((_,_,R)::rships) corr =
-        let val (_,Rc) = Correspondence.relationsOf corr
-        in Knowledge.subRelation KB Rc R orelse f rships corr
-        end
-    in FiniteSet.filter f corrs end
-  *)
-
-  fun unfoldState st =
-    let val corrs = (*FiniteSet.toSeq*) #correspondences (State.knowledgeOf st)
-        (*val corrs = FiniteSet.toSeq (Knowledge.correspondencesOf KB)
-        val rels = FiniteSet.toSeq (Knowledge.relationshipsOf KB)*)
-        (*val CR = quickCorrFilter KB (State.goalsOf st) (Set.union rels corrs)*)
-    in (*Seq.append (Seq.maps (applyRelationship st) rels)*)
-                  (Seq.maps (applyCorrespondence st) corrs) (*the returned sequence states is disjunctive; one must be satisfied *)
+  fun singleStepTransfer st =
+    let val corrs = #correspondences (State.knowledgeOf st)
+    in Seq.maps (applyCorrespondence st) corrs
     end
 
   exception BadGoal
+
   (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-  fun structureTransfer KB sourceT targetT ct goal =
+  fun structureTransferTac h ign forget state =
+      (*Search.depthFirst singleStepTransfer limit initialState*)
+      (*Search.graphDepthFirst singleStepTransfer eq limit initialState*)
+      (*Search.breadthFirstSortAndIgnore singleStepTransfer heuristic6 ign' initialState*)
+      (*Search.breadthFirstSortIgnoreForget singleStepTransfer heuristic4 ign' forget initialState*)
+      (*Search.depthFirstSortAndIgnore singleStepTransfer heuristic4 ign' initialState*)
+      (*Search.depthFirstSortIgnoreForget singleStepTransfer heuristic4 ign' forget initialState*)
+      (*Search.bestFirstSortAndIgnore singleStepTransfer heuristic6 ign' initialState*)
+      Search.bestFirstSortIgnoreForget singleStepTransfer h ign forget state
+
+    (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
+fun structureTransfer KB sourceT targetT ct goal =
+  let
+    val t = (case Relation.tupleOfRelationship goal of
+                (_,[x],_) => x
+              | _ => raise BadGoal)
+    val initialState = State.make {sourceTypeSystem = sourceT,
+                                    targetTypeSystem = targetT,
+                                    transferProof = TransferProof.ofRelationship goal,
+                                    construction = ct,
+                                    originalGoal = goal,
+                                    goals = [goal],
+                                    composition = Composition.makePlaceholderComposition t,
+                                    knowledge = KB}
+    fun heuristic1 (st,st') =
+      let val D = State.patternCompOf st
+          val D' = State.patternCompOf st'
+      in Int.compare ((Composition.size D'), (Composition.size D))
+      end
+    fun heuristic2 (st,st') =
+      let val gs = State.goalsOf st
+          val gs' = State.goalsOf st'
+          val D = State.patternCompOf st
+          val D' = State.patternCompOf st'
+      in Real.compare (real(Composition.size D') * Math.ln(real(length gs + 1)), real(Composition.size D) * Math.ln(real(length gs' + 1)))
+      end
+    fun heuristic3 (st,st') =
+      let val gs = State.goalsOf st
+          val gs' = State.goalsOf st'
+      in Int.compare (length gs,length gs')
+      end
+    fun opposite LESS = GREATER | opposite EQUAL = EQUAL | opposite GREATER = LESS
+    fun heuristic4 (st,st') =
+      let val gs = State.goalsOf st
+          val gs' = State.goalsOf st'
+          val gsn = length gs
+          val gsn' = length gs'
+          val D = State.patternCompOf st
+          val D' = State.patternCompOf st'
+          val P = Int.compare (Composition.size D,Composition.size D')
+      in if gsn = 0 andalso gsn' = 0 then P
+         else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P
+         else Int.compare (gsn,gsn')
+      end
+    fun heuristic5 _ =
+      let val x1 = MLtonRandom.rand ()
+          val X2 = map MLtonRandom.rand [(),(),(),(),(),(),(),(),(),()]
+          fun le x = List.all (fn y => x < y) X2
+      in if le x1 then LESS else GREATER
+      end
+    fun heuristic6 (st,st') =
+      let val gsn = length (State.goalsOf st)
+          val gsn' = length (State.goalsOf st')
+      in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
+         else Int.compare (gsn,gsn')
+      end
+    fun heuristicIS (st,st') =
+      let val gsn = length (State.goalsOf st)
+          val gsn' = length (State.goalsOf st')
+          val tproof = State.transferProofOf st
+          val tproof' = State.transferProofOf st'
+          val strength = Knowledge.strengthOf (State.knowledgeOf st)
+      in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
+         then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
+         else Int.compare (gsn,gsn')
+      end
+    val limit = 999
+    fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
+    fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
+    (*Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st')
+                andalso List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')*)
+    fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
+    fun ign' (st,L) = List.length (State.goalsOf st) > 20
+                orelse length L > limit
+              (*  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)*)
+                orelse Composition.size (State.patternCompOf st) > 40
+                orelse List.exists (fn x => eq' (x,st)) L
+                orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
+    fun forget st = List.length (State.goalsOf st) < 0
+  in structureTransferTac heuristicIS ign' forget initialState
+  end
+
+  fun v2t t =
+    let val tok = CSpace.nameOfToken t
+        val typ = CSpace.typeOfToken t
+        fun vt (x::xs) = if x = #"v" then #"t"::xs else x::xs
+          | vt [] = []
+    in SOME (CSpace.makeToken (String.implode (vt (String.explode tok))) typ)
+    end
+
+  exception Nope
+  fun iterativeStructureTransfer KB typeSystem ct goal =
     let
       val t = (case Relation.tupleOfRelationship goal of
                   (_,[x],_) => x
                 | _ => raise BadGoal)
-      val initialState = State.make {sourceTypeSystem = sourceT,
-                                      targetTypeSystem = targetT,
+      val initialState = State.make {sourceTypeSystem = typeSystem,
+                                      targetTypeSystem = typeSystem,
                                       transferProof = TransferProof.ofRelationship goal,
                                       construction = ct,
                                       originalGoal = goal,
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      fun heuristic1 (st,st') =
-        let val gs = State.goalsOf st
-            val gs' = State.goalsOf st'
-            val D = State.patternCompOf st
-            val D' = State.patternCompOf st'
-        in Int.compare ((Composition.size D'), (Composition.size D))
+      val (x,y,R) = Relation.tupleOfRelationship goal
+      fun updateState (C as {composition,goals,...}) =
+        let val newConstruction = (case Composition.resultingConstructions composition of [c] => Pattern.applyMorphism v2t c | _ => raise Nope)
+            val newConstruct = Construction.constructOf newConstruction
+            val newGoal = Relation.makeRelationship ([newConstruct],y,R)
+            val _ = if length goals > 0 then raise Nope else ()
+        in State.make {sourceTypeSystem = typeSystem,
+                      targetTypeSystem = typeSystem,
+                      transferProof = TransferProof.ofRelationship newGoal,
+                      construction = newConstruction,
+                      originalGoal = newGoal,
+                      goals = [newGoal],
+                      composition = Composition.makePlaceholderComposition newConstruct,
+                      knowledge = KB} handle Nope => (print "nope";C)
         end
-      fun heuristic2 (st,st') =
-        let val gs = State.goalsOf st
-            val gs' = State.goalsOf st'
-            val D = State.patternCompOf st
-            val D' = State.patternCompOf st'
-        in Real.compare (real(Composition.size D') * Math.ln(real(length gs + 1)), real(Composition.size D) * Math.ln(real(length gs' + 1)))
-        end
-      fun heuristic3 (st,st') =
-        let val gs = State.goalsOf st
-            val gs' = State.goalsOf st'
-            val D = State.patternCompOf st
-            val D' = State.patternCompOf st'
-        in Int.compare (length gs,length gs')
-        end
-      fun opposite LESS = GREATER | opposite EQUAL = EQUAL | opposite GREATER = LESS
-      fun heuristic4 (st,st') =
-        let val gs = State.goalsOf st
-            val gs' = State.goalsOf st'
-            val gsn = length gs
-            val gsn' = length gs'
-            val D = State.patternCompOf st
-            val D' = State.patternCompOf st'
-            val P = Int.compare (Composition.size D',Composition.size D)
-        in if gsn = 0 andalso gsn' = 0 then opposite P
-           else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P
-           else Int.compare (gsn,gsn')
-        end
-      fun heuristic5 _ =
-        let val x1 = MLtonRandom.rand ()
-            val X2 = map MLtonRandom.rand [(),(),(),(),(),(),(),(),(),()]
-            fun le x = List.all (fn y => x < y) X2
-        in if le x1 then LESS else GREATER
-        end
-      fun heuristic6 (st,st') =
-        let val gsn = length (State.goalsOf st)
+      fun heuristicIS (stx,st') =
+        let val gsn = length (State.goalsOf stx)
             val gsn' = length (State.goalsOf st')
-        in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
+            val tproof = State.transferProofOf stx
+            val tproof' = State.transferProofOf st'
+            val strength = Knowledge.strengthOf (State.knowledgeOf stx)
+        in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
+           then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
            else Int.compare (gsn,gsn')
         end
-      val limit = 9999
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
-      fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
-      fun ign' (st,L) = List.length (State.goalsOf st) > 10
-                  orelse length L > limit
-                  orelse Composition.size (State.patternCompOf st) > 4
-                  orelse not (Composition.unistructurable targetT (State.patternCompOf st))
-                  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)
-                  orelse List.exists (fn x => eq (x,st)) L
-      fun forget st = List.length (State.goalsOf st) < 0
-    in
-      (*Search.depthFirst unfoldState limit initialState*)
-      (*Search.graphDepthFirst unfoldState eq limit initialState*)
-      (*Search.breadthFirstSortAndIgnore unfoldState heuristic6 ign' initialState*)
-      (*Search.breadthFirstSortIgnoreForget unfoldState heuristic4 ign' forget initialState*)
-      (*Search.depthFirstSortAndIgnore unfoldState heuristic4 ign' initialState*)
-      (*Search.depthFirstSortIgnoreForget unfoldState heuristic6 ign' forget initialState*)
-      (*Search.bestFirstSortAndIgnore unfoldState heuristic6 ign' initialState*)
-      Search.bestFirstSortIgnoreForget unfoldState heuristic6 ign' forget initialState
+      val limit = 3
+      fun similar x y = Composition.pseudoSimilar (State.patternCompOf x) (State.patternCompOf y)
+      fun eqST (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
+      fun ign (st,L) = List.exists (fn x => similar x st) L
+      fun ignST (st,L) = List.length (State.goalsOf st) > 20
+                  orelse length L > 1999
+                (*  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)*)
+                  orelse Composition.size (State.patternCompOf st) > 40
+                  orelse List.exists (fn x => eqST (x,st)) L
+                  orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
+      fun forget st = List.length (State.goalsOf st) > 0
+      fun orderResults s = case Seq.pull s of SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) heuristicIS (uncurry similar) | NONE => Seq.empty
+      val ST = Seq.take limit o (structureTransferTac heuristicIS ignST forget)
+      val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) heuristicIS ign forget) (ST initialState)
+    in orderResults results
     end
-
 
 end;

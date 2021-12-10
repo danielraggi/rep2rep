@@ -13,10 +13,10 @@ sig
                                          -> construction
                                          -> pattern
                                          -> CSpace.token
-                                         -> ((CSpace.token -> CSpace.token option) * construction option) list;
+                                         -> ((CSpace.token -> CSpace.token option) * construction option) ;
 
   val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
-  val applyMorpism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
+  val applyMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
 end;
 
@@ -33,11 +33,11 @@ struct
   exception NoMatchingGenerator
 
   exception Undefined
-  fun applyMorpism f (Source t) = (case f t of NONE => raise Undefined | SOME x => Source x)
-    | applyMorpism f (Reference t) = (case f t of NONE => raise Undefined | SOME x => Reference x)
-    | applyMorpism f (TCPair ({token = t, constructor = c},cs)) =
+  fun applyMorphism f (Source t) = (case f t of NONE => raise Undefined | SOME x => Source x)
+    | applyMorphism f (Reference t) = (case f t of NONE => raise Undefined | SOME x => Reference x)
+    | applyMorphism f (TCPair ({token = t, constructor = c},cs)) =
         (case f t of NONE => raise Undefined
-                   | SOME x => TCPair ({token = x, constructor = c}, map (applyMorpism f) cs))
+                   | SOME x => TCPair ({token = x, constructor = c}, map (applyMorphism f) cs))
   fun applyPartialMorphism f (Source t) = (case f t of NONE => Source t | SOME x => Source x)
     | applyPartialMorphism f (Reference t) = (case f t of NONE => Reference t | SOME x => Reference x)
     | applyPartialMorphism f (TCPair ({token = t, constructor = c},cs)) =
@@ -86,7 +86,7 @@ struct
 
   fun findMapAndGeneratorMatching T ct ct' =
     let val f = findMapFromPatternToGenerator T ct ct'
-        val g = applyMorpism f ct'
+        val g = applyMorphism f ct'
     in (f, SOME g)
     end handle Undefined => (fn _ => NONE,NONE)
 
@@ -96,11 +96,24 @@ struct
   fun filterSomes' [] = []
     | filterSomes' ((_,NONE) :: L) = filterSomes' L
     | filterSomes' ((f,SOME x) :: L) = (f,SOME x) :: filterSomes' L
+  fun firstSome [] = (fn _ => NONE,NONE)
+    | firstSome ((_,NONE) :: L) = firstSome L
+    | firstSome ((f,SOME x) :: L) = (f,SOME x)
 
   fun findMapAndGeneratorMatchingForToken T ct p t =
-      if CSpace.sameTokens t (Construction.constructOf ct)
-      then [findMapAndGeneratorMatching T (Construction.fixReferences ct) p]
-      else (case ct of TCPair (_, cs) => filterSomes' (List.maps (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
-                                  | _ => [])
+      if CSpace.sameTokens t (constructOf ct)
+      then (findMapAndGeneratorMatching T (fixReferences ct) p)
+      else (case ct of
+              TCPair (_, cs) =>
+                let fun fmg (x::xs) = (case findMapAndGeneratorMatchingForToken T x p t of
+                                        (_,NONE) => fmg xs
+                                      | P => P)
+                      | fmg [] = (fn _ => NONE,NONE)
+                in fmg cs
+                end
+            | _ => (fn _ => NONE,NONE))
+
+      (*firstSome (List.map (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
+                                  | _ => (fn _ => NONE,NONE))*)
 
 end;

@@ -50,8 +50,9 @@ struct
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
+  val iterativeKW = "iterative"
   val ISKW = "IS"
-  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,ISKW]
+  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,iterativeKW,ISKW]
 
 
   fun breakOn s [] = ([],"",[])
@@ -135,6 +136,11 @@ struct
             if x = SOME limitKW
             then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
             else getLimit L
+      fun getIterative [] = false
+        | getIterative ((x,_)::L) =
+            if x = SOME iterativeKW
+            then true
+            else getIterative L
       val targetTypeSystem = getTargetTySys C
       val constructionRecord = getConstruction C
       val construction = #construction constructionRecord
@@ -144,10 +150,13 @@ struct
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
+      val iterative = getIterative C
       val KB = knowledgeOf DC
       val _ = print ("\nApplying structure transfer...");
       val startTime = Time.now();
-      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal;
+      val results = if iterative
+                    then Transfer.iterativeStructureTransfer KB sourceTypeSystem construction goal
+                    else Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
@@ -181,7 +190,9 @@ struct
             val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals (goal,goals,tproof)
             val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*, latexProof*)]))
+            val latexProof = mkLatexProof tproof
+            val CSize = Composition.size comp
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize(*, latexProof*)]))
         end
       val nres = length (Seq.list_of results);
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
@@ -296,7 +307,7 @@ struct
   fun parseConstruction s cspec =
     let
       fun c tacc s' =
-        case String.breakOn "[" (String.removeParentheses s') of
+        case String.breakOn "[" s' of
           (ts,"",_) =>
             let val tok = Parser.token ts
             in if List.exists (CSpace.sameTokens tok) tacc
@@ -311,7 +322,7 @@ struct
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, Parser.splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
-    in Construction.fixReferences (c [] (String.stripSpaces s))
+    in (*Construction.fixReferences*) (c [] (String.stripSpaces s))
     end;
 
   fun addCorrespondence (nn,cs) dc =
@@ -344,7 +355,9 @@ struct
             else getConstructRel L
       fun parsePull s =
         (case String.breakOn " to " s of
-          (Rs," to ",tks) => (Parser.relation (String.stripSpaces Rs), Parser.token tks)
+          (Rs," to ",S) => (case String.breakOn " as " S of
+                              (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.token tks)
+                            | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.token S))
         | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
       fun getPullList [] = []
         | getPullList ((x,pl) :: L) =
@@ -355,7 +368,7 @@ struct
                             raise ParseError ("no strength in correspondence " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
-            then Real.fromString (String.concat ss)
+            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in correspondence " ^ String.concat cs);raise Option)
             else getStrength L
       val blocks = contentForKeywords corrKeywords cs
       val sPatt = getPattern sourceKW blocks
@@ -372,11 +385,13 @@ struct
                   tokenRels = getTokenRels blocks,
                   constructRel = getConstructRel blocks,
                   pullList = getPullList blocks}
-      fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
-      val _ = Logging.write ("done\n")
+      val strengthVal = getStrength blocks
+      fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
+      val _ = Logging.write ("done\n");
+      fun ff (c,c') = Real.compare (valOf (strengthsUpd (Correspondence.nameOf c')), valOf (strengthsUpd (Correspondence.nameOf c)))
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
-      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr,
+      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr strengthVal ff,
       constructions = #constructions dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
@@ -388,6 +403,7 @@ struct
       val cspec = findConSpecWithName dc cspecN
       val ct = parseConstruction cts cspec
       val T = findTypeSystemWithName dc (#typeSystem cspec)
+
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
       val _ = if Construction.wellFormed  T ct then Logging.write ("\n  "^ name ^ " is well formed\n")
@@ -395,6 +411,7 @@ struct
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
+
       val ctRecord = {name = name, conSpec = cspecN, construction = ct}
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
@@ -419,7 +436,7 @@ struct
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
-      transferRequests = ws :: #transferRequests dc,
+      transferRequests = #transferRequests dc @ [ws],
       strengths = #strengths dc}
 
   fun read filename =

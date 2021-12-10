@@ -114,7 +114,7 @@ struct
         in Real.max(0.7,0.11* (Real.max(sizeOfToken, sizeOfType)))
         end
     | quickWidthEstimate (Construction.Reference _) = 0.0
-    | quickWidthEstimate (Construction.TCPair (_,cs)) = List.sumMap quickWidthEstimate cs
+    | quickWidthEstimate (Construction.TCPair ({token,...},cs)) = Real.max (quickWidthEstimate(Construction.Source token),List.sumMap quickWidthEstimate cs)
 
   fun construction' coor parentName i (Construction.Source t) =
         (case parentName of
