@@ -351,7 +351,7 @@ open String;
 
 fun splitOn sep s =
     if (String.size sep) = 1
-    then let val char = List.hd (String.explode sep) handle Empty => (print "hu!"; raise Empty)
+    then let val char = List.hd (String.explode sep)
              val match = equals char;
          in String.tokens match s end
     else let
