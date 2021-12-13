@@ -7,6 +7,12 @@ sig
 
   val configuratorMatches : CSpace.configurator -> CSpace.configurator -> bool
   val tokenMatches : Type.typeSystem -> CSpace.token -> CSpace.token -> bool
+  val matches : Type.typeSystem -> construction -> pattern -> bool;
+  val unifiable : Type.typeSystem -> pattern -> pattern -> bool;
+  val hasUnifiableGenerator : Type.typeSystem -> pattern -> pattern -> bool;
+  val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
+  val applyMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
+  val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val findMapFromPatternToGenerator : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option);
   val findMapAndGeneratorMatching : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
   val findMapAndGeneratorMatchingForToken : Type.typeSystem
@@ -15,9 +21,6 @@ sig
                                          -> CSpace.token
                                          -> ((CSpace.token -> CSpace.token option) * construction option) ;
 
-  val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
-  val applyMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
-  val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
 end;
 
 structure Pattern : PATTERN =
@@ -51,6 +54,39 @@ struct
       | (NONE,NONE) => NONE
       | (SOME y, SOME z) => if CSpace.sameTokens y z then SOME y else raise Undefined)
     | funUnion [] _ = NONE
+
+  (* Assumes well-formedness *)
+  fun matches T ct pt =
+    let fun m (Source t) (Source t') = tokenMatches T t t'
+          | m (Reference t) (Reference t') = tokenMatches T t t'
+          | m (TCPair ({token = t, constructor = c},cs)) (TCPair ({token = t', constructor = c'},cs')) =
+                CSpace.sameConstructors c c' andalso tokenMatches T t t' andalso
+                List.allZip (matches T) cs cs'
+          | m _ _ = false
+    in m ct pt
+    end
+
+  fun unifiable T ct1 ct2 =
+    let fun u (Source t) (Source t') = tokenMatches T t t' orelse tokenMatches T t' t
+          | u (Reference t) (Reference t') = tokenMatches T t t' orelse tokenMatches T t' t
+          | u (TCPair ({token = t, constructor = c},cs)) (TCPair ({token = t', constructor = c'},cs')) =
+                CSpace.sameConstructors c c' andalso (tokenMatches T t t' orelse tokenMatches T t' t) andalso
+                List.allZip (unifiable T) cs cs'
+          | u _ _ = false
+    in u ct1 ct2
+    end
+
+  fun hasUnifiableGenerator T ct1 ct2 =
+    let fun hu (Source t) (Source t') = tokenMatches T t t' orelse tokenMatches T t' t
+          | hu (Reference t) (Reference t') = tokenMatches T t t' orelse tokenMatches T t' t
+          | hu (TCPair ({token = t, constructor = c},cs)) (TCPair ({token = t', constructor = c'},cs')) =
+                CSpace.sameConstructors c c' andalso
+                (tokenMatches T t t' orelse tokenMatches T t' t) andalso
+                List.allZip (hasUnifiableGenerator T) cs cs'
+          | hu (TCPair ({token = t,...},_)) (Source t') = tokenMatches T t t' orelse tokenMatches T t' t
+          | hu _ _ = false
+    in hu ct1 ct2
+    end
 
   (* *)
   fun findMapFromPatternToGenerator T ct ct' =
