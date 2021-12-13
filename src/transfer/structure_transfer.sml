@@ -1,7 +1,6 @@
 import "transfer.search";
-import "transfer.state";
+import "transfer.heuristic";
 import "util.logging";
-import "util.random";
 
 signature TRANSFER =
 sig
@@ -188,7 +187,6 @@ struct
         fun ac [] = Seq.empty
           | ac (g::gs) = (Seq.cons (applyCorrespondenceForGoal newSt corr g) (ac gs)
                             handle CorrespondenceNotApplicable => ac gs)
-        (***)
     in ac (State.goalsOf newSt)
     end
 
@@ -199,18 +197,15 @@ struct
 
   exception BadGoal
 
-  (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
   fun structureTransferTac h ign forget state =
-      (*Search.depthFirst singleStepTransfer limit initialState*)
-      (*Search.graphDepthFirst singleStepTransfer eq limit initialState*)
-      (*Search.breadthFirstSortAndIgnore singleStepTransfer heuristic6 ign' initialState*)
-      (*Search.breadthFirstSortIgnoreForget singleStepTransfer heuristic4 ign' forget initialState*)
-      (*Search.depthFirstSortAndIgnore singleStepTransfer heuristic4 ign' initialState*)
-      (*Search.depthFirstSortIgnoreForget singleStepTransfer heuristic4 ign' forget initialState*)
-      (*Search.bestFirstSortAndIgnore singleStepTransfer heuristic6 ign' initialState*)
+      (*Search.breadthFirstSortAndIgnore singleStepTransfer h ign forget state*)
+      (*Search.breadthFirstSortIgnoreForget singleStepTransfer h ign forget state*)
+      (*Search.depthFirstSortAndIgnore singleStepTransfer h ign forget state*)
+      (*Search.depthFirstSortIgnoreForget singleStepTransfer h ign forget state*)
+      (*Search.bestFirstSortAndIgnore singleStepTransfer h ign forget state*)
       Search.bestFirstSortIgnoreForget singleStepTransfer h ign forget state
 
-    (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
+(* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
 fun structureTransfer KB sourceT targetT ct goal =
   let
     val t = (case Relation.tupleOfRelationship goal of
@@ -224,71 +219,17 @@ fun structureTransfer KB sourceT targetT ct goal =
                                     goals = [goal],
                                     composition = Composition.makePlaceholderComposition t,
                                     knowledge = KB}
-    fun heuristic1 (st,st') =
-      let val D = State.patternCompOf st
-          val D' = State.patternCompOf st'
-      in Int.compare ((Composition.size D'), (Composition.size D))
-      end
-    fun heuristic2 (st,st') =
-      let val gs = State.goalsOf st
-          val gs' = State.goalsOf st'
-          val D = State.patternCompOf st
-          val D' = State.patternCompOf st'
-      in Real.compare (real(Composition.size D') * Math.ln(real(length gs + 1)), real(Composition.size D) * Math.ln(real(length gs' + 1)))
-      end
-    fun heuristic3 (st,st') =
-      let val gs = State.goalsOf st
-          val gs' = State.goalsOf st'
-      in Int.compare (length gs,length gs')
-      end
-    fun opposite LESS = GREATER | opposite EQUAL = EQUAL | opposite GREATER = LESS
-    fun heuristic4 (st,st') =
-      let val gs = State.goalsOf st
-          val gs' = State.goalsOf st'
-          val gsn = length gs
-          val gsn' = length gs'
-          val D = State.patternCompOf st
-          val D' = State.patternCompOf st'
-          val P = Int.compare (Composition.size D,Composition.size D')
-      in if gsn = 0 andalso gsn' = 0 then P
-         else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P
-         else Int.compare (gsn,gsn')
-      end
-    fun heuristic5 _ =
-      let val x1 = MLtonRandom.rand ()
-          val X2 = map MLtonRandom.rand [(),(),(),(),(),(),(),(),(),()]
-          fun le x = List.all (fn y => x < y) X2
-      in if le x1 then LESS else GREATER
-      end
-    fun heuristic6 (st,st') =
-      let val gsn = length (State.goalsOf st)
-          val gsn' = length (State.goalsOf st')
-      in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0) then heuristic5 (st,st')
-         else Int.compare (gsn,gsn')
-      end
-    fun heuristicIS (st,st') =
-      let val gsn = length (State.goalsOf st)
-          val gsn' = length (State.goalsOf st')
-          val tproof = State.transferProofOf st
-          val tproof' = State.transferProofOf st'
-          val strength = Knowledge.strengthOf (State.knowledgeOf st)
-      in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-         then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
-         else Int.compare (gsn,gsn')
-      end
     val limit = 4999
     fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
     fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') andalso
                        Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st')
-    fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
-    fun ign' (st,L) = List.length (State.goalsOf st) > 6
+    fun ign (st,L) = List.length (State.goalsOf st) > 10
                 orelse length L > limit
-              (*  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)*)
-                orelse Composition.size (State.patternCompOf st) > 15
+                orelse Composition.size (State.patternCompOf st) > 20
                 orelse List.exists (fn x => eq' (x,st)) L
                 orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
     fun forget st = List.length (State.goalsOf st) < 0
-  in structureTransferTac heuristicIS ign' forget initialState
+  in structureTransferTac Heuristic.transferProofMultStrengths ign forget initialState
   end
 
   fun v2t t =
@@ -328,30 +269,19 @@ fun structureTransfer KB sourceT targetT ct goal =
                       composition = Composition.makePlaceholderComposition newConstruct,
                       knowledge = KB} handle Nope => (print "nope";C)
         end
-      fun heuristicIS (stx,st') =
-        let val gsn = length (State.goalsOf stx)
-            val gsn' = length (State.goalsOf st')
-            val tproof = State.transferProofOf stx
-            val tproof' = State.transferProofOf st'
-            val strength = Knowledge.strengthOf (State.knowledgeOf stx)
-        in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-           then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
-           else Int.compare (gsn,gsn')
-        end
       val limit = 3
       fun similar x y = Composition.pseudoSimilar (State.patternCompOf x) (State.patternCompOf y)
       fun eqST (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
       fun ign (st,L) = List.exists (fn x => similar x st) L
       fun ignST (st,L) = List.length (State.goalsOf st) > 20
                   orelse length L > 1999
-                (*  orelse List.exists Relation.relationshipIsFalse (State.goalsOf st)*)
                   orelse Composition.size (State.patternCompOf st) > 40
                   orelse List.exists (fn x => eqST (x,st)) L
                   orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
       fun forget st = List.length (State.goalsOf st) > 0
-      fun orderResults s = case Seq.pull s of SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) heuristicIS (uncurry similar) | NONE => Seq.empty
-      val ST = Seq.take limit o (structureTransferTac heuristicIS ignST forget)
-      val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) heuristicIS ign forget) (ST initialState)
+      fun orderResults s = case Seq.pull s of SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) Heuristic.transferProofMultStrengths (uncurry similar) | NONE => Seq.empty
+      val ST = Seq.take limit o (structureTransferTac Heuristic.transferProofMultStrengths ignST forget)
+      val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) Heuristic.transferProofMultStrengths ign forget) (ST initialState)
     in orderResults results
     end
 
@@ -382,27 +312,16 @@ fun structureTransfer KB sourceT targetT ct goal =
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      fun heuristicIS (st,st') =
-        let val gsn = length (State.goalsOf st)
-            val gsn' = length (State.goalsOf st')
-            val tproof = State.transferProofOf st
-            val tproof' = State.transferProofOf st'
-            val strength = Knowledge.strengthOf (State.knowledgeOf st)
-        in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-           then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
-           else Int.compare (gsn,gsn')
-        end
-      val limit = 999
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
-      fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') andalso
-                         Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st')
-      fun ign (st,L) = List.length (State.goalsOf st) > 30 orelse length L > limit orelse List.exists (fn x => eq (x,st)) L
-      fun ign' (st,L) = List.length (State.goalsOf st) > 6
+      val limit = 1999
+      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
+      fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') (*orelse
+                         (Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st') andalso eq (st,st'))*)
+      fun ign (st,L) = List.length (State.goalsOf st) > 15
                   orelse length L > limit
                   orelse List.exists (fn x => eq' (x,st)) L
                   orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
-      fun forget st = List.length (State.goalsOf st) < 0
-    in targetedTransferTac heuristicIS ign' forget targetCt initialState
+      fun forget st = List.length (State.goalsOf st) > 0
+    in targetedTransferTac Heuristic.transferProofMultStrengths ign forget targetCt initialState
     end
 
 end;
