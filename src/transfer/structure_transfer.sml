@@ -292,8 +292,9 @@ fun structureTransfer KB sourceT targetT ct goal =
               [c] => c
             | _ => raise CorrespondenceNotApplicable)
         fun withinTarget st =
-          Pattern.hasUnifiableGenerator targetTypeSystem targetCt (constructionOfComp st)
-        fun matchesTarget st = Pattern.matches targetTypeSystem (constructionOfComp st) targetCt
+          Pattern.hasUnifiableGenerator targetTypeSystem targetCt (constructionOfComp st) handle CorrespondenceNotApplicable => false
+        fun matchesTarget st =
+          Pattern.matches targetTypeSystem (constructionOfComp st) targetCt handle CorrespondenceNotApplicable => false
         fun forget' st = forget st orelse not (matchesTarget st)
         fun ign' (st,L) = ign (st,L) orelse not (withinTarget st)
     in Search.bestFirstSortIgnoreForget singleStepTransfer h ign' forget' state
@@ -312,14 +313,13 @@ fun structureTransfer KB sourceT targetT ct goal =
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      val limit = 1999
+      val limit = 4999
       fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
-      fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') (*orelse
-                         (Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st') andalso eq (st,st'))*)
+      fun eq' (st,st') = (*TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') andalso*)
+                         Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st') andalso eq (st,st')
       fun ign (st,L) = List.length (State.goalsOf st) > 15
                   orelse length L > limit
                   orelse List.exists (fn x => eq' (x,st)) L
-                  orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
       fun forget st = List.length (State.goalsOf st) > 0
     in targetedTransferTac Heuristic.transferProofMultStrengths ign forget targetCt initialState
     end
