@@ -9,7 +9,7 @@ sig
   type walk;
 
   val same : construction -> construction -> bool;
-  val similar : construction -> construction -> bool;
+  (*val similar : construction -> construction -> bool;*)
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> construction -> bool;

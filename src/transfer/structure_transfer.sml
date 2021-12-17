@@ -11,11 +11,14 @@ sig
                             -> Type.typeSystem
                             -> Type.typeSystem
                             -> Construction.construction
+                            -> bool
                             -> Relation.relationship
                             -> State.T Seq.seq
   val iterativeStructureTransfer : Knowledge.base
                                     -> Type.typeSystem
                                     -> Construction.construction
+                                    -> bool
+                                    -> Pattern.pattern option
                                     -> Relation.relationship
                                     -> State.T Seq.seq
   val targetedTransfer : Knowledge.base
@@ -23,6 +26,14 @@ sig
                             -> Type.typeSystem
                             -> Construction.construction
                             -> Pattern.pattern
+                            -> Relation.relationship
+                            -> State.T Seq.seq
+  val masterTransfer : bool -> bool
+                            -> Pattern.pattern option
+                            -> Knowledge.base
+                            -> Type.typeSystem
+                            -> Type.typeSystem
+                            -> Construction.construction
                             -> Relation.relationship
                             -> State.T Seq.seq
 
@@ -206,7 +217,7 @@ struct
       Search.bestFirstSortIgnoreForget singleStepTransfer h ign forget state
 
 (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
-fun structureTransfer KB sourceT targetT ct goal =
+fun structureTransfer KB sourceT targetT ct unistructured goal =
   let
     val t = (case Relation.tupleOfRelationship goal of
                 (_,[x],_) => x
@@ -219,17 +230,8 @@ fun structureTransfer KB sourceT targetT ct goal =
                                     goals = [goal],
                                     composition = Composition.makePlaceholderComposition t,
                                     knowledge = KB}
-    val limit = 4999
-    fun eq (st,st') = List.isPermutationOf (uncurry Relation.sameRelationship) (State.goalsOf st) (State.goalsOf st')
-    fun eq' (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') andalso
-                       Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st')
-    fun ign (st,L) = List.length (State.goalsOf st) > 10
-                orelse length L > limit
-                orelse Composition.size (State.patternCompOf st) > 20
-                orelse List.exists (fn x => eq' (x,st)) L
-                orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
-    fun forget st = List.length (State.goalsOf st) < 0
-  in structureTransferTac Heuristic.transferProofMultStrengths ign forget initialState
+    val ign = Heuristic.ignore 10 9999 30 unistructured
+  in structureTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetRelaxed initialState
   end
 
   fun v2t t =
@@ -241,7 +243,17 @@ fun structureTransfer KB sourceT targetT ct goal =
     end
 
   exception Nope
-  fun iterativeStructureTransfer KB typeSystem ct goal =
+
+  fun constructionOfComp st =
+    (case Composition.resultingConstructions (State.patternCompOf st) of
+        [c] => c
+      | _ => raise Nope)
+  fun withinTarget targetTypeSystem targetPattern st =
+    Pattern.hasUnifiableGenerator targetTypeSystem targetPattern (constructionOfComp st) handle Nope => false
+  fun matchesTarget targetTypeSystem targetPattern st =
+    Pattern.matches targetTypeSystem (constructionOfComp st) targetPattern handle Nope => false
+
+  fun iterativeStructureTransfer KB typeSystem ct unistructured targetPatternOption goal =
     let
       val t = (case Relation.tupleOfRelationship goal of
                   (_,[x],_) => x
@@ -256,7 +268,9 @@ fun structureTransfer KB sourceT targetT ct goal =
                                       knowledge = KB}
       val (x,y,R) = Relation.tupleOfRelationship goal
       fun updateState (C as {composition,goals,...}) =
-        let val newConstruction = (case Composition.resultingConstructions composition of [c] => Pattern.applyMorphism v2t c | _ => raise Nope)
+        let val newConstruction = (case Composition.resultingConstructions composition of
+                                      [c] => Pattern.applyMorphism v2t c
+                                    | _ => raise Nope)
             val newConstruct = Construction.constructOf newConstruction
             val newGoal = Relation.makeRelationship ([newConstruct],y,R)
             val _ = if length goals > 0 then raise Nope else ()
@@ -267,40 +281,31 @@ fun structureTransfer KB sourceT targetT ct goal =
                       originalGoal = newGoal,
                       goals = [newGoal],
                       composition = Composition.makePlaceholderComposition newConstruct,
-                      knowledge = KB} handle Nope => (print "nope";C)
+                      knowledge = KB} handle Nope => (print "nope!\n";C)
         end
-      val limit = 3
-      fun similar x y = Composition.pseudoSimilar (State.patternCompOf x) (State.patternCompOf y)
-      fun eqST (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
-      fun ign (st,L) = List.exists (fn x => similar x st) L
-      fun ignST (st,L) = List.length (State.goalsOf st) > 20
-                  orelse length L > 1999
-                  orelse Composition.size (State.patternCompOf st) > 40
-                  orelse List.exists (fn x => eqST (x,st)) L
-                  orelse not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st))
-      fun forget st = List.length (State.goalsOf st) > 0
-      fun orderResults s = case Seq.pull s of SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) Heuristic.transferProofMultStrengths (uncurry similar) | NONE => Seq.empty
-      val ST = Seq.take limit o (structureTransferTac Heuristic.transferProofMultStrengths ignST forget)
+      fun ign (st,L) = List.exists (fn x => Heuristic.similarGoalsAndComps (x, st)) L
+      val ignST = Heuristic.ignore 15 1999 30 unistructured
+      fun forget (st,L) = Heuristic.forgetStrict (st,L) orelse
+                      (case targetPatternOption of
+                          SOME targetPattern => not (matchesTarget typeSystem targetPattern st)
+                        | NONE => false)
+      fun orderResults s =
+        case Seq.pull s of
+          SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) Heuristic.transferProofMultStrengths Heuristic.similarGoalsAndComps
+        | NONE => Seq.empty
+      val ST = Seq.take 3 o (structureTransferTac Heuristic.transferProofMultStrengths ignST forget)
       val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) Heuristic.transferProofMultStrengths ign forget) (ST initialState)
     in orderResults results
     end
 
-  fun targetedTransferTac h ign forget targetCt state =
+  fun targetedTransferTac h ign forget targetPattern state =
     let val targetTypeSystem = State.targetTypeSystemOf state
-        fun constructionOfComp st =
-          (case Composition.resultingConstructions (State.patternCompOf st) of
-              [c] => c
-            | _ => raise CorrespondenceNotApplicable)
-        fun withinTarget st =
-          Pattern.hasUnifiableGenerator targetTypeSystem targetCt (constructionOfComp st) handle CorrespondenceNotApplicable => false
-        fun matchesTarget st =
-          Pattern.matches targetTypeSystem (constructionOfComp st) targetCt handle CorrespondenceNotApplicable => false
-        fun forget' st = forget st orelse not (matchesTarget st)
-        fun ign' (st,L) = ign (st,L) orelse not (withinTarget st)
+        fun forget' (st,L) = forget (st,L) orelse not (matchesTarget targetTypeSystem targetPattern st)
+        fun ign' (st,L) = ign (st,L) orelse not (withinTarget targetTypeSystem targetPattern st)
     in Search.bestFirstSortIgnoreForget singleStepTransfer h ign' forget' state
     end
 
-  fun targetedTransfer KB sourceT targetT ct targetCt goal =
+  fun targetedTransfer KB sourceT targetT ct targetPattern goal =
     let
       val t = (case Relation.tupleOfRelationship goal of
                   (_,[x],_) => x
@@ -313,15 +318,19 @@ fun structureTransfer KB sourceT targetT ct goal =
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      val limit = 4999
-      fun eq (st,st') = List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) (State.goalsOf st) (State.goalsOf st')
-      fun eq' (st,st') = (*TransferProof.similar (State.transferProofOf st) (State.transferProofOf st') andalso*)
-                         Composition.pseudoSimilar (State.patternCompOf st) (State.patternCompOf st') andalso eq (st,st')
-      fun ign (st,L) = List.length (State.goalsOf st) > 15
-                  orelse length L > limit
-                  orelse List.exists (fn x => eq' (x,st)) L
-      fun forget st = List.length (State.goalsOf st) > 0
-    in targetedTransferTac Heuristic.transferProofMultStrengths ign forget targetCt initialState
+      val ign = Heuristic.ignoreRelaxed 10 1999
+    in targetedTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetStrict targetPattern initialState
+    end
+
+  fun masterTransfer iterative unistructured targetPattOption KB sourceT targetT ct goal =
+    let val _ = if isSome targetPattOption andalso unistructured
+                then (Logging.write "incompatible or unsupported options: matchTarget & unistructured"; raise Nope)
+                else ()
+    in
+      if iterative then iterativeStructureTransfer KB sourceT ct unistructured targetPattOption goal
+      else (case targetPattOption of
+              NONE => structureTransfer KB sourceT targetT ct unistructured goal
+            | SOME targetPattern => targetedTransfer KB sourceT targetT ct targetPattern goal)
     end
 
 end;

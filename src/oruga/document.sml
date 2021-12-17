@@ -51,9 +51,10 @@ struct
   val outputKW = "output"
   val limitKW = "limit"
   val iterativeKW = "iterative"
+  val unistructuredKW = "unistructured"
   val matchTargetKW = "matchTarget"
   val targetConSpecKW = "targetConSpec"
-  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,iterativeKW,matchTargetKW,targetConSpecKW]
+  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW]
 
 
   fun breakOn s [] = ([],"",[])
@@ -373,21 +374,18 @@ struct
             if x = SOME iterativeKW
             then (case getMatchTarget C of NONE => true | _ => raise ParseError "iterative and matchTarget are incompatible")
             else getIterative L
+      fun getUnistructured [] = false
+        | getUnistructured ((x,_)::L) =
+            if x = SOME unistructuredKW
+            then true
+            else getUnistructured L
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
       val iterative = getIterative C
       val KB = knowledgeOf DC
-      val _ = print ("\nApplying structure transfer...");
-      val startTime = Time.now();
-      val results = if iterative
-                    then Transfer.iterativeStructureTransfer KB sourceTypeSystem construction goal
-                    else (case getMatchTarget C of
-                            NONE => Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal
-                          | SOME mtct => Transfer.targetedTransfer KB sourceTypeSystem targetTypeSystem construction mtct goal);
-      val endTime = Time.now();
-      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
-      val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
+      val unistructured = getUnistructured C
+      val targetPattern = getMatchTarget C
       fun getCompsAndGoals [] = []
         | getCompsAndGoals (h::t) = (State.patternCompOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
       fun mkLatexGoals (goal,goals,tproof) =
@@ -422,9 +420,15 @@ struct
             val CSize = Composition.size comp
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize(*, latexProof*)]))
         end
+      val _ = print ("\nApplying structure transfer...");
+      val startTime = Time.now();
+      val results = Transfer.masterTransfer iterative unistructured targetPattern KB sourceTypeSystem targetTypeSystem construction goal;
       val nres = length (Seq.list_of results);
-      val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       val (listOfResults,_) = Seq.chop limit results;
+      val endTime = Time.now();
+      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
+      val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
+      val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       val compsAndGoals = getCompsAndGoals listOfResults;
       val transferProofs = map State.transferProofOf listOfResults
       val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals

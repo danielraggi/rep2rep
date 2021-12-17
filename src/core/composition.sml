@@ -80,12 +80,16 @@ struct
     | unistructurable T (Composition {attachments = [], ...}) = true
 
   fun similar (Composition {construct = c, attachments = A}) (Composition {construct = c', attachments = A'}) =
-    let fun similarAttachments [] [] = true
-          | similarAttachments ((ct,compL)::L) ((ct',compL')::L') = Construction.similar ct ct' andalso List.allZip similar compL compL' andalso similarAttachments L L'
-          | similarAttachments _ _ = false
+    let fun SA (ct,compL) (ct',compL') =
+          let val (similarCts,f) = Pattern.mapUnder ct ct' CSpace.tokensHaveSameType CSpace.sameConstructors
+              fun mapAndSimilar (x,y) =
+                  CSpace.sameTokens (valOf (f (constructOfComposition x))) (constructOfComposition y)
+                  andalso similar x y
+          in similarCts andalso List.isPermutationOf mapAndSimilar compL compL' handle Option => (print "hm";false)
+          end
+        fun similarAttachments L L' = List.isPermutationOf (uncurry SA) L L'
     in CSpace.tokensHaveSameType c c' andalso similarAttachments A A'
     end
-
 
   fun makePlaceholderComposition t = Composition {construct = t, attachments = []}
 
@@ -148,7 +152,7 @@ struct
     end
 
   fun pseudoSimilar C C' =
-    List.isPermutationOf (uncurry Construction.similar) (resultingConstructions C) (resultingConstructions C')
+    List.isPermutationOf (uncurry Pattern.similar) (resultingConstructions C) (resultingConstructions C')
 
   fun leavesOfComposition (Composition {attachments = (ct,C::CL)::L, construct}) =
         Construction.leavesOfConstruction ct :: ((leavesOfComposition C)
