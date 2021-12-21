@@ -132,12 +132,14 @@ struct
       in Construction.Source t
       end
 
-
   fun multProp (x::L) = x * multProp L
     | multProp [] = 1.0
   fun multiplicativeIS p (Closed (r,npp,L)) =
         (case p (#name npp) of
             SOME s => s
-          | NONE => 1.0 ) * multProp (map (multiplicativeIS p) L)
-    | multiplicativeIS p (Open r) = 0.01
+          | NONE => 1.0) * multProp (map (multiplicativeIS p) L)
+    | multiplicativeIS p (Open r) =
+        (case r of ([],_,_) => 0.5
+                 | ([_],[_],_) => 0.02
+                 | _ => 0.1)
 end
