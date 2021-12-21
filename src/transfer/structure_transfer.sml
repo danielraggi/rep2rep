@@ -230,7 +230,7 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
                                     goals = [goal],
                                     composition = Composition.makePlaceholderComposition t,
                                     knowledge = KB}
-    val ign = Heuristic.ignore 10 9999 30 unistructured
+    val ign = Heuristic.ignore 15 9999 45 unistructured
   in structureTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetRelaxed initialState
   end
 
@@ -284,7 +284,7 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
                       knowledge = KB} handle Nope => (print "nope!\n";C)
         end
       fun ign (st,L) = List.exists (fn x => Heuristic.similarGoalsAndComps (x, st)) L
-      val ignST = Heuristic.ignore 10 1999 30 unistructured
+      val ignST = Heuristic.ignore 15 1999 45 unistructured
       fun forget (st,L) = Heuristic.forgetStrict (st,L) orelse
                       (case targetPatternOption of
                           SOME targetPattern => not (matchesTarget typeSystem targetPattern st)
@@ -318,7 +318,7 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
                                       goals = [goal],
                                       composition = Composition.makePlaceholderComposition t,
                                       knowledge = KB}
-      val ign = Heuristic.ignoreRelaxed 10 9999
+      val ign = Heuristic.ignoreRelaxed 15 9999
     in targetedTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetStrict targetPattern initialState
     end
 
