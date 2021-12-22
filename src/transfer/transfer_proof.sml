@@ -19,7 +19,6 @@ sig
                               -> Correspondence.corr -> tproof -> tproof;
 
   val toConstruction : tproof -> Construction.construction;
-  val multiplicativeIS : (string -> real option) -> tproof -> real;
 end;
 
 structure TransferProof : TRANSFER_PROOF =
@@ -63,18 +62,18 @@ struct
     | attachCorrPulls corr t (Open (x,y,R)) =
       let val pullList = Correspondence.pullListOf corr
           (*val t = Pattern.constructOf (#targetPattern corr)*)
-          fun applyPullItems ((R',R'',t') :: L) =
+          fun applyPullItems ((R',R'',tL) :: L) =
                 if Relation.same R R' andalso List.exists (CSpace.sameTokens t) y
-                then SOME (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')
+                then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL
                 else applyPullItems L
-            | applyPullItems [] = NONE
+            | applyPullItems [] = []
       in case applyPullItems pullList of
-            NONE => Open (x,y,R)
-          | SOME r => Closed ((x,y,R),
-                              {name = #name corr ^ "\\_pull",
-                               sourcePattern = #sourcePattern corr,
-                               targetPattern = #targetPattern corr},
-                              [Open r])
+            [] => Open (x,y,R)
+          | rL => Closed ((x,y,R),
+                          {name = #name corr ^ "\\_pull",
+                           sourcePattern = #sourcePattern corr,
+                           targetPattern = #targetPattern corr},
+                           map Open rL)
       end
 
   fun dump g (Closed (r,npp,L)) = Closed (r,npp, map (dump g) L)
@@ -132,14 +131,4 @@ struct
       in Construction.Source t
       end
 
-  fun multProp (x::L) = x * multProp L
-    | multProp [] = 1.0
-  fun multiplicativeIS p (Closed (r,npp,L)) =
-        (case p (#name npp) of
-            SOME s => s
-          | NONE => 1.0) * multProp (map (multiplicativeIS p) L)
-    | multiplicativeIS p (Open r) =
-        (case r of ([],_,_) => 0.5
-                 | ([_],[_],_) => 0.02
-                 | _ => 0.1)
 end

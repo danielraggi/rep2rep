@@ -244,8 +244,8 @@ struct
       fun parsePull s =
         (case String.breakOn " to " s of
           (Rs," to ",S) => (case String.breakOn " as " S of
-                              (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.token tks)
-                            | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.token S))
+                              (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.list Parser.token (String.stripSpaces tks))
+                            | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.list Parser.token (String.stripSpaces S)))
         | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
       fun getPullList [] = []
         | getPullList ((x,pl) :: L) =
@@ -391,12 +391,12 @@ struct
       fun mkLatexGoals (goal,goals,tproof) =
         let val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map Latex.relationship goals)
             val originalGoalS = Latex.relationship goal ^ "\\\\ \n"
-            val IS = TransferProof.multiplicativeIS (strengthsOf DC) tproof
+            val IS = Heuristic.multiplicativeScore (strengthsOf DC) tproof
             val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"
                                                                       ^ originalGoalS
                                                                       ^ "\\\\ \\mathbf{Open\\ goals}\\\\\n"
                                                                       ^ goalsS ^ "\\\\"
-                                                                      ^ "\\\\ \\mathbf{IS\\ score}\\\\\n"
+                                                                      ^ "\\\\ \\mathbf{transfer\\ score}\\\\\n"
                                                                       ^ Real.toString IS))
         in alignedGoals
         end
@@ -420,7 +420,7 @@ struct
             val CSize = Composition.size comp
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize(*, latexProof*)]))
         end
-      val _ = print ("\nApplying structure transfer...");
+      val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();
       val results = Transfer.masterTransfer iterative unistructured targetPattern KB sourceTypeSystem targetTypeSystem construction goal;
       val nres = length (Seq.list_of results);
@@ -435,9 +435,9 @@ struct
       fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
       val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
       val is = (Propagation.evaluate E) (hd tproofConstruction) handle Empty => (SOME 0.0)
-      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
+      val is' = SOME (Heuristic.multiplicativeScore (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
     (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
-      val _ = print ("  informational suitability score: " ^ Real.toString (valOf is') ^ "\n")
+      val _ = print ("  transfer score: " ^ Real.toString (valOf is') ^ "\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
       val latexCT = Latex.construction (0.0,0.0) construction;

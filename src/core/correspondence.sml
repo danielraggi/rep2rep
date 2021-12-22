@@ -8,19 +8,19 @@ sig
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
                constructRel : Relation.relationship,
-               pullList : (Relation.T * Relation.T * CSpace.token) list};
+               pullList : (Relation.T * Relation.T * CSpace.token list) list};
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> corr -> bool;
   val nameOf : corr -> string;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
-  val pullListOf : corr -> (Relation.T * Relation.T * CSpace.token) list
+  val pullListOf : corr -> (Relation.T * Relation.T * CSpace.token list) list
   val ofRelationship : Relation.relationship -> string -> corr;
   val declareCorrespondence : {name : string,
                                sourcePattern : Pattern.construction,
                                targetPattern : Pattern.construction,
                                tokenRels : Relation.relationship list,
                                constructRel : Relation.relationship,
-                               pullList : (Relation.T * Relation.T * CSpace.token) list} -> corr;
+                               pullList : (Relation.T * Relation.T * CSpace.token list) list} -> corr;
 end;
 
 structure Correspondence : CORRESPONDENCE =
@@ -30,7 +30,7 @@ struct
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
                constructRel : Relation.relationship,
-               pullList : (Relation.T * Relation.T * CSpace.token) list};
+               pullList : (Relation.T * Relation.T * CSpace.token list) list};
 
   exception badForm
   fun wellFormed sT tT {name,sourcePattern,targetPattern,tokenRels,constructRel,pullList} =
@@ -46,8 +46,8 @@ struct
                                  andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false
        fun okAtPullList [] = true
-         | okAtPullList ((_,_,t)::pL) = List.exists (CSpace.sameTokens t) targetTokens
-                                      andalso not (CSpace.sameTokens t (Pattern.constructOf targetPattern))
+         | okAtPullList ((_,_,tL)::pL) = List.all (fn t => List.exists (CSpace.sameTokens t) targetTokens) tL
+                                      andalso List.all (fn t => not (CSpace.sameTokens t (Pattern.constructOf targetPattern))) tL
                                       andalso okAtPullList pL
     in Pattern.wellFormed sT sourcePattern andalso Pattern.wellFormed tT targetPattern
         andalso okAtConstructs constructRel andalso okAtTokens tokenRels

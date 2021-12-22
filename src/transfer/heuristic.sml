@@ -15,6 +15,7 @@ sig
   val zeroGoalsOtherwiseCompositionSize : State.T * State.T -> order
   val random : State.T * State.T -> order
   val zeroGoalsOtherwiseRandom : State.T * State.T -> order
+  val multiplicativeScore : (string -> real option) -> TransferProof.tproof -> real
   val transferProofMultStrengths : State.T * State.T -> order
 end
 
@@ -93,6 +94,18 @@ fun zeroGoalsOtherwiseRandom (st,st') =
      else Int.compare (gsn,gsn')
   end
 
+
+fun multProp (x::L) = x * multProp L
+  | multProp [] = 1.0
+fun multiplicativeScore p (TransferProof.Closed (r,npp,L)) =
+      (case p (#name npp) of
+          SOME s => s
+        | NONE => 1.0) * multProp (map (multiplicativeScore p) L)
+  | multiplicativeScore p (TransferProof.Open r) =
+      (case r of ([],_,_) => 0.99
+               | ([_],[_],_) => 0.01
+               | _ => 0.5)
+
 fun transferProofMultStrengths (st,st') =
   let val gsn = length (State.goalsOf st)
       val gsn' = length (State.goalsOf st')
@@ -100,7 +113,7 @@ fun transferProofMultStrengths (st,st') =
       val tproof' = State.transferProofOf st'
       val strength = Knowledge.strengthOf (State.knowledgeOf st)
   in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-     then Real.compare (TransferProof.multiplicativeIS strength tproof',TransferProof.multiplicativeIS strength tproof)
+     then Real.compare (multiplicativeScore strength tproof',multiplicativeScore strength tproof)
      else Int.compare (gsn,gsn')
   end
 

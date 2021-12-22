@@ -116,7 +116,7 @@ struct
       (*****)
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
-      val updatedPullList = map (fn (R,R',t) => (R,R',Option.valOf (targetRenamingFunction t))) (#pullList corr)
+      val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL)) (#pullList corr)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         Correspondence.declareCorrespondence {name = #name corr,
                                               sourcePattern=matchingGenerator,
@@ -127,10 +127,11 @@ struct
     end
 
   fun applyPullItem [] _ _ = []
-    | applyPullItem ((x,y,R)::gs) t (R',R'',t') =
+    | applyPullItem ((x,y,R)::gs) t (R',R'',tL) =
     if Relation.same R R'
-    then (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'') :: applyPullItem gs t (R',R'',t')
-    else (x,y,R)::applyPullItem gs t (R',R'',t')
+    then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL @
+        applyPullItem gs t (R',R'',tL)
+    else (x,y,R)::applyPullItem gs t (R',R'',tL)
 
   exception Error
   fun applyCorrespondenceForGoal st corr goal =
@@ -167,8 +168,9 @@ struct
         fun applyPullList [] = gs'
           | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
         val updatedGoals = applyPullList (#pullList instantiatedCorr)
+        (*
         val _ = if not (null (#pullList instantiatedCorr)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
-                then raise CorrespondenceNotApplicable else ()
+                then raise CorrespondenceNotApplicable else ()*)
         val stateWithUpdatedGoals = State.updateGoals st updatedGoals
         val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
     in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
@@ -285,15 +287,15 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
         end
       fun ign (st,L) = List.exists (fn x => Heuristic.similarGoalsAndComps (x, st)) L
       val ignST = Heuristic.ignore 15 1999 45 unistructured
-      fun forget (st,L) = Heuristic.forgetStrict (st,L) orelse
-                      (case targetPatternOption of
-                          SOME targetPattern => not (matchesTarget typeSystem targetPattern st)
-                        | NONE => false)
+      fun forget (st,L) = (case targetPatternOption of
+                              SOME targetPattern => not (matchesTarget typeSystem targetPattern st)
+                            | NONE => false)
+      fun forgetST (st,L) = Heuristic.forgetStrict (st,L)
       fun orderResults s =
         case Seq.pull s of
           SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) Heuristic.transferProofMultStrengths Heuristic.similarGoalsAndComps
         | NONE => Seq.empty
-      val ST = Seq.take 3 o (structureTransferTac Heuristic.transferProofMultStrengths ignST forget)
+      val ST = Seq.take 10 o (structureTransferTac Heuristic.transferProofMultStrengths ignST forgetST)
       val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) Heuristic.transferProofMultStrengths ign forget) (ST initialState)
     in orderResults results
     end
@@ -323,14 +325,9 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
     end
 
   fun masterTransfer iterative unistructured targetPattOption KB sourceT targetT ct goal =
-    let val _ = if isSome targetPattOption andalso unistructured
-                then (Logging.write "incompatible or unsupported options: matchTarget & unistructured"; raise Nope)
-                else ()
-    in
       if iterative then iterativeStructureTransfer KB sourceT ct unistructured targetPattOption goal
       else (case targetPattOption of
               NONE => structureTransfer KB sourceT targetT ct unistructured goal
             | SOME targetPattern => targetedTransfer KB sourceT targetT ct targetPattern goal)
-    end
 
 end;
