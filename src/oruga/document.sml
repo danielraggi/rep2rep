@@ -416,7 +416,7 @@ struct
             val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals (goal,goals,tproof)
             val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
-            val latexProof = mkLatexProof tproof
+            val latexProof = ""(*mkLatexProof tproof*)
             val CSize = Composition.size comp
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize, latexProof]))
         end
