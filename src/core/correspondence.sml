@@ -7,17 +7,20 @@ sig
                sourcePattern : Pattern.construction,
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
-               constructRel : Relation.relationship};
+               constructRel : Relation.relationship,
+               pullList : (Relation.T * Relation.T * CSpace.token) list};
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> corr -> bool;
   val nameOf : corr -> string;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : corr -> Relation.relationship list * Relation.relationship;
+  val pullListOf : corr -> (Relation.T * Relation.T * CSpace.token) list
   val ofRelationship : Relation.relationship -> string -> corr;
   val declareCorrespondence : {name : string,
                                sourcePattern : Pattern.construction,
                                targetPattern : Pattern.construction,
                                tokenRels : Relation.relationship list,
-                               constructRel : Relation.relationship} -> corr;
+                               constructRel : Relation.relationship,
+                               pullList : (Relation.T * Relation.T * CSpace.token) list} -> corr;
 end;
 
 structure Correspondence : CORRESPONDENCE =
@@ -26,27 +29,36 @@ struct
                sourcePattern : Pattern.construction,
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
-               constructRel : Relation.relationship};
+               constructRel : Relation.relationship,
+               pullList : (Relation.T * Relation.T * CSpace.token) list};
 
   exception badForm
-  fun wellFormed  sT  tT {name,sourcePattern,targetPattern,tokenRels,constructRel} =
+  fun wellFormed sT tT {name,sourcePattern,targetPattern,tokenRels,constructRel,pullList} =
     let fun inTokens (t::L) tseq = List.exists (CSpace.sameTokens t) tseq andalso inTokens L tseq
           | inTokens [] _ = true
-        fun okAtTokens ((sfseq,tfseq,_)::rfs) = inTokens sfseq (Pattern.fullTokenSequence sourcePattern)
-                                         andalso inTokens tfseq (Pattern.fullTokenSequence targetPattern)
+        val sourceTokens = Pattern.fullTokenSequence sourcePattern
+        val targetTokens = Pattern.fullTokenSequence targetPattern
+        fun okAtTokens ((sfseq,tfseq,_)::rfs) = inTokens sfseq sourceTokens
+                                         andalso inTokens tfseq targetTokens
                                          andalso okAtTokens rfs
           | okAtTokens [] = true
        fun okAtConstructs ([t],[t'],_) = CSpace.sameTokens t (Pattern.constructOf sourcePattern)
                                  andalso CSpace.sameTokens t' (Pattern.constructOf targetPattern)
           | okAtConstructs _ = false
-    in Pattern.wellFormed  sT sourcePattern andalso Pattern.wellFormed  tT targetPattern
+       fun okAtPullList [] = true
+         | okAtPullList ((_,_,t)::pL) = List.exists (CSpace.sameTokens t) targetTokens
+                                      andalso not (CSpace.sameTokens t (Pattern.constructOf targetPattern))
+                                      andalso okAtPullList pL
+    in Pattern.wellFormed sT sourcePattern andalso Pattern.wellFormed tT targetPattern
         andalso okAtConstructs constructRel andalso okAtTokens tokenRels
+        andalso okAtPullList pullList
     end
 
   fun nameOf {name,...} = name;
 
   fun patternsOf {sourcePattern,targetPattern,...} = (sourcePattern,targetPattern);
   fun relationshipsOf {tokenRels,constructRel,...} = (tokenRels,constructRel);
+  fun pullListOf {pullList,...} = pullList
 
   fun declareCorrespondence x = x;
   (*the following turns a relation between tokens into a correspondence, with Rf being the
@@ -60,7 +72,8 @@ struct
         sourcePattern = sP,
         targetPattern = tP,
         tokenRels = [],
-        constructRel = Relation.makeRelationship ([sPc],[tPc],R)}
+        constructRel = Relation.makeRelationship ([sPc],[tPc],R),
+        pullList = []}
     end;
 
 end;

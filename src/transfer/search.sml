@@ -5,11 +5,11 @@ sig
   val depthFirst : ('a -> 'a Seq.seq) -> int -> 'a -> 'a Seq.seq;
   val graphDepthFirst : ('a -> 'a Seq.seq) -> ('a * 'a -> bool) -> int -> 'a -> 'a Seq.seq;
   val depthFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val depthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
+  val depthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
   val breadthFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val breadthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
+  val breadthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
   val bestFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val bestFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
+  val bestFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
 end;
 
 structure Search : SEARCH =
@@ -72,10 +72,10 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg st then recdfsi else Seq.insert st recdfsi h end
+                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
                   | SOME (st',s'') => let val newFrontier = Seq.append (Seq.cons st' s'') s'
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg st then recdfsi else Seq.insert st recdfsi h end))
+                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
     in dfsi (Seq.single state) []
     end
 
@@ -106,10 +106,10 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg st then recdfsi else Seq.insert st recdfsi h end
+                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
                   | SOME (st',s'') => let val newFrontier = Seq.append s' (Seq.cons st' s'')
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg st then recdfsi else Seq.insert st recdfsi h end))
+                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
     in dfsi (Seq.single state) []
     end
 
@@ -140,10 +140,10 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg st then recdfsi else Seq.insert st recdfsi h end
+                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
                   | SOME (st',s'') => let val newFrontier = Seq.insertMany s'' (Seq.insert st' s' h) h
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg st then recdfsi else Seq.insert st recdfsi h end))
+                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
     in dfsi (Seq.single state) []
     end
 

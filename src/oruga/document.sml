@@ -40,8 +40,9 @@ struct
   val sourceKW = "source"
   val tokenRelsKW = "tokenRels"
   val constructRelKW = "constructRel"
+  val pullListKW = "pull"
   val strengthKW = "strength"
-  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,strengthKW]
+  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,pullListKW,strengthKW]
 
   val sourceTypeSystemKW = "sourceTypeSystem"
   val targetTypeSystemKW = "targetTypeSystem"
@@ -49,8 +50,11 @@ struct
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
-  val ISKW = "IS"
-  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,ISKW]
+  val iterativeKW = "iterative"
+  val unistructuredKW = "unistructured"
+  val matchTargetKW = "matchTarget"
+  val targetConSpecKW = "targetConSpec"
+  val transferKeywords = [targetTypeSystemKW,sourceConstructionKW,goalKW,outputKW,limitKW,iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW]
 
 
   fun breakOn s [] = ([],"",[])
@@ -104,110 +108,6 @@ struct
   fun findCorrespondenceWithName DC n =
     valOf (Knowledge.findCorrespondenceWithName (knowledgeOf DC) n)
     handle Option => raise ParseError ("no correspondence with name " ^ n)
-
-  fun parseTransferRequests DC ws =
-  let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
-        | stringifyC [] = ""
-      val C = contentForKeywords transferKeywords ws
-      fun getTargetTySys [] = raise ParseError "no target type system for transfer"
-        | getTargetTySys ((x,c)::L) =
-            if x = SOME targetTypeSystemKW
-            then findTypeSystemWithName DC (String.concat c)
-            else getTargetTySys L
-      fun getConstruction [] = raise ParseError "no construction to transfer"
-        | getConstruction ((x,c)::L) =
-            if x = SOME sourceConstructionKW
-            then findConstructionWithName DC (String.concat c)
-            else getConstruction L
-      fun getGoal [] = raise ParseError "no goal for transfer"
-        | getGoal ((x,c)::L) =
-            if x = SOME goalKW
-            then Parser.relationship (String.concat c)
-            else getGoal L
-      fun getOutput [] = raise ParseError "no output file name for transfer"
-        | getOutput ((x,c)::L) =
-            if x = SOME outputKW
-            then "output/latex/"^(String.concat c)^".tex"
-            else getOutput L
-      fun getLimit [] = raise ParseError "no limit for transfer output file"
-        | getLimit ((x,c)::L) =
-            if x = SOME limitKW
-            then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
-            else getLimit L
-      val targetTypeSystem = getTargetTySys C
-      val constructionRecord = getConstruction C
-      val construction = #construction constructionRecord
-      val sourceConSpecN = #conSpec constructionRecord
-      val sourceConSpec = findConSpecWithName DC sourceConSpecN
-      val sourceTypeSystem = findTypeSystemWithName DC (#typeSystem sourceConSpec)
-      val goal = getGoal C
-      val outputFilePath = getOutput C
-      val limit = getLimit C
-      val KB = knowledgeOf DC
-      val _ = print ("\nApplying structure transfer...");
-      val startTime = Time.now();
-      val results = Transfer.structureTransfer KB sourceTypeSystem targetTypeSystem construction goal;
-      val endTime = Time.now();
-      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
-      val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
-      fun getCompsAndGoals [] = []
-        | getCompsAndGoals (h::t) = (State.patternCompOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
-      fun mkLatexGoals (goal,goals,tproof) =
-        let val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map Latex.relationship goals)
-            val originalGoalS = Latex.relationship goal ^ "\\\\ \n"
-            val IS = TransferProof.multiplicativeIS (strengthsOf DC) tproof
-            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"
-                                                                      ^ originalGoalS
-                                                                      ^ "\\\\ \\mathbf{Open\\ goals}\\\\\n"
-                                                                      ^ goalsS ^ "\\\\"
-                                                                      ^ "\\\\ \\mathbf{IS\\ score}\\\\\n"
-                                                                      ^ Real.toString IS))
-        in alignedGoals
-        end
-      fun mkLatexProof tproof =
-        let val construction = TransferProof.toConstruction tproof;
-        in Latex.construction (0.0,0.0) construction
-        end
-      fun mkLatexConstructions comp =
-        let val constructions = Composition.resultingConstructions comp;
-        in map (Latex.construction (0.0,0.0)) constructions
-        end
-      fun mkLatexConstructionsAndGoals (comp,tproof,goal,goals) =
-        let val latexConstructions = mkLatexConstructions comp
-            val _ = if Composition.wellFormedComposition targetTypeSystem comp
-                    then ()
-                    else print ("\nWARNING! some decomposition is not well formed!")
-            val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
-            val latexGoals = mkLatexGoals (goal,goals,tproof)
-            val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*, latexProof*)]))
-        end
-      val nres = length (Seq.list_of results);
-      val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
-      val (listOfResults,_) = Seq.chop limit results;
-      val compsAndGoals = getCompsAndGoals listOfResults;
-      val transferProofs = map State.transferProofOf listOfResults
-      val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
-      fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
-      val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
-      val is = (Propagation.evaluate E) (hd tproofConstruction)
-      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs))
-    (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
-      val _ = print ("  informational suitability score: " ^ Real.toString (valOf is') ^ "\n")
-      val _ = print "\nComposing patterns and creating tikz figures...";
-      val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
-      val latexCT = Latex.construction (0.0,0.0) construction;
-      val _ = print "done\n";
-      val _ = print "\nGenerating LaTeX document...";
-      val latexOriginalConsAndGoals = Latex.environment "center" "" (latexCT);
-      val outputFile = TextIO.openOut outputFilePath
-      val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
-      val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
-      val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
-      val _ = TextIO.closeOut outputFile;
-      val _ = print ("done!\n" ^ "  output file: "^outputFilePath^"\n\n");
-  in ()
-  end
 
   fun inequality s =
     (case String.breakOn "<" s of
@@ -295,7 +195,7 @@ struct
   fun parseConstruction s cspec =
     let
       fun c tacc s' =
-        case String.breakOn "[" (String.removeParentheses s') of
+        case String.breakOn "[" s' of
           (ts,"",_) =>
             let val tok = Parser.token ts
             in if List.exists (CSpace.sameTokens tok) tacc
@@ -310,7 +210,7 @@ struct
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, Parser.splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
-    in Construction.fixReferences (c [] (String.stripSpaces s))
+    in (*Construction.fixReferences*) (c [] (String.stripSpaces s))
     end;
 
   fun addCorrespondence (nn,cs) dc =
@@ -341,11 +241,22 @@ struct
             if x = SOME constructRelKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
+      fun parsePull s =
+        (case String.breakOn " to " s of
+          (Rs," to ",S) => (case String.breakOn " as " S of
+                              (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.token tks)
+                            | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.token S))
+        | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
+      fun getPullList [] = []
+        | getPullList ((x,pl) :: L) =
+            if x = SOME pullListKW
+            then Parser.relaxedList parsePull (Parser.deTokenise " " pl)
+            else getPullList L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in correspondence " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
-            then Real.fromString (String.concat ss)
+            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in correspondence " ^ String.concat cs);raise Option)
             else getStrength L
       val blocks = contentForKeywords corrKeywords cs
       val sPatt = getPattern sourceKW blocks
@@ -360,12 +271,15 @@ struct
                   sourcePattern = sPatt,
                   targetPattern = tPatt,
                   tokenRels = getTokenRels blocks,
-                  constructRel = getConstructRel blocks}
-      fun strengthsUpd c = if c = name then getStrength blocks else (#strengths dc) c
-      val _ = Logging.write ("done\n")
+                  constructRel = getConstructRel blocks,
+                  pullList = getPullList blocks}
+      val strengthVal = getStrength blocks
+      fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
+      val _ = Logging.write ("done\n");
+      fun ff (c,c') = Real.compare (valOf (strengthsUpd (Correspondence.nameOf c')), valOf (strengthsUpd (Correspondence.nameOf c)))
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
-      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr,
+      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr strengthVal ff,
       constructions = #constructions dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
@@ -377,6 +291,7 @@ struct
       val cspec = findConSpecWithName dc cspecN
       val ct = parseConstruction cts cspec
       val T = findTypeSystemWithName dc (#typeSystem cspec)
+
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
       val _ = if Construction.wellFormed  T ct then Logging.write ("\n  "^ name ^ " is well formed\n")
@@ -384,6 +299,7 @@ struct
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
+
       val ctRecord = {name = name, conSpec = cspecN, construction = ct}
   in {typeSystems = #typeSystems dc,
       conSpecs = #conSpecs dc,
@@ -391,6 +307,150 @@ struct
       constructions = ctRecord :: (#constructions dc),
       transferRequests = #transferRequests dc,
       strengths = #strengths dc}
+  end
+
+  fun addTransferRequests ws dc =
+     {typeSystems = #typeSystems dc,
+      conSpecs = #conSpecs dc,
+      knowledge = #knowledge dc,
+      constructions = #constructions dc,
+      transferRequests = #transferRequests dc @ [ws],
+      strengths = #strengths dc}
+
+  fun parseTransferRequests DC ws =
+  let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
+        | stringifyC [] = ""
+      val C = contentForKeywords transferKeywords ws
+
+      fun getConstruction [] = raise ParseError "no construction to transfer"
+        | getConstruction ((x,c)::L) =
+            if x = SOME sourceConstructionKW
+            then findConstructionWithName DC (String.concat c)
+            else getConstruction L
+      val constructionRecord = getConstruction C
+      val construction = #construction constructionRecord
+      val sourceConSpecN = #conSpec constructionRecord
+      val sourceConSpec = findConSpecWithName DC sourceConSpecN
+      val sourceTypeSystem = findTypeSystemWithName DC (#typeSystem sourceConSpec)
+
+      fun getTargetConSpec [] = sourceConSpec
+        | getTargetConSpec ((x,c)::L) =
+            if x = SOME targetConSpecKW
+            then findConSpecWithName DC (String.concat c)
+            else getTargetConSpec L
+      fun getTargetTySys [] = sourceTypeSystem
+        | getTargetTySys ((x,c)::L) =
+            if x = SOME targetTypeSystemKW
+            then findTypeSystemWithName DC (String.concat c)
+            else getTargetTySys L
+      val targetTypeSystem = getTargetTySys C
+      fun getGoal [] = raise ParseError "no goal for transfer"
+        | getGoal ((x,c)::L) =
+            if x = SOME goalKW
+            then Parser.relationship (String.concat c)
+            else getGoal L
+      fun getOutput [] = raise ParseError "no output file name for transfer"
+        | getOutput ((x,c)::L) =
+            if x = SOME outputKW
+            then "output/latex/"^(String.concat c)^".tex"
+            else getOutput L
+      fun getLimit [] = raise ParseError "no limit for transfer output file"
+        | getLimit ((x,c)::L) =
+            if x = SOME limitKW
+            then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
+            else getLimit L
+      fun getMatchTarget [] = NONE
+        | getMatchTarget ((x,c)::L) =
+            if x = SOME matchTargetKW
+            then (let val mtct = parseConstruction (String.concat c) (getTargetConSpec C)
+                      (*val _ = if Construction.wellFormed targetTypeSystem mtct
+                              then Logging.write "\n  pattern for matching is well formed"
+                              else Logging.write "\n  WARNING: pattern for matching is not well formed"*)
+                  in SOME mtct
+                  end)
+            else getMatchTarget L
+      fun getIterative [] = false
+        | getIterative ((x,_)::L) =
+            if x = SOME iterativeKW
+            then (case getMatchTarget C of NONE => true | _ => raise ParseError "iterative and matchTarget are incompatible")
+            else getIterative L
+      fun getUnistructured [] = false
+        | getUnistructured ((x,_)::L) =
+            if x = SOME unistructuredKW
+            then true
+            else getUnistructured L
+      val goal = getGoal C
+      val outputFilePath = getOutput C
+      val limit = getLimit C
+      val iterative = getIterative C
+      val KB = knowledgeOf DC
+      val unistructured = getUnistructured C
+      val targetPattern = getMatchTarget C
+      fun getCompsAndGoals [] = []
+        | getCompsAndGoals (h::t) = (State.patternCompOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
+      fun mkLatexGoals (goal,goals,tproof) =
+        let val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map Latex.relationship goals)
+            val originalGoalS = Latex.relationship goal ^ "\\\\ \n"
+            val IS = TransferProof.multiplicativeIS (strengthsOf DC) tproof
+            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"
+                                                                      ^ originalGoalS
+                                                                      ^ "\\\\ \\mathbf{Open\\ goals}\\\\\n"
+                                                                      ^ goalsS ^ "\\\\"
+                                                                      ^ "\\\\ \\mathbf{IS\\ score}\\\\\n"
+                                                                      ^ Real.toString IS))
+        in alignedGoals
+        end
+      fun mkLatexProof tproof =
+        let val construction = TransferProof.toConstruction tproof;
+        in Latex.construction (0.0,0.0) construction
+        end
+      fun mkLatexConstructions comp =
+        let val constructions = Composition.resultingConstructions comp;
+        in map (Latex.construction (0.0,0.0)) constructions
+        end
+      fun mkLatexConstructionsAndGoals (comp,tproof,goal,goals) =
+        let val latexConstructions = mkLatexConstructions comp
+            val _ = if Composition.wellFormedComposition targetTypeSystem comp
+                    then ()
+                    else print ("\nWARNING! some decomposition is not well formed!")
+            val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
+            val latexGoals = mkLatexGoals (goal,goals,tproof)
+            val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
+            val latexProof = mkLatexProof tproof
+            val CSize = Composition.size comp
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize(*, latexProof*)]))
+        end
+      val _ = print ("\nApplying structure transfer...");
+      val startTime = Time.now();
+      val results = Transfer.masterTransfer iterative unistructured targetPattern KB sourceTypeSystem targetTypeSystem construction goal;
+      val nres = length (Seq.list_of results);
+      val (listOfResults,_) = Seq.chop limit results;
+      val endTime = Time.now();
+      val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
+      val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
+      val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
+      val compsAndGoals = getCompsAndGoals listOfResults;
+      val transferProofs = map State.transferProofOf listOfResults
+      val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
+      fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
+      val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
+      val is = (Propagation.evaluate E) (hd tproofConstruction) handle Empty => (SOME 0.0)
+      val is' = SOME (TransferProof.multiplicativeIS (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
+    (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
+      val _ = print ("  informational suitability score: " ^ Real.toString (valOf is') ^ "\n")
+      val _ = print "\nComposing patterns and creating tikz figures...";
+      val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals compsAndGoals);
+      val latexCT = Latex.construction (0.0,0.0) construction;
+      val _ = print "done\n";
+      val _ = print "\nGenerating LaTeX document...";
+      val latexOriginalConsAndGoals = Latex.environment "center" "" (latexCT);
+      val outputFile = TextIO.openOut outputFilePath
+      val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
+      val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
+      val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
+      val _ = TextIO.closeOut outputFile;
+      val _ = print ("done!\n" ^ "  output file: "^outputFilePath^"\n\n");
+  in ()
   end
 
   fun joinDocumentContents ({typeSystems = ts, conSpecs = sp, knowledge = kb, constructions = cs, transferRequests = tr, strengths = st} :: L) =
@@ -402,14 +462,6 @@ struct
        transferRequests = tr @ tr',
        strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
   | joinDocumentContents [] = emptyDocContent
-
-  fun addTransferRequests ws dc =
-     {typeSystems = #typeSystems dc,
-      conSpecs = #conSpecs dc,
-      knowledge = #knowledge dc,
-      constructions = #constructions dc,
-      transferRequests = ws :: #transferRequests dc,
-      strengths = #strengths dc}
 
   fun read filename =
   let val file = TextIO.openIn ("input/"^filename)

@@ -1,0 +1,100 @@
+import correspondences/DNFCNF
+
+construction AinB:propDNFG =
+    t:AB|-AB|-A-B:nonclause
+        <- disj[t1:AB:nonliteral <- conj[t11:A:var,
+                                     t12:B:var],
+                t2:-AB|-A-B:nonclause
+                     <- disj[t21:-AB:nonliteral <- conj[t211:-A:nonvar <- neg[t2111:A:var],
+                                                    t212:B:var],
+                             t22:-A-B:nonliteral <- conj[t221:-A:nonvar <- neg[t2211:A:var],
+                                                     t222:-B:nonvar <- neg[t2221:B:var]]]]
+
+construction AinBdisjC:propDNFG =
+t:AB-C|-AB-C|-A-BC|-A-B-C:nonclause
+    <- disj[t1:AB-C:nonliteral <- conj[t11:A:var,
+                                        t12:B-C:nonliteral <- conj[t121:B:var,
+                                                                    t122:-C:nonvar <- neg[t1221:C:var]]],
+            t2:-AB-C|-A-BC|-A-B-C:nonclause
+                 <- disj[t21:-AB-C:nonliteral <- conj[t211:-A:nonvar <- neg[t2111:A:var],
+                                                      t212:B-C:nonliteral <- conj[t2121:B:var,
+                                                                                  t2122:-C:nonvar<- neg[t21221:C:var]]],
+                         t22:-A-BC|-A-B-C:nonclause
+                              <- disj[t221:-A-BC:nonliteral <- conj[t2211:-A:nonvar <- neg[t22111:A:var],
+                                                                    t2212:-BC:nonliteral <- conj[t22121:-B:nonvar <- neg[t221211:B:var],
+                                                                                                 t22122:C:var]],
+                                      t222:-A-B-C:nonliteral <- conj[t2221:-A:nonvar <- neg[t22211:A:var],
+                                                                     t2222:-B-C:nonliteral <- conj[t22221:-B:nonvar <- neg[t222211:B:var],
+                                                                                                   t22222:-C:nonvar <- neg[t222221:C:var]]] ]]]
+
+construction AinBdisjCinD:propDNFG =
+  t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclause
+      <- disj[t1:AB-CD:nonliteral
+                <- conj[t11:A:var,
+                        t12:B-CD:nonliteral
+                            <- conj[t121:B:var,
+                                    t122:-CD:nonliteral
+                                        <- conj[t1221:-C:nonvar <- neg[t12211:C:var],
+                                                t1222:D:var]]],
+              t2:-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclause
+                   <- disj[t21:-AB-CD:nonliteral
+                                <- conj[t211:-A:nonvar <- neg[t2111:A:var],
+                                        t212:B-CD:nonliteral
+                                            <- conj[t2121:B:var,
+                                                    t2122:-CD:nonliteral
+                                                        <- conj[t21221:-C:nonvar <- neg[t212211:C:var],
+                                                                t21222:D:var]]],
+                           t22:-A-BCD|-A-B-CD|-A-B-C-D:nonclause
+                               <- disj[t221:-A-BCD:nonliteral
+                                           <- conj[t2211:-A:nonvar <- neg[t22111:A:var],
+                                                   t2212:-BCD:nonliteral
+                                                       <- conj[t22121:-B:nonvar <- neg[t221211:B:var],
+                                                               t22122:CD:nonliteral
+                                                                   <- conj[t221221:C:var,
+                                                                           t221222:D:var]]],
+                                       t222:-A-B-CD|-A-B-C-D:nonclause
+                                           <- disj[t2221:-A-B-CD:nonliteral
+                                                       <- conj[t22211:-A:nonvar <- neg[t222111:A:var],
+                                                               t22212:-B-CD:nonliteral
+                                                                   <- conj[t222121:-B:nonvar <- neg[t2221211:B:var],
+                                                                           t222122:-CD:nonliteral
+                                                                               <- conj[t2221221:-C:nonvar <- neg[t22212211:C:var],
+                                                                                       t2221222:D:var] ]],
+                                                   t2222:-A-B-C-D:nonliteral
+                                                       <- conj[t22221:-A:nonvar <- neg[t222211:A:var],
+                                                               t22222:-B-C-D:nonliteral
+                                                                   <- conj[t222221:-B:nonvar <- neg[t2222211:B:var],
+                                                                           t222222:-C-D:nonliteral
+                                                                               <- conj[t2222221:-C:nonvar <- neg[t22222211:C:var],
+                                                                                       t2222222:-D:nonvar <- neg[t22222221:D:var]]]]
+                                                   ]
+                                        ]
+                            ]
+                ]
+
+
+comment
+   sourceConstruction AinB
+   targetTypeSystem propCNF
+   goal ([t:AB|-AB|-A-B:nonclause],[t':clause]) :: entails
+   unistructured
+   output AinBCNF2
+   limit 50
+
+comment
+    sourceConstruction AinBdisjC
+    targetTypeSystem propCNF
+    goal ([t:AB-C|-AB-C|-A-BC|-A-B-C:nonclause],[t':nonliteral]) :: entails
+    matchTarget t:nonliteral <- disj[t1:nonvar <- neg[t11:var], t2:nonvar <- neg[t21:var]]
+    targetConSpec propCNFG
+    output AinBdisjC
+    limit 10
+
+transfer
+    sourceConstruction AinBdisjCinD
+    targetTypeSystem propCNF
+    goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclause],[t':clause]) :: entails
+    matchTarget t:nonliteral <- disj[t1:B:var, t2:nonvar <- neg[t21:A:var]]
+    targetConSpec propCNFG
+    limit 10
+    output AinBdisjCinD

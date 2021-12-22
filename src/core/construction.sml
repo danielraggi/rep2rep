@@ -9,15 +9,17 @@ sig
   type walk;
 
   val same : construction -> construction -> bool;
+  (*val similar : construction -> construction -> bool;*)
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> construction -> bool;
   val size : construction -> int;
   (*val almostWellFormed : construction -> bool;*)
-(*)
+(*
   val CTS : construction -> walk list;
   val inducedConstruction : construction -> walk -> construction;
   val foundationSequence : construction -> CSpace.token list;*)
+  val leavesOfConstruction : construction -> CSpace.token list;
   val fullTokenSequence : construction -> CSpace.token list;
   val isGenerator : construction -> construction -> bool;
   (*)
@@ -63,7 +65,14 @@ struct
         CSpace.sameTokens t t' andalso CSpace.sameConstructors u u'
         andalso List.allZip same cs cs'
     | same _ _ = false
-    (* TO DO: implment a sameConstruction function which actually checks that constructions are the same, not only their construction terms *)
+
+  (* The following assumes well-formed *)
+  fun similar (Source t) (Source t') = CSpace.tokensHaveSameType t t'
+    | similar (Reference t) (Reference t') = CSpace.tokensHaveSameType t t'
+    | similar (TCPair ({token = t, constructor = c}, cs)) (TCPair ({token = t', constructor = c'}, cs')) =
+        CSpace.tokensHaveSameType t t' andalso CSpace.sameConstructors c c'
+        andalso List.allZip similar cs cs'
+    | similar _ _ = false
 
   fun subConstruction (Source t) (Source t') = CSpace.sameTokens t t'
     | subConstruction (Reference t) (Reference t') = CSpace.sameTokens t t'
@@ -77,6 +86,9 @@ struct
     | constructOf (Reference t) = t
     | constructOf (TCPair ({token, ...}, _)) = token
 
+  fun leavesOfConstruction (Source t) = [t]
+    | leavesOfConstruction (Reference t) = [t]
+    | leavesOfConstruction (TCPair ({token, ...}, cs)) = List.concat (map leavesOfConstruction cs)
 (*
   fun CTS (Source t) = [[Token t]]
     | CTS (Loop t) = [[Token t]]
@@ -151,7 +163,7 @@ struct
                 fun wfr [] prev' = (true,prev')
                   | wfr (ct'::L) prev' =
                     (case wf ct' prev' of
-                      (WFX,tokenSeqX) => (case wfr L (tokenSeqX @ prev') of
+                      (WFX,tokenSeqX) => (case wfr L tokenSeqX of
                                               (WFY,tokenSeqY) => (WFX andalso WFY, tokenSeqY)))
                 val (WF,uprev) = if typeChecks andalso not (List.exists (fn x => x = token) prev)
                                  then wfr cs (token::prev)
@@ -264,13 +276,13 @@ struct
     end
 
   fun fixReferences ct =
-    let fun fix (Source t) prev = if List.exists (fn x => x = t) prev then (Reference t,prev) else (Source t, t::prev)
-          | fix (Reference t) prev = if List.exists (fn x => x = t) prev then (Reference t,prev) else (Source t, t::prev)
+    let fun fix (Source t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
+          | fix (Reference t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
           | fix (TCPair (tc, cs)) prev =
             let fun fixr [] prev' = ([],prev')
                   | fixr (ct'::L) prev' =
                     (case fix ct' prev' of
-                      (fixedct',tokenSeqX) => (case fixr L (tokenSeqX @ prev') of
+                      (fixedct',tokenSeqX) => (case fixr L tokenSeqX of
                                                 (fixedctL',tokenSeqY) => (fixedct'::fixedctL', tokenSeqY)))
                 val (fixedcs,uprev) = fixr cs (#token tc :: prev)
             in (TCPair (tc, fixedcs),uprev)
