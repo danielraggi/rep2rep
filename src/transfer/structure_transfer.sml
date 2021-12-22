@@ -116,7 +116,7 @@ struct
       (*****)
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
-      val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL)) (#pullList corr)
+      val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL;raise Option))) (#pullList corr)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         Correspondence.declareCorrespondence {name = #name corr,
                                               sourcePattern=matchingGenerator,
@@ -188,7 +188,7 @@ struct
                else (g::keep,dump)
             end
           | rg [] = ([],[])
-        fun updateTransferProof (g::gs) = TransferProof.dump g (updateTransferProof gs)
+        fun updateTransferProof (g::gs) = TransferProof.dump "idempotency" g (updateTransferProof gs)
           | updateTransferProof [] = State.transferProofOf st
         val (keep,dump) = rg (State.goalsOf st)
         val stateWithUpdatedGoals = State.updateGoals st keep

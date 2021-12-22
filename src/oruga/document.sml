@@ -401,8 +401,8 @@ struct
         in alignedGoals
         end
       fun mkLatexProof tproof =
-        let val construction = TransferProof.toConstruction tproof;
-        in Latex.construction (0.0,0.0) construction
+        let val ct = TransferProof.toConstruction tproof;
+        in Latex.construction (0.0,0.0) ct
         end
       fun mkLatexConstructions comp =
         let val constructions = Composition.resultingConstructions comp;
@@ -418,7 +418,7 @@ struct
             val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" (latexGoals)
             val latexProof = mkLatexProof tproof
             val CSize = Composition.size comp
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize(*, latexProof*)]))
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize, latexProof]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();

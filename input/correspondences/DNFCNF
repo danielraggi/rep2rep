@@ -76,7 +76,7 @@ correspondence disjI1:(propDNFG,propCNFG) =
     target t':nonliteral <- disj[t1':literal,t2':clause]
     tokenRels ([t:dnf],[t1':literal]) :: entails
     constructRel ([t:dnf],[t':nonliteral]) :: entails
-    pull entails to t2':clause
+    pull entails to [t2':clause]
     strength 0.8
 
 comment disjI2:(propDNFG,propCNFG) =
@@ -84,7 +84,7 @@ comment disjI2:(propDNFG,propCNFG) =
     target t':nonliteral <- disj[t1':literal,t2':clause]
     tokenRels ([t:dnf],[t2':clause]) :: entails
     constructRel ([t:dnf],[t':nonliteral]) :: entails
-    pull entails to t1':literal
+    pull entails to [t1':literal]
     strength 0.5
 
 correspondence conjE1:(propDNFG,propCNFG) =

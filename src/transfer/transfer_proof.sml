@@ -13,7 +13,7 @@ sig
   val attachCorr : Correspondence.corr -> tproof -> tproof;
   val attachCorrAt : Correspondence.corr -> Relation.relationship -> tproof -> tproof;
   val attachCorrPulls : Correspondence.corr -> CSpace.token -> tproof -> tproof
-  val dump : Relation.relationship -> tproof -> tproof
+  val dump : string -> Relation.relationship -> tproof -> tproof
 
   val mapRelsAndAttachCorr : (Relation.relationship -> Relation.relationship)
                               -> Correspondence.corr -> tproof -> tproof;
@@ -76,13 +76,13 @@ struct
                            map Open rL)
       end
 
-  fun dump g (Closed (r,npp,L)) = Closed (r,npp, map (dump g) L)
-    | dump (x,y,R) (Open r) =
+  fun dump s g (Closed (r,npp,L)) = Closed (r,npp, map (dump s g) L)
+    | dump s (x,y,R) (Open r) =
       if Relation.sameRelationship (x,y,R) r
       then Closed ((x,y,R),
-                   {name = "dumped",
-                    sourcePattern = Pattern.Source (hd x),
-                    targetPattern = Pattern.Source (hd y)},
+                   {name = s,
+                    sourcePattern = Pattern.Source (CSpace.makeToken "" ""),
+                    targetPattern = Pattern.Source (CSpace.makeToken "" "")},
                    [])
       else Open r
 
