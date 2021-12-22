@@ -6,5 +6,4 @@ conSpec EulerG:Euler =
     assignLabel : [curve,label] -> basicDiagram,
     submerge : [basicDiagram,basicDiagram] -> diagram,
     dismerge : [basicDiagram,basicDiagram] -> diagram,
-    intermerge : [basicDiagram,basicDiagram] -> diagram,
     unify : [diagram,diagram] -> diagram
