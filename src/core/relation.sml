@@ -5,6 +5,9 @@ sig
   type T;
   type relationship = CSpace.token list * CSpace.token list * T;
 
+  val T_rpc : T Rpc.Datatype.t;
+  val relationship_rpc : relationship Rpc.Datatype.t;
+
   val nameOf : T -> string;
   val tupleOfRelationship : relationship -> CSpace.token list * CSpace.token list * T;
   val make : string -> T;
@@ -25,6 +28,13 @@ structure Relation : RELATION =
 struct
   type T = string;
   type relationship = CSpace.token list * CSpace.token list * T;
+
+  val T_rpc = String.string_rpc;
+
+  val relationship_rpc = Rpc.Datatype.tuple3
+                             (List.list_rpc CSpace.token_rpc,
+                              List.list_rpc CSpace.token_rpc,
+                              T_rpc);
 
   fun tupleOfRelationship r = r;
   fun make r = r;
