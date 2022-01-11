@@ -4,6 +4,8 @@ signature COMPOSITION =
 sig
   type composition;
 
+  val composition_rpc : composition Rpc.Datatype.t;
+
   val dataOfComposition : composition -> {construct : CSpace.token, attachments : (Construction.construction * composition list) list};
 
   val size : composition -> int;
@@ -32,6 +34,19 @@ structure Composition : COMPOSITION =
 struct
 
   datatype composition = Composition of {construct : CSpace.token, attachments : (Construction.construction * composition list) list};
+
+  fun composition_rpc_ () = Rpc.Datatype.convert
+                                (Rpc.Datatype.tuple2
+                                     (CSpace.token_rpc,
+                                      List.list_rpc
+                                          (Rpc.Datatype.tuple2
+                                               (Construction.construction_rpc,
+                                                List.list_rpc
+                                                    (Rpc.Datatype.recur composition_rpc_)))))
+                                (fn (c, a) => Composition {construct = c, attachments = a})
+                                (fn (Composition {construct = c, attachments = a}) => (c, a));
+
+  val composition_rpc = composition_rpc_ ();
 
   fun dataOfComposition (Composition {construct, attachments}) = {construct = construct, attachments = attachments}
   fun size (Composition {attachments = (c,D::DL)::L, construct}) = size D + size (Composition {attachments = (c,DL)::L, construct=construct})
