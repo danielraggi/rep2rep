@@ -6,6 +6,9 @@ sig
   type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool}
   exception undefined
 
+  val typ_rpc : typ Rpc.Datatype.t;
+  (* val typeSystem_rpc : typeSystem Rpc.Datatype.t; *)
+
   val typeOfString : string -> typ
   val any : typ
   val equal : typ -> typ -> bool
@@ -38,6 +41,9 @@ struct
   type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool};
   type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool};
   exception undefined;
+
+  val typ_rpc = String.string_rpc;
+  (* val typeSystem_rpc =  *)
 
   fun typeOfString x = x
   val any = "" (* emtpy string *)
