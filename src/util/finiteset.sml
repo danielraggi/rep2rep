@@ -1,8 +1,10 @@
 import "util.sequence";
+import "util.rpc";
 
 signature FINITESET =
 sig
   type ''a set
+  val set_rpc: ''a Rpc.Datatype.t -> ''a set Rpc.Datatype.t;
   val empty : ''a set;
   val ofList : ''a list -> ''a set;
   val listOf : ''a set -> ''a list;
@@ -22,6 +24,8 @@ end;
 structure FiniteSet : FINITESET =
 struct
   type 'a set = 'a list;
+
+  val set_rpc = List.list_rpc;
 
   val empty = [];
   fun ofList (n::ns) = n :: List.filter (fn x => not (x = n)) (ofList ns)
