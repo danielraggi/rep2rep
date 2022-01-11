@@ -92,7 +92,10 @@ fun dict_rpc v_rpc =
           | base_of_tree (BRANCH (a, l, r)) = Rpc.Datatype.Either2.SND (a, l, r);
         fun dict_of_base base = ref (tree_of_base base);
         fun base_of_dict dict = base_of_tree (!dict);
-    in Rpc.Datatype.convert tree_rpc
+    in Rpc.Datatype.convert (String.concat ["(", Rpc.Datatype.name K.k_rpc,
+                                            ",", Rpc.Datatype.name v_rpc,
+                                            ") Dictionary.dict"])
+                            tree_rpc
                             dict_of_base
                             base_of_dict
     end;

@@ -42,7 +42,7 @@ struct
   type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool};
   exception undefined;
 
-  val typ_rpc = String.string_rpc;
+  val typ_rpc = Rpc.Datatype.alias "Type.typ" String.string_rpc;
   (* val typeSystem_rpc =  *)
 
   fun typeOfString x = x

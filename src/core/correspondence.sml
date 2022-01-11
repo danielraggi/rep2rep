@@ -32,6 +32,7 @@ struct
                constructRel : Relation.relationship};
 
   val corr_rpc = Rpc.Datatype.convert
+                     "Correspondence.corr"
                      (Rpc.Datatype.tuple5
                           (String.string_rpc,
                            Pattern.construction_rpc,

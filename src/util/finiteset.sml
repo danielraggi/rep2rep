@@ -25,7 +25,9 @@ structure FiniteSet : FINITESET =
 struct
   type 'a set = 'a list;
 
-  val set_rpc = List.list_rpc;
+  fun set_rpc a_rpc = Rpc.Datatype.alias
+                          ((Rpc.Datatype.name a_rpc) ^ " FiniteSet.set")
+                          (List.list_rpc a_rpc);
 
   val empty = [];
   fun ofList (n::ns) = n :: List.filter (fn x => not (x = n)) (ofList ns)

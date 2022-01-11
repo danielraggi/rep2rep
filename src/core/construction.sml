@@ -54,11 +54,13 @@ struct
   type walk = vertex list;
 
   val tc_rpc = Rpc.Datatype.convert
+                   "Construction.tc"
                    (Rpc.Datatype.tuple2 (CSpace.token_rpc, CSpace.constructor_rpc))
                    (fn (t, u) => {token = t, constructor = u})
                    (fn {token = t, constructor = u} => (t, u));
 
   fun construction_rpc_ () = Rpc.Datatype.convert
+                                 "Construction.construction"
                                  (Rpc.Datatype.either3
                                       (Rpc.Datatype.tuple2
                                            (tc_rpc,
@@ -76,13 +78,16 @@ struct
   val construction_rpc = construction_rpc_ ();
 
   val vertex_rpc = Rpc.Datatype.convert
+                       "Construction.vertex"
                        (Rpc.Datatype.either2 (CSpace.token_rpc, CSpace.constructor_rpc))
                        (fn (Rpc.Datatype.Either2.FST t) => Token t
                          | (Rpc.Datatype.Either2.SND u) => Constructor u)
                        (fn (Token t) => Rpc.Datatype.Either2.FST t
                          | (Constructor u) => Rpc.Datatype.Either2.SND u);
 
-  val walk_rpc = List.list_rpc vertex_rpc;
+  val walk_rpc = Rpc.Datatype.alias
+                     "Construction.walk"
+                     (List.list_rpc vertex_rpc);
 
   fun isTrivial (Source _) = true
     | isTrivial _ = false

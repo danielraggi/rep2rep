@@ -55,9 +55,11 @@ signature RPC = sig
 
                   val read: 'a t -> data -> 'a
                   val write: 'a t -> 'a -> data
+                  val name: 'a t -> string
 
-                  (* convert: old -> old_to_new -> new_to_old -> new *)
-                  val convert: 'a t -> ('a -> 'b) -> ('b -> 'a) -> 'b t
+                  (* convert: new_name -> old -> old_to_new -> new_to_old -> new *)
+                  val convert: string -> 'a t -> ('a -> 'b) -> ('b -> 'a) -> 'b t
+                  val alias: string -> 'a t -> 'a t
 
                   (* If the datatype is recursive, guard the recursion inside `recur`
                      and a unit function. *)
@@ -111,7 +113,8 @@ type data = Word8Vector.vector
 structure Datatype = struct
 type 'a t = {
     reader: data -> 'a,
-    writer: 'a -> data
+    writer: 'a -> data,
+    name: string
 }
 
 structure Either2 = struct
@@ -149,22 +152,30 @@ end;
 
 fun read t d = (#reader t) d;
 fun write t d = (#writer t) d;
+fun name t = #name t
 
-fun convert t read_conv write_conv = {
+fun convert new_name t read_conv write_conv = {
     reader = fn bytes => read_conv (read t bytes),
-    writer = fn x => write t (write_conv x)
+    writer = fn x => write t (write_conv x),
+    name = new_name
 }
+
+fun alias new_name {reader, writer, name} = {reader = reader,
+                                             writer = writer,
+                                             name = new_name}
 
 fun recur f = {
     reader = fn bytes => (#reader (f ())) bytes,
-    writer = fn value => (#writer (f ())) value
+    writer = fn value => (#writer (f ())) value,
+    name = "<rec>"
 }
 
 val empty = Word8Vector.fromList [];
 
 val unit = {
     reader = fn _ => (),
-    writer = fn _ => empty
+    writer = fn _ => empty,
+    name = "unit"
 };
 
 val bool = {
@@ -174,7 +185,8 @@ val bool = {
                        | _ => raise RpcError,
     writer = fn b => case b of
                          true => Word8Vector.fromList [Word8.fromInt 1]
-                       | false => Word8Vector.fromList [Word8.fromInt 0]
+                       | false => Word8Vector.fromList [Word8.fromInt 0],
+    name = "bool"
 }
 
 val int =
@@ -211,17 +223,20 @@ val int =
             end;
     in {
         reader = unpackInt,
-        writer = packInt
+        writer = packInt,
+        name = "int"
     } end;
 
 val real = {
     reader = PackRealBig.fromBytes,
-    writer = PackRealBig.toBytes
+    writer = PackRealBig.toBytes,
+    name = "real"
 };
 
 val string = {
     reader = Byte.bytesToString,
-    writer = Byte.stringToBytes
+    writer = Byte.stringToBytes,
+    name = "string"
 };
 
 fun getBytes vect start len =
@@ -245,35 +260,53 @@ fun tupleN n =
             in Word8Vector.concat (lens @ bytelist) end;
     in {
         reader = readTuple,
-        writer = writeTuple
+        writer = writeTuple,
+        name = "tuple"
     } end;
 
 fun tuple2 (at, bt) =
-    convert (tupleN 2)
+    convert (String.concat ["(", name at, " * ", name bt, ")"])
+            (tupleN 2)
             (fn [a, b] => (read at a, read bt b)
             | _ => raise RpcError)
             (fn (a, b) => [write at a, write bt b]);
 
 fun tuple3 (at, bt, ct) =
-    convert (tupleN 3)
+    convert (String.concat ["(", name at, " * ", name bt, " * ", name ct, ")"])
+            (tupleN 3)
             (fn [a, b, c] => (read at a, read bt b, read ct c)
             | _ => raise RpcError)
             (fn (a, b, c) => [write at a, write bt b, write ct c]);
 
 fun tuple4 (at, bt, ct, dt) =
-    convert (tupleN 4)
+    convert (String.concat ["(", name at,
+                            " * ", name bt,
+                            " * ", name ct,
+                            " * ", name dt, ")"])
+            (tupleN 4)
             (fn [a, b, c, d] => (read at a, read bt b, read ct c, read dt d)
             | _ => raise RpcError)
             (fn (a, b, c, d) => [write at a, write bt b, write ct c, write dt d]);
 
 fun tuple5 (at, bt, ct, dt, et) =
-    convert (tupleN 5)
+    convert (String.concat ["(", name at,
+                            " * ", name ct,
+                            " * ", name dt,
+                            " * ", name bt,
+                            " * ", name et, ")"])
+            (tupleN 5)
             (fn [a, b, c, d, e] => (read at a, read bt b, read ct c, read dt d, read et e)
             | _ => raise RpcError)
             (fn (a, b, c, d, e) => [write at a, write bt b, write ct c, write dt d, write et e]);
 
 fun tuple6 (at, bt, ct, dt, et, ft) =
-    convert (tupleN 6)
+    convert (String.concat ["(", name at,
+                            " * ", name bt,
+                            " * ", name ct,
+                            " * ", name dt,
+                            " * ", name et,
+                            " * ", name ft, ")"])
+            (tupleN 6)
             (fn [a, b, c, d, e, f] => (read at a, read bt b, read ct c, read dt d, read et e, read ft f)
             | _ => raise RpcError)
             (fn (a, b, c, d, e, f) => [write at a, write bt b, write ct c, write dt d, write et e, write ft f]);
@@ -287,11 +320,15 @@ val eitherN =
             Word8Vector.concat [Word8Vector.fromList [Word8.fromInt idx], data];
     in {
         reader = readEither,
-        writer = writeEither
+        writer = writeEither,
+        name = "EitherN"
     } end;
 
 fun either2 (at, bt) =
-    convert eitherN
+    convert(String.concat ["(", name at,
+                            ", ", name bt,
+                            ") Rpc.Datatype.Either2.t"])
+           eitherN
             (fn (0, a) => Either2.FST (read at a)
             | (1, b) => Either2.SND (read bt b)
             | _ => raise RpcError)
@@ -299,7 +336,11 @@ fun either2 (at, bt) =
             | (Either2.SND b) => (1, write bt b));
 
 fun either3 (at, bt, ct) =
-    convert eitherN
+    convert (String.concat ["(", name at,
+                            ", ", name bt,
+                            ", ", name ct,
+                            ") Rpc.Datatype.Either3.t"])
+        eitherN
             (fn (0, a) => Either3.FST (read at a)
             | (1, b) => Either3.SND (read bt b)
             | (2, c) => Either3.THD (read ct c)
@@ -309,7 +350,12 @@ fun either3 (at, bt, ct) =
             | (Either3.THD c) => (2, write ct c));
 
 fun either4 (at, bt, ct, dt) =
-    convert eitherN
+    convert (String.concat ["(", name at,
+                            ", ", name bt,
+                            ", ", name ct,
+                            ", ", name dt,
+                            ") Rpc.Datatype.Either4.t"])
+        eitherN
             (fn (0, a) => Either4.FST (read at a)
             | (1, b) => Either4.SND (read bt b)
             | (2, c) => Either4.THD (read ct c)
@@ -321,7 +367,13 @@ fun either4 (at, bt, ct, dt) =
             | (Either4.FOR d) => (3, write dt d));
 
 fun either5 (at, bt, ct, dt, et) =
-    convert eitherN
+    convert (String.concat ["(", name at,
+                            ", ", name bt,
+                            ", ", name ct,
+                            ", ", name dt,
+                            ", ", name et,
+                            ") Rpc.Datatype.Either5.t"])
+        eitherN
             (fn (0, a) => Either5.FST (read at a)
             | (1, b) => Either5.SND (read bt b)
             | (2, c) => Either5.THD (read ct c)
@@ -335,7 +387,14 @@ fun either5 (at, bt, ct, dt, et) =
             | (Either5.FIF e) => (4, write et e));
 
 fun either6 (at, bt, ct, dt, et, ft) =
-    convert eitherN
+    convert (String.concat ["(", name at,
+                            ", ", name bt,
+                            ", ", name ct,
+                            ", ", name dt,
+                            ", ", name et,
+                            ", ", name ft,
+                            ") Rpc.Datatype.Either6.t"])
+        eitherN
             (fn (0, a) => Either6.FST (read at a)
             | (1, b) => Either6.SND (read bt b)
             | (2, c) => Either6.THD (read ct c)
@@ -351,7 +410,8 @@ fun either6 (at, bt, ct, dt, et, ft) =
             | (Either6.SIX f) => (5, write ft f));
 
 fun option at =
-    convert (either2 (at, unit))
+    convert ((name at) ^ " option")
+            (either2 (at, unit))
             (fn Either2.FST v => SOME v
             | Either2.SND () => NONE)
             (fn SOME v => Either2.FST v
@@ -380,7 +440,8 @@ fun list at =
             in Word8Vector.concat (len_bytes::encoded_elements) end;
     in {
         reader = listReader,
-        writer = listWriter
+        writer = listWriter,
+        name = (name at) ^ " list"
     } end;
 
 end;
