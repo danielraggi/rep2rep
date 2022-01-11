@@ -8,6 +8,9 @@ sig
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
                constructRel : Relation.relationship};
+
+  val corr_rpc : corr Rpc.Datatype.t;
+
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> corr -> bool;
   val nameOf : corr -> string;
   val patternsOf : corr -> Pattern.pattern * Pattern.pattern;
@@ -27,6 +30,24 @@ struct
                targetPattern : Pattern.construction,
                tokenRels : Relation.relationship list,
                constructRel : Relation.relationship};
+
+  val corr_rpc = Rpc.Datatype.convert
+                     (Rpc.Datatype.tuple5
+                          (String.string_rpc,
+                           Pattern.construction_rpc,
+                           Pattern.construction_rpc,
+                           List.list_rpc Relation.relationship_rpc,
+                           Relation.relationship_rpc))
+                     (fn (n, s, t, rs, r) => {name = n,
+                                              sourcePattern = s,
+                                              targetPattern = t,
+                                              tokenRels = rs,
+                                              constructRel = r})
+                     (fn {name = n,
+                          sourcePattern = s,
+                          targetPattern = t,
+                          tokenRels = rs,
+                          constructRel = r} => (n, s, t, rs, r));
 
   exception badForm
   fun wellFormed  sT  tT {name,sourcePattern,targetPattern,tokenRels,constructRel} =
