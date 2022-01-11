@@ -63,8 +63,7 @@ struct
                                       (Rpc.Datatype.tuple2
                                            (tc_rpc,
                                             List.list_rpc
-                                                (Rpc.Datatype.recur
-                                                     (fn () => construction_rpc_ ()))),
+                                                (Rpc.Datatype.recur construction_rpc_)),
                                        CSpace.token_rpc,
                                        CSpace.token_rpc))
                                  (fn (Rpc.Datatype.Either3.FST (tc, cs)) => TCPair (tc, cs)
