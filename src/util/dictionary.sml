@@ -9,11 +9,15 @@ look-up, insert, and deletion times.
 
 *)
 
+import "util.rpc";
+
 (* An abstract signature for dictionaries *)
 signature DICTIONARY =
 sig
     type k;
     type ('k, 'v) dict;
+
+    val dict_rpc: 'v Rpc.Datatype.t -> (k, 'v) dict Rpc.Datatype.t;
 
     exception KeyError;
 
@@ -64,6 +68,7 @@ end;
 functor Dictionary(K :
                    sig
                        type k;
+                       val k_rpc: k Rpc.Datatype.t;
                        val compare : k * k -> order;
                        val fmt : k -> string;
                    end
@@ -74,6 +79,23 @@ datatype 'a tree = LEAF
                  | BRANCH of ('a * 'a tree * 'a tree);
 type k = K.k;
 type ('k, 'v) dict = ('k * 'v) tree ref;
+
+fun dict_rpc v_rpc =
+    let fun tree_rpc a_rpc =
+            Rpc.Datatype.either2 (unit_rpc,
+                                  Rpc.Datatype.tuple3 (a_rpc,
+                                                       Rpc.Datatype.recur (fn () => tree_rpc a_rpc),
+                                                       Rpc.Datatype.recur (fn () => tree_rpc a_rpc)));
+        fun tree_of_base (Rpc.Datatype.Either2.FST ()) = LEAF
+          | tree_of_base (Rpc.Datatype.Either2.SND (a, l, r)) = BRANCH (a, l, r);
+        fun base_of_tree LEAF = Rpc.Datatype.Either2.FST ()
+          | base_of_tree (BRANCH (a, l, r)) = Rpc.Datatype.Either2.SND (a, l, r);
+        fun dict_of_base base = ref (tree_of_base base);
+        fun base_of_dict dict = base_of_tree (!dict);
+    in Rpc.Datatype.convert tree_rpc
+                            dict_of_base
+                            base_of_dict
+    end;
 
 exception KeyError;
 
