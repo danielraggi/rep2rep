@@ -470,15 +470,25 @@ fun provide (name, param, return) callback = {
                           in Datatype.write return output end
 };
 
-fun get_input sock' =
+fun get_input sock =
     let fun f ans =
-            let val inv = Socket.recvVec (sock', 1024); in
+            let val inv = Socket.recvVec (sock, 1024); in
                 if Word8Vector.length inv < 1024
                 then Word8Vector.concat (List.rev (inv::ans))
                 else f (inv::ans)
             end
     in f [] end;
 
+fun send_output sock vec =
+    let fun f offset remaining =
+            let val sent = Socket.sendVec
+                               (sock,
+                                Word8VectorSlice.slice (vec, offset, NONE));
+            in if sent = remaining
+               then offset + remaining
+               else f (offset + sent) (remaining - sent)
+            end;
+    in f 0 (Word8Vector.length vec) end;
 
 fun require {socket = _, address = addr} (name, param, return) =
     fn input =>
@@ -497,11 +507,13 @@ fun require {socket = _, address = addr} (name, param, return) =
            fun parse_response vec =
                let val req = Byte.bytesToString vec;
                    val lines = String.fields (fn c => c = #"\n") req;
-                   val data = List.last lines;
+                   val lines = List.dropWhile (fn l => l <> "\r") lines;
+                   val lines = List.tl lines;
+                   val data = String.concatWith "\n" lines;
                in Byte.stringToBytes data end;
            val data = Datatype.write param input;
            val request = make_request data;
-           val _ = Socket.sendVec (sock, Word8VectorSlice.full request);
+           val _ = send_output sock request;
            val response = get_input sock;
            val output = parse_response response;
            val () = Socket.close sock;
@@ -556,9 +568,7 @@ fun serve {socket = sock, address = addr} endpoints =
                                                    (#callback
                                                         (find_endpoint request)
                                                         data);
-                                val _ = Socket.sendVec
-                                            (sock',
-                                             Word8VectorSlice.full response);
+                                val _ = send_output sock' response;
                                 val () = Socket.close sock';
                             in () end;
                         val _ = Thread.Thread.fork (handler, []);
