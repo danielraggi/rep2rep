@@ -29,12 +29,14 @@ struct
   type T = string;
   type relationship = CSpace.token list * CSpace.token list * T;
 
-  val T_rpc = String.string_rpc;
+  val T_rpc = Rpc.Datatype.alias "Relation.T" String.string_rpc;
 
-  val relationship_rpc = Rpc.Datatype.tuple3
-                             (List.list_rpc CSpace.token_rpc,
-                              List.list_rpc CSpace.token_rpc,
-                              T_rpc);
+  val relationship_rpc = Rpc.Datatype.alias
+                             "Relation.relationship"
+                             (Rpc.Datatype.tuple3
+                                  (List.list_rpc CSpace.token_rpc,
+                                   List.list_rpc CSpace.token_rpc,
+                                   T_rpc));
 
   fun tupleOfRelationship r = r;
   fun make r = r;
