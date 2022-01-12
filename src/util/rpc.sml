@@ -546,15 +546,22 @@ fun serve {socket = sock, address = addr} endpoints =
                     ];
                 val header_bytes = Byte.stringToBytes header;
             in Word8Vector.concat [header_bytes, data] end;
-        val _ = print ("Running...\n");
     in
         forever (fn () =>
                     let val (sock', remote_addr) = Socket.accept sock;
-                        val invec = get_input sock';
-                        val (request, data) = parse_request invec;
-                        val response = make_response (#callback (find_endpoint request) data);
-                        val _ = Socket.sendVec (sock', Word8VectorSlice.full response);
-                        val () = Socket.close sock';
+                        fun handler () = let
+                                val invec = get_input sock';
+                                val (request, data) = parse_request invec;
+                                val response = make_response
+                                                   (#callback
+                                                        (find_endpoint request)
+                                                        data);
+                                val _ = Socket.sendVec
+                                            (sock',
+                                             Word8VectorSlice.full response);
+                                val () = Socket.close sock';
+                            in () end;
+                        val _ = Thread.Thread.fork (handler, []);
                     in () end)
     end;
 
