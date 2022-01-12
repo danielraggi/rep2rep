@@ -37,22 +37,29 @@ struct
 
   val corr_rpc = Rpc.Datatype.convert
                      "Correspondence.corr"
-                     (Rpc.Datatype.tuple5
+                     (Rpc.Datatype.tuple6
                           (String.string_rpc,
                            Pattern.construction_rpc,
                            Pattern.construction_rpc,
                            List.list_rpc Relation.relationship_rpc,
-                           Relation.relationship_rpc))
-                     (fn (n, s, t, rs, r) => {name = n,
+                           Relation.relationship_rpc,
+                           List.list_rpc
+                               (Rpc.Datatype.tuple3
+                                    (Relation.T_rpc,
+                                     Relation.T_rpc,
+                                     List.list_rpc CSpace.token_rpc))))
+                     (fn (n, s, t, rs, r, p) => {name = n,
                                               sourcePattern = s,
                                               targetPattern = t,
                                               tokenRels = rs,
-                                              constructRel = r})
+                                              constructRel = r,
+                                              pullList = p})
                      (fn {name = n,
                           sourcePattern = s,
                           targetPattern = t,
                           tokenRels = rs,
-                          constructRel = r} => (n, s, t, rs, r));
+                          constructRel = r,
+                          pullList = p} => (n, s, t, rs, r, p));
 
   exception badForm
   fun wellFormed sT tT {name,sourcePattern,targetPattern,tokenRels,constructRel,pullList} =
