@@ -35,7 +35,7 @@ struct
   open Construction
   type pattern = construction;
 
-  val pattern_rpc = construction_rpc;
+  val pattern_rpc = Rpc.Datatype.alias "Pattern.pattern" construction_rpc;
 
   fun configuratorMatches u u' =
       CSpace.sameConstructors (CSpace.constructorOfConfigurator u) (CSpace.constructorOfConfigurator u')
