@@ -16,6 +16,7 @@ sig
 
   val unistructured : composition -> bool;
   val unistructurable : Type.typeSystem -> composition -> bool;
+  val similar : composition -> composition -> bool;
 
   val initFromConstruction : Construction.construction -> composition;
   val attachConstructionAt : composition -> Construction.construction -> CSpace.token -> composition;
@@ -23,6 +24,10 @@ sig
   val makePlaceholderComposition : CSpace.token -> composition;
 
   val constructionsInComposition : composition -> Construction.construction list;
+
+  val pseudoSimilar : composition -> composition -> bool;
+
+
   val tokensOfComposition : composition -> CSpace.token list;
   val resultingConstructions : composition -> Construction.construction list;
   val pickICSfromAttachments : Construction.construction -> Construction.construction list -> Construction.construction list;
@@ -52,7 +57,7 @@ struct
 
   fun dataOfComposition (Composition {construct, attachments}) = {construct = construct, attachments = attachments}
   fun size (Composition {attachments = (c,D::DL)::L, construct}) = size D + size (Composition {attachments = (c,DL)::L, construct=construct})
-    | size (Composition {attachments = (c,[])::L, construct}) = Construction.size c - 1 + size (Composition {attachments = L, construct=construct})
+    | size (Composition {attachments = (c,[])::L, construct}) = Construction.size c + size (Composition {attachments = L, construct=construct})
     | size (Composition {attachments = [], ...}) = 0
 
   fun isPlaceholder (Composition {attachments,...}) = null attachments
@@ -90,6 +95,18 @@ struct
         List.all (subsumingAttachments T (ct,DL)) L andalso
         unistructurable T (Composition {attachments = L, construct = construct})
     | unistructurable T (Composition {attachments = [], ...}) = true
+
+  fun similar (Composition {construct = c, attachments = A}) (Composition {construct = c', attachments = A'}) =
+    let fun SA (ct,compL) (ct',compL') =
+          let val (similarCts,f) = Pattern.mapUnder ct ct' CSpace.tokensHaveSameType CSpace.sameConstructors
+              fun mapAndSimilar (x,y) =
+                  CSpace.sameTokens (valOf (f (constructOfComposition x))) (constructOfComposition y)
+                  andalso similar x y
+          in similarCts andalso List.isPermutationOf mapAndSimilar compL compL' handle Option => (print "hm";false)
+          end
+        fun similarAttachments L L' = List.isPermutationOf (uncurry SA) L L'
+    in CSpace.tokensHaveSameType c c' andalso similarAttachments A A'
+    end
 
   fun makePlaceholderComposition t = Composition {construct = t, attachments = []}
 
@@ -150,6 +167,16 @@ struct
           | removeRedundant [] = []
     in if null attachments then [Construction.Source construct] else removeRedundant (rc attachments)
     end
+
+  fun pseudoSimilar C C' =
+    List.isPermutationOf (uncurry Pattern.similar) (resultingConstructions C) (resultingConstructions C')
+
+  fun leavesOfComposition (Composition {attachments = (ct,C::CL)::L, construct}) =
+        Construction.leavesOfConstruction ct :: ((leavesOfComposition C)
+          @ (leavesOfComposition (Composition {attachments = L, construct = construct})))
+    | leavesOfComposition (Composition {attachments = (ct,[])::L, construct}) =
+        Construction.leavesOfConstruction ct :: (leavesOfComposition (Composition {attachments = L, construct = construct}))
+    | leavesOfComposition (Composition {attachments = [], ...}) = []
 
   fun applyPartialMorphismToComposition f (Composition {construct,attachments}) =
     let fun applyToAttachment (ct,C) = ((Pattern.applyPartialMorphism f ct, map (applyPartialMorphismToComposition f) C))

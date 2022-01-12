@@ -27,7 +27,9 @@ sig
   val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
-  val correspondence : string -> Correspondence.corr
+  (*val correspondence : string -> Correspondence.corr*)
+  val splitListWhen : ('a -> bool) -> 'a list -> ('a list * 'a list)
+  val deTokenise : string -> string list -> string
   (*
   val knowledge : string -> Knowledge.base
   val state : string -> State.T*)
@@ -37,6 +39,14 @@ structure Parser : PARSER =
 struct
   exception ParseError of string;
   exception CodeError;
+
+  fun deTokenise sep (s::L) = s ^ sep ^ deTokenise sep L
+    | deTokenise sep [] = ""
+
+  fun splitListWhen f [] = (print "splitListWhen";raise Match)
+    | splitListWhen f (s::L) =
+        if f s then ([],L)
+        else (case splitListWhen f L of (L1,L2) => (s::L1,L2))
 
   fun breakOnClosingDelimiter (lD,rD) s =
     let
@@ -204,6 +214,7 @@ struct
     in Relation.makeRelationship (list token xs,list token ys,relation Rs)
     end
 
+(*
   fun correspondence s =
     let val ss = String.removeParentheses (String.stripSpaces s)
         val (n,sPs,tPs,fRss,cRs) =
@@ -220,5 +231,5 @@ struct
                     tokenRels = fRs,
                     constructRel = cR}
     in Correspondence.declareCorrespondence corr
-    end
+    end*)
 end;

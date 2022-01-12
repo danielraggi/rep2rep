@@ -2,30 +2,49 @@ import "core.correspondence";
 
 signature TRANSFER_PROOF =
 sig
-  datatype tproof = Closed of Relation.relationship * {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern} * tproof list
+  type corr = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  datatype tproof = Closed of Relation.relationship * corr * tproof list
                   | Open of Relation.relationship;
   val ofRelationship : Relation.relationship -> tproof;
+  val dataOfCorrespondence : Correspondence.corr -> {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
   val ofCorrespondence : Correspondence.corr -> tproof;
+  val similar : tproof -> tproof -> bool
   val applyTokenMorph : (CSpace.token -> CSpace.token option) -> tproof -> tproof
   val attachCorr : Correspondence.corr -> tproof -> tproof;
   val attachCorrAt : Correspondence.corr -> Relation.relationship -> tproof -> tproof;
+  val attachCorrPulls : Correspondence.corr -> CSpace.token -> tproof -> tproof
+  val dump : string -> Relation.relationship -> tproof -> tproof
+
   val mapRelsAndAttachCorr : (Relation.relationship -> Relation.relationship)
                               -> Correspondence.corr -> tproof -> tproof;
 
   val toConstruction : tproof -> Construction.construction;
-  val multiplicativeIS : (string -> real option) -> tproof -> real;
 end;
 
 structure TransferProof : TRANSFER_PROOF =
 struct
 
-  datatype tproof = Closed of Relation.relationship * {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern} * tproof list
+  type corr = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  datatype tproof = Closed of Relation.relationship * corr * tproof list
                   | Open of Relation.relationship;
 
   fun ofRelationship r = Open r;
 
+
+  fun dataOfCorrespondence corr = {name = #name corr, sourcePattern = #sourcePattern corr,targetPattern = #targetPattern corr}
+
   fun ofCorrespondence corr =
-    Closed (#constructRel corr, {name = #name corr, sourcePattern = #sourcePattern corr,targetPattern = #targetPattern corr}, map Open (#tokenRels corr))
+    Closed (#constructRel corr, dataOfCorrespondence corr, map Open (#tokenRels corr))
+
+  fun sameSimilarCorrs c c' = #name c = #name c' andalso
+                          Pattern.same (#sourcePattern c) (#sourcePattern c') andalso
+                          Pattern.similar (#targetPattern c) (#targetPattern c')
+
+  fun similar (Closed (r,c,L)) (Closed (r',c',L')) = Relation.stronglyMatchingRelationships r r' andalso
+                                                     sameSimilarCorrs c c' andalso
+                                                     List.allZip similar L L'
+    | similar (Open r) (Open r') = Relation.stronglyMatchingRelationships r r'
+    | similar _ _ = false
 
   fun attachCorr corr (Closed (r,npp,L)) = Closed (r,npp, map (attachCorr corr) L)
     | attachCorr corr (Open r) =
@@ -39,6 +58,33 @@ struct
         then ofCorrespondence corr
         else Open r
 
+  fun attachCorrPulls corr t (Closed (r,npp,L)) = Closed (r,npp, map (attachCorrPulls corr t) L)
+    | attachCorrPulls corr t (Open (x,y,R)) =
+      let val pullList = Correspondence.pullListOf corr
+          (*val t = Pattern.constructOf (#targetPattern corr)*)
+          fun applyPullItems ((R',R'',tL) :: L) =
+                if Relation.same R R' andalso List.exists (CSpace.sameTokens t) y
+                then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL
+                else applyPullItems L
+            | applyPullItems [] = []
+      in case applyPullItems pullList of
+            [] => Open (x,y,R)
+          | rL => Closed ((x,y,R),
+                          {name = #name corr ^ "\\_pull",
+                           sourcePattern = #sourcePattern corr,
+                           targetPattern = #targetPattern corr},
+                           map Open rL)
+      end
+
+  fun dump s g (Closed (r,npp,L)) = Closed (r,npp, map (dump s g) L)
+    | dump s (x,y,R) (Open r) =
+      if Relation.sameRelationship (x,y,R) r
+      then Closed ((x,y,R),
+                   {name = s,
+                    sourcePattern = Pattern.Source (CSpace.makeToken "" ""),
+                    targetPattern = Pattern.Source (CSpace.makeToken "" "")},
+                   [])
+      else Open r
 
   fun applyTokenMorph f (Closed (r,npp,L)) =
         let fun applyPartialF t = (case f t of SOME t' => t' | NONE => t)
@@ -85,9 +131,4 @@ struct
       in Construction.Source t
       end
 
-
-  fun multProp (x::L) = x * multProp L
-    | multProp [] = 1.0
-  fun multiplicativeIS p (Closed (r,npp,L)) = (case p (#name npp) of SOME s => s * multProp (map (multiplicativeIS p) L) | NONE => 0.0 (* * (map (multiplicativeIS f) L)*))
-    | multiplicativeIS p (Open r) = 0.5
 end

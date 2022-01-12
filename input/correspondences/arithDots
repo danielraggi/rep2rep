@@ -8,81 +8,82 @@ correspondence plusJoin:(arithG,dotDiagramsG) =
               ([m:numExp],[b:arr]) :: count,
               ([],[a:arr,b:arr]) :: disjoint
     constructRel ([t:numExp],[t':arr]) :: count
-    strength 1.0
+    pull disjoint to [a:arr,b:arr]
+    strength 1
 
 correspondence doubleCounting:(arithG,dotDiagramsG) =
     source t:formula <- infixRel[n:numExp,e:equal,m:numExp]
     target t':arr
     tokenRels ([n:numExp],[t':arr]) :: count, ([m:numExp],[t':arr]) :: count
     constructRel ([t:formula],[t':arr]) :: formulaIsValid
-    strength 1.0
+    strength 1
 
 correspondence div2symmetry:(arithG,dotDiagramsG) =
     source t:numExp <- frac[t1:numExp,line:div,t2:2:numeral]
     target t':arr <- rotateX[t1':arr <- remove[t2':arr,t':arr]]
     tokenRels ([t1:numExp],[t2':arr]) :: count
     constructRel ([t:numExp],[t':arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence parenthesesSuperfluous:(arithG,dotDiagramsG) =
     source t:numExp <- addParentheses[toB:oB,x:numExp,tcB:cB]
     target t':arr
     tokenRels ([x:numExp],[t':arr])::count
     constructRel ([t:numExp],[t':arr])::count
-    strength 1.0
+    strength 1
 
 correspondence multRectangle:(arithG,dotDiagramsG) =
     source t:numExp <- implicitMult[t1:numExp,t2:numExp]
     target t':arr <- makeRectangle[t1':arr,t2':arr]
     tokenRels ([t1:numExp],[t1':arr]) :: count, ([t2:numExp],[t2':arr]) :: count, ([],[t1':arr,t2':arr]) :: canRectangulate
     constructRel ([t:numExp],[t':arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence oneCirc:(arithG,dotDiagramsG) =
     source t:1:numeral
     target t':\crc:arr
     tokenRels
     constructRel ([t:1:numeral],[t':\crc:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence twoHorizontal:(arithG,dotDiagramsG) =
     source t:2:numeral
     target t':\oo:arr
     tokenRels
     constructRel ([t:2:numeral],[t':\oo:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence threeHorizontal:(arithG,dotDiagramsG) =
     source t:3:numeral
     target t':\ooo:arr
     tokenRels
     constructRel ([t:3:numeral],[t':\ooo:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence fourHorizontal:(arithG,dotDiagramsG) =
     source t:4:numeral
     target t':\oooo:arr
     tokenRels
     constructRel ([t:4:numeral],[t':\oooo:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence twoVertical:(arithG,dotDiagramsG) =
     source t:2:numeral
     target t':\ooV:arr
     tokenRels
     constructRel ([t:2:numeral],[t':\ooV:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence threeVertical:(arithG,dotDiagramsG) =
     source t:3:numeral
     target t':\oooV:arr
     tokenRels
     constructRel ([t:3:numeral],[t':\oooV:arr]) :: count
-    strength 1.0
+    strength 1
 
 correspondence fourVertical:(arithG,dotDiagramsG) =
     source t:4:numeral
     target t':\ooooV:arr
     tokenRels
     constructRel ([t:4:numeral],[t':\ooooV:arr]) :: count
-    strength 1.0
+    strength 1

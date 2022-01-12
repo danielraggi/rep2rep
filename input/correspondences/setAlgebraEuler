@@ -70,3 +70,24 @@ correspondence labelName:(setAlgebraG,EulerG) =
     tokenRels
     constructRel ([t:C:bset],[t':C:label]) :: sameName
     strength 1.0
+
+correspondence implicationDraw:(setAlgebraG,EulerG) =
+    source t:formula <- infixLogical[t1:formula,t2:implies,t3:formula]
+    target t':diagram
+    tokenRels ([t1:formula],[t':diagram]) :: draw, ([t3:formula],[t':diagram]) :: draw
+    constructRel ([t:formula],[t':diagram]) :: draw
+    strength 0.5
+
+correspondence propagateUnify1:(setAlgebraG,EulerG) =
+    source t:formula
+    target t':diagram <- unify[t1':diagram,t2':diagram]
+    tokenRels ([t:formula],[t1':diagram]) :: draw
+    constructRel ([t:formula],[t':diagram]) :: draw
+    strength 1.0
+
+correspondence propagateUnify2:(setAlgebraG,EulerG) =
+    source t:formula
+    target t':diagram <- unify[t1':diagram,t2':diagram]
+    tokenRels ([t:formula],[t2':diagram]) :: draw
+    constructRel ([t:formula],[t':diagram]) :: draw
+    strength 1.0
