@@ -9,6 +9,12 @@ import "oruga.document";
 *)
 Logging.enable ();
 
+fun runServer addr =
+    let val rpc_service = Rpc.create addr;
+        val endpoints = [];
+        val _ = print "Starting RPC server...\n";
+    in Rpc.serve rpc_service endpoints end;
+
 fun filesMatchingPrefix dir prefix =
     let
         fun getWholeDir direc out = case OS.FileSys.readDir (direc) of
@@ -24,14 +30,19 @@ fun filesMatchingPrefix dir prefix =
     handle OS.SysErr (a, b) => (raise OS.SysErr (a, b));
 
 exception BadArguments
+datatype args = ServerMode of (string * int)
+              | DocumentMode of string
 fun parseArgs () =
-  let
-    val args = CommandLine.arguments ();
-    val configuration =
-        (case args of
-            [documentName] => documentName
-          | _ => raise BadArguments)
-  in configuration end
+  let val args = CommandLine.arguments ();
+      val configuration =
+          (case args of
+               ["--server-address", address, "--server-port", port]
+               => (case Int.fromString port of
+                       SOME port => ServerMode (address, port)
+                     | NONE => raise BadArguments)
+             | [documentName] => DocumentMode documentName
+             | _ => raise BadArguments)
+  in configuration end;
 
 fun main () =
   let val today = Date.fmt "%Y-%m-%d" (Date.fromTimeLocal (Time.now()));
@@ -40,7 +51,7 @@ fun main () =
                                ^ today
                                ^ " with "
                                ^ version ^ "\n");*)
-      val documentName = parseArgs ();
-      val _ = Document.read documentName
-  in ()
+  in case parseArgs () of
+         DocumentMode documentName => (Document.read documentName; ())
+       | ServerMode addr => runServer addr
   end
