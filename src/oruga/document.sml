@@ -210,7 +210,7 @@ struct
                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
             in Construction.TCPair (tcp, Parser.splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
             end
-    in (*Construction.fixReferences*) (c [] (String.stripSpaces s))
+    in Construction.fixReferences (c [] (String.stripSpaces s))
     end;
 
   fun addCorrespondence (nn,cs) dc =
