@@ -42,6 +42,12 @@ sig
   val toString : construction -> string;
 
   exception MalformedConstructionTerm of string;
+
+  structure R : sig
+                val size : Rpc.endpoint;
+                val leavesOfConstruction : Rpc.endpoint;
+                val fullTokenSequence : Rpc.endpoint;
+            end;
 end;
 
 structure Construction : CONSTRUCTION =
@@ -412,5 +418,23 @@ struct
               fun mkNew xs = TCPair (tc, xs)
           in map mkNew (List.listProduct csr)
           end
+
+  structure R = struct
+  fun url s = "core.construction." ^ s;
+
+  val size = Rpc.provide (url "size",
+                          construction_rpc,
+                          Int.int_rpc)
+                         size;
+  val leavesOfConstruction = Rpc.provide (url "leavesOfConstruction",
+                                          construction_rpc,
+                                          List.list_rpc CSpace.token_rpc)
+                                         leavesOfConstruction;
+  val fullTokenSequence = Rpc.provide (url "fullTokenSequence",
+                                       construction_rpc,
+                                       List.list_rpc CSpace.token_rpc)
+                                      fullTokenSequence;
+
+  end;
 
 end;

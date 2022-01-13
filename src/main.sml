@@ -14,6 +14,9 @@ fun runServer addr =
     let val rpc_service = Rpc.create addr;
         val endpoints = [
             forAaron_rpc,
+            Construction.R.size,
+            Construction.R.leavesOfConstruction,
+            Construction.R.fullTokenSequence
         ];
         val _ = print "Starting RPC server...\n";
     in Rpc.serve rpc_service endpoints end;
