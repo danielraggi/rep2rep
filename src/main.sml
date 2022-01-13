@@ -1,6 +1,7 @@
 import "util.logging";
 import "latex.latex";
 import "oruga.document";
+import "aarons";
 
 (* To see a full trace of the algorithm, we enable logging.
    If this seems too 'noisy', you can use `Logging.disable ()`.
@@ -11,7 +12,9 @@ Logging.enable ();
 
 fun runServer addr =
     let val rpc_service = Rpc.create addr;
-        val endpoints = [];
+        val endpoints = [
+            forAaron_rpc,
+        ];
         val _ = print "Starting RPC server...\n";
     in Rpc.serve rpc_service endpoints end;
 
