@@ -13,6 +13,8 @@ at providing endpoints. The "calling" end is from JavaScript/ReScript, located e
 The serialisation format must be kept in sync between the two languages.
 *)
 
+import "util.http";
+
 signature RPC = sig
 
     exception RpcError;
@@ -450,130 +452,67 @@ type ('a, 'b) functype = string * 'a Datatype.t * 'b Datatype.t
 
 type endpoint = {
     identifier: string,
+    specification: string,
     callback: data -> data
 }
 
 type service = {
-    socket: Socket.passive INetSock.stream_sock,
     address: INetSock.sock_addr
 }
 
 fun create (host, port) = {
-    socket = INetSock.TCP.socket (),
     address = INetSock.toAddr (Option.valOf (NetHostDB.fromString host), port)
 };
 
 fun provide (name, param, return) callback = {
     identifier = name,
+    specification = String.concat [Datatype.name param,
+                                   " -> ",
+                                   Datatype.name return],
     callback = fn data => let val input = Datatype.read param data;
                               val output = callback input;
                           in Datatype.write return output end
 };
 
-fun get_input sock =
-    let fun f ans =
-            let val inv = Socket.recvVec (sock, 1024); in
-                if Word8Vector.length inv < 1024
-                then Word8Vector.concat (List.rev (inv::ans))
-                else f (inv::ans)
-            end
-    in f [] end;
-
-fun send_output sock vec =
-    let fun f offset remaining =
-            let val sent = Socket.sendVec
-                               (sock,
-                                Word8VectorSlice.slice (vec, offset, NONE));
-            in if sent = remaining
-               then offset + remaining
-               else f (offset + sent) (remaining - sent)
-            end;
-    in f 0 (Word8Vector.length vec) end;
-
-fun require {socket = _, address = addr} (name, param, return) =
+fun require {address = addr} (name, param, return) =
     fn input =>
-       let val sock = INetSock.TCP.socket ();
-           val () = Socket.connect (sock, addr);
-           fun make_request data =
-               let val len = Word8Vector.length data;
-                   val header = String.concat [
-                           "POST /" ^ name ^ " HTTP/1.1\r\n",
-                           "Content-Length: " ^ (Int.toString len) ^ "\r\n",
-                           "Content-Type: application/octet-stream\r\n",
-                           "\r\n"
-                       ];
-                   val header_bytes = Byte.stringToBytes header;
-               in Word8Vector.concat [header_bytes, data] end;
-           fun parse_response vec =
-               let val req = Byte.bytesToString vec;
-                   val lines = String.fields (fn c => c = #"\n") req;
-                   val lines = List.dropWhile (fn l => l <> "\r") lines;
-                   val lines = List.tl lines;
-                   val data = String.concatWith "\n" lines;
-               in Byte.stringToBytes data end;
-           val data = Datatype.write param input;
-           val request = make_request data;
-           val _ = send_output sock request;
-           val response = get_input sock;
-           val output = parse_response response;
-           val () = Socket.close sock;
-       in Datatype.read return output end;
+       let val data = Datatype.write param input;
+           val request = Http.Client.makeRequest
+                             (Http.POST, "/" ^ name)
+                             ("application/octet-stream", data);
+           val response = Http.Client.fetch addr request;
+           val (status, _, output) = Http.Client.readResponse response;
+       in if status <> Http.OK then raise RpcError
+          else Datatype.read return output
+       end;
 
-(* This function is a mess -- needs rewriting. *)
-fun serve {socket = sock, address = addr} endpoints =
-    let val () = Socket.bind (sock, addr);
-        val () = Socket.listen (sock, 5);
-        fun forever f = (f () handle _ => (); forever f);
-        fun find_endpoint req =
-            case List.find (fn ep => (#identifier ep) = req) endpoints of
-                NONE => {identifier = req,
-                         callback = fn _ => Byte.stringToBytes
-                                                (String.concatWith
-                                                     "\n"
-                                                     (("Unknown endpoint " ^ req)
-                                                      ::"Known endpoints:"
-                                                      ::(List.map #identifier endpoints)) ^ "\n")}
-             |  SOME ep => ep;
-        fun parse_request vec =
-            let val req = Byte.bytesToString vec;
-                val lines = String.fields (fn c => c = #"\n") req;
-                val ep = (String.implode o List.tl o String.explode)
-                             ((List.hd o List.tl)
-                                  (String.fields (fn c => c = #" ")
-                                                 (List.hd lines)));
-                val data = let fun f [] = []
-                                 | f (l::ls) = if l = "\r" then ls
-                                               else f ls;
-                           in String.concatWith "\n" (f lines) end;
-            in (ep, Byte.stringToBytes data) end;
-        fun make_response data =
-            let val len = Word8Vector.length data;
-                val header = String.concat [
-                        "HTTP/1.1 200 OK\r\n",
-                        "Content-Length: " ^ (Int.toString len) ^ "\r\n",
-                        "Content-Type: application/octet-stream\r\n",
-                        "Access-Control-Allow-Origin: * \r\n",
-                        "Connection: close\r\n",
-                        "\r\n"
-                    ];
-                val header_bytes = Byte.stringToBytes header;
-            in Word8Vector.concat [header_bytes, data] end;
-    in
-        forever (fn () =>
-                    let val (sock', remote_addr) = Socket.accept sock;
-                        fun handler () = let
-                                val invec = get_input sock';
-                                val (request, data) = parse_request invec;
-                                val response = make_response
-                                                   (#callback
-                                                        (find_endpoint request)
-                                                        data);
-                                val _ = send_output sock' response;
-                                val () = Socket.close sock';
-                            in () end;
-                        val _ = Thread.Thread.fork (handler, []);
-                    in () end)
-    end;
+fun serve {address = addr} endpoints =
+    let fun findEndpoint req =
+            if req = "/"
+            then SOME (fn _ =>
+                          let fun fmt ep = String.concat
+                                               [#identifier ep, " : ",
+                                                #specification ep, ";\n"];
+                              val lines = List.map fmt endpoints;
+                              val msg = String.concat lines;
+                          in Byte.stringToBytes msg end)
+            else Option.map #callback
+                            (List.find (fn ep => "/" ^ (#identifier ep) = req)
+                                       endpoints);
+        fun handler request =
+            let val (_, endpoint, _, input) = Http.Server.readRequest request;
+            in case findEndpoint endpoint of
+                   NONE => Http.Server.makeResponse
+                               Http.NOT_FOUND
+                               ("text/plain", Datatype.empty)
+                 | SOME callback => Http.Server.makeResponse
+                                        Http.OK
+                                        ("application/octet-stream",
+                                         callback input)
+            end handle RpcError => Http.Server.makeResponse
+                                       Http.BAD_REQUEST
+                                       ("text/plain", Datatype.empty);
+    in Http.Server.listen addr handler end;
 
 end;
 
