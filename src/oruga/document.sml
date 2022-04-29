@@ -3,15 +3,16 @@ import "latex.latex";
 
 signature DOCUMENT =
 sig
+  type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
   type documentContent
   val joinDocumentContents : documentContent list -> documentContent
   val read : string -> documentContent
   val knowledgeOf : documentContent -> Knowledge.base
-  val typeSystemsOf : documentContent -> Type.typeSystem list
+  val typeSystemsDataOf : documentContent -> typeSystemData list
   val conSpecsOf : documentContent -> CSpace.conSpec list
   val constructionsOf : documentContent -> {name : string, conSpec : string, construction : Construction.construction} FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
-  val findTypeSystemWithName : documentContent -> string -> Type.typeSystem
+  val findTypeSystemDataWithName : documentContent -> string -> typeSystemData
   val findConSpecWithName : documentContent -> string -> CSpace.conSpec
   val findConstructionWithName : documentContent -> string -> {name : string, conSpec : string, construction : Construction.construction}
   val findCorrespondenceWithName : documentContent -> string -> Correspondence.corr
@@ -73,28 +74,29 @@ struct
                     | L => (NONE,[w]) :: L))
     end
 
-  type documentContent = {typeSystems : Type.typeSystem list,
+  type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
+  type documentContent = {typeSystemsData : typeSystemData list,
                           conSpecs : CSpace.conSpec list,
                           knowledge : Knowledge.base,
                           constructions : {name : string, conSpec : string, construction : Construction.construction} list,
                           transferRequests : (string list) list,
                           strengths : string -> real option}
-  val emptyDocContent = {typeSystems = [],
+  val emptyDocContent = {typeSystemsData = [],
                          conSpecs = [],
                          knowledge = Knowledge.empty,
                          constructions = [],
                          transferRequests = [],
                          strengths = (fn _ => NONE)}
 
-  val typeSystemsOf = #typeSystems
+  val typeSystemsDataOf = #typeSystemsData
   val conSpecsOf = #conSpecs
   val knowledgeOf = #knowledge
   val constructionsOf = #constructions
   val transferRequestsOf = #transferRequests
   val strengthsOf = #strengths
 
-  fun findTypeSystemWithName DC n =
-    valOf (List.find (fn x => #name x = n) (typeSystemsOf DC))
+  fun findTypeSystemDataWithName DC n =
+    valOf (List.find (fn x => #name (#typeSystem x) = n) (typeSystemsDataOf DC))
     handle Option => raise ParseError ("no type system with name " ^ n)
 
   fun findConSpecWithName DC n =
@@ -115,12 +117,14 @@ struct
       | (x,">",y) => (y,x)
       | _ => raise ParseError s)
 
-  (* The function below not only parses a type from a string, but if in notation _:t it makes it a subtype of t (and of any supertype of t) *)
+  (* The function below not only parses a type from a string, but if in notation _:t it
+      makes everything with :t as suffix a subtype of t (and of any supertype of t) *)
   fun parseTyp subType s =
     case String.breakOn ":" s of
-        ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
-                               fn (x,y) => String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y))
-      | _ => (fn x => x = Type.typeOfString s, fn _ => false)
+      ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
+                             fn (x,y) => String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y),
+                             {typ = Type.typeOfString superTyp, subTypeable = true})
+    | _ => (fn x => x = Type.typeOfString s, fn _ => false, {typ = Type.typeOfString s, subTypeable = false})
 
   fun addTypeSystem (name, tss) dc =
   let val blocks = contentForKeywords typeKeywords tss
@@ -139,17 +143,30 @@ struct
         | getTypsInOrdList [] = FiniteSet.empty
       val typsInOrdList = getTypsInOrdList ordList
       fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-      fun subType_raw x = List.exists (eq x) ordList
+      fun subType_raw p = List.exists (eq p) ordList
       val subType' = Type.fixFiniteSubTypeFunction typsInOrdList subType_raw
 
-      fun processTys ((typs,subty)::L) = (case processTys L of (Ty,subtype) => (fn x => typs x orelse Ty x, fn (x,y) => subtype (x,y) orelse subty (x,y)))
-        | processTys [] = (fn _ => false, subType')
+      fun prInsert pt P =
+        if #subTypeable pt then
+          FiniteSet.insert pt (FiniteSet.filter (fn x => #typ x <> #typ pt) P)
+        else
+          if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
+          else FiniteSet.insert pt P
+
+      fun processTys ((typs,subty,prtyp)::L) =
+          (case processTys L of
+            ((Ty,subtype),prTyps) => ((fn x => typs x orelse Ty x,
+                                      fn (x,y) => subty (x,y) orelse subtype (x,y)),
+                                     prInsert prtyp prTyps)
+          )
+        | processTys [] = ((fn _ => false, subType'), FiniteSet.empty)
 
       val TypsAndSubTypeList = getTyps subType' blocks
-      val (Ty,subType) = processTys TypsAndSubTypeList
+      val ((Ty,subType),prTyps) = processTys TypsAndSubTypeList
 
       val typSys = {name = name, Ty = Ty, subType = subType}
-  in {typeSystems = typSys :: (#typeSystems dc),
+      val typSysData = {typeSystem = typSys, principalTypes = prTyps}
+  in {typeSystemsData = typSysData :: (#typeSystemsData dc),
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -176,7 +193,7 @@ struct
       val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) crs
       val _ = Logging.write "...done\n"
       val cspec = {name = name, typeSystem = typeSystemN, constructors = FiniteSet.ofList crs}
-  in {typeSystems = #typeSystems dc,
+  in {typeSystemsData = #typeSystemsData dc,
       conSpecs = cspec :: #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -219,9 +236,9 @@ struct
       val (sourceCSpecN,y,targetCSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
       val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source and target cspecs")
       val sourceCSpec = findConSpecWithName dc sourceCSpecN
-      val sourceTySys = findTypeSystemWithName dc (#typeSystem sourceCSpec)
+      val sourceTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem sourceCSpec))
       val targetCSpec = findConSpecWithName dc targetCSpecN
-      val targetTySys = findTypeSystemWithName dc (#typeSystem targetCSpec)
+      val targetTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem targetCSpec))
       val _ = Logging.write ("\nAdding correspondence " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
                               raise ParseError ("no " ^ k ^ " in correspondence " ^ String.concat cs))
@@ -277,7 +294,7 @@ struct
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
       fun ff (c,c') = Real.compare (valOf (strengthsUpd (Correspondence.nameOf c')), valOf (strengthsUpd (Correspondence.nameOf c)))
-  in {typeSystems = #typeSystems dc,
+  in {typeSystemsData = #typeSystemsData dc,
       conSpecs = #conSpecs dc,
       knowledge = Knowledge.addCorrespondence (#knowledge dc) corr strengthVal ff,
       constructions = #constructions dc,
@@ -290,7 +307,7 @@ struct
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
       val cspec = findConSpecWithName dc cspecN
       val ct = parseConstruction cts cspec
-      val T = findTypeSystemWithName dc (#typeSystem cspec)
+      val T = #typeSystem (findTypeSystemDataWithName dc (#typeSystem cspec))
 
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
@@ -301,7 +318,7 @@ struct
       val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
 
       val ctRecord = {name = name, conSpec = cspecN, construction = ct}
-  in {typeSystems = #typeSystems dc,
+  in {typeSystemsData = #typeSystemsData dc,
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = ctRecord :: (#constructions dc),
@@ -310,7 +327,7 @@ struct
   end
 
   fun addTransferRequests ws dc =
-     {typeSystems = #typeSystems dc,
+     {typeSystemsData = #typeSystemsData dc,
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -331,7 +348,7 @@ struct
       val construction = #construction constructionRecord
       val sourceConSpecN = #conSpec constructionRecord
       val sourceConSpec = findConSpecWithName DC sourceConSpecN
-      val sourceTypeSystem = findTypeSystemWithName DC (#typeSystem sourceConSpec)
+      val sourceTypeSystem = #typeSystem (findTypeSystemDataWithName DC (#typeSystem sourceConSpec))
 
       fun getTargetConSpec [] = sourceConSpec
         | getTargetConSpec ((x,c)::L) =
@@ -341,7 +358,7 @@ struct
       fun getTargetTySys [] = sourceTypeSystem
         | getTargetTySys ((x,c)::L) =
             if x = SOME targetTypeSystemKW
-            then findTypeSystemWithName DC (String.concat c)
+            then #typeSystem (findTypeSystemDataWithName DC (String.concat c))
             else getTargetTySys L
       val targetTypeSystem = getTargetTySys C
       fun getGoal [] = raise ParseError "no goal for transfer"
@@ -453,9 +470,9 @@ struct
   in ()
   end
 
-  fun joinDocumentContents ({typeSystems = ts, conSpecs = sp, knowledge = kb, constructions = cs, transferRequests = tr, strengths = st} :: L) =
-  (case joinDocumentContents L of {typeSystems = ts', conSpecs = sp', knowledge = kb', constructions = cs', transferRequests = tr', strengths = st'} =>
-      {typeSystems = ts @ ts',
+  fun joinDocumentContents ({typeSystemsData = ts, conSpecs = sp, knowledge = kb, constructions = cs, transferRequests = tr, strengths = st} :: L) =
+  (case joinDocumentContents L of {typeSystemsData = ts', conSpecs = sp', knowledge = kb', constructions = cs', transferRequests = tr', strengths = st'} =>
+      {typeSystemsData = ts @ ts',
        conSpecs = sp @ sp',
        knowledge = Knowledge.join kb kb',
        constructions = cs @ cs',
