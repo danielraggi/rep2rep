@@ -3,7 +3,11 @@ import "util.set";
 signature TYPE =
 sig
   type typ
-  type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool}
+  type principalType = {typ : typ, subTypeable : bool}
+  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool}
+  type typeSystemData = {name : string,
+                         typeSystem : typeSystem,
+                         principalTypes : principalType FiniteSet.set}
   exception undefined
 
   val typ_rpc : typ Rpc.Datatype.t;
@@ -38,8 +42,12 @@ end;
 structure Type : TYPE =
 struct
   type typ = string;
-  type typeSystem = {name : string, Ty : typ Set.set, subType : typ * typ -> bool};
+  type principalType = {typ : typ, subTypeable : bool}
+  type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};
   type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool};
+  type typeSystemData = {name : string,
+                         typeSystem : typeSystem,
+                         principalTypes : principalType FiniteSet.set}
   exception undefined;
 
   val typ_rpc = Rpc.Datatype.alias "Type.typ" String.string_rpc;
