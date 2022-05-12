@@ -5,11 +5,6 @@ signature DOCUMENT =
 sig
   type documentContent
 
-  type principalType = {typ: Type.typ, subTypeable: bool}
-  type typeSystemDescription = {name: string, principalTypes: principalType FiniteSet.set}
-  val principalType_rpc: principalType Rpc.Datatype.t;
-  val typeSystemDescription_rpc: typeSystemDescription Rpc.Datatype.t
-
   val joinDocumentContents : documentContent list -> documentContent
   val read : string -> documentContent
   val knowledgeOf : documentContent -> Knowledge.base

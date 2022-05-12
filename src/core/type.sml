@@ -11,6 +11,7 @@ sig
   exception undefined
 
   val typ_rpc : typ Rpc.Datatype.t;
+  val principalType_rpc : principalType Rpc.Datatype.t
   (* val typeSystem_rpc : typeSystem Rpc.Datatype.t; *)
 
   val typeOfString : string -> typ
@@ -51,6 +52,11 @@ struct
   exception undefined;
 
   val typ_rpc = Rpc.Datatype.alias "Type.typ" String.string_rpc;
+  val principalType_rpc = Rpc.Datatype.convert
+                              "Type.principalType"
+                              (Rpc.Datatype.tuple2 (typ_rpc, Bool.bool_rpc))
+                              (fn (typ, subTypeable) => {typ=typ, subTypeable=subTypeable})
+                              (fn {typ, subTypeable} => (typ, subTypeable));
   (* val typeSystem_rpc =  *)
 
   fun typeOfString x = x
