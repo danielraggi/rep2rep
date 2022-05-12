@@ -3,16 +3,15 @@ import "latex.latex";
 
 signature DOCUMENT =
 sig
-  type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
   type documentContent
   val joinDocumentContents : documentContent list -> documentContent
   val read : string -> documentContent
   val knowledgeOf : documentContent -> Knowledge.base
-  val typeSystemsDataOf : documentContent -> typeSystemData list
+  val typeSystemsDataOf : documentContent -> Type.typeSystemData list
   val conSpecsOf : documentContent -> CSpace.conSpec list
   val constructionsOf : documentContent -> {name : string, conSpec : string, construction : Construction.construction} FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
-  val findTypeSystemDataWithName : documentContent -> string -> typeSystemData
+  val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val findConSpecWithName : documentContent -> string -> CSpace.conSpec
   val findConstructionWithName : documentContent -> string -> {name : string, conSpec : string, construction : Construction.construction}
   val findCorrespondenceWithName : documentContent -> string -> Correspondence.corr
@@ -74,8 +73,7 @@ struct
                     | L => (NONE,[w]) :: L))
     end
 
-  type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
-  type documentContent = {typeSystemsData : typeSystemData list,
+  type documentContent = {typeSystemsData : Type.typeSystemData list,
                           conSpecs : CSpace.conSpec list,
                           knowledge : Knowledge.base,
                           constructions : {name : string, conSpec : string, construction : Construction.construction} list,
@@ -96,7 +94,7 @@ struct
   val strengthsOf = #strengths
 
   fun findTypeSystemDataWithName DC n =
-    valOf (List.find (fn x => #name (#typeSystem x) = n) (typeSystemsDataOf DC))
+    valOf (List.find (fn x => #name x = n) (typeSystemsDataOf DC))
     handle Option => raise ParseError ("no type system with name " ^ n)
 
   fun findConSpecWithName DC n =
@@ -164,8 +162,8 @@ struct
       val TypsAndSubTypeList = getTyps subType' blocks
       val ((Ty,subType),prTyps) = processTys TypsAndSubTypeList
 
-      val typSys = {name = name, Ty = Ty, subType = subType}
-      val typSysData = {typeSystem = typSys, principalTypes = prTyps}
+      val typSys = {Ty = Ty, subType = subType}
+      val typSysData = {name = name, typeSystem = typSys, principalTypes = prTyps}
   in {typeSystemsData = typSysData :: (#typeSystemsData dc),
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
