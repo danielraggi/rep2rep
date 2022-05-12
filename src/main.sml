@@ -1,7 +1,7 @@
 import "util.logging";
 import "latex.latex";
 import "oruga.document";
-import "aarons";
+import "server.server";
 
 (* To see a full trace of the algorithm, we enable logging.
    If this seems too 'noisy', you can use `Logging.disable ()`.
@@ -10,15 +10,9 @@ import "aarons";
 *)
 Logging.enable ();
 
-fun runServer addr =
+fun runServer addr files =
     let val rpc_service = Rpc.create addr;
-        val endpoints = [
-            forAaron_rpc,
-            demoSpaces_rpc,
-            Construction.R.size,
-            Construction.R.leavesOfConstruction,
-            Construction.R.fullTokenSequence
-        ];
+        val endpoints = Server.make files;
         val _ = print "Starting RPC server...\n";
     in Rpc.serve rpc_service endpoints end;
 
@@ -37,15 +31,15 @@ fun filesMatchingPrefix dir prefix =
     handle OS.SysErr (a, b) => (raise OS.SysErr (a, b));
 
 exception BadArguments
-datatype args = ServerMode of (string * int)
+datatype args = ServerMode of ((string * int) * string list)
               | DocumentMode of string
 fun parseArgs () =
   let val args = CommandLine.arguments ();
       val configuration =
           (case args of
-               ["--server-address", address, "--server-port", port]
+               ("--server-address"::address::"--server-port"::port::files)
                => (case Int.fromString port of
-                       SOME port => ServerMode (address, port)
+                       SOME port => ServerMode ((address, port), files)
                      | NONE => raise BadArguments)
              | [documentName] => DocumentMode documentName
              | _ => raise BadArguments)
@@ -60,5 +54,6 @@ fun main () =
                                ^ version ^ "\n");*)
   in case parseArgs () of
          DocumentMode documentName => (Document.read documentName; ())
-       | ServerMode addr => runServer addr
+       | ServerMode (addr, files) => (Logging.write (List.toString (fn s => s) files);
+                                      runServer addr files)
   end

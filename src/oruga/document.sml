@@ -5,6 +5,12 @@ signature DOCUMENT =
 sig
   type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
   type documentContent
+
+  type principalType = {typ: Type.typ, subTypeable: bool}
+  type typeSystemDescription = {name: string, principalTypes: principalType FiniteSet.set}
+  val principalType_rpc: principalType Rpc.Datatype.t;
+  val typeSystemDescription_rpc: typeSystemDescription Rpc.Datatype.t
+
   val joinDocumentContents : documentContent list -> documentContent
   val read : string -> documentContent
   val knowledgeOf : documentContent -> Knowledge.base
@@ -74,6 +80,21 @@ struct
                     | L => (NONE,[w]) :: L))
     end
 
+  type principalType = {typ: Type.typ, subTypeable: bool}
+  type typeSystemDescription = {name: string, principalTypes: principalType FiniteSet.set}
+
+  val principalType_rpc = Rpc.Datatype.convert
+                              "Document.principalType"
+                              (Rpc.Datatype.tuple2 (Type.typ_rpc, Bool.bool_rpc))
+                              (fn (typ, subTypeable) => {typ=typ, subTypeable=subTypeable})
+                              (fn {typ=typ, subTypeable=subTypeable} => (typ, subTypeable));
+  val typeSystemDescription_rpc = Rpc.Datatype.convert
+                                      "Document.typeSystemDescription"
+                                      (Rpc.Datatype.tuple2 (String.string_rpc, FiniteSet.set_rpc principalType_rpc))
+                                      (fn (name, principalTypes) => {name = name, principalTypes = principalTypes})
+                                      (fn {name=name, principalTypes=principalTypes} => (name, principalTypes));
+
+
   type typeSystemData = {typeSystem : Type.typeSystem, principalTypes : {typ : Type.typ, subTypeable : bool} FiniteSet.set}
   type documentContent = {typeSystemsData : typeSystemData list,
                           conSpecs : CSpace.conSpec list,
@@ -81,6 +102,7 @@ struct
                           constructions : {name : string, conSpec : string, construction : Construction.construction} list,
                           transferRequests : (string list) list,
                           strengths : string -> real option}
+
   val emptyDocContent = {typeSystemsData = [],
                          conSpecs = [],
                          knowledge = Knowledge.empty,
