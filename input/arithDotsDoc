@@ -1,4 +1,4 @@
-import correspondences/arithDots
+import transferSchemas/arithDots
 
 construction 1plus2plus3plus4equalsStuff:arithG =
     t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula
@@ -31,4 +31,4 @@ transfer
     targetTypeSystem dotDiagrams
     goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
-    limit 10
+    limit 1

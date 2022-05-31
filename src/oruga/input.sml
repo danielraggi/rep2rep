@@ -6,7 +6,7 @@ import "oruga.parser";
 signature INPUT =
 sig
   val loadTypeSystem : string -> Type.typeSystem
-  val loadCorrespondences : string -> Correspondence.corr Seq.seq
+  val loadTransferSchemas : string -> TransferSchema.tSch Seq.seq
   val loadRelations : string -> Relation.relationship FiniteSet.set
   val loadKnowledge : string -> Knowledge.base
   val loadConstruction : string -> Construction.construction
@@ -49,20 +49,20 @@ struct
     in T
     end
 
-  fun loadCorrespondences filename =
+  fun loadTransferSchemas filename =
     let
-      val file = TextIO.openIn ("input/correspondences/"^filename)
-      val corrBulk = TextIO.inputAll file
+      val file = TextIO.openIn ("input/transferSchemas/"^filename)
+      val tschBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
-      val corrChars = normaliseLineBreaks (String.explode corrBulk)
-      val corrList = if corrChars = [] then []
-                     else Parser.splitLevelWithSeparatorApply Parser.correspondence #"\n" corrChars
-    in Seq.of_list corrList
+      val tschChars = normaliseLineBreaks (String.explode tschBulk)
+      val tschList = if tschChars = [] then []
+                     else Parser.splitLevelWithSeparatorApply Parser.tSchema #"\n" tschChars
+    in Seq.of_list tschList
     end
 
   fun loadRelations filename =
     let
-      val file = TextIO.openIn ("input/correspondences/"^filename)
+      val file = TextIO.openIn ("input/transferSchemas/"^filename)
       val relBulk = TextIO.inputAll file
       val _ = TextIO.closeIn file
       val relChars = normaliseLineBreaks (String.explode relBulk)
@@ -71,10 +71,10 @@ struct
     in FiniteSet.ofList relList
     end;
 
-  fun loadKnowledge corrfilename (*relfilename*) =
+  fun loadKnowledge tschfilename (*relfilename*) =
     let (*val rels = loadRelations relfilename*)
-        val corrs = loadCorrespondences corrfilename
-    in Knowledge.make corrs
+        val tschs = loadTransferSchemas tschfilename
+    in Knowledge.make tschs
     end
 
   fun loadConstruction filename =

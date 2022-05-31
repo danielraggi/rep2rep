@@ -14,7 +14,7 @@ sig
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val findConSpecWithName : documentContent -> string -> CSpace.conSpec
   val findConstructionWithName : documentContent -> string -> {name : string, conSpec : string, construction : Construction.construction}
-  val findCorrespondenceWithName : documentContent -> string -> Correspondence.corr
+  val findTransferSchemaWithName : documentContent -> string -> TransferSchema.tSch
 
 end;
 
@@ -26,11 +26,11 @@ struct
   val importKW = "import"
   val typeSystemKW = "typeSystem"
   val conSpecKW = "conSpec"
-  val correspondenceKW = "correspondence"
+  val tSchemaKW = "tSchema"
   val constructionKW = "construction"
   val transferKW = "transfer"
   val commentKW = "comment"
-  val bigKeywords = [importKW,typeSystemKW,conSpecKW,correspondenceKW,constructionKW,transferKW,commentKW]
+  val bigKeywords = [importKW,typeSystemKW,conSpecKW,tSchemaKW,constructionKW,transferKW,commentKW]
 
   val typesKW = "types"
   val subTypeKW = "order"
@@ -38,11 +38,11 @@ struct
 
   val targetKW = "target"
   val sourceKW = "source"
-  val tokenRelsKW = "tokenRels"
-  val constructRelKW = "constructRel"
+  val antecedentKW = "antecedent"
+  val consequentKW = "consequent"
   val pullListKW = "pull"
   val strengthKW = "strength"
-  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,pullListKW,strengthKW]
+  val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,pullListKW,strengthKW]
 
   val sourceTypeSystemKW = "sourceTypeSystem"
   val targetTypeSystemKW = "targetTypeSystem"
@@ -105,9 +105,9 @@ struct
     valOf (FiniteSet.find (fn x => #name x = n) (constructionsOf DC))
     handle Option => raise ParseError ("no construction with name " ^ n)
 
-  fun findCorrespondenceWithName DC n =
-    valOf (Knowledge.findCorrespondenceWithName (knowledgeOf DC) n)
-    handle Option => raise ParseError ("no correspondence with name " ^ n)
+  fun findTransferSchemaWithName DC n =
+    valOf (Knowledge.findTransferSchemaWithName (knowledgeOf DC) n)
+    handle Option => raise ParseError ("no tSchema with name " ^ n)
 
   fun inequality s =
     (case String.breakOn "<" s of
@@ -228,7 +228,7 @@ struct
     in Construction.fixReferences (c [] (String.stripSpaces s))
     end;
 
-  fun addCorrespondence (nn,cs) dc =
+  fun addTransferSchema (nn,cs) dc =
   let val (name,x,cspecNs) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source and target cspecs")
       val (sourceCSpecN,y,targetCSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
@@ -237,23 +237,23 @@ struct
       val sourceTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem sourceCSpec))
       val targetCSpec = findConSpecWithName dc targetCSpecN
       val targetTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem targetCSpec))
-      val _ = Logging.write ("\nAdding correspondence " ^ name ^ "...")
+      val _ = Logging.write ("\nAdding tSchema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
-                              raise ParseError ("no " ^ k ^ " in correspondence " ^ String.concat cs))
+                              raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
             then parseConstruction (String.concat ps) (if k = sourceKW then sourceCSpec else targetCSpec)
             else getPattern k L
       fun getTokenRels [] = (Logging.write ("  ERROR: token relation not specified");
-                              raise ParseError ("no token rels in correspondence " ^ String.concat cs))
+                              raise ParseError ("no token rels in tSchema " ^ String.concat cs))
         | getTokenRels ((x,trss) :: L) =
-            if x = SOME tokenRelsKW
+            if x = SOME antecedentKW
             then Parser.relaxedList Parser.relationship (String.concat trss)
             else getTokenRels L
       fun getConstructRel [] = (Logging.write ("  ERROR: construct relation not specified");
-                                raise ParseError ("no construct rel in correspondence " ^ String.concat cs))
+                                raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
         | getConstructRel ((x,crs) :: L) =
-            if x = SOME constructRelKW
+            if x = SOME consequentKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
       fun parsePull s =
@@ -261,19 +261,19 @@ struct
           (Rs," to ",S) => (case String.breakOn " as " S of
                               (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.list Parser.token (String.stripSpaces tks))
                             | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.list Parser.token (String.stripSpaces S)))
-        | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
+        | _ => raise ParseError ("badly specified pull list in tSchema " ^ s))
       fun getPullList [] = []
         | getPullList ((x,pl) :: L) =
             if x = SOME pullListKW
             then Parser.relaxedList parsePull (Parser.deTokenise " " pl)
             else getPullList L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
-                            raise ParseError ("no strength in correspondence " ^ String.concat cs))
+                            raise ParseError ("no strength in tSchema " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
-            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in correspondence " ^ String.concat cs);raise Option)
+            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);raise Option)
             else getStrength L
-      val blocks = contentForKeywords corrKeywords cs
+      val blocks = contentForKeywords tSchemaKeywords cs
       val sPatt = getPattern sourceKW blocks
       val tPatt = getPattern targetKW blocks
       val _ = if Construction.wellFormed sourceTySys sPatt
@@ -282,19 +282,19 @@ struct
       val _ = if Construction.wellFormed targetTySys tPatt
               then Logging.write "\n  target pattern is well formed\n"
               else Logging.write "\n  WARNING: target pattern is not well formed\n"
-      val corr = {name = name,
+      val tsch = {name = name,
                   sourcePattern = sPatt,
                   targetPattern = tPatt,
-                  tokenRels = getTokenRels blocks,
-                  constructRel = getConstructRel blocks,
+                  antecedent = getTokenRels blocks,
+                  consequent = getConstructRel blocks,
                   pullList = getPullList blocks}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (valOf (strengthsUpd (Correspondence.nameOf c')), valOf (strengthsUpd (Correspondence.nameOf c)))
+      fun ff (c,c') = Real.compare (valOf (strengthsUpd (TransferSchema.nameOf c')), valOf (strengthsUpd (TransferSchema.nameOf c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecs = #conSpecs dc,
-      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr strengthVal ff,
+      knowledge = Knowledge.addTransferSchema (#knowledge dc) tsch strengthVal ff,
       constructions = #constructions dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
@@ -447,8 +447,8 @@ struct
       val compsAndGoals = getCompsAndGoals listOfResults;
       val transferProofs = map State.transferProofOf listOfResults
       val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
-      fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
-      val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
+      fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
+      val E = Propagation.mkMultiplicativeISEvaluator readTSchemaStrengths
       val is = (Propagation.evaluate E) (hd tproofConstruction) handle Empty => (SOME 0.0)
       val is' = SOME (Heuristic.multiplicativeScore (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
     (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
@@ -496,7 +496,7 @@ struct
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
           in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
              if x = SOME conSpecKW then addConSpec (hd n, ws) dc else
-             if x = SOME correspondenceKW then addCorrespondence (hd n,ws) dc else
+             if x = SOME tSchemaKW then addTransferSchema (hd n,ws) dc else
              if x = SOME constructionKW then addConstruction (hd n,String.concat ws) dc else
              if x = SOME transferKW then addTransferRequests c dc else
              if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"

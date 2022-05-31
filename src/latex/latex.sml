@@ -107,39 +107,45 @@ struct
                    parentName,
                    ";"]
 
+  val normalScale = 0.11
+  val scriptScale = normalScale * 0.75
+  val nodeConstant = 1.0 * normalScale
+  fun sizeOfToken t = normalScale * real (String.size (CSpace.nameOfToken t)) + nodeConstant
+  fun sizeOfType t = scriptScale * real (String.size (Type.nameOfType (CSpace.typeOfToken t)))
+  fun sizeOfConstructor c = scriptScale * real (String.size (CSpace.nameOfConstructor c)) + nodeConstant
   fun quickWidthEstimate (Construction.Source t) =
-        let val sizeOfToken = real (String.size (CSpace.nameOfToken t))
-            val sizeOfType = 0.8 * real (String.size (Type.nameOfType (CSpace.typeOfToken t)))
-        (*in Real.max(0.75,0.1*real (Int.max(sizeOfToken,sizeOfType)))*)
-        in Real.max(0.7,0.11* (Real.max(sizeOfToken, sizeOfType)))
-        end
+        Real.max(sizeOfToken t, sizeOfType t)
     | quickWidthEstimate (Construction.Reference _) = 0.0
-    | quickWidthEstimate (Construction.TCPair ({token,...},cs)) = Real.max (quickWidthEstimate(Construction.Source token),List.sumMap quickWidthEstimate cs)
+    | quickWidthEstimate (Construction.TCPair ({token,constructor},cs)) =
+        List.max Real.compare [sizeOfConstructor constructor,
+                               0.9 * sizeOfToken token + sizeOfType token,
+                               List.sumMap quickWidthEstimate cs + nodeConstant]
 
-  fun construction' coor parentName i (Construction.Source t) =
+  fun construction' coor parentName (i,n) (Construction.Source t) =
         (case parentName of
           NONE => lines [tokenNode true coor t]
         | SOME pn => lines [tokenNode true coor t, arrowLabelled (nodeNameOfToken t) pn i])
-    | construction' _ parentName i (Construction.Reference t) =
+    | construction' _ parentName (i,n) (Construction.Reference t) =
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
-        | SOME pn => if i = 1
-                     then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,195)]
-                     else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,~15)])
-    | construction' (x,y) parentName i (Construction.TCPair ({constructor,token},cs)) =
+        | SOME pn => if real i <= real n / real 2
+                     then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,180)]
+                     else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,0)])
+    | construction' (x,y) parentName (i,n) (Construction.TCPair ({constructor,token},cs)) =
         let val tn = tokenNode false (x,y) token
             val cn = constructorNode (x,y-1.0) constructor token
             val constructorNodeName = nodeNameOfConstructor constructor token
             val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
-            val widthEstimates = map (fn x => (Math.pow(quickWidthEstimate x,0.9))) cs
+            val widthEstimates = map (fn x => quickWidthEstimate x) cs
             fun mkIntervals _ [] = []
               | mkIntervals _ [h] = []
               | mkIntervals p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: mkIntervals p' (h2::t))
             val intervals = 0.0 :: mkIntervals 0.0 widthEstimates
             val cssize = List.last intervals
+            val nchildren = length cs
             fun calcX j = ~cssize/2.0 + List.nth(intervals,j)
             fun crec _ [] = []
-              | crec j (ct::cts) = construction' (x + (calcX j), y-2.0) (SOME constructorNodeName) (j+1) ct :: crec (j+1) cts
+              | crec j (ct::cts) = construction' (x + (calcX j), y-2.0) (SOME constructorNodeName) (j+1,nchildren) ct :: crec (j+1) cts
         in (case parentName of
               NONE => lines ([tn,cn,cn2tn] @ (crec 0 cs))
             | SOME pn =>
@@ -151,7 +157,7 @@ struct
   fun construction coor ct =
     let val opening = "\\begin{tikzpicture}[construction,align at top]"
         val closing = "\\end{tikzpicture}"
-    in lines [opening, construction' coor NONE 0 ct, closing]
+    in lines [opening, construction' coor NONE (0,1) ct, closing]
     end
 
   fun mkDocument content =

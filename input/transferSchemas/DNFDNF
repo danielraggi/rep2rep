@@ -1,0 +1,166 @@
+import DNF
+
+comment disj:(propDNFG,propDNFG) =
+    source t:nonclause <- disj[t1:clause,t2:dnf]
+    target t':nonclause <- disj[t1':clause,t2':dnf]
+    antecedent ([t1:clause],[t1':clause]) :: entails, ([t2:dnf],[t2':dnf]) :: entails
+    consequent ([t:nonclause],[t':nonclause]) :: entails
+    pull entails to [t2':dnf]
+    strength 1.0
+
+comment conj:(propDNFG,propDNFG) =
+    source t:nonliteral <- conj[t1:literal,t2:clause]
+    target t':nonliteral <- conj[t1':literal,t2':clause]
+    antecedent ([t1:literal],[t1':literal]) :: entails, ([t2:clause],[t2':clause]) :: entails
+    consequent ([t:nonliteral],[t':nonliteral]) :: entails
+    pull entails to [t2':clause]
+    strength 1.0
+
+tSchema basicA1:(propDNFG,propDNFG) =
+    source t:A:var
+    target t':A:var
+    antecedent
+    consequent ([t:A:var], [t':A:var]) :: entails
+    strength 1.0
+
+tSchema basicA2:(propDNFG,propDNFG) =
+    source t:A:var
+    target t':A:var
+    antecedent
+    consequent ([t:A:var], [t':A:var]) :: isEntailedBy
+    strength 1.0
+
+tSchema basicB1:(propDNFG,propDNFG) =
+    source t:B:var
+    target t':B:var
+    antecedent
+    consequent ([t:B:var], [t':B:var]) :: entails
+    strength 1.0
+
+tSchema basicB2:(propDNFG,propDNFG) =
+    source t:B:var
+    target t':B:var
+    antecedent
+    consequent ([t:B:var], [t':B:var]) :: isEntailedBy
+    strength 1.0
+
+tSchema neg:(propDNFG,propDNFG) =
+    source t:nonvar <- neg[t1:var]
+    target t':nonvar <- neg[t1':var]
+    antecedent ([t1:var], [t1':var]) :: isEntailedBy
+    consequent ([t:nonvar], [t':nonvar]) :: entails
+    strength 1.0
+
+tSchema disjE:(propDNFG,propDNFG) =
+    source t:nonclause <- disj[t1:clause,t2:dnf]
+    target t':dnf
+    antecedent ([t1:clause],[t':dnf]) :: entails, ([t2:dnf],[t':dnf]) :: entails
+    consequent ([t:nonclause],[t':dnf]) :: entails
+    strength 1.0
+
+tSchema conjE1:(propDNFG,propDNFG) =
+    source t:nonliteral <- conj[t1:literal,t2:clause]
+    target t':dnf
+    antecedent ([t1:literal],[t':dnf]) :: entails
+    consequent ([t:nonliteral],[t':dnf]) :: entails
+    strength 1.0
+
+tSchema conjE2:(propDNFG,propDNFG) =
+    source t:nonliteral <- conj[t1:literal,t2:clause]
+    target t':dnf
+    antecedent ([t2:clause],[t':dnf]) :: entails
+    consequent ([t:nonliteral],[t':dnf]) :: entails
+    strength 1.0
+
+comment conjI:(propDNFG,propDNFG) =
+    source t:nonliteral
+    target t':nonliteral <- conj[t1':literal,t2':clause]
+    antecedent ([t:nonliteral],[t1':literal]) :: entails, ([t:nonliteral],[t2':clause]) :: entails
+    consequent ([t:nonliteral],[t':nonliteral]) :: entails
+    strength 0.1
+
+tSchema disjI1:(propDNFG,propDNFG) =
+    source t:dnf
+    target t':nonclause <- disj[t1':clause,t2':dnf]
+    antecedent ([t:dnf],[t1':clause]) :: entails
+    consequent ([t:dnf],[t':nonclause]) :: entails
+    pull entails to [t2':dnf]
+    strength 0.2
+
+comment disjI2:(propDNFG,propDNFG) =
+    source t:dnf
+    target t':nonclause <- disj[t1':clause,t2':dnf]
+    antecedent ([t:dnf],[t2':dnf]) :: entails
+    consequent ([t:dnf],[t':nonclause]) :: entails
+    pull entails to [t1':clause]
+    strength 0.2
+
+comment basicC1:(propDNFG,propDNFG) =
+    source t:C:var
+    target t':C:var
+    antecedent
+    consequent ([t:C:var], [t':C:var]) :: entails
+    strength 1.0
+
+comment basicC2:(propDNFG,propDNFG) =
+    source t:C:var
+    target t':C:var
+    antecedent
+    consequent ([t:C:var], [t':C:var]) :: isEntailedBy
+    strength 1.0
+
+comment false1:(propDNFG,propDNFG) =
+    source t:A:var
+    target t':B:var
+    antecedent ([], []) :: FALSE
+    consequent ([t:A:var], [t':B:var]) :: entails
+    strength 1.0
+
+comment false2:(propDNFG,propDNFG) =
+    source t:B:var
+    target t':A:var
+    antecedent ([], []) :: FALSE
+    consequent ([t:B:var], [t':A:var]) :: entails
+    strength 1.0
+
+comment false3:(propDNFG,propDNFG) =
+    source t:-A:nonvar
+    target t':-B:nonvar
+    antecedent ([], []) :: FALSE
+    consequent ([t:-A:nonvar], [t':-B:nonvar]) :: entails
+    strength 1.0
+
+comment false4:(propDNFG,propDNFG) =
+    source t:-B:nonvar
+    target t':-A:nonvar
+    antecedent ([], []) :: FALSE
+    consequent ([t:-B:nonvar], [t':-A:nonvar]) :: entails
+    strength 1.0
+
+comment false5:(propDNFG,propDNFG) =
+    source t:A:var
+    target t':-A:nonvar
+    antecedent ([], []) :: FALSE
+    consequent ([t:A:var], [t':-A:nonvar]) :: entails
+    strength 1.0
+
+comment false6:(propDNFG,propDNFG) =
+    source t:-A:nonvar
+    target t':A:var
+    antecedent ([], []) :: FALSE
+    consequent ([t:-A:nonvar], [t':A:var]) :: entails
+    strength 1.0
+
+comment false7:(propDNFG,propDNFG) =
+    source t:B:var
+    target t':-B:nonvar
+    antecedent ([], []) :: FALSE
+    consequent ([t:B:var], [t':-B:nonvar]) :: entails
+    strength 1.0
+
+comment false8:(propDNFG,propDNFG) =
+    source t:-B:nonvar
+    target t':B:var
+    antecedent ([], []) :: FALSE
+    consequent ([t:-B:nonvar], [t':B:var]) :: entails
+    strength 1.0

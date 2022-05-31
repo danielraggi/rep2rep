@@ -494,7 +494,7 @@
 \newcommand{\allconstructions}[1]{\mathbb{C}(#1)} % all constructions in space #1
 \newcommand{\constructionofD}[1]{\mathit{Con}(#1)}
 
-%%% Correspondences %% NO PURGING HERE
+%%% TransferSchemas %% NO PURGING HERE
 
 \newcommand{\trelation}{R} % term relation
 \newcommand{\vtrelation}{R} % variadic term relation
@@ -502,10 +502,10 @@
 
 \newcommand{\cclass}{\mathscr{G}} % class of constructions
 
-\newcommand{\crelationI}{\trelation_F} % input term relations for correspondence
-\newcommand{\crelationO}{\trelation_C} % output relation for correspondence
+\newcommand{\crelationI}{\trelation_F} % input term relations for tSchema
+\newcommand{\crelationO}{\trelation_C} % output relation for tSchema
 
-\newcommand{\corRels}{(\crelationI,\crelationO)} % the correspondence relation pair
+\newcommand{\tSchemaRels}{(\crelationI,\crelationO)} % the tSchema relation pair
 
 \newcommand{\fcor}[2]{\langle #1, #2 \rangle}
 
@@ -522,7 +522,7 @@
 		(vn) edge (u)
 		(u) edge (v)
 		;
-		
+
 		\node[term = $t'$, right = 6cm of v] (v2) {$v'$};
 		\node[above left = -0.2cm and 1cm of v2] {$#2$};
 		\node[omitted, below = of v2] (u2) {} ;
@@ -534,7 +534,7 @@
 		(v2n) edge (u2)
 		(u2) edge (v2)
 		;
-		
+
 		%\node at (3.5,7) {$(t,t') \in R$};
 		%\node at (3.5,0) {$(t_1,\ldots,t_n,t_1'\ldots,t_m') \in \mathcal{R}$};
 		\end{tikzpicture}
