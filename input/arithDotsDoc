@@ -1,7 +1,7 @@
 import transferSchemas/arithDots
 
 construction 1plus2plus3plus4equalsStuff:arithG =
-    t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula
+    t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3plus4:numExp
                         <- infixOp[t11:1plus2plus3:numExp
                                         <- infixOp[t111:1plus2:numExp
@@ -12,7 +12,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                                     t113:3:numeral],
                                     t12:plus,
                                     t13:4:numeral],
-                     t2:equals,
+                     t2:equal,
                      t3:4oB4plus1cBdiv2:numExp
                         <- frac[t31:4oB4plus1cB:numExp
                                     <- implicitMult[t311:4:numeral,
@@ -26,31 +26,9 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                 t32:div,
                                 t33:2:numeral]]
 
-construction 2plus1:arithG =
-    t:2plus1:numExp <- infixOp[t1:2:numeral,
-                               t2:plus,
-                               t3:1:numeral]
-
-construction 2plus1equals3:arithG =
-    t:2plus1equals3:formula
-        <- infixRel[t1:2plus1:numExp
-                        <- infixOp[t11:2:numeral,
-                                   t12:plus,
-                                   t13:1:numeral],
-                    t2:equals,
-                    t3:3:numeral]
-
-
 transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetTypeSystem dotDiagrams
-    goal ([t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
+    goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 1
-
-transfer
-    sourceConstruction 2plus1equals3
-    targetTypeSystem dotDiagrams
-    goal ([t:2plus1equals3:formula],[t':arr]) :: formulaIsValid
-    output 2plus1equals3
-    limit 10

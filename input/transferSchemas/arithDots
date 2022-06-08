@@ -12,7 +12,7 @@ tSchema plusJoin:(arithG,dotDiagramsG) =
     strength 1
 
 tSchema doubleCounting:(arithG,dotDiagramsG) =
-    source t:formula <- infixRel[n:numExp,e:equals,m:numExp]
+    source t:formula <- infixRel[n:numExp,e:equal,m:numExp]
     target t':arr
     antecedent ([n:numExp],[t':arr]) :: count, ([m:numExp],[t':arr]) :: count
     consequent ([t:formula],[t':arr]) :: formulaIsValid
