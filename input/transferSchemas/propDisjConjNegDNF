@@ -1,0 +1,77 @@
+import propDisjConjNeg
+import DNF
+
+tSchema conj:(propDisjConjNegG,propDNFG) =
+    source t:prop <- conj[t1:prop, t2:prop]
+    target t':nonliteral <- conj[t1':literal, t2':clause]
+    antecedent ([t1:prop],[t1':literal]) :: id,
+              ([t2:prop],[t2':clause]) :: id
+    consequent ([t:prop],[t':nonliteral]) :: id
+    strength 0.5
+
+tSchema disj:(propDisjConjNegG,propDNFG) =
+    source t:prop <- disj[t1:prop, t2:prop]
+    target t':nonclause <- disj[t1':clause, t2':dnf]
+    antecedent ([t1:prop],[t1':clause]) :: id,
+              ([t2:prop],[t2':dnf]) :: id
+    consequent ([t:prop],[t':nonclause]) :: id
+    strength 0.5
+
+tSchema neg:(propDisjConjNegG,propDNFG) =
+    source t:prop <- neg[t1:prop]
+    target t':nonvar <- neg[t1':var]
+    antecedent ([t1:prop],[t1':var]) :: id
+    consequent ([t:prop],[t':nonvar]) :: id
+    strength 0.5
+
+tSchema basicA:(propDisjConjNegG,propDNFG) =
+    source t:A:basicProp
+    target t':A:var
+    antecedent
+    consequent ([t:A:basicProp],[t':A:var]) :: id
+    strength 1.0
+
+tSchema basicB:(propDisjConjNegG,propDNFG) =
+    source t:B:basicProp
+    target t':B:var
+    antecedent
+    consequent ([t:B:basicProp],[t':B:var]) :: id
+    strength 1.0
+
+tSchema basicC:(propDisjConjNegG,propDNFG) =
+    source t:C:basicProp
+    target t':C:var
+    antecedent
+    consequent ([t:C:basicProp],[t':C:var]) :: id
+    strength 1.0
+
+tSchema basicD:(propDisjConjNegG,propDNFG) =
+    source t:D:basicProp
+    target t':D:var
+    antecedent
+    consequent ([t:D:basicProp],[t':D:var]) :: id
+    strength 1.0
+
+construction ABCD:propDisjConjNegG =
+  t:AorBandCorD:prop
+    <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
+            t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
+
+construction ABCD':propDisjConjNegG =
+  t:AandBorCandD:prop
+    <- disj[t1:AandB:prop <- conj[t11:A:basicProp,t12:B:basicProp],
+            t2:CandD:prop <- conj[t21:C:basicProp,t22:D:basicProp]]
+
+transfer
+    sourceConstruction ABCD
+    targetTypeSystem propDNF
+    goal ([t:AorBandCorD:prop],[t':dnf]) :: id
+    output abcd1
+    limit 10
+
+transfer
+    sourceConstruction ABCD'
+    targetTypeSystem propDNF
+    goal ([t:AandBorCandD:prop],[t':dnf]) :: id
+    output abcd2
+    limit 10

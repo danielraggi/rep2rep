@@ -1,0 +1,220 @@
+typeSystem propDisjConjNeg =
+    types _:basicProp, _:prop
+    order basicProp < prop
+
+conSpec propDisjConjNegG:propDisjConjNeg =
+    conj : [prop,prop] -> prop,
+    disj : [prop,prop] -> prop,
+    neg : [prop] -> prop
+
+tSchema distribution1:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop <- disj[t11:prop,t12:prop], t2:prop]
+    target t':prop <- disj[t1':prop <- conj[t11':prop,t12':prop],
+                           t2':prop <- conj[t21':prop,t22':prop]]
+    antecedent ([t11:prop],[t11':prop]) :: simplify,
+              ([t12:prop],[t21':prop]) :: simplify,
+              ([t2:prop],[t12':prop]) :: simplify,
+              ([t2:prop],[t22':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 2.0
+
+tSchema distribution2:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop, t2:prop <- disj[t21:prop,t22:prop]]
+    target t':prop <- disj[t1':prop <- conj[t11':prop,t12':prop],
+                           t2':prop <- conj[t21':prop,t22':prop]]
+    antecedent ([t1:prop],[t11':prop]) :: simplify,
+              ([t1:prop],[t21':prop]) :: simplify,
+              ([t21:prop],[t12':prop]) :: simplify,
+              ([t22:prop],[t22':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 2.0
+
+tSchema falseConjA1:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop <- neg[t11:A:basicProp], t2:A:basicProp]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseConjA2:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t2:A:basicProp, t1:prop <- neg[t11:A:basicProp]]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseConjB1:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop <- neg[t11:B:basicProp], t2:B:basicProp]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseConjB2:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t2:B:basicProp, t1:prop <- neg[t11:B:basicProp]]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseConjC1:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop <- neg[t11:C:basicProp], t2:C:basicProp]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseConjC2:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t2:C:basicProp, t1:prop <- neg[t11:C:basicProp]]
+    target t':FALSE:basicProp
+    antecedent
+    consequent ([t:prop],[t':FALSE:basicProp]) :: simplify
+    strength 3
+
+tSchema falseDisj1:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- disj[t1:FALSE:basicProp, t2:prop]
+    target t':prop
+    antecedent ([t2:prop],[t':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 10
+
+tSchema falseDisj2:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- disj[t1:prop, t2:FALSE:basicProp]
+    target t':prop
+    antecedent ([t1:prop],[t':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 10
+
+tSchema assocDisj:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- disj[t1:prop <- disj[t11:prop,t12:prop], t2:prop]
+    target t':prop <- disj[t11':prop, tt':prop <- disj[t12':prop, t2':prop]]
+    antecedent ([t11:prop],[t11':prop]) :: simplify,
+              ([t12:prop],[t12':prop]) :: simplify,
+              ([t2:prop],[t2':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 1.5
+
+tSchema conjID:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- conj[t1:prop, t2:prop]
+    target t':prop <- conj[t1':prop, t2':prop]
+    antecedent ([t1:prop],[t1':prop]) :: simplify,
+              ([t2:prop],[t2':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 1
+
+tSchema disjID:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- disj[t1:prop, t2:prop]
+    target t':prop <- disj[t1':prop, t2':prop]
+    antecedent ([t1:prop],[t1':prop]) :: simplify,
+              ([t2:prop],[t2':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 1
+
+tSchema negID:(propDisjConjNegG,propDisjConjNegG) =
+    source t:prop <- neg[t1:prop]
+    target t':prop <- neg[t1':prop]
+    antecedent ([t1:prop],[t1':prop]) :: simplify
+    consequent ([t:prop],[t':prop]) :: simplify
+    strength 1
+
+tSchema basicA:(propDisjConjNegG,propDisjConjNegG) =
+    source t:A:basicProp
+    target t':A:basicProp
+    antecedent
+    consequent ([t:A:basicProp],[t':A:basicProp]) :: simplify
+    strength 1.0
+
+tSchema basicB:(propDisjConjNegG,propDisjConjNegG) =
+    source t:B:basicProp
+    target t':B:basicProp
+    antecedent
+    consequent ([t:B:basicProp],[t':B:basicProp]) :: simplify
+    strength 1.0
+
+tSchema basicC:(propDisjConjNegG,propDisjConjNegG) =
+    source t:C:basicProp
+    target t':C:basicProp
+    antecedent
+    consequent ([t:C:basicProp],[t':C:basicProp]) :: simplify
+    strength 1.0
+
+tSchema basicD:(propDisjConjNegG,propDisjConjNegG) =
+    source t:D:basicProp
+    target t':D:basicProp
+    antecedent
+    consequent ([t:D:basicProp],[t':D:basicProp]) :: simplify
+    strength 1.0
+
+construction ABCD:propDisjConjNegG =
+  t:AorBandCorD:prop
+    <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
+            t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
+
+construction ABCD':propDisjConjNegG =
+  t:AorBandCor:prop
+    <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
+            t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
+
+construction AA:propDisjConjNegG =
+  t:AB|-AB|-A-BandB-C|-BC|-B-C:prop
+    <- conj[t1:AB|-AB|-A-B:prop
+                <- disj[t11:AB:prop <- conj[t111:A:basicProp,t112:B:basicProp],
+                        t12:-AB|-A-B:prop
+                            <- disj[t121:-AB:prop
+                                        <- conj[t1211:-A:prop <- neg[t1211:A:basicProp],
+                                                t1212:B:basicProp],
+                                    t122:-A-B:prop <- conj[t1221:-A:prop <- neg[t12211:A:basicProp],
+                                                           t1222:-B:prop <- neg[t12221:B:basicProp]]]],
+            t2:B-C|-BC|-B-C:prop
+                <- disj[t21:B-C:prop <- conj[t211:B:basicProp,t212:-C:prop <- neg[t2121:C:basicProp]],
+                        t22:-BC|-B-C:prop
+                            <- disj[t221:-BC:prop
+                                        <- conj[t2211:-B:prop <- neg[t2211:B:basicProp],
+                                                t2212:C:basicProp],
+                                    t222:-B-C:prop <- conj[t2221:-B:prop <- neg[t22211:B:basicProp],
+                                                           t2222:-C:prop <- neg[t22221:C:basicProp]]]]]
+
+construction AA1:propDisjConjNegG =
+  t:-AorBand-Bor-C:prop
+    <- conj[t1:-AorB:prop
+                <- disj[t11:-A:prop <- neg[t111:A:basicProp],
+                        t12:B:basicProp],
+            t2:-Bor-C:prop
+                <- disj[t21:-B:prop <- neg[t211:B:basicProp],
+                        t22:-C:prop <- neg[t221:C:basicProp]]]
+
+construction BB:propDisjConjNegG =
+  t:AorBand-B:prop
+    <- disj[t1:A:basicProp,
+            t2:Band-B:prop
+                <- conj[t21:B:basicProp,
+                        t22:-B:prop <- neg[t221:B:basicProp]]]
+
+
+comment
+    sourceConstruction ABCD
+    goal ([t:AorBandCorD:prop],[t':prop]) :: simplify
+    output abcd
+    limit 10
+    iterative
+
+comment
+    sourceConstruction AA
+    goal ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
+    output aa
+    limit 10
+    iterative
+
+comment
+    sourceConstruction AA1
+    goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
+    output aa11
+    limit 10
+    iterative
+
+transfer
+    sourceConstruction AA1
+    goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
+    output aa
+    limit 20
+    iterative

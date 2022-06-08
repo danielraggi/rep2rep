@@ -1,4 +1,4 @@
-import correspondences/DNFCNF
+import transferSchemas/DNFCNF
 
 construction AinB:propDNFG =
     t:AB|-AB|-A-B:nonclause
@@ -72,25 +72,40 @@ construction AinBdisjCinD:propDNFG =
                             ]
                 ]
 
+construction -A-B|-A-C|B-C:propDNFG =
+  t:-A-B|-A-C|B-C:nonclause
+    <- disj[t1:-A-B:nonliteral <- conj[t11:-A:nonvar <- neg[t111:A:var],t12:-B:nonvar <- neg[t121:B:var]],
+            t2:-A-C|B-C:nonclause
+                <- disj[t21:-A-C:nonliteral <- conj[t211:-A:nonvar <- neg[t2111:A:var],t212:-C:nonvar <- neg[t2121:C:var]],
+                        t22:B-C:nonliteral <- conj[t221:B:var,t222:-C:nonvar <- neg[t2221:C:var]]]]
+
+transfer
+   sourceConstruction -A-B|-A-C|B-C
+   targetTypeSystem propCNF
+   goal ([t:-A-B|-A-C|B-C:nonclause],[t':clause]) :: entails
+   unistructured
+   output AinBdisjC1
+   limit 50
 
 comment
    sourceConstruction AinB
    targetTypeSystem propCNF
    goal ([t:AB|-AB|-A-B:nonclause],[t':clause]) :: entails
    unistructured
-   output AinBCNF2
+   output AinB
    limit 50
 
 comment
     sourceConstruction AinBdisjC
     targetTypeSystem propCNF
     goal ([t:AB-C|-AB-C|-A-BC|-A-B-C:nonclause],[t':nonliteral]) :: entails
+    output AinBdisjC
+    unistructured
+    limit 50
     matchTarget t:nonliteral <- disj[t1:nonvar <- neg[t11:var], t2:nonvar <- neg[t21:var]]
     targetConSpec propCNFG
-    output AinBdisjC
-    limit 10
 
-transfer
+comment
     sourceConstruction AinBdisjCinD
     targetTypeSystem propCNF
     goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclause],[t':clause]) :: entails

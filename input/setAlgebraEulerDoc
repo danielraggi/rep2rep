@@ -1,4 +1,4 @@
-import correspondences/setAlgebraEuler
+import transferSchemas/setAlgebraEuler
 
 construction x:setAlgebraG =
     t1:A_subseteq_B:formula

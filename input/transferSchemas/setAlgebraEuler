@@ -1,0 +1,64 @@
+import euler
+import setAlgebra
+
+tSchema andUnify:(setAlgebraG,EulerG) =
+    source t:formula <- infixLogical[t1:formula, t2:and, t3:formula]
+    target t':diagram <- unify[t1':diagram,t2':diagram]
+    antecedent ([t1:formula],[t1':diagram]) :: draw, ([t3:formula],[t2':diagram]) :: draw
+    consequent ([t:formula],[t':diagram]) :: draw
+    strength 1.0
+
+tSchema subsetSubmerge:(setAlgebraG,EulerG) =
+    source t:formula <- infixRel[t1:set, t2:\subseteq, t3:set]
+    target t':diagram <- submerge[t1':basicDiagram,t2':basicDiagram]
+    antecedent ([t1:set],[t1':basicDiagram]) :: draw, ([t3:set],[t2':basicDiagram]) :: draw
+    consequent ([t:formula],[t':diagram]) :: draw
+    strength 1.0
+
+tSchema disjointDismerge:(setAlgebraG,EulerG) =
+    source t:formula
+             <- infixRel[t1:set
+                            <-infixOp[t11:set,
+                                      t12:\cap,
+                                      t13:set],
+                         t2:=,
+                         t3:\emptyset]
+    target t':diagram <- dismerge[t1':basicDiagram,t2':basicDiagram]
+    antecedent ([t11:set],[t1':basicDiagram]) :: draw, ([t13:set],[t2':basicDiagram]) :: draw
+    consequent ([t:formula],[t':diagram]) :: draw
+    strength 1.0
+
+tSchema basicset:(setAlgebraG,EulerG) =
+    source t:bset
+    target t':basicDiagram <- assignLabel[t1':curve,t2':label]
+    antecedent ([t:bset],[t2':label]) :: sameName
+    consequent ([t:bset],[t':basicDiagram]) :: draw
+    strength 1.0
+
+tSchema labelName:(setAlgebraG,EulerG) =
+    source t:A:bset
+    target t':A:label
+    antecedent
+    consequent ([t:A:bset],[t':A:label]) :: sameName
+    strength 1.0
+
+tSchema labelName:(setAlgebraG,EulerG) =
+    source t:B:bset
+    target t':B:label
+    antecedent
+    consequent ([t:B:bset],[t':B:label]) :: sameName
+    strength 1.0
+
+tSchema labelName:(setAlgebraG,EulerG) =
+    source t:C:bset
+    target t':C:label
+    antecedent
+    consequent ([t:C:bset],[t':C:label]) :: sameName
+    strength 1.0
+
+tSchema implicationDraw:(setAlgebraG,EulerG) =
+    source t:formula <- infixLogical[t1:formula,t2:implies,t3:formula]
+    target t':diagram
+    antecedent ([t1:formula],[t':diagram]) :: draw, ([t3:formula],[t':diagram]) :: draw
+    consequent ([t:formula],[t':diagram]) :: draw
+    strength 0.5
