@@ -238,13 +238,13 @@ type documentContent = \{typeSystems : Type.typeSystem list,
 \begin{alltt}
 typeSystem arith =
     types _:numeral, _:var, _:numExp, _:formula, plus, minus,
-          times, div, binOp, equal, binRel, oB, cB, par
+          times, div, binOp, equals, binRel, oB, cB, par
     order var < numExp,
           numeral < numExp,
           plus < binOp,
           minus < binOp,
           times < binOp,
-          equal < binRel,
+          equals < binRel,
           oB < par,
           cB < par
 \end{alltt}
@@ -275,7 +275,7 @@ construction 1plus2:arithG =
 	A construction of $1+2+3+4=\frac{4(4+1)}{2}$ can be declared as follows:\\[0.3cm]
 \adjustbox{minipage={\linewidth},scale=0.8}{\begin{alltt}
 construction 1plus2plus3plus4equalsStuff:arithG =
-    t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula
+    t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3plus4:numExp
                         <- infixOp[t11:1plus2plus3:numExp
                                         <- infixOp[t111:1plus2:numExp
@@ -286,7 +286,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                                    t113:3:numeral],
                                    t12:plus,
                                    t13:4:numeral],
-                    t2:equal,
+                    t2:equals,
                     t3:4oB4plus1cBdiv2:numExp
                         <- frac[t31:4oB4plus1cB:numExp
                                     <- implicitMult[t311:4:numeral,
@@ -345,7 +345,7 @@ import transferSchemas/arithDots
 transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetTypeSystem dotDiagrams
-    goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
+    goal ([t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 10
 \end{alltt}
