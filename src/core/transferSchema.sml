@@ -10,7 +10,7 @@ sig
                consequent : Relation.relationship,
                pullList : (Relation.T * Relation.T * CSpace.token list) list};
 
-  val corr_rpc : tSch Rpc.Datatype.t;
+  val tSch_rpc : tSch Rpc.Datatype.t;
 
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> tSch -> bool;
   val nameOf : tSch -> string;
@@ -18,7 +18,7 @@ sig
   val relationshipsOf : tSch -> Relation.relationship list * Relation.relationship;
   val pullListOf : tSch -> (Relation.T * Relation.T * CSpace.token list) list
   val ofRelationship : Relation.relationship -> string -> tSch;
-  val declareCorrespondence : {name : string,
+  val declareTransferSchema : {name : string,
                                sourcePattern : Pattern.construction,
                                targetPattern : Pattern.construction,
                                antecedent : Relation.relationship list,
@@ -35,8 +35,8 @@ struct
                consequent : Relation.relationship,
                pullList : (Relation.T * Relation.T * CSpace.token list) list};
 
-  val corr_rpc = Rpc.Datatype.convert
-                     "Correspondence.corr"
+  val tSch_rpc = Rpc.Datatype.convert
+                     "TransferSchemma.tSch"
                      (Rpc.Datatype.tuple6
                           (String.string_rpc,
                            Pattern.construction_rpc,
@@ -51,14 +51,14 @@ struct
                      (fn (n, s, t, rs, r, p) => {name = n,
                                               sourcePattern = s,
                                               targetPattern = t,
-                                              tokenRels = rs,
-                                              constructRel = r,
+                                              antecedent = rs,
+                                              consequent = r,
                                               pullList = p})
                      (fn {name = n,
                           sourcePattern = s,
                           targetPattern = t,
-                          tokenRels = rs,
-                          constructRel = r,
+                          antecedent = rs,
+                          consequent = r,
                           pullList = p} => (n, s, t, rs, r, p));
 
   exception badForm
