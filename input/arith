@@ -1,12 +1,15 @@
 typeSystem arith =
     types _:numeral, _:var, _:numExp, _:formula,
-          plus, minus, times, div, binOp, equals, binRel, oB, cB, par
+          plus, minus, times, div, binOp,
+          leq, equals, binRel,
+          oB, cB, par
     order var < numExp,
           numeral < numExp,
           plus < binOp,
           minus < binOp,
           times < binOp,
           equals < binRel,
+          leq < binRel,
           oB < par,
           cB < par
 

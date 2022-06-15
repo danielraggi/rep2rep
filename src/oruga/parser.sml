@@ -178,7 +178,7 @@ struct
         val Ty = set typ Tys
         fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
         val subType' = boolfun eq (pair (typ,typ)) subTys
-        val {subType,...} = Type.fixFiniteSubTypeFunction {name = name, Ty = finTy, subType = subType'}
+        val {subType,...} = Type.closureOverFiniteSet {name = name, Ty = finTy, subType = subType'}
     in {name = name, Ty = Ty, subType = subType}
     end;*)
 

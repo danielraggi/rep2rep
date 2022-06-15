@@ -34,7 +34,8 @@ struct
 
   val typesKW = "types"
   val subTypeKW = "order"
-  val typeKeywords = [typesKW,subTypeKW]
+  val typeImportsKW = "imports"
+  val typeKeywords = [typesKW,subTypeKW,typeImportsKW]
 
   val targetKW = "target"
   val sourceKW = "source"
@@ -115,56 +116,85 @@ struct
       | (x,">",y) => (y,x)
       | _ => raise ParseError s)
 
-  (* The function below not only parses a type from a string, but if in notation _:t it
-      makes everything with :t as suffix a subtype of t (and of any supertype of t) *)
-  fun parseTyp subType s =
+  (* The function below adds types and, if in notation _:t it
+      adds everything with :t as suffix *)
+  fun parseTyp s =
     case String.breakOn ":" s of
       ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
-                             fn (x,y) => String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y),
                              {typ = Type.typeOfString superTyp, subTypeable = true})
-    | _ => (fn x => x = Type.typeOfString s, fn _ => false, {typ = Type.typeOfString s, subTypeable = false})
+    | _ => (fn x => x = Type.typeOfString s, {typ = Type.typeOfString s, subTypeable = false})
+
+(*
+  fun insertPrincipalTypes (pt::L) P =
+      Type.insertPrincipalType pt (insertPrincipalTypes L P)
+    | insertPrincipalTypes [] P = P*)
+
+  fun joinTypeSystemsData name TSDs =
+    let fun joinData [] = {typeSystem = {Ty = Set.empty, subType = fn (x,y) => Type.equal x y},
+                           principalTypes = FiniteSet.empty}
+          | joinData (tsd::L) =
+              let val tsd_rec = joinData L
+                  val TS_rec = #typeSystem tsd_rec
+                  val TS = #typeSystem tsd
+                  val jointTys = Set.union (#Ty TS) (#Ty TS_rec)
+                  val jointPTys = foldl (uncurry Type.insertPrincipalType) (#principalTypes tsd_rec) (FiniteSet.listOf (#principalTypes tsd))
+                  (*val jointPTys = insertPrincipalTypes (FiniteSet.listOf (#principalTypes tsd)) (#principalTypes tsd_rec)*)
+                  val jointSubType = (fn (x,y) => #subType TS (x,y) orelse #subType TS_rec (x,y))
+                  val jointTS = {Ty = jointTys, subType = jointSubType}
+              in {typeSystem = jointTS, principalTypes = jointPTys}
+              end
+        val {typeSystem,principalTypes} = joinData TSDs
+        val strippedPrincipalTypes = map #typ principalTypes
+        val subTypeableTypes = map #typ (FiniteSet.filter #subTypeable principalTypes)
+        val principalSubType = Type.closureOverFiniteSet strippedPrincipalTypes (#subType typeSystem)
+        val subType = Type.fixForSubtypeable subTypeableTypes principalSubType
+        val typeSystem = {Ty = #Ty typeSystem, subType = subType}
+    in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
+    end
 
   fun addTypeSystem (name, tss) dc =
-  let val blocks = contentForKeywords typeKeywords tss
-      fun getTyps _ [] = []
-        | getTyps subType ((x,c)::L) =
+  let val _ = print ("\nAdding type system " ^ name ^ "...");
+      val blocks = contentForKeywords typeKeywords tss
+      fun getTyps [] = []
+        | getTyps ((x,c)::L) =
             if x = SOME typesKW
-            then map (parseTyp subType) (String.tokens (fn x => x = #",") (String.concat c))
-            else getTyps subType L
+            then map parseTyp (String.tokens (fn x => x = #",") (String.concat c))
+            else getTyps L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME subTypeKW
             then map inequality (String.tokens (fn x => x = #",") (String.concat c))
             else getOrder L
-      val ordList = getOrder blocks
-      fun getTypsInOrdList ((x,y)::L) = FiniteSet.insert (Type.typeOfString x) (FiniteSet.insert (Type.typeOfString y) (getTypsInOrdList L))
-        | getTypsInOrdList [] = FiniteSet.empty
-      val typsInOrdList = getTypsInOrdList ordList
-      fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-      fun subType_raw p = List.exists (eq p) ordList
-      val subType' = Type.fixFiniteSubTypeFunction typsInOrdList subType_raw
+      fun getImports [] = []
+        | getImports ((x,c)::L) =
+            if x = SOME typeImportsKW
+            then map (findTypeSystemDataWithName dc) (String.tokens (fn x => x = #",") (String.concat c))
+            else getImports L
 
-      fun prInsert pt P =
-        if #subTypeable pt then
-          FiniteSet.insert pt (FiniteSet.filter (fn x => #typ x <> #typ pt) P)
-        else
-          if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
-          else FiniteSet.insert pt P
-
-      fun processTys ((typs,subty,prtyp)::L) =
+      fun processTys ((Ty,prtyp)::L) =
           (case processTys L of
-            ((Ty,subtype),prTyps) => ((fn x => typs x orelse Ty x,
-                                      fn (x,y) => subty (x,y) orelse subtype (x,y)),
-                                     prInsert prtyp prTyps)
+            (Ty_rec,prTyps) => (fn x => Ty x orelse Ty_rec x,
+                                Type.insertPrincipalType prtyp prTyps)
           )
-        | processTys [] = ((fn _ => false, subType'), FiniteSet.empty)
+        | processTys [] = (Set.empty, FiniteSet.empty)
 
-      val TypsAndSubTypeList = getTyps subType' blocks
-      val ((Ty,subType),prTyps) = processTys TypsAndSubTypeList
+      val (newTys,newPrincipalTyps) = processTys (getTyps blocks)
+      val strippedPrincipalTypes = map #typ newPrincipalTyps
 
-      val typSys = {Ty = Ty, subType = subType}
-      val typSysData = {name = name, typeSystem = typSys, principalTypes = prTyps}
-  in {typeSystemsData = typSysData :: (#typeSystemsData dc),
+      val ordList = getOrder blocks
+      fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
+      fun subType_raw (x,y) = List.exists (eq (x,y)) ordList
+      val typeSystemData_raw = {typeSystem = {Ty = newTys, subType = subType_raw},
+                                principalTypes = newPrincipalTyps,
+                                name = "__tmp"}
+
+      val importsTSDs = getImports blocks
+      val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
+      val _ = if Type.wellDefined typeSystemData
+              then print ("done\n")
+              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined and it's probably not your fault!\n")
+
+  in {typeSystemsData = typeSystemData :: (#typeSystemsData dc),
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
