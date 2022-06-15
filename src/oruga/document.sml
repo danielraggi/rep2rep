@@ -4,6 +4,7 @@ import "latex.latex";
 signature DOCUMENT =
 sig
   type documentContent
+
   val joinDocumentContents : documentContent list -> documentContent
   val read : string -> documentContent
   val knowledgeOf : documentContent -> Knowledge.base
@@ -80,6 +81,7 @@ struct
                           constructions : {name : string, conSpec : string, construction : Construction.construction} list,
                           transferRequests : (string list) list,
                           strengths : string -> real option}
+
   val emptyDocContent = {typeSystemsData = [],
                          conSpecs = [],
                          knowledge = Knowledge.empty,

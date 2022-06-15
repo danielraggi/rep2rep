@@ -5,6 +5,8 @@ sig
   include CONSTRUCTION
   type pattern;
 
+  val pattern_rpc : pattern Rpc.Datatype.t;
+
   val configuratorMatches : CSpace.configurator -> CSpace.configurator -> bool
   val tokenMatches : Type.typeSystem -> CSpace.token -> CSpace.token -> bool
   val mapUnder : pattern -> pattern
@@ -32,6 +34,8 @@ structure Pattern : PATTERN =
 struct
   open Construction
   type pattern = construction;
+
+  val pattern_rpc = Rpc.Datatype.alias "Pattern.pattern" construction_rpc;
 
   fun configuratorMatches u u' =
       CSpace.sameConstructors (CSpace.constructorOfConfigurator u) (CSpace.constructorOfConfigurator u')

@@ -1,4 +1,5 @@
 import "core.cspace";
+import "util.rpc";
 
 signature CONSTRUCTION =
 sig
@@ -7,6 +8,10 @@ sig
                         | Source of CSpace.token
                         | Reference of CSpace.token;
   type walk;
+
+  val tc_rpc : tc Rpc.Datatype.t;
+  val construction_rpc: construction Rpc.Datatype.t;
+  val walk_rpc: walk Rpc.Datatype.t;
 
   val same : construction -> construction -> bool;
   (*val similar : construction -> construction -> bool;*)
@@ -37,6 +42,12 @@ sig
   val toString : construction -> string;
 
   exception MalformedConstructionTerm of string;
+
+  structure R : sig
+                val size : Rpc.endpoint;
+                val leavesOfConstruction : Rpc.endpoint;
+                val fullTokenSequence : Rpc.endpoint;
+            end;
 end;
 
 structure Construction : CONSTRUCTION =
@@ -49,6 +60,42 @@ struct
     | Reference of CSpace.token ;
   datatype vertex = Token of CSpace.token | Constructor of CSpace.constructor
   type walk = vertex list;
+
+  val tc_rpc = Rpc.Datatype.convert
+                   "Construction.tc"
+                   (Rpc.Datatype.tuple2 (CSpace.token_rpc, CSpace.constructor_rpc))
+                   (fn (t, u) => {token = t, constructor = u})
+                   (fn {token = t, constructor = u} => (t, u));
+
+  fun construction_rpc_ () = Rpc.Datatype.convert
+                                 "Construction.construction"
+                                 (Rpc.Datatype.either3
+                                      (Rpc.Datatype.tuple2
+                                           (tc_rpc,
+                                            List.list_rpc
+                                                (Rpc.Datatype.recur construction_rpc_)),
+                                       CSpace.token_rpc,
+                                       CSpace.token_rpc))
+                                 (fn (Rpc.Datatype.Either3.FST (tc, cs)) => TCPair (tc, cs)
+                                   | (Rpc.Datatype.Either3.SND t) => Source t
+                                   | (Rpc.Datatype.Either3.THD t) => Reference t)
+                                 (fn (TCPair (tc, cs)) => Rpc.Datatype.Either3.FST (tc, cs)
+                                   | (Source t) => Rpc.Datatype.Either3.SND t
+                                   | (Reference t) => Rpc.Datatype.Either3.THD t);
+
+  val construction_rpc = construction_rpc_ ();
+
+  val vertex_rpc = Rpc.Datatype.convert
+                       "Construction.vertex"
+                       (Rpc.Datatype.either2 (CSpace.token_rpc, CSpace.constructor_rpc))
+                       (fn (Rpc.Datatype.Either2.FST t) => Token t
+                         | (Rpc.Datatype.Either2.SND u) => Constructor u)
+                       (fn (Token t) => Rpc.Datatype.Either2.FST t
+                         | (Constructor u) => Rpc.Datatype.Either2.SND u);
+
+  val walk_rpc = Rpc.Datatype.alias
+                     "Construction.walk"
+                     (List.list_rpc vertex_rpc);
 
   fun isTrivial (Source _) = true
     | isTrivial _ = false
@@ -371,5 +418,23 @@ struct
               fun mkNew xs = TCPair (tc, xs)
           in map mkNew (List.listProduct csr)
           end
+
+  structure R = struct
+  fun url s = "core.construction." ^ s;
+
+  val size = Rpc.provide (url "size",
+                          construction_rpc,
+                          Int.int_rpc)
+                         size;
+  val leavesOfConstruction = Rpc.provide (url "leavesOfConstruction",
+                                          construction_rpc,
+                                          List.list_rpc CSpace.token_rpc)
+                                         leavesOfConstruction;
+  val fullTokenSequence = Rpc.provide (url "fullTokenSequence",
+                                       construction_rpc,
+                                       List.list_rpc CSpace.token_rpc)
+                                      fullTokenSequence;
+
+  end;
 
 end;

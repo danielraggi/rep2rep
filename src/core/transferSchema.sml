@@ -9,13 +9,16 @@ sig
                antecedent : Relation.relationship list,
                consequent : Relation.relationship,
                pullList : (Relation.T * Relation.T * CSpace.token list) list};
+
+  val corr_rpc : tSch Rpc.Datatype.t;
+
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> (*CSpace.conSpec ->*) Type.typeSystem -> tSch -> bool;
   val nameOf : tSch -> string;
   val patternsOf : tSch -> Pattern.pattern * Pattern.pattern;
   val relationshipsOf : tSch -> Relation.relationship list * Relation.relationship;
   val pullListOf : tSch -> (Relation.T * Relation.T * CSpace.token list) list
   val ofRelationship : Relation.relationship -> string -> tSch;
-  val declareTransferSchema : {name : string,
+  val declareCorrespondence : {name : string,
                                sourcePattern : Pattern.construction,
                                targetPattern : Pattern.construction,
                                antecedent : Relation.relationship list,
@@ -31,6 +34,32 @@ struct
                antecedent : Relation.relationship list,
                consequent : Relation.relationship,
                pullList : (Relation.T * Relation.T * CSpace.token list) list};
+
+  val corr_rpc = Rpc.Datatype.convert
+                     "Correspondence.corr"
+                     (Rpc.Datatype.tuple6
+                          (String.string_rpc,
+                           Pattern.construction_rpc,
+                           Pattern.construction_rpc,
+                           List.list_rpc Relation.relationship_rpc,
+                           Relation.relationship_rpc,
+                           List.list_rpc
+                               (Rpc.Datatype.tuple3
+                                    (Relation.T_rpc,
+                                     Relation.T_rpc,
+                                     List.list_rpc CSpace.token_rpc))))
+                     (fn (n, s, t, rs, r, p) => {name = n,
+                                              sourcePattern = s,
+                                              targetPattern = t,
+                                              tokenRels = rs,
+                                              constructRel = r,
+                                              pullList = p})
+                     (fn {name = n,
+                          sourcePattern = s,
+                          targetPattern = t,
+                          tokenRels = rs,
+                          constructRel = r,
+                          pullList = p} => (n, s, t, rs, r, p));
 
   exception badForm
   fun wellFormed sT tT {name,sourcePattern,targetPattern,antecedent,consequent,pullList} =

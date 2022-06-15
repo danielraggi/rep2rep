@@ -12,6 +12,12 @@ sig
   type configurator
   type conSpec = {name : string, typeSystem : string, constructors : constructor FiniteSet.set}
 
+  val ctyp_rpc : ctyp Rpc.Datatype.t;
+  val constructor_rpc : constructor Rpc.Datatype.t;
+  val token_rpc : token Rpc.Datatype.t;
+  val configurator_rpc : configurator Rpc.Datatype.t;
+  val conSpec_rpc : conSpec Rpc.Datatype.t;
+
   val makeCTyp : Type.typ list * Type.typ -> ctyp
   val makeConstructor : string * ctyp -> constructor
   val makeConfigurator : string * constructor -> configurator
@@ -43,6 +49,39 @@ struct
   type token = string * Type.typ
   type configurator = string * constructor
   type conSpec = {name : string, typeSystem : string, constructors : constructor FiniteSet.set}
+
+  val ctyp_rpc = Rpc.Datatype.alias
+                     "CSpace.ctyp"
+                     (Rpc.Datatype.tuple2
+                          (List.list_rpc Type.typ_rpc,
+                           Type.typ_rpc));
+
+  val constructor_rpc = Rpc.Datatype.alias
+                            "CSpace.constructor"
+                            (Rpc.Datatype.tuple2 (String.string_rpc, ctyp_rpc));
+
+  val token_rpc = Rpc.Datatype.alias
+                      "CSpace.token"
+                      (Rpc.Datatype.tuple2 (String.string_rpc, Type.typ_rpc));
+
+  val configurator_rpc = Rpc.Datatype.alias
+                             "CSpace.configurator"
+                             (Rpc.Datatype.tuple2
+                                  (String.string_rpc, constructor_rpc));
+
+  val conSpec_rpc = Rpc.Datatype.convert
+                        "CSpace.conSpec"
+                        (Rpc.Datatype.tuple3
+                             (String.string_rpc,
+                              String.string_rpc,
+                              FiniteSet.set_rpc constructor_rpc))
+                        (fn (n, ts, cs) => {name = n,
+                                            typeSystem = ts,
+                                            constructors = cs})
+                        (fn {name = n,
+                             typeSystem = ts,
+                             constructors = cs} => (n, ts, cs));
+
 
   fun makeCTyp x = x
   fun makeConstructor x = x
