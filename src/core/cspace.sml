@@ -172,9 +172,9 @@ struct
         end
 
       fun resolveClash TP ((s,(inTyps,outTyp)), (s',(inTyps',outTyp'))) =
-        let val (otyp::ityps,updatedTP) = extendWithManyLCSuperTypes TP (outTyp::inTyps) (outTyp'::inTyps')
-        in ((s,(ityps,otyp)),updatedTP)
-        end
+        case extendWithManyLCSuperTypes TP (outTyp::inTyps) (outTyp'::inTyps') of
+          (otyp::ityps,updatedTP) => ((s,(ityps,otyp)),updatedTP)
+        | _ => raise Match
 
       fun resolveClashesForConstructor TP (c,[]) = (c,TP)
         | resolveClashesForConstructor TP (c,(c'::L')) =
