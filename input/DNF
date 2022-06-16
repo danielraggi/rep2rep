@@ -8,6 +8,7 @@ typeSystem propDNF =
           nonclause < dnf
 
 conSpec propDNFG:propDNF =
+  constructors
     conj : [literal, clause] -> nonliteral,
     disj : [clause, dnf] -> nonclause,
     neg : [var] -> nonvar

@@ -38,6 +38,10 @@ struct
   val typeImportsKW = "imports"
   val typeKeywords = [typesKW,subTypeKW,typeImportsKW]
 
+  val constructorsKW = "constructors"
+  val conSpecImportsKW = "imports"
+  val conSpecKeywords = [constructorsKW,conSpecImportsKW]
+
   val targetKW = "target"
   val sourceKW = "source"
   val antecedentKW = "antecedent"
@@ -122,9 +126,9 @@ struct
       adds everything with :t as suffix *)
   fun parseTyp s =
     case String.breakOn ":" s of
-      ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
-                             {typ = Type.typeOfString superTyp, subTypeable = true})
-    | _ => (fn x => x = Type.typeOfString s, {typ = Type.typeOfString s, subTypeable = false})
+      ("_",":",superTyp) => (fn x => x = Type.fromString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
+                             {typ = Type.fromString superTyp, subTypeable = true})
+    | _ => (fn x => x = Type.fromString s, {typ = Type.fromString s, subTypeable = false})
 
 (*
   fun insertPrincipalTypes (pt::L) P =
@@ -160,17 +164,17 @@ struct
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
             if x = SOME typesKW
-            then map parseTyp (String.tokens (fn x => x = #",") (String.concat c))
+            then map parseTyp (String.tokens (fn k => k = #",") (String.concat c))
             else getTyps L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME subTypeKW
-            then map inequality (String.tokens (fn x => x = #",") (String.concat c))
+            then map inequality (String.tokens (fn k => k = #",") (String.concat c))
             else getOrder L
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME typeImportsKW
-            then map (findTypeSystemDataWithName dc) (String.tokens (fn x => x = #",") (String.concat c))
+            then map (findTypeSystemDataWithName dc) (String.tokens (fn k => k = #",") (String.concat c))
             else getImports L
 
       fun processTys ((Ty,prtyp)::L) =
@@ -208,7 +212,7 @@ struct
     case String.breakOn ":" s of
       (cname,":",csig) =>
           (case String.breakOn "->" csig of
-            (inTyps,"->",outTyp) => CSpace.makeConstructor (cname, CSpace.makeCTyp (Parser.list Type.typeOfString inTyps, Type.typeOfString outTyp))
+            (inTyps,"->",outTyp) => CSpace.makeConstructor (cname, CSpace.makeCTyp (Parser.list Type.fromString inTyps, Type.fromString outTyp))
           | _ => raise ParseError ("bad signature for constructor: " ^ s)
           )
     | _ => raise ParseError ("badly specified constructor: " ^ s)
@@ -217,14 +221,38 @@ struct
   fun addConSpec (r, tss) dc =
   let val (name,x,typeSystemN) = String.breakOn ":" r
       (*val _ = if x = ":" then () else raise ParseError "no type system specified for conSpec"*)
-      val chars = List.concat (map String.explode tss)
-      val crs = map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") chars)
       val _ = Logging.write ("\nAdding constructors for constructor specification " ^ name ^ " of type system " ^ typeSystemN ^ "...\n")
-      val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) crs
+
+      val blocks = contentForKeywords conSpecKeywords tss
+      fun getImports [] = []
+        | getImports ((x,c)::L) =
+            if x = SOME conSpecImportsKW
+            then map (findConSpecWithName dc) (String.tokens (fn k => k = #",") (String.concat c))
+            else getImports L
+      fun getConstructors [] = []
+        | getConstructors ((x,c)::L) =
+            if x = SOME constructorsKW
+            then map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") (List.concat (map String.explode c)))
+            else getConstructors L
+
+      val newConstructors = FiniteSet.ofList (getConstructors blocks)
+      val importedConstructorSets = map #constructors (getImports blocks)
+      val allConstructors = foldl (uncurry FiniteSet.union) FiniteSet.empty (newConstructors :: importedConstructorSets)
+
+      (*val chars = List.concat (map String.explode tss)
+      val crs = map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") chars)*)
+      val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
+      val cspec = {name = name, typeSystem = typeSystemN, constructors = allConstructors}
+      val TSD = findTypeSystemDataWithName dc typeSystemN
+      val (updatedTSD,updatedCSpec) =
+        case CSpace.wellDefinedConSpec TSD cspec of
+          (true,true,true) => (TSD,cspec)
+        | (true,true,false) => CSpace.fixClashesInConSpec TSD cspec
+        | (false,_,_) => (Logging.write "ERROR: strange type system for constructor specifiation\n"; raise CSpace.ImpossibleOverload)
+        | (_,false,_) => (Logging.write "ERROR: some constructor is not well defined... cannot proceed\n"; raise CSpace.ImpossibleOverload)
       val _ = Logging.write "...done\n"
-      val cspec = {name = name, typeSystem = typeSystemN, constructors = FiniteSet.ofList crs}
-  in {typeSystemsData = #typeSystemsData dc,
-      conSpecs = cspec :: #conSpecs dc,
+  in {typeSystemsData = updatedTSD :: List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc),
+      conSpecs = updatedCSpec :: #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
       transferRequests = #transferRequests dc,
@@ -269,7 +297,7 @@ struct
       val sourceTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem sourceCSpec))
       val targetCSpec = findConSpecWithName dc targetCSpecN
       val targetTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem targetCSpec))
-      val _ = Logging.write ("\nAdding tSchema " ^ name ^ "...")
+      val _ = Logging.write ("\nAdding transfer schema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
                               raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =

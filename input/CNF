@@ -8,6 +8,7 @@ typeSystem propCNF =
           nonclause < cnf
 
 conSpec propCNFG:propCNF =
+  constructors
     conj : [clause, cnf] -> nonclause,
     disj : [literal, clause] -> nonliteral,
     neg : [var] -> nonvar

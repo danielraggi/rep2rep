@@ -14,7 +14,7 @@ sig
   val principalType_rpc : principalType Rpc.Datatype.t
   (* val typeSystem_rpc : typeSystem Rpc.Datatype.t; *)
 
-  val typeOfString : string -> typ
+  val fromString : string -> typ
   val any : typ
   val equal : typ -> typ -> bool
 
@@ -39,6 +39,11 @@ sig
 
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
+
+  val addLeastCommonSuperType : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
+                                -> typ
+                                -> typ
+                                -> typ * {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
 end;
 
 structure Type : TYPE =
@@ -60,7 +65,7 @@ struct
                               (fn {typ, subTypeable} => (typ, subTypeable));
   (* val typeSystem_rpc =  *)
 
-  fun typeOfString x = x
+  fun fromString x = x
   val any = "" (* emtpy string *)
   fun equal x y = (x = y)
 
@@ -109,4 +114,37 @@ struct
     else
       if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
       else FiniteSet.insert pt P
+
+
+  fun superTypes {typeSystem,principalTypes} ty =
+    let val {Ty,subType} = typeSystem
+        val pTys = map #typ principalTypes
+    in FiniteSet.filter (fn typ => subType (ty,typ)) pTys
+    end
+
+  fun addLeastCommonSuperType (TP as {typeSystem,principalTypes}) ty ty' =
+    let val {Ty,subType} = typeSystem
+        val spTys = superTypes TP ty
+        val spTys' = superTypes TP ty'
+        val commonSuperTypes = FiniteSet.intersection spTys spTys'
+        val (new,lcspt) =
+              if FiniteSet.elementOf ty commonSuperTypes then (false, ty)
+              else if FiniteSet.elementOf ty' commonSuperTypes then (false, ty')
+              else (true, fromString ("leastCommonSuperType(" ^ (nameOfType ty) ^ "," ^ (nameOfType ty') ^ ")"))
+        val updatedTy = if new then Set.insert lcspt Ty else Ty
+        fun updatedSubType (x,y) =
+              if new
+              then if y = lcspt
+                   then subType (x,ty) orelse subType (x,ty')
+                   else if x = lcspt
+                        then FiniteSet.elementOf y commonSuperTypes
+                        else subType (x,y)
+              else subType (x,y)
+        val updatedTypeSystem = {Ty = updatedTy, subType = updatedSubType}
+        val updatedPrincipalTypes =
+              if new
+              then insertPrincipalType {typ = lcspt,subTypeable = false} principalTypes
+              else principalTypes
+    in (lcspt,{typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes})
+    end
 end;

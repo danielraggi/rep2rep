@@ -3,6 +3,7 @@ typeSystem Euler =
     order basicDiagram < diagram
 
 conSpec EulerG:Euler =
+  constructors
     assignLabel : [curve,label] -> basicDiagram,
     submerge : [basicDiagram,basicDiagram] -> diagram,
     dismerge : [basicDiagram,basicDiagram] -> diagram,

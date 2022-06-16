@@ -12,7 +12,7 @@ fun demoSpaces () =
       {name="monoid",
        typeSystem="trivial",
        constructors=FiniteSet.ofList [
-           CSpace.makeConstructor ("app", ([Type.typeOfString "t", Type.typeOfString "t"], Type.typeOfString "t"))
+           CSpace.makeConstructor ("app", ([Type.fromString "t", Type.fromString "t"], Type.fromString "t"))
       ]}
     ]
 

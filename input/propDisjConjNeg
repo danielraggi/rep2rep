@@ -3,6 +3,7 @@ typeSystem propDisjConjNeg =
     order basicProp < prop
 
 conSpec propDisjConjNegG:propDisjConjNeg =
+  constructors
     conj : [prop,prop] -> prop,
     disj : [prop,prop] -> prop,
     neg : [prop] -> prop
