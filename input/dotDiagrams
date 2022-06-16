@@ -3,6 +3,7 @@ typeSystem dotDiagrams =
     order
 
 conSpec dotDiagramsG:dotDiagrams =
+  constructors
     join : [arr,arr] -> arr,
     rotateX : [arr] -> arr,
     remove : [arr,arr] -> arr,

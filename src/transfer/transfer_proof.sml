@@ -114,18 +114,18 @@ struct
   fun stringOfPair f (x,y) = "(" ^ f x ^ "," ^ f y ^ ")"
   fun stringOfTokenListPair (x,y) = stringOfPair (fn z => List.toString CSpace.stringOfToken z) (x,y)
   fun toConstruction (Closed ((x,y,R),npp,L)) =
-      let fun relType X =Type.typeOfString (Relation.nameOf X)
+      let fun relType X =Type.fromString (Relation.nameOf X)
           val Rtyp = relType R
           val t = CSpace.makeToken (stringOfTokenListPair (x,y)) Rtyp
           val ctyp = CSpace.makeCTyp (map (relType o topRel) L, Rtyp)
           val c = CSpace.makeConstructor (#name npp,ctyp)
           val cs = if null L
-                   then [Construction.Source (CSpace.makeToken "" (Type.typeOfString "true"))]
+                   then [Construction.Source (CSpace.makeToken "" (Type.fromString "true"))]
                    else map toConstruction L
       in Construction.TCPair ({token = t,constructor = c}, cs)
       end
     | toConstruction (Open (x,y,R)) =
-      let fun relType X =Type.typeOfString (Relation.nameOf X)
+      let fun relType X =Type.fromString (Relation.nameOf X)
           val Rtyp = relType R
           val t = CSpace.makeToken (stringOfTokenListPair (x,y)) Rtyp
       in Construction.Source t

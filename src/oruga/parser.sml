@@ -137,7 +137,7 @@ struct
   fun list f x = if x = "[]" then [] else (splitLevelApply f o String.explode o String.removeSquareBrackets) x
   fun finiteSet f x = if x= "{}" then FiniteSet.empty else (FiniteSet.ofList o splitLevelApply f o String.explode o String.removeBraces) x
   fun set f x = if x= "{}" then Set.empty else (Set.ofList o splitLevelApply f o String.explode o String.removeBraces) x
-  val typ = Type.typeOfString
+  val typ = Type.fromString
   fun token s = case String.breakOn ":" (String.stripSpaces s) of
                   (ts,_,tys) => CSpace.makeToken ts (typ tys)
   fun ctyp s = case list typ (String.stripSpaces s) of

@@ -29,7 +29,7 @@ struct
                       NONE => NONE
                     | SOME f => f (map (evaluate E) cs)) handle Option => NONE)
 
-  val trueT = CSpace.makeToken "" (Type.typeOfString "true")
+  val trueT = CSpace.makeToken "" (Type.fromString "true")
   fun optionSum [] = 0.0
     | optionSum (NONE::t) = optionSum t - 1.0
     | optionSum (SOME x :: t) = x + optionSum t

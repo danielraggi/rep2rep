@@ -39,6 +39,9 @@ sig
   val stringOfConstructor : constructor -> string
   val stringOfConfigurator : configurator -> string
 
+  val wellDefinedConSpec : Type.typeSystemData -> conSpec -> (bool * bool * bool)
+  exception ImpossibleOverload
+  val fixClashesInConSpec : Type.typeSystemData -> conSpec -> (Type.typeSystemData * conSpec)
 end;
 
 structure CSpace : CSPACE =
@@ -108,4 +111,96 @@ struct
   fun stringOfConstructor (c,(tys,ty)) = c ^ " : " ^ (String.stringOfList Type.nameOfType tys) ^ " -> " ^ ty
   fun stringOfConfigurator (u,cc) = u ^ ":" ^ stringOfConstructor cc
 
+
+  fun wellDefinedConSpec TSD {name,typeSystem,constructors} =
+    let
+      val Ty = #Ty (#typeSystem TSD)
+      fun clashes (s,ctyp) (s',ctyp') =
+        if s = s' andalso ctyp <> ctyp'
+        then (print ("WARNING: type " ^ s ^ " is defined twice with different signatures\n"); true)
+        else false
+      fun noClashes [] = true
+        | noClashes ((s,(inTyps,outTyp))::L) = not (List.exists (clashes (s,(inTyps,outTyp))) L) andalso noClashes L
+      val nameMatches =
+        if #name TSD = typeSystem
+        then true
+        else (print ("WARNING: " ^ #name TSD ^ " is not " ^ typeSystem ^ "\n"); false)
+      fun goodTypes [] = true
+        | goodTypes (typ::L) =
+            if Set.elementOf typ Ty
+            then goodTypes L
+            else (print ("WARNING: type " ^ (Type.nameOfType typ) ^ " is not in " ^ typeSystem ^ "\n"); false)
+      fun nonEmptyInput s inTyps =
+        if inTyps = []
+        then (print ("WARNING: Empty input types for " ^ s ^ "\n"); false)
+        else true
+      fun checkConstructors [] = []
+        | checkConstructors ((s,(inTyps,outTyp))::L) =
+            nonEmptyInput s inTyps ::
+            goodTypes (outTyp :: inTyps) ::
+            checkConstructors L
+      val wellDefinedConstructors = List.all (fn x => x) (checkConstructors constructors)
+    in (nameMatches, wellDefinedConstructors, noClashes constructors)
+    end
+
+
+  exception ImpossibleOverload
+  fun extendWithManyLCSuperTypes (TP as {typeSystem,principalTypes}) (ty::tys) (ty'::tys') =
+        (case Type.addLeastCommonSuperType TP ty ty' of
+          (lcspt,TP') => (case extendWithManyLCSuperTypes TP' tys tys' of
+                            (L,TP'') => (lcspt::L,TP'')))
+    | extendWithManyLCSuperTypes X [] [] = ([],X)
+    | extendWithManyLCSuperTypes _ _ _ = raise ImpossibleOverload
+
+  fun fixClashesInConSpec TSD {name,typeSystem,constructors} =
+    let
+      fun clash (s,(inTyps,outTyp)) (s',(inTyps',outTyp')) =
+        s = s' andalso (inTyps,outTyp) <> (inTyps',outTyp')
+
+      fun findClashes L =
+        let fun findClashes' [] = []
+              | findClashes' (c::L') =
+                  (case List.partition (clash c) L' of (Cl,NCl) => (c,Cl) :: findClashes' NCl)
+            val (clashes,F) = List.partition (fn (_,Y) => Y <> []) (findClashes' L)
+            fun getNonclashing [] = []
+              | getNonclashing ((c,_)::L') =
+                  if List.exists (fn (x,_) => nameOfConstructor c = nameOfConstructor x) clashes
+                  then getNonclashing L'
+                  else c :: getNonclashing L'
+            val nonclashing = getNonclashing F
+        in (clashes, nonclashing)
+        end
+
+      fun resolveClash TP ((s,(inTyps,outTyp)), (s',(inTyps',outTyp'))) =
+        let val (otyp::ityps,updatedTP) = extendWithManyLCSuperTypes TP (outTyp::inTyps) (outTyp'::inTyps')
+        in ((s,(ityps,otyp)),updatedTP)
+        end
+
+      fun resolveClashesForConstructor TP (c,[]) = (c,TP)
+        | resolveClashesForConstructor TP (c,(c'::L')) =
+            case resolveClash TP (c,c') of
+              (d,nextTP) => resolveClashesForConstructor nextTP (d,L')
+
+      fun resolveClashes TP [] = ([],TP)
+        | resolveClashes TP (cP::L) =
+            let val (c,stepTP) = resolveClashesForConstructor TP cP
+                val (cL,updatedTP) = resolveClashes stepTP L
+            in (c::cL,updatedTP)
+            end
+
+      val TP = {typeSystem = #typeSystem TSD, principalTypes = #principalTypes TSD}
+
+      val (clashes,nonclashing) = findClashes (FiniteSet.listOf constructors)
+      val (newConstructors,updatedTP) = resolveClashes TP clashes
+      val updatedConstructors = FiniteSet.ofList (newConstructors @ nonclashing)
+
+      val updatedTSD = {typeSystem = #typeSystem updatedTP,
+                        principalTypes = #principalTypes updatedTP,
+                        name = #name TSD}
+      val _ = print ("  SUCCESSFULLY REPLACED ALL CLASHES WITH CONSTRUCTORS WITH GENERALISED SIGNATURES (EXPERIMENTAL):\n")
+      val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o stringOfConstructor) newConstructors
+
+      val _ = findClashes
+    in (updatedTSD, {name = name, typeSystem = typeSystem, constructors = updatedConstructors})
+    end handle ImpossibleOverload => (Logging.write "ERROR: Impossible to fix clash in constructor specification :-( \n"; raise ImpossibleOverload)
 end;

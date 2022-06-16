@@ -16,6 +16,7 @@ typeSystem setAlgebra =
           not < unaryLogical
 
 conSpec setAlgebraG:setAlgebra =
+  constructors
     infixRel : [set,binaryRel,set] -> formula,
     infixOp : [set,binaryOp,set] -> set,
     unaryOpApp : [unaryOp,set] -> set,
