@@ -1,4 +1,4 @@
-import "core.correspondence";
+import "core.transferSchema";
 import "core.composition";
 
 signature KNOWLEDGE =
@@ -13,15 +13,15 @@ sig
   (*val related : base -> Relation.T -> CSpace.token list -> CSpace.token list -> bool;*)
   val subRelation : base -> Relation.T -> Relation.T -> bool;
 
-  (* Correspondence knowledge *)
-  val correspondencesOf : base -> Correspondence.corr Seq.seq;
+  (* TransferSchema knowledge *)
+  val tSchemasOf : base -> TransferSchema.tSch Seq.seq;
   val strengthOf : base -> string -> real option
 
   (* Building a knowledge base *)
-  val addCorrespondence : base -> Correspondence.corr -> real -> (Correspondence.corr * Correspondence.corr -> order) -> base;
+  val addTransferSchema : base -> TransferSchema.tSch -> real -> (TransferSchema.tSch * TransferSchema.tSch -> order) -> base;
 
   (*val addRelationships : base -> Relation.relationship list -> base;*)
-  val findCorrespondenceWithName : base -> string -> Correspondence.corr option;
+  val findTransferSchemaWithName : base -> string -> TransferSchema.tSch option;
 
   val join : base -> base -> base;
   val empty : base;
@@ -31,7 +31,7 @@ structure Knowledge : KNOWLEDGE =
 struct
   type base = {(*relationships : Relation.relationship FiniteSet.set,*)
                subRelation : Relation.T * Relation.T -> bool,
-               correspondences : Correspondence.corr Seq.seq,
+               tSchemas : TransferSchema.tSch Seq.seq,
                strength : string -> real option};
 
   (* Relational knowledge *)
@@ -42,36 +42,36 @@ struct
     in Relation.same R Relation.alwaysTrue orelse Option.isSome (FiniteSet.find sat (relationshipsOf KB))
     end;*)
 
-  (* Correspondence knowledge *)
-  fun correspondencesOf KB = #correspondences KB;
+  (* TransferSchema knowledge *)
+  fun tSchemasOf KB = #tSchemas KB;
   fun strengthOf KB = #strength KB
 
-  fun addCorrespondence KB corr s f =
+  fun addTransferSchema KB tsch s f =
     {(*relationships= #relationships KB,*)
       subRelation = #subRelation KB,
-      correspondences = Seq.insert corr (#correspondences KB) f,
-      strength = (fn cn => if #name corr = cn then SOME s else (#strength KB) cn)}
+      tSchemas = Seq.insert tsch (#tSchemas KB) f,
+      strength = (fn cn => if #name tsch = cn then SOME s else (#strength KB) cn)}
 
 (*fun addRelationships KB rels =
     {relationships= FiniteSet.union (#relationships KB) rels,
       subRelation = #subRelation KB,
-      correspondences = #correspondences KB}*)
+      tSchemas = #tSchemas KB}*)
 
-  fun findCorrespondenceWithName KB name =
-    Seq.findFirst (fn x => Correspondence.nameOf x = name) (#correspondences KB)
+  fun findTransferSchemaWithName KB name =
+    Seq.findFirst (fn x => TransferSchema.nameOf x = name) (#tSchemas KB)
 
   fun subRelUnion subR1 subR2 (x,y) = subR1(x,y) orelse subR2(x,y)
 
   fun join k1 k2 =
     {subRelation = subRelUnion (#subRelation k1) (#subRelation k2),
-     correspondences = Seq.append (#correspondences k1) (#correspondences k2),
+     tSchemas = Seq.append (#tSchemas k1) (#tSchemas k2),
      strength = (fn cn => case (#strength k2) cn of SOME r => SOME r | NONE => (#strength k1) cn)}
 
   val empty =
     let fun subrel (R1,R2) = Relation.same R1 R2
     in {(*relationships= FiniteSet.ofList rels,*)
         subRelation = subrel,
-        correspondences = Seq.empty,
+        tSchemas = Seq.empty,
         strength = (fn _ => NONE)}
   end
 end;

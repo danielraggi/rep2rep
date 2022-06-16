@@ -1,22 +1,22 @@
-import "core.correspondence";
+import "core.transferSchema";
 
 signature TRANSFER_PROOF =
 sig
-  type corr = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
-  datatype tproof = Closed of Relation.relationship * corr * tproof list
+  type tApp = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  datatype tproof = Closed of Relation.relationship * tApp * tproof list
                   | Open of Relation.relationship;
   val ofRelationship : Relation.relationship -> tproof;
-  val dataOfCorrespondence : Correspondence.corr -> {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
-  val ofCorrespondence : Correspondence.corr -> tproof;
+  val dataOfTransferSchema : TransferSchema.tSch -> {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  val ofTransferSchema : TransferSchema.tSch -> tproof;
   val similar : tproof -> tproof -> bool
   val applyTokenMorph : (CSpace.token -> CSpace.token option) -> tproof -> tproof
-  val attachCorr : Correspondence.corr -> tproof -> tproof;
-  val attachCorrAt : Correspondence.corr -> Relation.relationship -> tproof -> tproof;
-  val attachCorrPulls : Correspondence.corr -> CSpace.token -> tproof -> tproof
+  val attachTSchema : TransferSchema.tSch -> tproof -> tproof;
+  val attachTSchemaAt : TransferSchema.tSch -> Relation.relationship -> tproof -> tproof;
+  val attachTSchemaPulls : TransferSchema.tSch -> CSpace.token -> tproof -> tproof
   val dump : string -> Relation.relationship -> tproof -> tproof
 
-  val mapRelsAndAttachCorr : (Relation.relationship -> Relation.relationship)
-                              -> Correspondence.corr -> tproof -> tproof;
+  val mapRelsAndAttachTSchema : (Relation.relationship -> Relation.relationship)
+                              -> TransferSchema.tSch -> tproof -> tproof;
 
   val toConstruction : tproof -> Construction.construction;
 end;
@@ -24,44 +24,44 @@ end;
 structure TransferProof : TRANSFER_PROOF =
 struct
 
-  type corr = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
-  datatype tproof = Closed of Relation.relationship * corr * tproof list
+  type tApp = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  datatype tproof = Closed of Relation.relationship * tApp * tproof list
                   | Open of Relation.relationship;
 
   fun ofRelationship r = Open r;
 
 
-  fun dataOfCorrespondence corr = {name = #name corr, sourcePattern = #sourcePattern corr,targetPattern = #targetPattern corr}
+  fun dataOfTransferSchema tApp = {name = #name tApp, sourcePattern = #sourcePattern tApp,targetPattern = #targetPattern tApp}
 
-  fun ofCorrespondence corr =
-    Closed (#constructRel corr, dataOfCorrespondence corr, map Open (#tokenRels corr))
+  fun ofTransferSchema tApp =
+    Closed (#consequent tApp, dataOfTransferSchema tApp, map Open (#antecedent tApp))
 
-  fun sameSimilarCorrs c c' = #name c = #name c' andalso
+  fun sameSimilarTSchemas c c' = #name c = #name c' andalso
                           Pattern.same (#sourcePattern c) (#sourcePattern c') andalso
                           Pattern.similar (#targetPattern c) (#targetPattern c')
 
   fun similar (Closed (r,c,L)) (Closed (r',c',L')) = Relation.stronglyMatchingRelationships r r' andalso
-                                                     sameSimilarCorrs c c' andalso
+                                                     sameSimilarTSchemas c c' andalso
                                                      List.allZip similar L L'
     | similar (Open r) (Open r') = Relation.stronglyMatchingRelationships r r'
     | similar _ _ = false
 
-  fun attachCorr corr (Closed (r,npp,L)) = Closed (r,npp, map (attachCorr corr) L)
-    | attachCorr corr (Open r) =
-        if Relation.sameRelationship (#constructRel corr) r
-        then ofCorrespondence corr
+  fun attachTSchema tApp (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchema tApp) L)
+    | attachTSchema tApp (Open r) =
+        if Relation.sameRelationship (#consequent tApp) r
+        then ofTransferSchema tApp
         else Open r
 
-  fun attachCorrAt corr r' (Closed (r,npp,L)) = Closed (r,npp, map (attachCorrAt corr r') L)
-    | attachCorrAt corr r' (Open r) =
+  fun attachTSchemaAt tApp r' (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchemaAt tApp r') L)
+    | attachTSchemaAt tApp r' (Open r) =
         if Relation.sameRelationship r' r
-        then ofCorrespondence corr
+        then ofTransferSchema tApp
         else Open r
 
-  fun attachCorrPulls corr t (Closed (r,npp,L)) = Closed (r,npp, map (attachCorrPulls corr t) L)
-    | attachCorrPulls corr t (Open (x,y,R)) =
-      let val pullList = Correspondence.pullListOf corr
-          (*val t = Pattern.constructOf (#targetPattern corr)*)
+  fun attachTSchemaPulls tApp t (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchemaPulls tApp t) L)
+    | attachTSchemaPulls tApp t (Open (x,y,R)) =
+      let val pullList = TransferSchema.pullListOf tApp
+          (*val t = Pattern.constructOf (#targetPattern tApp)*)
           fun applyPullItems ((R',R'',tL) :: L) =
                 if Relation.same R R' andalso List.exists (CSpace.sameTokens t) y
                 then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL
@@ -70,9 +70,9 @@ struct
       in case applyPullItems pullList of
             [] => Open (x,y,R)
           | rL => Closed ((x,y,R),
-                          {name = #name corr ^ "\\_pull",
-                           sourcePattern = #sourcePattern corr,
-                           targetPattern = #targetPattern corr},
+                          {name = #name tApp ^ "\\_pull",
+                           sourcePattern = #sourcePattern tApp,
+                           targetPattern = #targetPattern tApp},
                            map Open rL)
       end
 
@@ -100,12 +100,12 @@ struct
   fun mapRels f (Closed (r,npp,L)) = Closed (f r, npp, map (mapRels f) L)
     | mapRels f (Open r) = Open (f r)
 
-  fun mapRelsAndAttachCorr f corr (Closed (r,npp,L)) =
-        Closed (f r, npp, map (mapRelsAndAttachCorr f corr) L)
-    | mapRelsAndAttachCorr f corr (Open r) =
+  fun mapRelsAndAttachTSchema f tApp (Closed (r,npp,L)) =
+        Closed (f r, npp, map (mapRelsAndAttachTSchema f tApp) L)
+    | mapRelsAndAttachTSchema f tApp (Open r) =
       let val r' = f r
-      in if Relation.sameRelationship r' (#constructRel corr)
-         then ofCorrespondence corr
+      in if Relation.sameRelationship r' (#consequent tApp)
+         then ofTransferSchema tApp
          else Open r'
       end
 

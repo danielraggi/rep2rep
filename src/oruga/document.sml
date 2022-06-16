@@ -15,7 +15,7 @@ sig
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val findConSpecWithName : documentContent -> string -> CSpace.conSpec
   val findConstructionWithName : documentContent -> string -> {name : string, conSpec : string, construction : Construction.construction}
-  val findCorrespondenceWithName : documentContent -> string -> Correspondence.corr
+  val findTransferSchemaWithName : documentContent -> string -> TransferSchema.tSch
 
 end;
 
@@ -27,23 +27,24 @@ struct
   val importKW = "import"
   val typeSystemKW = "typeSystem"
   val conSpecKW = "conSpec"
-  val correspondenceKW = "correspondence"
+  val tSchemaKW = "tSchema"
   val constructionKW = "construction"
   val transferKW = "transfer"
   val commentKW = "comment"
-  val bigKeywords = [importKW,typeSystemKW,conSpecKW,correspondenceKW,constructionKW,transferKW,commentKW]
+  val bigKeywords = [importKW,typeSystemKW,conSpecKW,tSchemaKW,constructionKW,transferKW,commentKW]
 
   val typesKW = "types"
   val subTypeKW = "order"
-  val typeKeywords = [typesKW,subTypeKW]
+  val typeImportsKW = "imports"
+  val typeKeywords = [typesKW,subTypeKW,typeImportsKW]
 
   val targetKW = "target"
   val sourceKW = "source"
-  val tokenRelsKW = "tokenRels"
-  val constructRelKW = "constructRel"
+  val antecedentKW = "antecedent"
+  val consequentKW = "consequent"
   val pullListKW = "pull"
   val strengthKW = "strength"
-  val corrKeywords = [targetKW,sourceKW,tokenRelsKW,constructRelKW,pullListKW,strengthKW]
+  val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,pullListKW,strengthKW]
 
   val sourceTypeSystemKW = "sourceTypeSystem"
   val targetTypeSystemKW = "targetTypeSystem"
@@ -107,9 +108,9 @@ struct
     valOf (FiniteSet.find (fn x => #name x = n) (constructionsOf DC))
     handle Option => raise ParseError ("no construction with name " ^ n)
 
-  fun findCorrespondenceWithName DC n =
-    valOf (Knowledge.findCorrespondenceWithName (knowledgeOf DC) n)
-    handle Option => raise ParseError ("no correspondence with name " ^ n)
+  fun findTransferSchemaWithName DC n =
+    valOf (Knowledge.findTransferSchemaWithName (knowledgeOf DC) n)
+    handle Option => raise ParseError ("no tSchema with name " ^ n)
 
   fun inequality s =
     (case String.breakOn "<" s of
@@ -117,56 +118,85 @@ struct
       | (x,">",y) => (y,x)
       | _ => raise ParseError s)
 
-  (* The function below not only parses a type from a string, but if in notation _:t it
-      makes everything with :t as suffix a subtype of t (and of any supertype of t) *)
-  fun parseTyp subType s =
+  (* The function below adds types and, if in notation _:t it
+      adds everything with :t as suffix *)
+  fun parseTyp s =
     case String.breakOn ":" s of
       ("_",":",superTyp) => (fn x => x = Type.typeOfString superTyp orelse String.isSuffix (":"^superTyp) (Type.nameOfType x),
-                             fn (x,y) => String.isSuffix (":"^superTyp) (Type.nameOfType x) andalso subType (Type.typeOfString superTyp,y),
                              {typ = Type.typeOfString superTyp, subTypeable = true})
-    | _ => (fn x => x = Type.typeOfString s, fn _ => false, {typ = Type.typeOfString s, subTypeable = false})
+    | _ => (fn x => x = Type.typeOfString s, {typ = Type.typeOfString s, subTypeable = false})
+
+(*
+  fun insertPrincipalTypes (pt::L) P =
+      Type.insertPrincipalType pt (insertPrincipalTypes L P)
+    | insertPrincipalTypes [] P = P*)
+
+  fun joinTypeSystemsData name TSDs =
+    let fun joinData [] = {typeSystem = {Ty = Set.empty, subType = fn (x,y) => Type.equal x y},
+                           principalTypes = FiniteSet.empty}
+          | joinData (tsd::L) =
+              let val tsd_rec = joinData L
+                  val TS_rec = #typeSystem tsd_rec
+                  val TS = #typeSystem tsd
+                  val jointTys = Set.union (#Ty TS) (#Ty TS_rec)
+                  val jointPTys = foldl (uncurry Type.insertPrincipalType) (#principalTypes tsd_rec) (FiniteSet.listOf (#principalTypes tsd))
+                  (*val jointPTys = insertPrincipalTypes (FiniteSet.listOf (#principalTypes tsd)) (#principalTypes tsd_rec)*)
+                  val jointSubType = (fn (x,y) => #subType TS (x,y) orelse #subType TS_rec (x,y))
+                  val jointTS = {Ty = jointTys, subType = jointSubType}
+              in {typeSystem = jointTS, principalTypes = jointPTys}
+              end
+        val {typeSystem,principalTypes} = joinData TSDs
+        val strippedPrincipalTypes = map #typ principalTypes
+        val subTypeableTypes = map #typ (FiniteSet.filter #subTypeable principalTypes)
+        val principalSubType = Type.closureOverFiniteSet strippedPrincipalTypes (#subType typeSystem)
+        val subType = Type.fixForSubtypeable subTypeableTypes principalSubType
+        val typeSystem = {Ty = #Ty typeSystem, subType = subType}
+    in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
+    end
 
   fun addTypeSystem (name, tss) dc =
-  let val blocks = contentForKeywords typeKeywords tss
-      fun getTyps _ [] = []
-        | getTyps subType ((x,c)::L) =
+  let val _ = print ("\nAdding type system " ^ name ^ "...");
+      val blocks = contentForKeywords typeKeywords tss
+      fun getTyps [] = []
+        | getTyps ((x,c)::L) =
             if x = SOME typesKW
-            then map (parseTyp subType) (String.tokens (fn x => x = #",") (String.concat c))
-            else getTyps subType L
+            then map parseTyp (String.tokens (fn x => x = #",") (String.concat c))
+            else getTyps L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME subTypeKW
             then map inequality (String.tokens (fn x => x = #",") (String.concat c))
             else getOrder L
-      val ordList = getOrder blocks
-      fun getTypsInOrdList ((x,y)::L) = FiniteSet.insert (Type.typeOfString x) (FiniteSet.insert (Type.typeOfString y) (getTypsInOrdList L))
-        | getTypsInOrdList [] = FiniteSet.empty
-      val typsInOrdList = getTypsInOrdList ordList
-      fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-      fun subType_raw p = List.exists (eq p) ordList
-      val subType' = Type.fixFiniteSubTypeFunction typsInOrdList subType_raw
+      fun getImports [] = []
+        | getImports ((x,c)::L) =
+            if x = SOME typeImportsKW
+            then map (findTypeSystemDataWithName dc) (String.tokens (fn x => x = #",") (String.concat c))
+            else getImports L
 
-      fun prInsert pt P =
-        if #subTypeable pt then
-          FiniteSet.insert pt (FiniteSet.filter (fn x => #typ x <> #typ pt) P)
-        else
-          if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
-          else FiniteSet.insert pt P
-
-      fun processTys ((typs,subty,prtyp)::L) =
+      fun processTys ((Ty,prtyp)::L) =
           (case processTys L of
-            ((Ty,subtype),prTyps) => ((fn x => typs x orelse Ty x,
-                                      fn (x,y) => subty (x,y) orelse subtype (x,y)),
-                                     prInsert prtyp prTyps)
+            (Ty_rec,prTyps) => (fn x => Ty x orelse Ty_rec x,
+                                Type.insertPrincipalType prtyp prTyps)
           )
-        | processTys [] = ((fn _ => false, subType'), FiniteSet.empty)
+        | processTys [] = (Set.empty, FiniteSet.empty)
 
-      val TypsAndSubTypeList = getTyps subType' blocks
-      val ((Ty,subType),prTyps) = processTys TypsAndSubTypeList
+      val (newTys,newPrincipalTyps) = processTys (getTyps blocks)
+      val strippedPrincipalTypes = map #typ newPrincipalTyps
 
-      val typSys = {Ty = Ty, subType = subType}
-      val typSysData = {name = name, typeSystem = typSys, principalTypes = prTyps}
-  in {typeSystemsData = typSysData :: (#typeSystemsData dc),
+      val ordList = getOrder blocks
+      fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
+      fun subType_raw (x,y) = List.exists (eq (x,y)) ordList
+      val typeSystemData_raw = {typeSystem = {Ty = newTys, subType = subType_raw},
+                                principalTypes = newPrincipalTyps,
+                                name = "__tmp"}
+
+      val importsTSDs = getImports blocks
+      val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
+      val _ = if Type.wellDefined typeSystemData
+              then print ("done\n")
+              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined and it's probably not your fault!\n")
+
+  in {typeSystemsData = typeSystemData :: (#typeSystemsData dc),
       conSpecs = #conSpecs dc,
       knowledge = #knowledge dc,
       constructions = #constructions dc,
@@ -230,7 +260,7 @@ struct
     in Construction.fixReferences (c [] (String.stripSpaces s))
     end;
 
-  fun addCorrespondence (nn,cs) dc =
+  fun addTransferSchema (nn,cs) dc =
   let val (name,x,cspecNs) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source and target cspecs")
       val (sourceCSpecN,y,targetCSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
@@ -239,23 +269,23 @@ struct
       val sourceTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem sourceCSpec))
       val targetCSpec = findConSpecWithName dc targetCSpecN
       val targetTySys = #typeSystem (findTypeSystemDataWithName dc (#typeSystem targetCSpec))
-      val _ = Logging.write ("\nAdding correspondence " ^ name ^ "...")
+      val _ = Logging.write ("\nAdding tSchema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
-                              raise ParseError ("no " ^ k ^ " in correspondence " ^ String.concat cs))
+                              raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
             then parseConstruction (String.concat ps) (if k = sourceKW then sourceCSpec else targetCSpec)
             else getPattern k L
       fun getTokenRels [] = (Logging.write ("  ERROR: token relation not specified");
-                              raise ParseError ("no token rels in correspondence " ^ String.concat cs))
+                              raise ParseError ("no token rels in tSchema " ^ String.concat cs))
         | getTokenRels ((x,trss) :: L) =
-            if x = SOME tokenRelsKW
+            if x = SOME antecedentKW
             then Parser.relaxedList Parser.relationship (String.concat trss)
             else getTokenRels L
       fun getConstructRel [] = (Logging.write ("  ERROR: construct relation not specified");
-                                raise ParseError ("no construct rel in correspondence " ^ String.concat cs))
+                                raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
         | getConstructRel ((x,crs) :: L) =
-            if x = SOME constructRelKW
+            if x = SOME consequentKW
             then Parser.relationship (String.concat crs)
             else getConstructRel L
       fun parsePull s =
@@ -263,19 +293,19 @@ struct
           (Rs," to ",S) => (case String.breakOn " as " S of
                               (tks," as ",Rs') => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs'), Parser.list Parser.token (String.stripSpaces tks))
                             | _ => (Parser.relation (String.stripSpaces Rs), Parser.relation (String.stripSpaces Rs), Parser.list Parser.token (String.stripSpaces S)))
-        | _ => raise ParseError ("badly specified pull list in correspondence " ^ s))
+        | _ => raise ParseError ("badly specified pull list in tSchema " ^ s))
       fun getPullList [] = []
         | getPullList ((x,pl) :: L) =
             if x = SOME pullListKW
             then Parser.relaxedList parsePull (Parser.deTokenise " " pl)
             else getPullList L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
-                            raise ParseError ("no strength in correspondence " ^ String.concat cs))
+                            raise ParseError ("no strength in tSchema " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
-            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in correspondence " ^ String.concat cs);raise Option)
+            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);raise Option)
             else getStrength L
-      val blocks = contentForKeywords corrKeywords cs
+      val blocks = contentForKeywords tSchemaKeywords cs
       val sPatt = getPattern sourceKW blocks
       val tPatt = getPattern targetKW blocks
       val _ = if Construction.wellFormed sourceTySys sPatt
@@ -284,19 +314,19 @@ struct
       val _ = if Construction.wellFormed targetTySys tPatt
               then Logging.write "\n  target pattern is well formed\n"
               else Logging.write "\n  WARNING: target pattern is not well formed\n"
-      val corr = {name = name,
+      val tsch = {name = name,
                   sourcePattern = sPatt,
                   targetPattern = tPatt,
-                  tokenRels = getTokenRels blocks,
-                  constructRel = getConstructRel blocks,
+                  antecedent = getTokenRels blocks,
+                  consequent = getConstructRel blocks,
                   pullList = getPullList blocks}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (valOf (strengthsUpd (Correspondence.nameOf c')), valOf (strengthsUpd (Correspondence.nameOf c)))
+      fun ff (c,c') = Real.compare (valOf (strengthsUpd (TransferSchema.nameOf c')), valOf (strengthsUpd (TransferSchema.nameOf c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecs = #conSpecs dc,
-      knowledge = Knowledge.addCorrespondence (#knowledge dc) corr strengthVal ff,
+      knowledge = Knowledge.addTransferSchema (#knowledge dc) tsch strengthVal ff,
       constructions = #constructions dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
@@ -449,8 +479,8 @@ struct
       val compsAndGoals = getCompsAndGoals listOfResults;
       val transferProofs = map State.transferProofOf listOfResults
       val tproofConstruction = map (TransferProof.toConstruction o #2) compsAndGoals
-      fun readCorrStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
-      val E = Propagation.mkMultiplicativeISEvaluator readCorrStrengths
+      fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
+      val E = Propagation.mkMultiplicativeISEvaluator readTSchemaStrengths
       val is = (Propagation.evaluate E) (hd tproofConstruction) handle Empty => (SOME 0.0)
       val is' = SOME (Heuristic.multiplicativeScore (strengthsOf DC) (hd transferProofs)) handle Empty => (SOME 0.0)
     (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
@@ -498,7 +528,7 @@ struct
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
           in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
              if x = SOME conSpecKW then addConSpec (hd n, ws) dc else
-             if x = SOME correspondenceKW then addCorrespondence (hd n,ws) dc else
+             if x = SOME tSchemaKW then addTransferSchema (hd n,ws) dc else
              if x = SOME constructionKW then addConstruction (hd n,String.concat ws) dc else
              if x = SOME transferKW then addTransferRequests c dc else
              if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"

@@ -4,8 +4,8 @@ import "util.logging";
 
 signature TRANSFER =
 sig
-  val applyCorrespondenceForGoal : State.T -> Correspondence.corr -> Relation.relationship -> State.T
-  val applyCorrespondence : State.T -> Correspondence.corr -> State.T Seq.seq
+  val applyTransferSchemaForGoal : State.T -> TransferSchema.tSch -> Relation.relationship -> State.T
+  val applyTransferSchema : State.T -> TransferSchema.tSch -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
   val structureTransfer : Knowledge.base
                             -> Type.typeSystem
@@ -42,7 +42,7 @@ end;
 structure Transfer : TRANSFER =
 struct
 
-  exception CorrespondenceNotApplicable
+  exception TransferSchemaNotApplicable
   (*  *)
   fun refreshNamesOfConstruction ct D =
     let
@@ -69,23 +69,23 @@ struct
     end
 
   exception Undefined
-  (* The following function takes a correspondence, corr, with construct relation Rc,
+  (* The following function takes a tSchema, tsch, with construct relation Rc,
      and a goal assumed to have a superRelation Rg of Rc.
      The function will try to find a generator in the given source construction that matches
-     the source pattern of corr. If found, it will use the isomorphic map (from pattern to generator)
-     to rename the relationships between the vertices of the source specified by the correspondence.
+     the source pattern of tsch. If found, it will use the isomorphic map (from pattern to generator)
+     to rename the relationships between the vertices of the source specified by the tSchema.
      It will also rename the vertices of the target pattern so that they don't clash with the
      vertices in the composition.  *)
-  fun instantiateCorrForStateAndGoal corr st goal targetType =
+  fun instantiateTSchemaForStateAndGoal tsch st goal targetType =
     let
       val (sourceToken,targetToken) = (case Relation.tupleOfRelationship goal of
                                           ([x],[y],_) => (x,y)
-                                        | _ => raise CorrespondenceNotApplicable) (* assumes Rc is subrelation of Rg*)
-      val (rfs,rc) = Correspondence.relationshipsOf corr
+                                        | _ => raise TransferSchemaNotApplicable) (* assumes Rc is subrelation of Rg*)
+      val (rfs,rc) = TransferSchema.relationshipsOf tsch
       val ct = State.constructionOf st
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompOf st
-      val (sourcePattern,targetPattern) = Correspondence.patternsOf corr
+      val (sourcePattern,targetPattern) = TransferSchema.patternsOf tsch
       val targetConstructWithUpdatedType =
             CSpace.makeToken (CSpace.nameOfToken (Pattern.constructOf targetPattern)) targetType
       fun partialMorphism x = if CSpace.sameTokens x (Pattern.constructOf targetPattern)
@@ -97,7 +97,7 @@ struct
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
                 ((f,SOME x) ) => (f, x)
-              | _ => raise CorrespondenceNotApplicable)
+              | _ => raise TransferSchemaNotApplicable)
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
       fun srFun x = (Option.valOf o sourceRenamingFunction) x
           handle Option => (Logging.write ("\nERROR: source renaming function\n"); raise Option)
@@ -116,13 +116,13 @@ struct
       (*****)
       val updatedFoundationRelationships = map updateR rfs
       val updatedConstructRelationship = updateR rc
-      val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL;raise Option))) (#pullList corr)
+      val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL;raise Option))) (#pullList tsch)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
-        Correspondence.declareCorrespondence {name = #name corr,
+        TransferSchema.declareTransferSchema {name = #name tsch,
                                               sourcePattern=matchingGenerator,
                                               targetPattern=updatedTargetPattern,
-                                              tokenRels=updatedFoundationRelationships,
-                                              constructRel=updatedConstructRelationship,
+                                              antecedent=updatedFoundationRelationships,
+                                              consequent=updatedConstructRelationship,
                                               pullList = updatedPullList})
     end
 
@@ -134,43 +134,43 @@ struct
     else (x,y,R)::applyPullItem gs t (R',R'',tL)
 
   exception Error
-  fun applyCorrespondenceForGoal st corr goal =
+  fun applyTransferSchemaForGoal st tsch goal =
     let val (sourceToken,targetToken,Rg) = (case Relation.tupleOfRelationship goal of
                                               ([x],[y],R) => (x,y,R)
-                                            | _ => raise CorrespondenceNotApplicable)
-        val (stcs,ttcs,Rc) = (case Correspondence.relationshipsOf corr of
+                                            | _ => raise TransferSchemaNotApplicable)
+        val (stcs,ttcs,Rc) = (case TransferSchema.relationshipsOf tsch of
                                 (_,([x],[y],R)) => (x,y,R)
                               | _ => (print "oh no!";raise Error))
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         val typeOfTargetTokenInGoal = CSpace.typeOfToken targetToken
-        val typeOfTargetConstructInCorr = CSpace.typeOfToken ttcs
+        val typeOfTargetConstructInTSchema = CSpace.typeOfToken ttcs
         fun minType typSys (ty1,ty2) =
               if (#subType typSys) (ty1,ty2) then ty1
               else if (#subType typSys) (ty2,ty1) then ty2
-              else raise CorrespondenceNotApplicable
-        val (f,instantiatedCorr) =
+              else raise TransferSchemaNotApplicable
+        val (f,instantiatedTSchema) =
               if Knowledge.subRelation (State.knowledgeOf st) Rc Rg
                  andalso Pattern.tokenMatches sT sourceToken stcs
-              then instantiateCorrForStateAndGoal corr st goal (minType tT (typeOfTargetTokenInGoal, typeOfTargetConstructInCorr))
-              else raise CorrespondenceNotApplicable
-        val (_,targetPattern) = Correspondence.patternsOf instantiatedCorr
+              then instantiateTSchemaForStateAndGoal tsch st goal (minType tT (typeOfTargetTokenInGoal, typeOfTargetConstructInTSchema))
+              else raise TransferSchemaNotApplicable
+        val (_,targetPattern) = TransferSchema.patternsOf instantiatedTSchema
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
-        val (rfs,rc) = Correspondence.relationshipsOf instantiatedCorr
+        val (rfs,rc) = TransferSchema.relationshipsOf instantiatedTSchema
         val patternComp = State.patternCompOf st
         val updatedPatternComp = if Composition.isPlaceholder patternComp
                                  then Composition.initFromConstruction targetPattern
                                  else Composition.attachConstructionAt patternComp targetPattern targetToken
         val transferProof = State.transferProofOf st
-        val updatedTransferProof' = TransferProof.attachCorrAt instantiatedCorr goal transferProof
-        val updatedTransferProof = TransferProof.attachCorrPulls instantiatedCorr targetToken updatedTransferProof'
+        val updatedTransferProof' = TransferProof.attachTSchemaAt instantiatedTSchema goal transferProof
+        val updatedTransferProof = TransferProof.attachTSchemaPulls instantiatedTSchema targetToken updatedTransferProof'
         val gs' = State.goalsOf (State.replaceGoal st goal rfs)
         fun applyPullList [] = gs'
           | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
-        val updatedGoals = applyPullList (#pullList instantiatedCorr)
+        val updatedGoals = applyPullList (#pullList instantiatedTSchema)
         (*
-        val _ = if not (null (#pullList instantiatedCorr)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
-                then raise CorrespondenceNotApplicable else ()*)
+        val _ = if not (null (#pullList instantiatedTSchema)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
+                then raise TransferSchemaNotApplicable else ()*)
         val stateWithUpdatedGoals = State.updateGoals st updatedGoals
         val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
     in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
@@ -195,17 +195,17 @@ struct
     in State.updateTransferProof stateWithUpdatedGoals (updateTransferProof dump)
     end
 
-  fun applyCorrespondence st corr =
+  fun applyTransferSchema st tsch =
     let val newSt = idempotencyOnGoals st
         fun ac [] = Seq.empty
-          | ac (g::gs) = (Seq.cons (applyCorrespondenceForGoal newSt corr g) (ac gs)
-                            handle CorrespondenceNotApplicable => ac gs)
+          | ac (g::gs) = (Seq.cons (applyTransferSchemaForGoal newSt tsch g) (ac gs)
+                            handle TransferSchemaNotApplicable => ac gs)
     in ac (State.goalsOf newSt)
     end
 
   fun singleStepTransfer st =
-    let val corrs = #correspondences (State.knowledgeOf st)
-    in Seq.maps (applyCorrespondence st) corrs
+    let val tschs = #tSchemas (State.knowledgeOf st)
+    in Seq.maps (applyTransferSchema st) tschs
     end
 
   exception BadGoal

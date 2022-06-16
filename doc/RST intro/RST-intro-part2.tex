@@ -17,7 +17,7 @@
 \begin{document}
 	\maketitle
 	In \href{https://github.com/danielraggi/rep2rep/blob/59c2d2b0f8759dd034a94a2186b4b5eadae40812/doc/RST-intro-part1.pdf}{Part 1} I introduced the formal notion of representational system (three construction spaces), and that of a construction, which is a specific structure formed within a construction space.
-	Here I introduce the notion of \textit{pattern} and \textit{correspondence}, and then give an overview of structure transfer, and rep2rep's input language \textit{oruga}.
+	Here I introduce the notion of \textit{pattern} and \textit{transfer schema}, and then give an overview of structure transfer, and rep2rep's input language \textit{oruga}.
 	%
 	\section{Patterns}
 	\begin{definition}
@@ -36,26 +36,26 @@
 		Such an isomorphism is called an \textit{embedding}.
 	\end{definition}
 	%
-	So there really is no difference between constructions and patterns other than in relation to each other. Generally when we talk about a construction that matches a pattern, the construction is taken from some specific representational system but the pattern is not. 
-	
+	So there really is no difference between constructions and patterns other than in relation to each other. Generally when we talk about a construction that matches a pattern, the construction is taken from some specific representational system but the pattern is not.
+
 	In general, when we have a construction space $\mathcal{C}$, we can talk about \textit{a pattern for $\mathcal{C}$}. When we do so we don't mean that the pattern lives in $\mathcal{C}$, but that there may be constructions in the construction space which match the pattern. Basically, the `tokens' of a pattern for $\mathcal{C}$ are not necessarily tokens in $\mathcal{C}$.
-	
-	The next definition simply connects the notion of decomposition and the notion of pattern-matching. 
+
+	The next definition simply connects the notion of decomposition and the notion of pattern-matching.
 	\begin{definition}
 		Let $(g,t)$ be a construction that matches a pattern $(\gamma,v)$. Let $D$ be a decomposition of $(\gamma,v)$. Then we say that $D$ \textit{describes} $(g,t)$.
 	\end{definition}
-	
+
 	For structure transfer, there's an implicit decomposition of the construction for which we are seeking a transformation. But more importantly, the result of the structure transfer algorithm is a pattern decomposition of the sought-after construction. This means that the construction we are looking for might not be apparent, or even exist; but if it exists then the decomposition we got is a description of it.
-	
-	\section{Correspondences}
-	Correspondences are the basic links between representational systems. They allow us to transform constructions.
-	
-	A correspondence will be defined as a tuple, $((\gamma,v),(\gamma',v'),L,L',R, S),$
-	where $(\gamma,v)$ and $(\gamma',v')$ patterns, $L$ and $L'$ are sequences of tokens taken from the patterns, and $R$ and $S$ are relations. The idea is that two patterns are in such a correspondence if whenever they are instantiated (with concrete tokens) and $R$ holds (for tokens which `embed' into $L$ and $L'$) then $S$ must also hold.
-	
+
+	\section{Transfer Schemas}
+	Transfer schemas are the basic links between representational systems. They allow us to transform constructions.
+
+	A transfer schema will be defined as a tuple, $((\gamma,v),(\gamma',v'),L,L',R, S),$
+	where $(\gamma,v)$ and $(\gamma',v')$ patterns, $L$ and $L'$ are sequences of tokens taken from the patterns, and $R$ and $S$ are relations. The idea is that two patterns are source and target of a transfer schema if whenever they are instantiated (with concrete tokens) and $R$ holds (for tokens which `embed' into $L$ and $L'$) then $S$ must also hold.
+
 	\newpage
 	\begin{definition}
-		Let $\mathcal{C}$ and $\mathcal{C}'$ be construction spaces, and let $(\gamma,v)$ and $(\gamma',v')$ be patterns. Let $L=[v_1,\ldots,v_n]$ and $L'=[v_1',\ldots,v_m']$ be sequences of tokens taken from $\gamma$ and $\gamma'$, respectively. Let $R$ be a relation of arity $n+m$ and let $S$ be a binary relation. Then, the tuple $((\gamma,v),(\gamma',v'),L,L',R, S)$ is a \textit{correspondence} for $\mathcal{C}$ and $\mathcal{C}'$ if 
+		Let $\mathcal{C}$ and $\mathcal{C}'$ be construction spaces, and let $(\gamma,v)$ and $(\gamma',v')$ be patterns. Let $L=[v_1,\ldots,v_n]$ and $L'=[v_1',\ldots,v_m']$ be sequences of tokens taken from $\gamma$ and $\gamma'$, respectively. Let $R$ be a relation of arity $n+m$ and let $S$ be a binary relation. Then, the tuple $((\gamma,v),(\gamma',v'),L,L',R, S)$ is a \textit{transfer schema} for $\mathcal{C}$ and $\mathcal{C}'$ if
 		for any constructions $(g,t)$ and $(g',t')$ in $\mathcal{C}$ and $\mathcal{C}'$, whenever
 		\begin{enumerate}[itemsep=1pt]
 			\item $(g,t)$ matches $(\gamma,v)$ with embedding $f$, and
@@ -63,18 +63,18 @@
 			\item $(f^{-1}(v_1),\ldots,f^{-1}(v_n),f'^{-1}(v_1'),\ldots,f'^{-1}(v_m')) \in R$ holds
 		\end{enumerate}
 		then $(f^{-1}(v),f'^{-1}(v'))\in S$ (or equivalently $(t,t')\in S$) also holds.
-		
-		Given such a correspondence, $(\gamma,v)$ is called the \textit{source pattern}, $(\gamma',v')$ is called the \textit{target pattern}, $R$ is called the \textit{token relation}, and $S$ is called the \textit{construct relation}.
+
+		Given such a transfer schema, $(\gamma,v)$ is called the \textit{source pattern}, $(\gamma',v')$ is called the \textit{target pattern}, $R$ is called the \textit{token relation}, and $S$ is called the \textit{construct relation}.
 	\end{definition}
 
-	Take, for example, a correspondence $((\gamma,v),(\gamma',v'),L,L',\textcolor{darkblue}{R}, \textcolor{darkred}{S})$, where $(\gamma,v)$ is the pattern below (left), $(\gamma',v')$ is the pattern bellow (right), $L=[v_1,v_3]$ and $L'=[v_1',v_2']$, and $\textcolor{darkblue}{R}$ is the relation captured by the conjunction of the blue edges, and $\textcolor{darkred}{S}$ is the relation captured by the red edge.
+	Take, for example, a transfer schema $((\gamma,v),(\gamma',v'),L,L',\textcolor{darkblue}{R}, \textcolor{darkred}{S})$, where $(\gamma,v)$ is the pattern below (left), $(\gamma',v')$ is the pattern bellow (right), $L=[v_1,v_3]$ and $L'=[v_1',v_2']$, and $\textcolor{darkblue}{R}$ is the relation captured by the conjunction of the blue edges, and $\textcolor{darkred}{S}$ is the relation captured by the red edge.
 	\begin{center}
 				\begin{tikzpicture}[construction]
 				\node[typeN = {\textsf{arrangement}}] (v) {$v'$};
 				\node[constructor = {join}, below = of v,yshift = 0.3cm] (u) {};
 				\node[typeNW = {\textsf{arrangement}}, below left = of u,yshift = 0.4cm] (v1) {$v_1'$};
 				\node[typeSE = {\textsf{arrangement}}, below right = of u,yshift = 0.2cm] (v2) {$v_2'$};
-				\path[->] 
+				\path[->]
 				(v1) edge node[ index label] {1} (u)
 				(v2) edge node[ index label] {2} (u)
 				(u) edge (v);
@@ -83,7 +83,7 @@
 				\node[typeSW = {\textsf{numExp}}, below left = of u', yshift = 0.2cm] (v1') {$v_1$};
 				\node[type = {\textsf{plus}}, below = of u', yshift = 0.2cm] (v2') {$v_2$};
 				\node[typeNE = {\textsf{numExp}}, below right = of u', yshift = 0.5cm] (v3') {$v_3$};
-				\path[->] 
+				\path[->]
 				(v1') edge node[ index label] {1} (u')
 				(v2') edge node[ index label] {2} (u')
 				(v3') edge node[ index label] {3} (u')
@@ -94,14 +94,14 @@
 				\path[-] (v2) edge[darkblue, in = -20, out = 200] node[index label] {count} (v3');
 				\end{tikzpicture}
 			\end{center}
-		Now, below see instantiations of the patterns, one in which the token relation holds, and another in which the token relation doesn't hold. The above is indeed a correspondence because whenever the token relation holds the construct relation will necessarily hold (as demonstrated on the left).
+		Now, below see instantiations of the patterns, one in which the token relation holds, and another in which the token relation doesn't hold. The above is indeed a transfer schema because whenever the token relation holds the construct relation will necessarily hold (as demonstrated on the left).
 \begin{center}
 		\begin{tikzpicture}[construction]
 		\node[term = {}] (v) {$\oL$};
 		\node[constructor = {join}, below = of v,yshift = 0.3cm] (u) {};
 		\node[termW = {}, below left = of u,yshift = 0.6cm,xshift=0.2cm] (v1) {$\oo$};
 		\node[termE = {}, below right = of u,yshift = 0.4cm,xshift=-0.2cm] (v2) {$\crc$};
-		\path[->] 
+		\path[->]
 		(v1) edge node[ index label] {1} (u)
 		(v2) edge node[ index label] {2} (u)
 		(u) edge (v);
@@ -110,7 +110,7 @@
 		\node[termW = {}, below left = of u', yshift = 0.1cm,xshift=0.2cm] (v1') {$2$};
 		\node[term = {}, below = of u', yshift = 0.2cm] (v2') {$+$};
 		\node[termE = {}, below right = of u', yshift = 0.5cm,xshift=-0.2cm] (v3') {$1$};
-		\path[->] 
+		\path[->]
 		(v1') edge node[ index label] {1} (u')
 		(v2') edge node[ index label] {2} (u')
 		(v3') edge node[ index label] {3} (u')
@@ -126,7 +126,7 @@
 	\node[constructor = {join}, below = of v,yshift = 0.3cm] (u) {};
 	\node[termW = {}, below left = of u,yshift = 0.6cm,xshift=0.2cm] (v1) {$\crc$};
 	\node[termE = {}, below right = of u,yshift = 0.4cm,xshift=-0.2cm] (v2) {$\crc$};
-	\path[->] 
+	\path[->]
 	(v1) edge node[ index label] {1} (u)
 	(v2) edge node[ index label] {2} (u)
 	(u) edge (v);
@@ -135,7 +135,7 @@
 	\node[termW = {}, below left = of u', yshift = 0.1cm,xshift=0.2cm] (v1') {$2$};
 	\node[term = {}, below = of u', yshift = 0.2cm] (v2') {$+$};
 	\node[termE = {}, below right = of u', yshift = 0.5cm,xshift=-0.2cm] (v3') {$1$};
-	\path[->] 
+	\path[->]
 	(v1') edge node[ index label] {1} (u')
 	(v2') edge node[ index label] {2} (u')
 	(v3') edge node[ index label] {3} (u')
@@ -146,36 +146,36 @@
 	\path[-] (v2) edge[darkblue, in = -20, out = 200] node[index label] {count} (v3');
 	\end{tikzpicture}
 \end{center}
-	In practice, a correspondence is best declared as a conjunction of relations. For example, the above $\textcolor{darkblue}{R}$ is easily expressed as the conjunction: $$(t_1,t_3,t_1',t_2') \in \textcolor{darkblue}{R} \quad\equiv\quad (t_1,t_1') \in \text{count} \;\wedge\; (t_3,t_2') \in \text{count} \;\wedge\; (t_1',t_2') \in \text{disjoint}.$$
-	
-	See below the type of correspondences, as implemented\footnote{Note this is a \textit{record} type.}:
+	In practice, a transfer schema is best declared as a conjunction of relations. For example, the above $\textcolor{darkblue}{R}$ is easily expressed as the conjunction: $$(t_1,t_3,t_1',t_2') \in \textcolor{darkblue}{R} \quad\equiv\quad (t_1,t_1') \in \text{count} \;\wedge\; (t_3,t_2') \in \text{count} \;\wedge\; (t_1',t_2') \in \text{disjoint}.$$
+
+	See below the type of transfer schemas, as implemented\footnote{Note this is a \textit{record} type.}:
 	\begin{alltt}
-type corr = \{name : string,
+type tsch = \{name : string,
              sourcePattern : Pattern.construction,
              targetPattern : Pattern.construction,
-             tokenRels : Relation.relationship list,
-             constructRel : Relation.relationship\};
+             antecedent : Relation.relationship list,
+             consequent : Relation.relationship\};
 	\end{alltt}
 	A relationship is, essentially, just an encoding of statements such as $(x,y)\in R$, with explicit names referring to the tokens in the source and target patterns. The relationship list should be interpreted as a conjunction of various relationships.
-	
-	Given the implicational nature of correspondences they can be used as inference rules. This is exploited in the structure transfer algorithm.
-	
+
+	Given the implicational nature of transfer schemas they can be used as inference rules. This is exploited in the structure transfer algorithm.
+
 	\section{Structure transfer}
-	Structure transfer is the algorithm by which we transform one construction in a representational system into a composition in another representational system. It is essentially an inference mechanism (with correspondences as inference rules) which tries to find a way to satisfy some given relation while using information from the correspondences to build a composition which witnesses the relation being satisfied.
-	
+	Structure transfer is the algorithm by which we transform one construction in a representational system into a composition in another representational system. It is essentially an inference mechanism (with transfer schemas as inference rules) which tries to find a way to satisfy some given relation while using information from the transfer schemas to build a composition which witnesses the relation being satisfied.
+
 	Next I will list a few auxiliary concepts to understand structure transfer.
 	\paragraph{Relations and Relationships}
 	If $R$ is a \textit{relation}, the triple $(x,y,R)$ is called a \textit{relationship}, meant to represent the statement $(x,y) \in R$. In the implementation, all relationships are of the form $$([t_1,\ldots,t_n],[t_1',\ldots,t_m'],R),$$ where every $t_i$ is a token from \textit{source} construction space, and every $t_i'$ is a token from the \textit{target} construction space. By source I mean the construction space from where we take our original construction, and by target I meant he construction space to which we want to transform.
-	
+
 	\paragraph{Goal} A \textit{goal} is a relationship that we want to satisfy. For structure transfer, we start with a goal, $([t],[v],R)$, where $t$ refers to a token in a given construction and $v$ represents an unknown token we want to find. This goal will be further broken down into subgoals, and these will be broken down into subgoals (or satisfied) and so on. We refer to the goals that have not been satisfied as \textit{open goals}.
-	
-	\paragraph{Knowledge base} A knowledge base consists of a set of correspondences, and a \textit{sub-relation function}, which tells you whether some relations are included in others (e.g., the relation $=$ is included in the relation $\leq$). See below the type of a knowledge base, as implemented:
+
+	\paragraph{Knowledge base} A knowledge base consists of a set of transfer schemas, and a \textit{sub-relation function}, which tells you whether some relations are included in others (e.g., the relation $=$ is included in the relation $\leq$). See below the type of a knowledge base, as implemented:
 	\begin{alltt}
 type base = \{subRelation : Relation.T * Relation.T -> bool,
-             correspondences : Correspondence.corr Seq.seq\};
+             tSchemas : TransferSchema.tSch Seq.seq\};
 	\end{alltt}
 	 $\mathtt{subRelation}$, where $\mathtt{subRelation}(R_1,R_2) = \mathtt{true}$ if $R_1 \subseteq R_2$. The default is that $\mathtt{subRelation}(R_1,R_2)$ will output true only if $R_1$ equals $R_2$, but in principle this knowledge can be augmented.
-	
+
 	\paragraph{State}
 	 Given that structure transfer relies on graph search, we need to define the possible states from and into which the algorithm moves. The type of a state is implemented as follows:
 \begin{alltt}
@@ -188,68 +188,68 @@ type T = \{sourceTypeSystem : Type.typeSystem,
           composition : Composition.composition,
           knowledge : Knowledge.base\};
 \end{alltt}
-	Most of this is self-explanatory. 
+	Most of this is self-explanatory.
 	In every step of structure transfer the \texttt{composition}, the \texttt{goals} and the \texttt{transferProof}\footnote{The \texttt{transferProof} structure keeps every step of the `proof' of the goal from the open goals.} will be updated. The rest remains the same.
-	
+
 	\paragraph{Search and heuristic}
 	A \textit{heuristic} is any function that, given two states, tells you which one is more desirable. The current implementation uses a depth-first search, keeping all the intermediate steps, and in the end orders the results according to the heuristic.
-	
+
 	\subsection{The structure transfer algorithm}
-	The main function for understanding what structure transfer does is $\mathtt{applyCorrespondenceForGoal}$. This function is the single-step state change (walking exactly one edge in graph search).
-	
-	Let us analyse what the function application $\mathtt{applyCorrespondenceForGoal\ st\ corr\ goal}$ would do.
+	The main function for understanding what structure transfer does is $\mathtt{applyTransferSchemaForGoal}$. This function is the single-step state change (walking exactly one edge in graph search).
+
+	Let us analyse what the function application $\mathtt{applyTransferSchemaForGoal\ st\ tsch\ goal}$ would do.
 	If the following holds:
 	\begin{enumerate}[itemsep=1pt]
 		\item $\mathtt{goal}$ is of the form $([t_1],[t_1'],R_1)$, and
-		\item $\mathtt{corr}$ is a correspondence whose construct relationship\footnote{By \textit{construct relationship} of a correspondence we mean the construct relation applied to the constructs.} is $([t_2],[t_2'],R_2)$ where $R_2 \subseteq R_1$ and $\type{(t_1)} \leq \type{(t_2)}$ and $t'=\min(t_1',t_2')$ (assuming the minimum type exists), and
-		\item the source pattern of $\mathtt{corr}$ matches the relevant part of the original construction,
+		\item $\mathtt{tsch}$ is a transfer schema whose construct relationship\footnote{By \textit{construct relationship} of a transfer schema we mean the construct relation applied to the constructs.} is $([t_2],[t_2'],R_2)$ where $R_2 \subseteq R_1$ and $\type{(t_1)} \leq \type{(t_2)}$ and $t'=\min(t_1',t_2')$ (assuming the minimum type exists), and
+		\item the source pattern of $\mathtt{tsch}$ matches the relevant part of the original construction,
 	\end{enumerate}
-	then $\mathtt{applyCorrespondenceForGoal\ st\ corr\ goal}$ will return a state that modifies the following from $\mathtt{st}$:
+	then $\mathtt{applyTransferSchemaForGoal\ st\ tsch\ goal}$ will return a state that modifies the following from $\mathtt{st}$:
 	\begin{enumerate}[itemsep=1pt]
-		\item replace the goal $([t_1],[t_1'],R_1)$ with the list of token relationships of the correspondence,
-		\item attach the target pattern of the correspondence to $t_1'$ in the composition.
+		\item replace the goal $([t_1],[t_1'],R_1)$ with the list of token relationships of the transfer schema,
+		\item attach the target pattern of the transfer schema to $t_1'$ in the composition.
 	\end{enumerate}
-	
-	Structure transfer uses $\mathtt{applyCorrespondenceForGoal}$, trying all combinations of the given correspondences (from the knowledge base) and the current open goals, to traverse the search graph until either it cannot apply more correspondences to the given goals, or some given limit has been exceeded. 
-	
+
+	Structure transfer uses $\mathtt{applyTransferSchemaForGoal}$, trying all combinations of the given transfer schemas (from the knowledge base) and the current open goals, to traverse the search graph until either it cannot apply more transfer schemas to the given goals, or some given limit has been exceeded.
+
 	\section{The oruga language}
-	The input language for the rep2rep implementation is called \textit{oruga}, after the Spanish word for \textit{caterpillar} (the input of a transformational process!). 
-	
+	The input language for the rep2rep implementation is called \textit{oruga}, after the Spanish word for \textit{caterpillar} (the input of a transformational process!).
+
 	The purpose of the language is to declare all the relevant rep2rep structures and to call the structure transfer algorithm.
-	
-	The language is very simple, and the parser is as simple as can be. It relies on a set of global keywords, which are: \texttt{typeSystem}, \texttt{conSpec} (constructor specification), \texttt{construction}, \texttt{correspondence}, \texttt{import}, and \texttt{transfer}. Whatever follows one keyword (and before the next keyword is found) is parsed as a local environment with its own local keywords.
-	
-	When a \textit{document} string is parsed it is converted to a structure of the following type: 
+
+	The language is very simple, and the parser is as simple as can be. It relies on a set of global keywords, which are: \texttt{typeSystem}, \texttt{conSpec} (constructor specification), \texttt{construction}, \texttt{transfer schema}, \texttt{import}, and \texttt{transfer}. Whatever follows one keyword (and before the next keyword is found) is parsed as a local environment with its own local keywords.
+
+	When a \textit{document} string is parsed it is converted to a structure of the following type:
 \begin{alltt}
 type documentContent = \{typeSystems : Type.typeSystem list,
                         conSpecs : CSpace.conSpec list,
                         knowledge : Knowledge.base,
-                        constructions : \{name : string, 
-                                         conSpec : string, 
+                        constructions : \{name : string,
+                                         conSpec : string,
                                          construction : Construction.construction\} list,
                         transferRequests : (string list) list,
                         strengths : string -> real option\}
 \end{alltt}
 
 	As we will see, most of the declarations have the shape  $\mathtt{\langle globalKeyword\rangle\ \langle name\rangle = \langle content\rangle}$.
-	
+
 	\subsection{Type systems}
 	The local keywords for the \texttt{typeSystem} environment are \texttt{types} and \texttt{order}. A type system declaration looks as follows (for a simple arithmetic algebra):
 \begin{alltt}
 typeSystem arith =
-    types _:numeral, _:var, _:numExp, _:formula, plus, minus, 
-          times, div, binOp, equal, binRel, oB, cB, par
+    types _:numeral, _:var, _:numExp, _:formula, plus, minus,
+          times, div, binOp, equals, binRel, oB, cB, par
     order var < numExp,
           numeral < numExp,
           plus < binOp,
           minus < binOp,
           times < binOp,
-          equal < binRel,
+          equals < binRel,
           oB < par,
           cB < par
 \end{alltt}
 	The content after the keyword \texttt{types} should be a list separated by commas. Most will just stand for the names of types, but the ones with shape \ $\mathtt{\_:\langle \tau\rangle}$\ indicate that type $\mathtt{\langle \tau\rangle}$ has a bunch of subtypes that don't need to be declared individually. In practice, it means that, later, we can declare a token such as $\mathtt{1+2:1plus2:numExp}$. And this should be interpreted as saying that $1+2$ is a token of type $\mathtt{1plus2}$, which is of subtype $\mathtt{numExp}$ (and this can be known without declaring type $\mathtt{1plus2}$ explicitly).
-	
+
 	The parser for type systems computes the reflexive and transitive closure. This ensures it will be an order.
 
 	\subsection{Constructor specifications}
@@ -263,7 +263,7 @@ conSpec arithG:arith =
     addParentheses : [oB,numExp,cB] -> numExp
 \end{alltt}
 	Each constructor is declared along with its signature. It should be self-evident how the above is interpreted as constructors with their signatures.
-	
+
 	\subsection{Constructions}
 	A construction is declared with the following form: $\mathtt{construction\ \langle name\rangle : \langle conSpec\ name\rangle = \langle content\rangle}$. The recursive form of a construction is either a trivial construction (with no constructors): $$\mathtt{\langle token\rangle :\langle type\rangle}$$ or $$\mathtt{\langle token\rangle :\langle type\rangle\  {\texttt{<-}}\  \langle constructor\rangle[\langle construction_1\rangle,\ldots,\langle construction_n\rangle]}.$$
 	A simple construction of $1+2$ can be declared as:
@@ -275,7 +275,7 @@ construction 1plus2:arithG =
 	A construction of $1+2+3+4=\frac{4(4+1)}{2}$ can be declared as follows:\\[0.3cm]
 \adjustbox{minipage={\linewidth},scale=0.8}{\begin{alltt}
 construction 1plus2plus3plus4equalsStuff:arithG =
-    t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula
+    t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3plus4:numExp
                         <- infixOp[t11:1plus2plus3:numExp
                                         <- infixOp[t111:1plus2:numExp
@@ -286,7 +286,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                                    t113:3:numeral],
                                    t12:plus,
                                    t13:4:numeral],
-                    t2:equal,
+                    t2:equals,
                     t3:4oB4plus1cBdiv2:numExp
                         <- frac[t31:4oB4plus1cB:numExp
                                     <- implicitMult[t311:4:numeral,
@@ -300,37 +300,37 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                 t32:div,
                                 t33:2:numeral]]
 \end{alltt}}
-	\subsection{Correspondences}
-	The \texttt{correspondence} environment has 5 local keywords: \texttt{source}, \texttt{target}, \texttt{tokenRels}, \texttt{constructRel}, \texttt{strength}. The general form of a correspondence declaration is \begin{align*}
-	\mathtt{corr}& \mathtt{espondence}\ \mathtt{\langle name\rangle : \big(\langle source\ conSpec\ name\rangle,\langle target\ conSpec\ name\rangle\big)} =\\[-3pt]
+	\subsection{Transfer Schemas}
+	The \texttt{tSchema} environment has 5 local keywords: \texttt{source}, \texttt{target}, \texttt{antecedent}, \texttt{consequent}, \texttt{strength}. The general form of a transfer schema declaration is \begin{align*}
+	\mathtt{tsch}& \mathtt{espondence}\ \mathtt{\langle name\rangle : \big(\langle source\ conSpec\ name\rangle,\langle target\ conSpec\ name\rangle\big)} =\\[-3pt]
 	& \mathtt{source\ \langle source\ pattern \rangle}\\[-3pt]
 	& \mathtt{target\  \langle target\ pattern \rangle}\\[-3pt]
-	& \mathtt{tokenRels\  \langle token\ relationships \rangle}\\[-3pt]
-	& \mathtt{constructRel\  \langle construct\ relationship \rangle}\\[-3pt]
+	& \mathtt{antecedent\  \langle token\ relationships \rangle}\\[-3pt]
+	& \mathtt{consequent\  \langle construct\ relationship \rangle}\\[-3pt]
 	& \mathtt{strength\  \langle real\ number \rangle}
 	\end{align*}
 	Naturally, source and target patterns are written simply as constructions. Strength is meant to capture fuzzy implication or uncertainty. Use value 1.0 for when the implication of the construct relationship by the token relationship is universally true and known.
-	
-	See the following correspondence declaration, for the analogy between plus (in arithmetic) and join (in dot diagrams).
+
+	See the following transfer schema declaration, for the analogy between plus (in arithmetic) and join (in dot diagrams).
 \begin{alltt}
-correspondence plusJoin:(arithG,dotDiagramsG) =
+tSchema plusJoin:(arithG,dotDiagramsG) =
     source t:numExp <- infixOp[n:numExp,p:plus,m:numExp]
     target t':arr <- join[a:arr,b:arr]
-    tokenRels ([n:numExp],[a:arr]) :: count,
+    antecedent ([n:numExp],[a:arr]) :: count,
               ([m:numExp],[b:arr]) :: count,
               ([],[a:arr,b:arr]) :: disjoint
-    constructRel ([t:numExp],[t':arr]) :: count
+    consequent ([t:numExp],[t':arr]) :: count
     strength 1.0
 \end{alltt}
- Note that, in a relationship declaration \texttt{::} should be interpreted as $\in$. 
+ Note that, in a relationship declaration \texttt{::} should be interpreted as $\in$.
 	\subsection{Import}
 	Import simply takes a file name in the rep2rep folder input/$\cdots$ and appends the contents of that document to the current one:
 \begin{alltt}
-import correspondences/arithDots
+import transferSchemas/arithDots
 \end{alltt}
 	\subsection{Transfer requests}
 	Anything under the global keyword \texttt{transfer} is a \textit{request} to apply structure transfer to some construction.
-	
+
 	The local keywords of the \texttt{transfer} environment are \texttt{sourceConstruction}, \texttt{targetTypeSystem}, \texttt{goal}, \texttt{output}, and \texttt{limit}. The general form of a transfer request is:
 	\begin{align*}
 	\mathtt{tran}& \mathtt{sfer}\\[-3pt]
@@ -345,7 +345,7 @@ import correspondences/arithDots
 transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetTypeSystem dotDiagrams
-    goal ([t:1plus2plus3plus4equal4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
+    goal ([t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 10
 \end{alltt}
@@ -353,8 +353,8 @@ transfer
 	\begin{center}
 		\includegraphics[scale=0.55]{sample.png}
 	\end{center}
-	
+
 \section{Summary}
-In Part 1 I introduced representational systems, constructions, and associated concepts. In this note I introduced patterns, correspondences, structure transfer, and the syntax oruga, the input language for the implementation. To get started using it, visit: \url{https://github.com/danielraggi/rep2rep}.
-	
+In Part 1 I introduced representational systems, constructions, and associated concepts. In this note I introduced patterns, transfer schemas, structure transfer, and the syntax oruga, the input language for the implementation. To get started using it, visit: \url{https://github.com/danielraggi/rep2rep}.
+
 \end{document}

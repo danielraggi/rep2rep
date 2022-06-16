@@ -27,7 +27,7 @@ sig
   val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
-  (*val correspondence : string -> Correspondence.corr*)
+  (*val tSchema : string -> TransferSchema.tSch*)
   val splitListWhen : ('a -> bool) -> 'a list -> ('a list * 'a list)
   val deTokenise : string -> string list -> string
   (*
@@ -178,7 +178,7 @@ struct
         val Ty = set typ Tys
         fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
         val subType' = boolfun eq (pair (typ,typ)) subTys
-        val {subType,...} = Type.fixFiniteSubTypeFunction {name = name, Ty = finTy, subType = subType'}
+        val {subType,...} = Type.closureOverFiniteSet {name = name, Ty = finTy, subType = subType'}
     in {name = name, Ty = Ty, subType = subType}
     end;*)
 
@@ -215,21 +215,21 @@ struct
     end
 
 (*
-  fun correspondence s =
+  fun tSchema s =
     let val ss = String.removeParentheses (String.stripSpaces s)
         val (n,sPs,tPs,fRss,cRs) =
               (case splitLevel (String.explode ss) of
                   [v,w,x,y,z] => (v,w,x,y,z)
-                  | _ => raise ParseError ("invalid correspondence expression: " ^ s))
+                  | _ => raise ParseError ("invalid tSchema expression: " ^ s))
         val sP = pattern sPs
         val tP = pattern tPs
         val fRs = list relationship fRss
         val cR = relationship cRs
-        val corr = {name = n,
+        val tsch = {name = n,
                     sourcePattern = sP,
                     targetPattern = tP,
-                    tokenRels = fRs,
-                    constructRel = cR}
-    in Correspondence.declareCorrespondence corr
+                    antecedent = fRs,
+                    consequent = cR}
+    in TransferSchema.declareTransferSchema tsch
     end*)
 end;
