@@ -3,6 +3,7 @@ typeSystem aarons =
     order
 
 conSpec aaronsG:aarons =
+  constructors
     c1 : [a1] -> a2,
     c2 : [a1,a1] -> a1,
     c3 : [a1,a2] -> a2,
