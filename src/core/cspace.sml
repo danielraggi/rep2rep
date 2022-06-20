@@ -1,4 +1,5 @@
 import "core.type";
+import "util.logging";
 
 
 (* An underlying assumption of having token = string * type is that two tokens in a
