@@ -13,10 +13,13 @@ sig
   val construction_rpc: construction Rpc.Datatype.t;
   val walk_rpc: walk Rpc.Datatype.t;
 
+
   val same : construction -> construction -> bool;
+  val isTrivial : construction -> bool;
   (*val similar : construction -> construction -> bool;*)
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
+  val childrenOf : construction -> construction list;
   val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> construction -> bool;
   val size : construction -> int;
   (*val almostWellFormed : construction -> bool;*)
@@ -38,6 +41,8 @@ sig
   val replaceConstruct : construction -> CSpace.token -> construction;
 
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
+
+  val remove : construction -> construction -> construction list;
 
   val toString : construction -> string;
 
@@ -105,13 +110,17 @@ struct
     | toString (TCPair ({token,constructor}, cs)) =
        CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConstructor constructor ^ " <-" ^ (String.stringOfList toString cs)
 
+  fun sameTCPairs {token = t, constructor = c} {token = t', constructor = c'} =
+    CSpace.sameTokens t t' andalso CSpace.sameConstructors c c'
+
   (* The following assumes well-formed *)
   fun same (Source t) (Source t') = CSpace.sameTokens t t'
     | same (Reference t) (Reference t') = CSpace.sameTokens t t'
-    | same (TCPair ({token = t, constructor = u}, cs)) (TCPair ({token = t', constructor = u'}, cs')) =
-        CSpace.sameTokens t t' andalso CSpace.sameConstructors u u'
-        andalso List.allZip same cs cs'
+    | same (TCPair (tc, cs)) (TCPair (tc', cs')) = sameTCPairs tc tc' andalso List.allZip same cs cs'
     | same _ _ = false
+
+  fun isTrivial (TCPair _) = false
+    | isTrivial _ = true
 
   (* The following assumes well-formed *)
   fun similar (Source t) (Source t') = CSpace.tokensHaveSameType t t'
@@ -287,6 +296,10 @@ struct
         CSpace.sameTokens t t'
     | isGenerator _ _ = false
 
+  fun childrenOf (Source t) = []
+    | childrenOf (Reference t) = []
+    | childrenOf (TCPair (tc,cts)) = cts
+
 (*)
   exception badTrail
   fun inducedConstruction (Source t) [Token t'] =
@@ -418,6 +431,59 @@ struct
               fun mkNew xs = TCPair (tc, xs)
           in map mkNew (List.listProduct csr)
           end
+
+  exception NotGenerator;
+  fun minusGenerator (TCPair (tc,cts)) (TCPair (tc',cts')) =
+        let fun minusL [] [] = []
+              | minusL (x::L) (x'::L') = minusGenerator x x' @ minusL L L'
+              | minusL _ _ = raise NotGenerator
+        in if tc = tc'
+           then minusL cts cts'
+           else raise NotGenerator
+        end
+    | minusGenerator (Reference t) (Reference t') =
+        if CSpace.sameTokens t t'
+        then []
+        else raise NotGenerator
+    | minusGenerator ct (Source t') =
+        if CSpace.sameTokens (constructOf ct) t'
+        then childrenOf ct
+        else raise NotGenerator
+    | minusGenerator _ _ = raise NotGenerator;
+
+  fun removeTCPair ct tc' =
+    let fun removeTC' (TCPair (tc,cts)) =
+            if sameTCPairs tc tc'
+            then (Source (#token tc), List.filter (fn x => not (isTrivial x)) cts)
+            else (case map removeTC' cts of R =>
+                  (TCPair (tc, map #1 R), List.concat (map #2 R)))
+          | removeTC' (Source t) = (Source t,[])
+          | removeTC' (Reference t) = (Source t,[])
+        val (c,L) = removeTC' ct
+    in if not (isTrivial c) orelse null L then [c] @ L else L
+    end
+
+  fun removeTCPairs ct (tc::L) =
+        List.maps (fn x => removeTCPair x tc) (removeTCPairs ct L)
+      (*)  List.maps (fn x => removeTCPairs x L) (removeTCPair ct tc)*)
+    | removeTCPairs ct [] = [ct]
+
+  fun collectTCPairs (TCPair (tc,cts)) = tc :: List.maps collectTCPairs cts
+    | collectTCPairs _ = []
+
+  fun remove ct ct' = removeTCPairs ct (collectTCPairs ct')
+(*)
+  exception NotSubConstruction;
+  fun minusSubConstruction ct ct' = minusGenerator ct ct'
+    handle NotGenerator =>
+      (case ct of TCPair (tc,cts) =>
+        let fun minusSC' (x::L) = (minusSubConstruction x ct' handle NotSubConstruction => [x]) @ minusSC' L
+              | minusSC' [] = []
+        in TCPair (tc, minusSC')
+        end ))
+*)
+
+
 
   structure R = struct
   fun url s = "core.construction." ^ s;

@@ -4,37 +4,42 @@ import "util.logging";
 
 signature TRANSFER =
 sig
-  val applyTransferSchemaForGoal : State.T -> TransferSchema.tSch -> Relation.relationship -> State.T
+  type goal = Pattern.construction
+  val applyTransferSchemaForGoal : State.T -> TransferSchema.tSch -> goal -> State.T
   val applyTransferSchema : State.T -> TransferSchema.tSch -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
+
   val structureTransfer : Knowledge.base
                             -> Type.typeSystem
                             -> Type.typeSystem
                             -> Construction.construction
                             -> bool
-                            -> Relation.relationship
+                            -> goal
                             -> State.T Seq.seq
+
   val iterativeStructureTransfer : Knowledge.base
                                     -> Type.typeSystem
                                     -> Construction.construction
                                     -> bool
                                     -> Pattern.pattern option
-                                    -> Relation.relationship
+                                    -> goal
                                     -> State.T Seq.seq
+
   val targetedTransfer : Knowledge.base
                             -> Type.typeSystem
                             -> Type.typeSystem
                             -> Construction.construction
                             -> Pattern.pattern
-                            -> Relation.relationship
+                            -> goal
                             -> State.T Seq.seq
+
   val masterTransfer : bool -> bool
                             -> Pattern.pattern option
                             -> Knowledge.base
                             -> Type.typeSystem
                             -> Type.typeSystem
                             -> Construction.construction
-                            -> Relation.relationship
+                            -> goal
                             -> State.T Seq.seq
 
 end;
@@ -81,10 +86,10 @@ struct
       val (sourceToken,targetToken) = (case Relation.tupleOfRelationship goal of
                                           ([x],[y],_) => (x,y)
                                         | _ => raise TransferSchemaNotApplicable) (* assumes Rc is subrelation of Rg*)
-      val (rfs,rc) = TransferSchema.relationshipsOf tsch
+      val (rfs,rc) = (#antecedent tsch, #consequent tsch)
       val ct = State.constructionOf st
       val T = #sourceTypeSystem st
-      val patternComp = State.patternCompOf st
+      val patternComp = State.patternCompsOf st
       val (sourcePattern,targetPattern) = TransferSchema.patternsOf tsch
       val targetConstructWithUpdatedType =
             CSpace.makeToken (CSpace.nameOfToken (Pattern.constructOf targetPattern)) targetType
@@ -119,8 +124,8 @@ struct
       val updatedPullList = map (fn (R,R',tL) => (R,R',map (valOf o targetRenamingFunction) tL handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL;raise Option))) (#pullList tsch)
     in (fn x => if CSpace.sameTokens x targetToken then SOME (Construction.constructOf updatedTargetPattern) else NONE,
         TransferSchema.declareTransferSchema {name = #name tsch,
-                                              sourcePattern=matchingGenerator,
-                                              targetPattern=updatedTargetPattern,
+                                              source=matchingGenerator,
+                                              target=updatedTargetPattern,
                                               antecedent=updatedFoundationRelationships,
                                               consequent=updatedConstructRelationship,
                                               pullList = updatedPullList})
@@ -138,9 +143,7 @@ struct
     let val (sourceToken,targetToken,Rg) = (case Relation.tupleOfRelationship goal of
                                               ([x],[y],R) => (x,y,R)
                                             | _ => raise TransferSchemaNotApplicable)
-        val (stcs,ttcs,Rc) = (case TransferSchema.relationshipsOf tsch of
-                                (_,([x],[y],R)) => (x,y,R)
-                              | _ => (print "oh no!";raise Error))
+        val (stcs,ttcs,Rc) = #consequent tsch
         val sT = #sourceTypeSystem st
         val tT = #targetTypeSystem st
         val typeOfTargetTokenInGoal = CSpace.typeOfToken targetToken
@@ -154,23 +157,23 @@ struct
                  andalso Pattern.tokenMatches sT sourceToken stcs
               then instantiateTSchemaForStateAndGoal tsch st goal (minType tT (typeOfTargetTokenInGoal, typeOfTargetConstructInTSchema))
               else raise TransferSchemaNotApplicable
-        val (_,targetPattern) = TransferSchema.patternsOf instantiatedTSchema
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
-        val (rfs,rc) = TransferSchema.relationshipsOf instantiatedTSchema
-        val patternComp = State.patternCompOf st
+        val {antecedent, target,...} = instantiatedTSchema
+        val patternComp = State.patternCompsOf st
         val updatedPatternComp = if Composition.isPlaceholder patternComp
-                                 then Composition.initFromConstruction targetPattern
-                                 else Composition.attachConstructionAt patternComp targetPattern targetToken
+                                 then Composition.initFromConstruction target
+                                 else Composition.attachConstructionAt patternComp target targetToken
         val transferProof = State.transferProofOf st
         val updatedTransferProof' = TransferProof.attachTSchemaAt instantiatedTSchema goal transferProof
         val updatedTransferProof = TransferProof.attachTSchemaPulls instantiatedTSchema targetToken updatedTransferProof'
-        val gs' = State.goalsOf (State.replaceGoal st goal rfs)
+        val gs' = State.goalsOf (State.replaceGoal st goal antecedent)
         fun applyPullList [] = gs'
           | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
         val updatedGoals = applyPullList (#pullList instantiatedTSchema)
         (*
         val _ = if not (null (#pullList instantiatedTSchema)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
-                then raise TransferSchemaNotApplicable else ()*)
+                then raise TransferSchemaNotApplicable else ()
+        *)
         val stateWithUpdatedGoals = State.updateGoals st updatedGoals
         val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
     in State.applyPartialMorphismToCompAndGoals f (State.updatePatternComp stateWithUpdatedProof updatedPatternComp)
@@ -247,7 +250,7 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
   exception Nope
 
   fun constructionOfComp st =
-    (case Composition.resultingConstructions (State.patternCompOf st) of
+    (case Composition.resultingConstructions (State.patternCompsOf st) of
         [c] => c
       | _ => raise Nope)
   fun withinTarget targetTypeSystem targetPattern st =
@@ -318,7 +321,7 @@ fun structureTransfer KB sourceT targetT ct unistructured goal =
                                       construction = ct,
                                       originalGoal = goal,
                                       goals = [goal],
-                                      composition = Composition.makePlaceholderComposition t,
+                                      composition = Composition.initFromConstruction t,
                                       knowledge = KB}
       val ign = Heuristic.ignoreRelaxed 15 4999
     in targetedTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetStrict targetPattern initialState

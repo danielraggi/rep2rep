@@ -2,11 +2,11 @@ import "core.transferSchema";
 
 signature TRANSFER_PROOF =
 sig
-  type tApp = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern}
   datatype tproof = Closed of Relation.relationship * tApp * tproof list
                   | Open of Relation.relationship;
   val ofRelationship : Relation.relationship -> tproof;
-  val dataOfTransferSchema : TransferSchema.tSch -> {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  val dataOfTransferSchema : TransferSchema.tSch -> {name : string, source : Pattern.pattern, target : Pattern.pattern}
   val ofTransferSchema : TransferSchema.tSch -> tproof;
   val similar : tproof -> tproof -> bool
   val applyTokenMorph : (CSpace.token -> CSpace.token option) -> tproof -> tproof
@@ -24,21 +24,21 @@ end;
 structure TransferProof : TRANSFER_PROOF =
 struct
 
-  type tApp = {name : string, sourcePattern : Pattern.pattern, targetPattern : Pattern.pattern}
+  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern}
   datatype tproof = Closed of Relation.relationship * tApp * tproof list
                   | Open of Relation.relationship;
 
   fun ofRelationship r = Open r;
 
 
-  fun dataOfTransferSchema tApp = {name = #name tApp, sourcePattern = #sourcePattern tApp,targetPattern = #targetPattern tApp}
+  fun dataOfTransferSchema tApp = {name = #name tApp, source = #source tApp,target = #target tApp}
 
   fun ofTransferSchema tApp =
     Closed (#consequent tApp, dataOfTransferSchema tApp, map Open (#antecedent tApp))
 
   fun sameSimilarTSchemas c c' = #name c = #name c' andalso
-                          Pattern.same (#sourcePattern c) (#sourcePattern c') andalso
-                          Pattern.similar (#targetPattern c) (#targetPattern c')
+                          Pattern.same (#source c) (#source c') andalso
+                          Pattern.similar (#target c) (#target c')
 
   fun similar (Closed (r,c,L)) (Closed (r',c',L')) = Relation.stronglyMatchingRelationships r r' andalso
                                                      sameSimilarTSchemas c c' andalso
@@ -61,7 +61,7 @@ struct
   fun attachTSchemaPulls tApp t (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchemaPulls tApp t) L)
     | attachTSchemaPulls tApp t (Open (x,y,R)) =
       let val pullList = TransferSchema.pullListOf tApp
-          (*val t = Pattern.constructOf (#targetPattern tApp)*)
+          (*val t = Pattern.constructOf (#target tApp)*)
           fun applyPullItems ((R',R'',tL) :: L) =
                 if Relation.same R R' andalso List.exists (CSpace.sameTokens t) y
                 then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL
@@ -71,8 +71,8 @@ struct
             [] => Open (x,y,R)
           | rL => Closed ((x,y,R),
                           {name = #name tApp ^ "\\_pull",
-                           sourcePattern = #sourcePattern tApp,
-                           targetPattern = #targetPattern tApp},
+                           source = #source tApp,
+                           target = #target tApp},
                            map Open rL)
       end
 
@@ -81,8 +81,8 @@ struct
       if Relation.sameRelationship (x,y,R) r
       then Closed ((x,y,R),
                    {name = s,
-                    sourcePattern = Pattern.Source (CSpace.makeToken "" ""),
-                    targetPattern = Pattern.Source (CSpace.makeToken "" "")},
+                    source = Pattern.Source (CSpace.makeToken "" ""),
+                    target = Pattern.Source (CSpace.makeToken "" "")},
                    [])
       else Open r
 

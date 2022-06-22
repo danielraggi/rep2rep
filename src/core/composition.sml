@@ -19,6 +19,7 @@ sig
   val similar : composition -> composition -> bool;
 
   val initFromConstruction : Construction.construction -> composition;
+  val initFromConstructions : Construction.construction list -> composition;
   val attachConstructionAt : composition -> Construction.construction -> CSpace.token -> composition;
 
   val makePlaceholderComposition : CSpace.token -> composition;
@@ -26,7 +27,6 @@ sig
   val constructionsInComposition : composition -> Construction.construction list;
 
   val pseudoSimilar : composition -> composition -> bool;
-
 
   val tokensOfComposition : composition -> CSpace.token list;
   val resultingConstructions : composition -> Construction.construction list;
@@ -63,7 +63,7 @@ struct
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
 
-  fun wellFormedComposition  T (Composition {construct,attachments}) =
+  fun wellFormedComposition T (Composition {construct,attachments}) =
     let
       fun wfds [] =  true
         | wfds ((ct,Ds)::L) =
@@ -121,6 +121,13 @@ struct
     | pickICSfromAttachments _ _ = (print"hey";raise Match)
 
   fun initFromConstruction ct =
+    let val placeholders = map makePlaceholderComposition (Construction.fullTokenSequence ct)
+    in Composition {construct = Construction.constructOf ct,
+                    attachments = [(ct,placeholders)]}
+    end
+
+  fun initFromConstructions [] =
+    | initFromConstructions (ct::L) =
     let val placeholders = map makePlaceholderComposition (Construction.fullTokenSequence ct)
     in Composition {construct = Construction.constructOf ct,
                     attachments = [(ct,placeholders)]}

@@ -56,7 +56,7 @@ struct
       val _ = TextIO.closeIn file
       val tschChars = normaliseLineBreaks (String.explode tschBulk)
       val tschList = if tschChars = [] then []
-                     else Parser.splitLevelWithSeparatorApply Parser.tSchema #"\n" tschChars
+                     else Parser.splitLevelWithSepApply Parser.tSchema #"\n" tschChars
     in Seq.of_list tschList
     end
 
@@ -67,7 +67,7 @@ struct
       val _ = TextIO.closeIn file
       val relChars = normaliseLineBreaks (String.explode relBulk)
       val relList = if relChars = [] then []
-                    else Parser.splitLevelWithSeparatorApply Parser.relationship #"\n" relChars
+                    else Parser.splitLevelWithSepApply Parser.relationship #"\n" relChars
     in FiniteSet.ofList relList
     end;
 

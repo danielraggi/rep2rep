@@ -232,7 +232,7 @@ struct
       fun getConstructors [] = []
         | getConstructors ((x,c)::L) =
             if x = SOME constructorsKW
-            then map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") (List.concat (map String.explode c)))
+            then map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") (List.concat (map String.explode c)))
             else getConstructors L
 
       val newConstructors = FiniteSet.ofList (getConstructors blocks)
@@ -240,7 +240,7 @@ struct
       val allConstructors = foldl (uncurry FiniteSet.union) FiniteSet.empty (newConstructors :: importedConstructorSets)
 
       (*val chars = List.concat (map String.explode tss)
-      val crs = map parseConstructor (Parser.splitLevelWithSeparatorApply' (fn x => x) (fn x => x = #",") chars)*)
+      val crs = map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") chars)*)
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
       val cspec = {name = name, typeSystem = typeSystemN, constructors = allConstructors}
       val TSD = findTypeSystemDataWithName dc typeSystemN
@@ -343,8 +343,8 @@ struct
               then Logging.write "\n  target pattern is well formed\n"
               else Logging.write "\n  WARNING: target pattern is not well formed\n"
       val tsch = {name = name,
-                  sourcePattern = sPatt,
-                  targetPattern = tPatt,
+                  source = sPatt,
+                  target = tPatt,
                   antecedent = getTokenRels blocks,
                   consequent = getConstructRel blocks,
                   pullList = getPullList blocks}
@@ -462,7 +462,7 @@ struct
       val unistructured = getUnistructured C
       val targetPattern = getMatchTarget C
       fun getCompsAndGoals [] = []
-        | getCompsAndGoals (h::t) = (State.patternCompOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
+        | getCompsAndGoals (h::t) = (State.patternCompsOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
       fun mkLatexGoals (goal,goals,tproof) =
         let val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map Latex.relationship goals)
             val originalGoalS = Latex.relationship goal ^ "\\\\ \n"

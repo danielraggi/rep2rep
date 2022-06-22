@@ -25,8 +25,8 @@ struct
 fun similarGoalsAndComps (st,st') =
   let val gs = State.goalsOf st
       val gs' = State.goalsOf st'
-      val C = State.patternCompOf st
-      val C' = State.patternCompOf st'
+      val C = State.patternCompsOf st
+      val C' = State.patternCompsOf st'
   in List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) gs gs' andalso
      Composition.pseudoSimilar C C'
   end
@@ -36,10 +36,10 @@ fun similarTransferProofs (st,st') = TransferProof.similar (State.transferProofO
 fun ignore ngoals nresults csize unistructured (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
   length L > nresults orelse
-  Composition.size (State.patternCompOf st) > csize orelse
+  Composition.size (State.patternCompsOf st) > csize orelse
   List.exists (fn x => similarTransferProofs (x,st)) L orelse
   (unistructured andalso
-   not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st)))
+   not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompsOf st)))
 
 fun ignoreRelaxed ngoals nresults (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
@@ -55,8 +55,8 @@ fun forgetRelaxed (st,L) =
 
 
 fun largerComposition (st,st') =
-  let val D = State.patternCompOf st
-      val D' = State.patternCompOf st'
+  let val D = State.patternCompsOf st
+      val D' = State.patternCompsOf st'
   in Int.compare (Composition.size D', Composition.size D)
   end
 
@@ -72,8 +72,8 @@ fun zeroGoalsOtherwiseCompositionSize (st,st') =
       val gs' = State.goalsOf st'
       val gsn = length gs
       val gsn' = length gs'
-      val D = State.patternCompOf st
-      val D' = State.patternCompOf st'
+      val D = State.patternCompsOf st
+      val D' = State.patternCompsOf st'
       val P = Int.compare (Composition.size D,Composition.size D')
   in if gsn = 0 andalso gsn' = 0 then P
      else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P

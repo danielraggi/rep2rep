@@ -7,24 +7,24 @@ sig
   val sourceTypeSystemOf : T -> Type.typeSystem;
   val targetTypeSystemOf : T -> Type.typeSystem;
   val constructionOf : T -> Construction.construction;
-  val originalGoalOf : T -> Relation.relationship;
-  val goalsOf : T -> Relation.relationship list;
-  val patternCompOf : T -> Composition.composition;
+  val originalGoalOf : T -> Pattern.construction;
+  val goalsOf : T -> Pattern.construction list;
+  val patternCompsOf : T -> Composition.composition list;
   val knowledgeOf : T -> Knowledge.base;
   val transferProofOf : T -> TransferProof.tproof;
   val make : {sourceTypeSystem : Type.typeSystem,
               targetTypeSystem : Type.typeSystem,
               transferProof : TransferProof.tproof,
               construction : Construction.construction,
-              originalGoal : Relation.relationship,
-              goals : Relation.relationship list,
-              composition : Composition.composition,
+              originalGoal : Pattern.construction,
+              goals : Pattern.construction list,
+              compositions : Composition.composition list,
               knowledge : Knowledge.base} -> T;
-  val updatePatternComp : T -> Composition.composition -> T
-  val updateGoals : T -> Relation.relationship list -> T
+  val updatePatternComp : T -> Composition.composition list -> T
+  val updateGoals : T -> Pattern.construction list -> T
   val updateTransferProof : T -> TransferProof.tproof -> T
-  val replaceGoal : T -> Relation.relationship -> Relation.relationship list -> T
-  val removeGoal : T -> Relation.relationship -> T
+  val replaceGoal : T -> Pattern.construction ->Pattern.construction list -> T
+  val removeGoal : T -> Pattern.construction -> T
   val applyPartialMorphismToCompAndGoals : (CSpace.token -> CSpace.token option) -> T -> T;
 
 end;
@@ -35,9 +35,9 @@ struct
             targetTypeSystem : Type.typeSystem,
             transferProof : TransferProof.tproof,
             construction : Construction.construction,
-            originalGoal : Relation.relationship,
-            goals : Relation.relationship list,
-            composition : Composition.composition,
+            originalGoal : Pattern.construction,
+            goals : Pattern.construction list,
+            compositions : Composition.composition list,
             knowledge : Knowledge.base};
 
   fun sourceTypeSystemOf {sourceTypeSystem,...} = sourceTypeSystem;
@@ -45,20 +45,20 @@ struct
   fun constructionOf {construction,...} = construction;
   fun originalGoalOf {originalGoal,...} = originalGoal;
   fun goalsOf {goals,...} = goals;
-  fun patternCompOf {composition,...} = composition;
+  fun patternCompsOf {compositions,...} = compositions;
   fun knowledgeOf {knowledge,...} = knowledge;
   fun transferProofOf {transferProof,...} = transferProof;
 
   fun make st = st
 
-  fun updatePatternComp st d =
+  fun updatePatternComps st L =
            {sourceTypeSystem = #sourceTypeSystem st,
             targetTypeSystem = #targetTypeSystem st,
             transferProof = #transferProof st,
             construction = #construction st,
             originalGoal = #originalGoal st,
             goals = #goals st,
-            composition = d,
+            compositions = L,
             knowledge = #knowledge st}
 
   fun updateGoals st gs =
@@ -68,7 +68,7 @@ struct
             construction = #construction st,
             originalGoal = #originalGoal st,
             goals = gs,
-            composition = #composition st,
+            compositions = #compositions st,
             knowledge = #knowledge st}
 
   fun updateTransferProof st tp =
@@ -78,7 +78,7 @@ struct
             construction = #construction st,
             originalGoal = #originalGoal st,
             goals = #goals st,
-            composition = #composition st,
+            compositions = #compositions st,
             knowledge = #knowledge st}
 
 
@@ -102,7 +102,7 @@ struct
         construction = #construction st,
         originalGoal = applyToRelationship (#originalGoal st),
         goals = map applyToRelationship (#goals st),
-        composition = Composition.applyPartialMorphismToComposition f (#composition st),
+        compositions = map (Composition.applyPartialMorphismToComposition f) (#compositions st),
         knowledge = #knowledge st}
     end
 

@@ -26,9 +26,25 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                 t32:div,
                                 t33:2:numeral]]
 
-transfer
+construction 1plus2equals3:arithG =
+    t:1plus2equals3:formula
+        <- infixRel[t1:1plus2:numExp
+                        <- infixOp[t11:1:numeral,
+                                    t12:plus,
+                                    t13:2:numeral],
+                     t2:equals,
+                     t3:3:numeral]
+
+comment
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetTypeSystem dotDiagrams
     goal ([t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
     output test
     limit 1
+
+transfer
+    sourceConstruction 1plus2equals3
+    targetTypeSystem dotDiagrams
+    goal ([t:1plus2equals3:formula],[t':arr]) :: formulaIsValid
+    output test
+    limit 10

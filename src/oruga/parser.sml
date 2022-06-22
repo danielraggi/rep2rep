@@ -19,20 +19,15 @@ sig
   val configurator : string -> CSpace.configurator
   val tcpair : string -> {token : CSpace.token, constructor : CSpace.constructor}
   val splitLevelApply : (string -> 'a) -> char list -> 'a list
-  val splitLevelWithSeparatorApply : (string -> 'a) -> char -> char list -> 'a list
-  val splitLevelWithSeparatorApply' : (string -> 'a) -> (char -> bool) -> char list -> 'a list
+  val splitLevelWithSepApply : (string -> 'a) -> char -> char list -> 'a list
+  val splitLevelWithSepFunApply : (string -> 'a) -> (char -> bool) -> char list -> 'a list
   val splitLevel : char list -> string list
   val construction : string -> Construction.construction
-(*)  val finiteTypeSystem : string -> Type.typeSystem*)
   val pattern : string -> Pattern.construction
   val relation : string -> Relation.T
   val relationship : string -> Relation.relationship
-  (*val tSchema : string -> TransferSchema.tSch*)
   val splitListWhen : ('a -> bool) -> 'a list -> ('a list * 'a list)
   val deTokenise : string -> string list -> string
-  (*
-  val knowledge : string -> Knowledge.base
-  val state : string -> State.T*)
 end;
 
 structure Parser : PARSER =
@@ -65,16 +60,6 @@ struct
                     else raise CodeError
     in bcb triple (String.explode s)
     end;
-(*)
-  fun breakOnClosingDelimiter (lD,rD) s =
-    let
-      fun bcb _ [] = raise ParseError
-        | bcb n (x::xs) =
-            let val m = if x = lD then n+1 else (if x = rD then n-1 else n)
-            in if m = ~1 then ([],xs) else (case bcb m xs of (l1,l2) => (x::l1,l2))
-            end
-    in bcb 0 (String.explode s)
-    end;*)
 
   fun splitLevel L =
     let
@@ -95,7 +80,7 @@ struct
     end;
 
 
-  fun splitLevelWithSeparatorApply' f sep L =
+  fun splitLevelWithSepFunApply f sep L =
     let
       fun sl _ [] = [[]]
         | sl (p,s,c) (x::xs) =
@@ -113,7 +98,7 @@ struct
     in List.map (f o String.implode) (sl (0,0,0) L)
     end;
 
-  fun splitLevelWithSeparatorApply f sep L =
+  fun splitLevelWithSepApply f sep L =
     let
       fun sl _ [] = [[]]
         | sl (p,s,c) (x::xs) =
@@ -131,7 +116,7 @@ struct
     in List.map (f o String.implode) (sl (0,0,0) L)
     end;
 
-  fun splitLevelApply f L = splitLevelWithSeparatorApply f #"," L;
+  fun splitLevelApply f L = splitLevelWithSepApply f #"," L;
 
   fun relaxedList f x = if x = "" then [] else (splitLevelApply f o String.explode) x
   fun list f x = if x = "[]" then [] else (splitLevelApply f o String.explode o String.removeSquareBrackets) x
@@ -165,22 +150,6 @@ struct
     | functionFromPairs (f,g) eq [] x = raise undefined
 
   fun boolfun eq f s x = (List.exists (eq x) o splitLevelApply f o String.explode o String.removeBraces) s
-  (*
-  fun finiteTypeSystem s =
-    let val s' = String.stripSpaces s
-        val L = if String.isPrefix "(" s'
-                then String.explode (String.removeParentheses s')
-                else raise ParseError (s ^ " not a type system")
-        val (name,Tys,subTys) = (case splitLevel L of
-                                  [w,x,y] => (w,x,y)
-                                | _ => raise ParseError (s ^ " not a type system"))
-        val finTy = finiteSet typ Tys
-        val Ty = set typ Tys
-        fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-        val subType' = boolfun eq (pair (typ,typ)) subTys
-        val {subType,...} = Type.closureOverFiniteSet {name = name, Ty = finTy, subType = subType'}
-    in {name = name, Ty = Ty, subType = subType}
-    end;*)
 
   fun construction s =
     let
@@ -214,22 +183,4 @@ struct
     in Relation.makeRelationship (list token xs,list token ys,relation Rs)
     end
 
-(*
-  fun tSchema s =
-    let val ss = String.removeParentheses (String.stripSpaces s)
-        val (n,sPs,tPs,fRss,cRs) =
-              (case splitLevel (String.explode ss) of
-                  [v,w,x,y,z] => (v,w,x,y,z)
-                  | _ => raise ParseError ("invalid tSchema expression: " ^ s))
-        val sP = pattern sPs
-        val tP = pattern tPs
-        val fRs = list relationship fRss
-        val cR = relationship cRs
-        val tsch = {name = n,
-                    sourcePattern = sP,
-                    targetPattern = tP,
-                    antecedent = fRs,
-                    consequent = cR}
-    in TransferSchema.declareTransferSchema tsch
-    end*)
 end;
