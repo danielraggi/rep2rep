@@ -122,7 +122,6 @@ sig
 
   val wellFormed : Type.typeSystem -> Type.typeSystem -> tSch -> bool;
   val nameOf : tSch -> string;
-  val patternsOf : tSch -> Pattern.pattern * Pattern.pattern;
 
   val pullListOf : tSch -> (Pattern.construction * Pattern.construction * CSpace.token list) list
   val ofRelationship : Relation.relationship -> string -> tSch;
@@ -193,8 +192,6 @@ struct
 
   fun nameOf {name,...} = name;
 
-  fun patternsOf {source,target,...} = (source,target);
-  fun relationshipsOf {antecedent,consequent,...} = (antecedent,consequent);
   fun pullListOf {pullList,...} = pullList
 
   fun declareTransferSchema x = x;
