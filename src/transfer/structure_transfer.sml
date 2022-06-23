@@ -90,17 +90,17 @@ struct
       val ct = State.constructionOf st
       val T = #sourceTypeSystem st
       val patternComp = State.patternCompsOf st
-      val (sourcePattern,targetPattern) = TransferSchema.patternsOf tsch
+      val {source, target,...} = tsch
       val targetConstructWithUpdatedType =
-            CSpace.makeToken (CSpace.nameOfToken (Pattern.constructOf targetPattern)) targetType
-      fun partialMorphism x = if CSpace.sameTokens x (Pattern.constructOf targetPattern)
+            CSpace.makeToken (CSpace.nameOfToken (Pattern.constructOf target)) targetType
+      fun partialMorphism x = if CSpace.sameTokens x (Pattern.constructOf target)
                               then SOME targetConstructWithUpdatedType
                               else NONE
-      val targetPattern' = Pattern.applyPartialMorphism partialMorphism targetPattern
+      val target' = Pattern.applyPartialMorphism partialMorphism target
       val (targetRenamingFunction, updatedTargetPattern) =
-            refreshNamesOfConstruction targetPattern' patternComp
+            refreshNamesOfConstruction target' patternComp
       val (sourceRenamingFunction, matchingGenerator) =
-            (case Pattern.findMapAndGeneratorMatchingForToken T ct sourcePattern sourceToken of
+            (case Pattern.findMapAndGeneratorMatchingForToken T ct source sourceToken of
                 ((f,SOME x) ) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)

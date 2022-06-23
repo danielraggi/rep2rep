@@ -151,8 +151,8 @@
 	See below the type of transfer schemas, as implemented\footnote{Note this is a \textit{record} type.}:
 	\begin{alltt}
 type tsch = \{name : string,
-             sourcePattern : Pattern.construction,
-             targetPattern : Pattern.construction,
+             source : Pattern.construction,
+             target : Pattern.construction,
              antecedent : Relation.relationship list,
              consequent : Relation.relationship\};
 	\end{alltt}

@@ -123,15 +123,15 @@ sig
   val wellFormed : Type.typeSystem -> Type.typeSystem -> tSch -> bool;
   val nameOf : tSch -> string;
   val patternsOf : tSch -> Pattern.pattern * Pattern.pattern;
-  val relationshipsOf : tSch -> Relation.relationship list * Relation.relationship;
-  val pullListOf : tSch -> (Relation.T * Relation.T * CSpace.token list) list
+
+  val pullListOf : tSch -> (Pattern.construction * Pattern.construction * CSpace.token list) list
   val ofRelationship : Relation.relationship -> string -> tSch;
   val declareTransferSchema : {name : string,
                                source : Pattern.construction,
                                target : Pattern.construction,
-                               antecedent : Relation.relationship list,
-                               consequent : Relation.relationship,
-                               pullList : (Relation.T * Relation.T * CSpace.token list) list} -> tSch;
+                               antecedent : Pattern.construction list,
+                               consequent : Pattern.construction,
+                               pullList : (Pattern.construction * Pattern.construction * CSpace.token list) list} -> tSch;
 end;
 
 structure TransferSchema : TRANSFERSCHEMA =

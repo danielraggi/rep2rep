@@ -17,6 +17,7 @@ sig
   val same : construction -> construction -> bool;
   val isTrivial : construction -> bool;
   (*val similar : construction -> construction -> bool;*)
+  val isGenerator : construction -> construction -> bool;
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
   val childrenOf : construction -> construction list;
@@ -29,20 +30,18 @@ sig
   val foundationSequence : construction -> CSpace.token list;*)
   val leavesOfConstruction : construction -> CSpace.token list;
   val fullTokenSequence : construction -> CSpace.token list;
-  val isGenerator : construction -> construction -> bool;
   (*)
   val split : construction -> construction -> construction list;
   val unsplit : (construction * construction list) -> construction;*)
-  val fixLoops : construction -> construction;
   val fixReferences : construction -> construction;
-  val findAndExpandSubConstruction : construction -> CSpace.token -> construction
+  val largestSubConstructionWithConstruct : construction -> CSpace.token -> construction
   val attachAtSource : construction -> construction -> construction;
 
   val replaceConstruct : construction -> CSpace.token -> construction;
 
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
 
-  val remove : construction -> construction -> construction list;
+  val minus : construction -> construction -> construction list;
 
   val toString : construction -> string;
 
@@ -129,14 +128,6 @@ struct
         CSpace.tokensHaveSameType t t' andalso CSpace.sameConstructors c c'
         andalso List.allZip similar cs cs'
     | similar _ _ = false
-
-  fun subConstruction (Source t) (Source t') = CSpace.sameTokens t t'
-    | subConstruction (Reference t) (Reference t') = CSpace.sameTokens t t'
-    | subConstruction (TCPair ({token = t, constructor = u}, cs)) (TCPair ({token = t', constructor = u'}, cs')) =
-        CSpace.sameTokens t t' andalso CSpace.sameConstructors u u'
-        andalso List.allZip subConstruction cs cs'
-    | subConstruction (Source t) (TCPair ({token = t', ...}, _)) = CSpace.sameTokens t t'
-    | subConstruction _ _ = false
 
   fun constructOf (Source t) = t
     | constructOf (Reference t) = t
@@ -292,9 +283,63 @@ struct
         andalso List.allZip isGenerator cs cs'
     | isGenerator (Source t) (TCPair ({token, ...}, _)) =
         CSpace.sameTokens t token
-    | isGenerator (Source t) (Reference t') =
-        CSpace.sameTokens t t'
     | isGenerator _ _ = false
+
+  fun fixReferences ct =
+    let fun fix (Source t) prev =
+              if List.exists (fn x => CSpace.sameTokens x t) prev
+              then (Reference t,prev)
+              else (Source t, t::prev)
+          | fix (Reference t) prev =
+              if List.exists (fn x => CSpace.sameTokens x t) prev
+              then (Reference t,prev)
+              else (Source t, t::prev)
+          | fix (TCPair (tc, cs)) prev =
+            let fun fixr [] prev' = ([],prev')
+                  | fixr (ct'::L) prev' =
+                    (case fix ct' prev' of (fixedct',tokenSeqX) =>
+                      (case fixr L tokenSeqX of (fixedctL',tokenSeqY) =>
+                        (fixedct'::fixedctL', tokenSeqY)))
+                val (fixedcs,uprev) = fixr cs (#token tc :: prev)
+            in (TCPair (tc, fixedcs),uprev)
+            end
+    in #1 (fix ct [])
+    end
+
+  fun findFirstSOME (SOME x :: _) = SOME x
+    | findFirstSOME (NONE :: L) = findFirstSOME L
+    | findFirstSOME [] = NONE
+
+  fun findSubConstructionWithConstruct (Source t') t =
+        if CSpace.sameTokens t' t then SOME (Source t') else NONE
+    | findSubConstructionWithConstruct (Reference _) _ = NONE
+    | findSubConstructionWithConstruct (TCPair (tc, cs)) t =
+        if CSpace.sameTokens (#token tc) t
+        then SOME (TCPair (tc, cs))
+        else findFirstSOME (map (fn x => findSubConstructionWithConstruct x t) cs)
+
+  exception TokenNotPresent
+  fun takeGeneratorUntil L (Source t) =
+        if List.exists (fn x => CSpace.sameTokens x t) L
+        then Reference t
+        else Source t
+    | takeGeneratorUntil _ (Reference t) = Reference t
+    | takeGeneratorUntil L (TCPair (tc, cs)) =
+        if List.exists (fn x => CSpace.sameTokens x (#token tc)) L
+        then Reference (#token tc)
+        else TCPair (tc, map (takeGeneratorUntil L) cs)
+  fun largestSubConstructionWithConstruct ct t =
+    let val smallConstruction = valOf (findSubConstructionWithConstruct ct t)
+        val tokensOfSmallConstruction = fullTokenSequence smallConstruction
+        fun expandReferencesUntil (Source t') = Source t'
+          | expandReferencesUntil (Reference t') = takeGeneratorUntil tokensOfSmallConstruction (valOf (findSubConstructionWithConstruct ct t'))
+          | expandReferencesUntil (TCPair (tc,cs)) = TCPair (tc, map expandReferencesUntil cs)
+    in fixReferences (expandReferencesUntil smallConstruction)
+    end handle Option => raise TokenNotPresent
+
+  fun subConstruction ct ct' =
+    isGenerator ct (largestSubConstructionWithConstruct ct' (constructOf ct))
+    handle TokenNotPresent => false
 
   fun childrenOf (Source t) = []
     | childrenOf (Reference t) = []
@@ -326,75 +371,7 @@ struct
   exception NotASplit
   fun split c c' = map (inducedConstruction c) (CTS c')
 *)
-  fun fixLoops c =
-    let
-      fun fic _ (Source t) = (Source t)
-        | fic wk (Reference t) = if List.exists (fn x => #token x = t) wk then Reference t else Source t
-        | fic wk (TCPair (tc, cs)) =
-            TCPair (tc, map (fic (tc::wk)) cs)
-    in fic [] c
-    end
 
-  fun fixReferences ct =
-    let fun fix (Source t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
-          | fix (Reference t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
-          | fix (TCPair (tc, cs)) prev =
-            let fun fixr [] prev' = ([],prev')
-                  | fixr (ct'::L) prev' =
-                    (case fix ct' prev' of
-                      (fixedct',tokenSeqX) => (case fixr L tokenSeqX of
-                                                (fixedctL',tokenSeqY) => (fixedct'::fixedctL', tokenSeqY)))
-                val (fixedcs,uprev) = fixr cs (#token tc :: prev)
-            in (TCPair (tc, fixedcs),uprev)
-            end
-    in #1 (fix ct [])
-    end
-
-  fun findFirstSOME (SOME x :: _) = SOME x
-    | findFirstSOME (NONE :: L) = findFirstSOME L
-    | findFirstSOME [] = NONE
-
-  fun findSubConstructionWithConstruct (Source t') t =
-        if CSpace.sameTokens t' t then SOME (Source t') else NONE
-    | findSubConstructionWithConstruct (Reference _) _ = NONE
-    | findSubConstructionWithConstruct (TCPair (tc, cs)) t =
-        if CSpace.sameTokens (#token tc) t
-        then SOME (TCPair (tc, cs))
-        else findFirstSOME (map (fn x => findSubConstructionWithConstruct x t) cs)
-
-  fun takeGeneratorUntil L (Source t) = if List.exists (fn x => x = t) L then Reference t else (Source t)
-    | takeGeneratorUntil _ (Reference t) = Reference t
-    | takeGeneratorUntil L (TCPair (tc, cs)) =
-        if List.exists (fn x => x = #token tc) L
-        then Reference (#token tc)
-        else TCPair (tc, map (takeGeneratorUntil L) cs)
-  fun findAndExpandSubConstruction ct t =
-    let val smallConstruction = valOf (findSubConstructionWithConstruct ct t)
-        val tokensOfSmallConstruction = fullTokenSequence smallConstruction
-        fun expandReferencesUntil (Source t') = Source t'
-          | expandReferencesUntil (Reference t') = takeGeneratorUntil tokensOfSmallConstruction (valOf (findSubConstructionWithConstruct ct t'))
-          | expandReferencesUntil (TCPair (tc,cs)) = TCPair (tc, map expandReferencesUntil cs)
-    in expandReferencesUntil smallConstruction
-    end handle Option => (print "what?";raise BadConstruction)
-
-(*)
-  (* The choice of how this function is built may seem strange, but it's made
-      so that if the split is not actually a split but something like a pattern split, where
-      the induced construction are specialisations, it uses the construct of the
-      specialisation instead of the original token *)
-  fun unsplit x =
-    let fun unsplit' (Source _,[ct]) = ct
-          | unsplit' (Reference _, [ct]) = Reference (constructOf ct)
-          | unsplit' ((TCPair (tc,cs)), cts) =
-              let fun us (c::L) icts = (case List.split(icts, length (foundationSequence c)) of
-                                            (cLx,cly) => unsplit' (c, cLx) :: us L cly)
-                    | us [] _ = []
-              in TCPair (tc, us cs cts)
-              end
-          | unsplit' _ = raise NotASplit
-        val result = fixLoops (unsplit' x)
-      (*  val _ = if wellFormed T result then () else print "\n WARNING: " ^ toString result ^ " is malformed" *)
-    in result end*)
 
   fun isReference (Reference _) = true
     | isReference _ = false
@@ -421,9 +398,9 @@ struct
     | attachConstructionAtToken (Reference t) _ _ = [Reference t]
     | attachConstructionAtToken (TCPair (tc, cs)) t ct =
         if CSpace.sameTokens (#token tc) t
-        then (if subConstruction ct (TCPair (tc, cs))
+        then (if isGenerator ct (TCPair (tc, cs))
               then [TCPair (tc, cs)]
-              else if subConstruction (TCPair (tc, cs)) ct
+              else if isGenerator (TCPair (tc, cs)) ct
                    then [ct]
                    else [TCPair (tc, cs), ct])
         else
@@ -451,27 +428,29 @@ struct
         else raise NotGenerator
     | minusGenerator _ _ = raise NotGenerator;
 
-  fun removeTCPair ct tc' =
-    let fun removeTC' (TCPair (tc,cts)) =
+  fun minusTCPair ct tc' =
+    let fun minusTC' (TCPair (tc,cts)) =
             if sameTCPairs tc tc'
             then (Source (#token tc), List.filter (fn x => not (isTrivial x)) cts)
-            else (case map removeTC' cts of R =>
+            else (case map minusTC' cts of R =>
                   (TCPair (tc, map #1 R), List.concat (map #2 R)))
-          | removeTC' (Source t) = (Source t,[])
-          | removeTC' (Reference t) = (Source t,[])
-        val (c,L) = removeTC' ct
+          | minusTC' (Source t) = (Source t,[])
+          | minusTC' (Reference t) = (Source t,[])
+        val (c,L) = minusTC' ct
     in if not (isTrivial c) orelse null L then [c] @ L else L
     end
 
-  fun removeTCPairs ct (tc::L) =
-        List.maps (fn x => removeTCPair x tc) (removeTCPairs ct L)
-      (*)  List.maps (fn x => removeTCPairs x L) (removeTCPair ct tc)*)
-    | removeTCPairs ct [] = [ct]
+  fun minusTCPairs ct (tc::L) =
+        List.maps (fn x => minusTCPair x tc) (minusTCPairs ct L)
+      (*)  List.maps (fn x => minusTCPairs x L) (minusTCPair ct tc)*)
+    | minusTCPairs ct [] = [ct]
 
   fun collectTCPairs (TCPair (tc,cts)) = tc :: List.maps collectTCPairs cts
     | collectTCPairs _ = []
 
-  fun remove ct ct' = removeTCPairs ct (collectTCPairs ct')
+  fun minus ct ct' = minusTCPairs ct (collectTCPairs ct')
+
+
 (*)
   exception NotSubConstruction;
   fun minusSubConstruction ct ct' = minusGenerator ct ct'

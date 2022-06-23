@@ -23,7 +23,7 @@ sig
   val updatePatternComp : T -> Composition.composition list -> T
   val updateGoals : T -> Pattern.construction list -> T
   val updateTransferProof : T -> TransferProof.tproof -> T
-  val replaceGoal : T -> Pattern.construction ->Pattern.construction list -> T
+  val replaceGoal : T -> Pattern.construction -> Pattern.construction list -> T
   val removeGoal : T -> Pattern.construction -> T
   val applyPartialMorphismToCompAndGoals : (CSpace.token -> CSpace.token option) -> T -> T;
 
@@ -81,11 +81,20 @@ struct
             compositions = #compositions st,
             knowledge = #knowledge st}
 
-
+(*)
   fun replaceGoal st g gs =
     let fun r [] = []
           | r (x::xs) = if Relation.sameRelationship x g
                         then gs @ r xs
+                        else x :: r xs
+        val newGoals = r (#goals st)
+    in updateGoals st newGoals
+    end*)
+
+  fun replaceGoal st g gs =
+    let fun r [] = []
+          | r (x::xs) = if Construction.subConstruction x g
+                        then Construction.minus x g @ gs @ r xs
                         else x :: r xs
         val newGoals = r (#goals st)
     in updateGoals st newGoals
@@ -100,8 +109,8 @@ struct
         targetTypeSystem = #targetTypeSystem st,
         transferProof = TransferProof.applyTokenMorph f (#transferProof st),
         construction = #construction st,
-        originalGoal = applyToRelationship (#originalGoal st),
-        goals = map applyToRelationship (#goals st),
+        originalGoal = applyPartialMorphism f (#originalGoal st),
+        goals = map (applyPartialMorphism f) (#goals st),
         compositions = map (Composition.applyPartialMorphismToComposition f) (#compositions st),
         knowledge = #knowledge st}
     end

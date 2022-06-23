@@ -107,33 +107,33 @@ struct
   (* *)
   fun findMapFromPatternToGenerator T ct ct' =
   let
-    fun findMapFromPatternToGenerator' (Source t) (Source t') =
+    fun mpg (Source t) (Source t') =
           if tokenMatches T t t'
           then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
           else (fn _ => NONE)
-      | findMapFromPatternToGenerator' (Reference t) (Reference t') =
+      | mpg (Reference t) (Reference t') =
           if tokenMatches T t t'
           then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
           else (fn _ => NONE)
-      | findMapFromPatternToGenerator' (TCPair ({token = t, constructor = c},cs))
+      | mpg (TCPair ({token = t, constructor = c},cs))
                                         (TCPair ({token = t', constructor = c'},cs')) =
           if CSpace.sameConstructors c c' andalso tokenMatches T t t'
           then
-            let val CHfunctions = List.funZip (findMapFromPatternToGenerator') cs cs'
+            let val CHfunctions = List.funZip (mpg) cs cs'
                 fun nodeFunction x = if CSpace.sameTokens x t' then SOME t else NONE
             in funUnion (nodeFunction :: CHfunctions)
             end
           else (fn _ => NONE)
-      | findMapFromPatternToGenerator' (TCPair ({token = t, ...},_)) (Source t') =
+      | mpg (TCPair ({token = t, ...},_)) (Source t') =
           if tokenMatches T t t'
           then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
           else (fn _ => NONE)
-      | findMapFromPatternToGenerator' (Reference t) ctx =
+      | mpg (Reference t) ctx =
           if tokenMatches T t (constructOf ctx)
-          then findMapFromPatternToGenerator' (findAndExpandSubConstruction ct t) ctx
+          then mpg (largestSubConstructionWithConstruct ct t) ctx
           else (fn _ => NONE)
-      | findMapFromPatternToGenerator' _ _ = (fn _ => NONE)
-  in findMapFromPatternToGenerator' ct ct'
+      | mpg _ _ = (fn _ => NONE)
+  in mpg ct ct'
   end
 
   fun findMapAndGeneratorMatching T ct ct' =

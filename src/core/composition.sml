@@ -169,8 +169,8 @@ struct
                                  end
           | rc [] = []
         fun removeRedundant (ct::cts) =
-              if List.exists (fn x => Construction.subConstruction ct x) cts then removeRedundant cts
-              else ct :: removeRedundant (List.filter (fn x => not (Construction.subConstruction x ct)) cts)
+              if List.exists (fn x => Construction.isGenerator ct x) cts then removeRedundant cts
+              else ct :: removeRedundant (List.filter (fn x => not (Construction.isGenerator x ct)) cts)
           | removeRedundant [] = []
     in if null attachments then [Construction.Source construct] else removeRedundant (rc attachments)
     end
