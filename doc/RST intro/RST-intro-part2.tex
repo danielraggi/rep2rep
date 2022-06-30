@@ -172,7 +172,7 @@ type tsch = \{name : string,
 	\paragraph{Knowledge base} A knowledge base consists of a set of transfer schemas, and a \textit{sub-relation function}, which tells you whether some relations are included in others (e.g., the relation $=$ is included in the relation $\leq$). See below the type of a knowledge base, as implemented:
 	\begin{alltt}
 type base = \{subRelation : Relation.T * Relation.T -> bool,
-             tSchemas : TransferSchema.tSch Seq.seq\};
+             tSchemas : InterCSpace.tSchema Seq.seq\};
 	\end{alltt}
 	 $\mathtt{subRelation}$, where $\mathtt{subRelation}(R_1,R_2) = \mathtt{true}$ if $R_1 \subseteq R_2$. The default is that $\mathtt{subRelation}(R_1,R_2)$ will output true only if $R_1$ equals $R_2$, but in principle this knowledge can be augmented.
 

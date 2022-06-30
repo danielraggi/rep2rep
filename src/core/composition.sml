@@ -12,15 +12,15 @@ sig
 
   val isPlaceholder : composition -> bool;
   val constructOfComposition : composition -> CSpace.token;
-  val wellFormedComposition : (*CSpace.conSpec ->*) Type.typeSystem -> composition -> bool;
+  val wellFormedComposition : CSpace.conSpecData -> composition -> bool;
 
   val unistructured : composition -> bool;
   val unistructurable : Type.typeSystem -> composition -> bool;
   val similar : composition -> composition -> bool;
 
   val initFromConstruction : Construction.construction -> composition;
-  val initFromConstructions : Construction.construction list -> composition;
-  val attachConstructionAt : composition -> Construction.construction -> CSpace.token -> composition;
+  val attachConstructions : composition list -> Construction.construction list -> composition list;
+  val attachConstructionAt : Construction.construction -> CSpace.token -> composition -> (bool * composition);
 
   val makePlaceholderComposition : CSpace.token -> composition;
 
@@ -28,7 +28,8 @@ sig
 
   val pseudoSimilar : composition -> composition -> bool;
 
-  val tokensOfComposition : composition -> CSpace.token list;
+  val tokensOfComposition : composition -> CSpace.token FiniteSet.set;
+  val tokensOfCompositions : composition list -> CSpace.token FiniteSet.set;
   val resultingConstructions : composition -> Construction.construction list;
   val pickICSfromAttachments : Construction.construction -> Construction.construction list -> Construction.construction list;
 
@@ -63,14 +64,14 @@ struct
   fun isPlaceholder (Composition {attachments,...}) = null attachments
   fun constructOfComposition (Composition {construct,...}) = construct
 
-  fun wellFormedComposition T (Composition {construct,attachments}) =
+  fun wellFormedComposition CS (Composition {construct,attachments}) =
     let
       fun wfds [] =  true
         | wfds ((ct,Ds)::L) =
-            Construction.wellFormed T ct
+            Construction.wellFormed CS ct
             andalso CSpace.sameTokens construct (Construction.constructOf ct)
-            andalso List.all (fn x => List.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (Construction.fullTokenSequence ct)) Ds
-            andalso List.all (wellFormedComposition  T) Ds
+            andalso List.all (fn x => FiniteSet.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (Construction.tokensOfConstruction ct)) Ds
+            andalso List.all (wellFormedComposition CS) Ds
             andalso wfds L
       val result = wfds attachments
     in result
@@ -113,7 +114,7 @@ struct
   fun pickICSfromAttachments (Construction.Source _) [ct] = [ct]
     | pickICSfromAttachments (Construction.Reference _) [] = []
     | pickICSfromAttachments (Construction.TCPair (_,cs)) (_::cts) =
-        let fun picsfa (c::L) icts = (case List.split(icts,length (Construction.fullTokenSequence c)) of
+        let fun picsfa (c::L) icts = (case List.split(icts,FiniteSet.size (Construction.tokensOfConstruction c)) of
                                           (cLx,cly) => pickICSfromAttachments c cLx @ picsfa L cly)
               | picsfa [] _ = []
         in picsfa cs cts
@@ -121,32 +122,44 @@ struct
     | pickICSfromAttachments _ _ = (print"hey";raise Match)
 
   fun initFromConstruction ct =
-    let val placeholders = map makePlaceholderComposition (Construction.fullTokenSequence ct)
-    in Composition {construct = Construction.constructOf ct,
-                    attachments = [(ct,placeholders)]}
-    end
-
-  fun initFromConstructions [] =
-    | initFromConstructions (ct::L) =
-    let val placeholders = map makePlaceholderComposition (Construction.fullTokenSequence ct)
+    let val placeholders = map makePlaceholderComposition (FiniteSet.listOf (Construction.tokensOfConstruction ct))
     in Composition {construct = Construction.constructOf ct,
                     attachments = [(ct,placeholders)]}
     end
 
   (* the following function doesn't assume anything about the names of vertices in
   the construction relative to the composition. *)
-  fun attachConstructionAt (Composition {construct,attachments}) ct t =
-    let fun aca (ct',Ds) = (ct',map (fn x => attachConstructionAt x ct t) Ds)
-    in if CSpace.sameTokens t construct
-       then Composition {construct = t, attachments = (ct,map makePlaceholderComposition (Construction.fullTokenSequence ct)) :: attachments}
-       else Composition {construct = construct, attachments = map aca attachments}
+  fun attachConstructionAt ct t (Composition {construct,attachments}) =
+    let fun aca (ct',Ds) = (case map (attachConstructionAt ct t) Ds of L =>
+                              if List.exists (fn (b,_) => b) L
+                              then (true,(ct',map #2 L))
+                              else (false,(ct',Ds)))
+        val (b,atts) = if CSpace.sameTokens t construct
+                       then (true,(ct,map makePlaceholderComposition (FiniteSet.listOf (Construction.tokensOfConstruction ct))) :: attachments)
+                       else (case map aca attachments of L =>
+                              if List.exists (fn (b,_) => b) L
+                              then (true,map #2 L)
+                              else (false,map #2 L))
+    in (b,Composition {construct = construct, attachments = atts})
     end
 
-  fun tokensOfComposition (Composition {attachments,...}) =
-    let fun tokensOfAttachments ((ct,DS)::L) = Construction.fullTokenSequence ct @ (List.maps tokensOfComposition DS) @ tokensOfAttachments L
-          | tokensOfAttachments [] = []
-    in tokensOfAttachments attachments
+  fun attachConstructions CC [] = CC
+    | attachConstructions CC (ct::L) =
+      (case map (attachConstructionAt ct (Construction.constructOf ct)) (attachConstructions CC L) of
+        CC => if List.exists (fn (b,_) => b) CC then map #2 CC else initFromConstruction ct :: map #2 CC)
+
+
+
+  (* assumes composition is well formed *)
+  fun tokensOfComposition (Composition {attachments,construct}) =
+    let fun tokensOfAttachments ((ct,DS)::L) = FiniteSet.union (Construction.tokensOfConstruction ct)
+                                                               (FiniteSet.union (tokensOfCompositions DS)
+                                                                                (tokensOfAttachments L))
+          | tokensOfAttachments [] = FiniteSet.empty
+    in if FiniteSet.isEmpty attachments then FiniteSet.ofList [construct] else tokensOfAttachments attachments
     end
+  and tokensOfCompositions [] = FiniteSet.empty
+    | tokensOfCompositions (c::L) = FiniteSet.union (tokensOfComposition c) (tokensOfCompositions L)
 
   fun constructionsInComposition (Composition {attachments,...}) =
     let fun coc ((ct,comps)::A) = ct :: (List.maps constructionsInComposition comps) @ coc A
@@ -158,7 +171,7 @@ struct
 
   fun resultingConstructions (Composition {construct,attachments}) =
     let fun rc ((ct,comps)::A) = let val rr = List.listProduct (map resultingConstructions comps)
-                                     val VS = Construction.fullTokenSequence ct
+                                     val VS = Construction.tokensOfConstruction ct
                                      fun f [] [] = [ct]
                                        | f (t::tL) (c::cL) =
                                             if Construction.same (Construction.Source t) c then (f tL cL) else

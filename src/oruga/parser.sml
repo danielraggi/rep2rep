@@ -146,7 +146,8 @@ struct
 
   exception undefined
   fun functionFromPairs (f,g) eq (s::ss) x =
-        (case pair (f,g) s of (a,b) => if eq x a then b else functionFromPairs (f,g) eq ss x)
+        (case pair (f,g) s of (a,b) =>
+          if eq x a then b else functionFromPairs (f,g) eq ss x)
     | functionFromPairs (f,g) eq [] x = raise undefined
 
   fun boolfun eq f s x = (List.exists (eq x) o splitLevelApply f o String.explode o String.removeBraces) s

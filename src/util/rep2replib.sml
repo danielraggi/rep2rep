@@ -122,6 +122,7 @@ sig
     val sumMap : ('a -> real) -> 'a list -> real;
     val weightedSum : (real -> real) -> real list -> real;
     val sum : real list -> real;
+    val sumMapInt : ('a -> int) -> 'a list -> int;
 
     val weightedAvgIndexed : ('a -> real) -> ('a -> real) -> 'a list -> real;
     val avgIndexed : ('a -> real) -> 'a list -> real;
@@ -283,6 +284,8 @@ fun weightedSum w L = weightedSumMap w (fn x => x) L;
 
 fun sumMap f L = weightedSumMap (fn _ => 1.0) f L;
 fun sum L = weightedSumMap (fn _ => 1.0) (fn x => x) L;
+
+fun sumMapInt f L = List.foldr (fn (x, s) => (f x) + s) 0 L;
 
 fun weightedAvgIndexed w f L = if null L then raise Empty else (weightedSumMap w f L) / (sumMap w L)
 

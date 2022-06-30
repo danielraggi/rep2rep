@@ -6,7 +6,7 @@ import "oruga.parser";
 signature INPUT =
 sig
   val loadTypeSystem : string -> Type.typeSystem
-  val loadTransferSchemas : string -> TransferSchema.tSch Seq.seq
+  val loadTransferSchemas : string -> InterCSpace.tSchema Seq.seq
   val loadRelations : string -> Relation.relationship FiniteSet.set
   val loadKnowledge : string -> Knowledge.base
   val loadConstruction : string -> Construction.construction

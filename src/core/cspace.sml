@@ -11,13 +11,13 @@ sig
   (*datatype atom = Token of string | Variable of string;*)
   type token(* = string * Type.typ;*)
   type configurator
-  type conSpec = {name : string, typeSystem : string, constructors : constructor FiniteSet.set}
+  type conSpecData = {name : string, typeSystemData : Type.typeSystemData, constructors : constructor FiniteSet.set}
 
   val ctyp_rpc : ctyp Rpc.Datatype.t;
   val constructor_rpc : constructor Rpc.Datatype.t;
   val token_rpc : token Rpc.Datatype.t;
   val configurator_rpc : configurator Rpc.Datatype.t;
-  val conSpec_rpc : conSpec Rpc.Datatype.t;
+  val conSpecData_rpc : conSpecData Rpc.Datatype.t;
 
   val makeCTyp : Type.typ list * Type.typ -> ctyp
   val makeConstructor : string * ctyp -> constructor
@@ -35,14 +35,14 @@ sig
   val tokensHaveSameType : token -> token -> bool
   val nameOfToken : token -> string
   val typeOfToken : token -> Type.typ
-  val findConstructorWithName : string -> conSpec -> constructor option
+  val findConstructorWithName : string -> conSpecData -> constructor option
   val stringOfToken : token -> string
   val stringOfConstructor : constructor -> string
   val stringOfConfigurator : configurator -> string
 
-  val wellDefinedConSpec : Type.typeSystemData -> conSpec -> (bool * bool * bool)
+  val wellDefinedConSpec : conSpecData -> (bool * bool)
   exception ImpossibleOverload
-  val fixClashesInConSpec : Type.typeSystemData -> conSpec -> (Type.typeSystemData * conSpec)
+  val fixClashesInConSpec : conSpecData -> conSpecData
 end;
 
 structure CSpace : CSPACE =
@@ -52,7 +52,7 @@ struct
   (*datatype atom = Token of string | Variable of string;*)
   type token = string * Type.typ
   type configurator = string * constructor
-  type conSpec = {name : string, typeSystem : string, constructors : constructor FiniteSet.set}
+  type conSpecData = {name : string, typeSystemData : Type.typeSystemData, constructors : constructor FiniteSet.set}
 
   val ctyp_rpc = Rpc.Datatype.alias
                      "CSpace.ctyp"
@@ -73,18 +73,17 @@ struct
                              (Rpc.Datatype.tuple2
                                   (String.string_rpc, constructor_rpc));
 
-  val conSpec_rpc = Rpc.Datatype.convert
-                        "CSpace.conSpec"
+  exception ConversionError
+  val conSpecData_rpc = Rpc.Datatype.convert
+                        "CSpace.conSpecData"
                         (Rpc.Datatype.tuple3
                              (String.string_rpc,
                               String.string_rpc,
                               FiniteSet.set_rpc constructor_rpc))
-                        (fn (n, ts, cs) => {name = n,
-                                            typeSystem = ts,
-                                            constructors = cs})
+                        (fn (n, tsn, cs) => raise ConversionError)
                         (fn {name = n,
-                             typeSystem = ts,
-                             constructors = cs} => (n, ts, cs));
+                             typeSystemData = tsd,
+                             constructors = cs} => (n, #name tsd, cs));
 
 
   fun makeCTyp x = x
@@ -113,24 +112,20 @@ struct
   fun stringOfConfigurator (u,cc) = u ^ ":" ^ stringOfConstructor cc
 
 
-  fun wellDefinedConSpec TSD {name,typeSystem,constructors} =
+  fun wellDefinedConSpec {name,typeSystemData,constructors} =
     let
-      val Ty = #Ty (#typeSystem TSD)
+      val Ty = #Ty (#typeSystem typeSystemData)
       fun clashes (s,ctyp) (s',ctyp') =
         if s = s' andalso ctyp <> ctyp'
         then (print ("WARNING: type " ^ s ^ " is defined twice with different signatures\n"); true)
         else false
       fun noClashes [] = true
         | noClashes ((s,(inTyps,outTyp))::L) = not (List.exists (clashes (s,(inTyps,outTyp))) L) andalso noClashes L
-      val nameMatches =
-        if #name TSD = typeSystem
-        then true
-        else (print ("WARNING: " ^ #name TSD ^ " is not " ^ typeSystem ^ "\n"); false)
       fun goodTypes [] = true
         | goodTypes (typ::L) =
             if Set.elementOf typ Ty
             then goodTypes L
-            else (print ("WARNING: type " ^ (Type.nameOfType typ) ^ " is not in " ^ typeSystem ^ "\n"); false)
+            else (print ("WARNING: type " ^ (Type.nameOfType typ) ^ " is not in type system " ^ name ^ "\n"); false)
       fun nonEmptyInput s inTyps =
         if inTyps = []
         then (print ("WARNING: Empty input types for " ^ s ^ "\n"); false)
@@ -141,19 +136,19 @@ struct
             goodTypes (outTyp :: inTyps) ::
             checkConstructors L
       val wellDefinedConstructors = List.all (fn x => x) (checkConstructors constructors)
-    in (nameMatches, wellDefinedConstructors, noClashes constructors)
+    in (wellDefinedConstructors, noClashes constructors)
     end
 
 
   exception ImpossibleOverload
-  fun extendWithManyLCSuperTypes (TP as {typeSystem,principalTypes}) (ty::tys) (ty'::tys') =
+  fun extendWithManyLCSuperTypes TP (ty::tys) (ty'::tys') =
         (case Type.addLeastCommonSuperType TP ty ty' of
           (lcspt,TP') => (case extendWithManyLCSuperTypes TP' tys tys' of
                             (L,TP'') => (lcspt::L,TP'')))
     | extendWithManyLCSuperTypes X [] [] = ([],X)
     | extendWithManyLCSuperTypes _ _ _ = raise ImpossibleOverload
 
-  fun fixClashesInConSpec TSD {name,typeSystem,constructors} =
+  fun fixClashesInConSpec {name,typeSystemData,constructors} =
     let
       fun clash (s,(inTyps,outTyp)) (s',(inTyps',outTyp')) =
         s = s' andalso (inTyps,outTyp) <> (inTyps',outTyp')
@@ -189,7 +184,7 @@ struct
             in (c::cL,updatedTP)
             end
 
-      val TP = {typeSystem = #typeSystem TSD, principalTypes = #principalTypes TSD}
+      val TP = {typeSystem = #typeSystem typeSystemData, principalTypes = #principalTypes typeSystemData}
 
       val (clashes,nonclashing) = findClashes (FiniteSet.listOf constructors)
       val (newConstructors,updatedTP) = resolveClashes TP clashes
@@ -197,11 +192,11 @@ struct
 
       val updatedTSD = {typeSystem = #typeSystem updatedTP,
                         principalTypes = #principalTypes updatedTP,
-                        name = #name TSD}
+                        name = #name typeSystemData}
       val _ = print ("  SUCCESSFULLY REPLACED ALL CLASHES WITH CONSTRUCTORS WITH GENERALISED SIGNATURES (EXPERIMENTAL):\n")
       val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o stringOfConstructor) newConstructors
 
       val _ = findClashes
-    in (updatedTSD, {name = name, typeSystem = typeSystem, constructors = updatedConstructors})
+    in {name = name, typeSystemData = updatedTSD, constructors = updatedConstructors}
     end handle ImpossibleOverload => (Logging.write "ERROR: Impossible to fix clash in constructor specification :-( \n"; raise ImpossibleOverload)
 end;

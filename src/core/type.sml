@@ -17,6 +17,7 @@ sig
   val fromString : string -> typ
   val any : typ
   val equal : typ -> typ -> bool
+  val emptySystem : typeSystem
 
   val nameOfType : typ -> string;
 
@@ -69,6 +70,7 @@ struct
   val any = "" (* emtpy string *)
   fun equal x y = (x = y)
 
+  val emptySystem = {Ty = Set.empty, subType = (fn x => false)}
 
   fun reflexive Ty R = FiniteSet.all (fn x => R (x,x)) Ty;
   fun transitive Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => FiniteSet.all (fn z => not (R (x,y) andalso R (y,z)) orelse R (x,z)) Ty) Ty) Ty;

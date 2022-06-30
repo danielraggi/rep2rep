@@ -14,15 +14,17 @@ sig
                          -> (CSpace.constructor -> CSpace.constructor -> bool)
                          -> (bool * (CSpace.token -> CSpace.token option))
   val similar : pattern -> pattern -> bool
-  val matches : Type.typeSystem -> construction -> pattern -> bool;
-  val unifiable : Type.typeSystem -> pattern -> pattern -> bool;
+  val matches : Type.typeSystem -> pattern -> pattern -> bool;
+  (*val unifiable : Type.typeSystem -> pattern -> pattern -> bool;*)
   val hasUnifiableGenerator : Type.typeSystem -> pattern -> pattern -> bool;
   val funUnion : ('a -> CSpace.token option) list -> ('a -> CSpace.token option)
   val applyMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
-  val findMapFromPatternToGenerator : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option);
-  val findMapAndGeneratorMatching : Type.typeSystem -> construction -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
-  val findMapAndGeneratorMatchingForToken : Type.typeSystem
+  val findEmbedding : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option
+  val findMatch : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option
+  val findMapFromPatternToGenerator : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option);
+  val findMapAndGeneratorMatching : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
+  val matchToSubConstructionWithConstruct : Type.typeSystem
                                          -> construction
                                          -> pattern
                                          -> CSpace.token
@@ -44,7 +46,7 @@ struct
 
   (*TODO: in some future version, unifiable should check whether there's a common super-type,
           but this is hard to know in general because the set of types might be infinite *)
-  fun unifiableTokens T t t' = tokenMatches T t t' orelse tokenMatches T t' t
+  (*fun unifiableTokens T t t' = tokenMatches T t t' orelse tokenMatches T t' t*)
 
   exception NoMatchingGenerator
 
@@ -90,7 +92,7 @@ struct
   fun matches T ct pt = #1 (mapUnder ct pt (tokenMatches T) CSpace.sameConstructors)
 
   (* Assumes well-formedness *)
-  fun unifiable T ct1 ct2 = #1 (mapUnder ct1 ct2 (unifiableTokens T) CSpace.sameConstructors)
+(*  fun unifiable T ct1 ct2 = #1 (mapUnder ct1 ct2 (unifiableTokens T) CSpace.sameConstructors)*)
 
   fun hasUnifiableGenerator T ct1 ct2 =
     let fun hu (Source t) (Source t') = tokenMatches T t t' orelse tokenMatches T t' t
@@ -105,6 +107,58 @@ struct
     end
 
   (* *)
+  fun findMatch T ct ct' =
+  let
+    fun fm (Source t) (Source t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+          else (fn _ => NONE)
+      | fm (Reference t) (Reference t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+          else (fn _ => NONE)
+      | fm (TCPair ({token = t, constructor = c},cs))
+            (TCPair ({token = t', constructor = c'},cs')) =
+          if CSpace.sameConstructors c c' andalso tokenMatches T t t'
+          then
+            let val CHfunctions = List.funZip fm cs cs'
+                fun nodeFunction x = if CSpace.sameTokens x t' then SOME t else NONE
+            in funUnion (nodeFunction :: CHfunctions)
+            end
+          else (fn _ => NONE)
+      | fm _ _ = (fn _ => NONE)
+    val f = fm ct ct'
+    val g = applyMorphism f ct'
+  in (f, SOME g) handle Undefined => (fn _ => NONE,NONE)
+  end
+  
+  (* *)
+  fun findEmbedding T ct ct' =
+  let
+    fun fm (Source t) (Source t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
+          else (fn _ => NONE)
+      | fm (Reference t) (Reference t') =
+          if tokenMatches T t t'
+          then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
+          else (fn _ => NONE)
+      | fm (TCPair ({token = t, constructor = c},cs))
+            (TCPair ({token = t', constructor = c'},cs')) =
+          if CSpace.sameConstructors c c' andalso tokenMatches T t t'
+          then
+            let val CHfunctions = List.funZip fm cs cs'
+                fun nodeFunction x = if CSpace.sameTokens x t then SOME t' else NONE
+            in funUnion (nodeFunction :: CHfunctions)
+            end
+          else (fn _ => NONE)
+      | fm _ _ = (fn _ => NONE)
+    val f = fm ct ct'
+    val g = applyMorphism f ct
+  in (f, SOME g) handle Undefined => (fn _ => NONE,NONE)
+  end
+
+  (* *)
   fun findMapFromPatternToGenerator T ct ct' =
   let
     fun mpg (Source t) (Source t') =
@@ -116,7 +170,7 @@ struct
           then (fn x => if CSpace.sameTokens x t' then SOME t else NONE)
           else (fn _ => NONE)
       | mpg (TCPair ({token = t, constructor = c},cs))
-                                        (TCPair ({token = t', constructor = c'},cs')) =
+            (TCPair ({token = t', constructor = c'},cs')) =
           if CSpace.sameConstructors c c' andalso tokenMatches T t t'
           then
             let val CHfunctions = List.funZip (mpg) cs cs'
@@ -152,20 +206,24 @@ struct
     | firstSome ((_,NONE) :: L) = firstSome L
     | firstSome ((f,SOME x) :: L) = (f,SOME x)
 
-  fun findMapAndGeneratorMatchingForToken T ct p t =
-      if CSpace.sameTokens t (constructOf ct)
-      then (findMapAndGeneratorMatching T (fixReferences ct) p)
-      else (case ct of
-              TCPair (_, cs) =>
-                let fun fmg (x::xs) = (case findMapAndGeneratorMatchingForToken T x p t of
-                                        (_,NONE) => fmg xs
-                                      | P => P)
-                      | fmg [] = (fn _ => NONE,NONE)
-                in fmg cs
-                end
-            | _ => (fn _ => NONE,NONE))
+(* finds a subconstruction, sct, of ct with construct t that matches pattern p
+    under type system T, and returns the map from p to sct as the first argument
+    and sct as the second argument *)
+  fun matchToSubConstructionWithConstruct T ct p t =
+    if CSpace.sameTokens t (constructOf ct)
+    then findMapAndGeneratorMatching T (fixReferences ct) p
+    else (case ct of
+            TCPair (_, cs) =>
+              let fun fmg (x::xs) =
+                        (case matchToSubConstructionWithConstruct T x p t of
+                            (_,NONE) => fmg xs
+                          | P => P)
+                    | fmg [] = (fn _ => NONE,NONE)
+              in fmg cs
+              end
+          | _ => (fn _ => NONE,NONE))
 
-      (*firstSome (List.map (fn x => findMapAndGeneratorMatchingForToken T x p t) cs)
+      (*firstSome (List.map (fn x => matchToSubConstructionWithConstruct T x p t) cs)
                                   | _ => (fn _ => NONE,NONE))*)
 
 
