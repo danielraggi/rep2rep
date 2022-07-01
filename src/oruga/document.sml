@@ -311,18 +311,18 @@ struct
             if x = SOME k
             then parseConstruction (if k = sourceKW then sourceCSpec else targetCSpec) (String.concat ps)
             else getPattern k L
-      fun getTokenRels [] = (Logging.write ("  ERROR: token relation not specified");
+      fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in tSchema " ^ String.concat cs))
-        | getTokenRels ((x,trss) :: L) =
+        | getAntecedent ((x,trss) :: L) =
             if x = SOME antecedentKW
             then Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode trss)
-            else getTokenRels L
-      fun getConstructRel [] = (Logging.write ("  ERROR: construct relation not specified");
+            else getAntecedent L
+      fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
                                 raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
-        | getConstructRel ((x,crs) :: L) =
+        | getConsequent ((x,crs) :: L) =
             if x = SOME consequentKW
             then parseConstruction interConSpec (String.concat crs)
-            else getConstructRel L
+            else getConsequent L
       fun parsePull s =
         (case String.breakOn " to " s of
           (Rs," to ",S) =>
@@ -349,19 +349,27 @@ struct
             then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);raise Option)
             else getStrength L
       val blocks = contentForKeywords tSchemaKeywords cs
-      val sPatt = getPattern sourceKW blocks
-      val tPatt = getPattern targetKW blocks
-      val _ = if Construction.wellFormed sourceCSpec sPatt
+      val source = getPattern sourceKW blocks
+      val target = getPattern targetKW blocks
+      val antecedent = getAntecedent blocks
+      val consequent = getConsequent blocks
+      val _ = if Construction.wellFormed sourceCSpec source
               then Logging.write "\n  source pattern is well formed"
               else Logging.write "\n  WARNING: source pattern is not well formed"
-      val _ = if Construction.wellFormed targetCSpec tPatt
-              then Logging.write "\n  target pattern is well formed\n"
-              else Logging.write "\n  WARNING: target pattern is not well formed\n"
+      val _ = if Construction.wellFormed targetCSpec target
+              then Logging.write "\n  target pattern is well formed"
+              else Logging.write "\n  WARNING: target pattern is not well formed"
+      val _ = if List.all (Construction.wellFormed interConSpec) antecedent
+              then Logging.write "\n  antecedent patterns are well formed"
+              else Logging.write "\n  WARNING: some antecedent pattern is not well formed"
+      val _ = if Construction.wellFormed interConSpec consequent
+              then Logging.write "\n  consequent pattern is well formed\n"
+              else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
       val tsch = {name = name,
-                  source = sPatt,
-                  target = tPatt,
-                  antecedent = getTokenRels blocks,
-                  consequent = getConstructRel blocks,
+                  source = source,
+                  target = target,
+                  antecedent = antecedent,
+                  consequent = consequent,
                   pullList = getPullList blocks}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c

@@ -107,7 +107,7 @@ struct
   fun toString (Source t) = CSpace.stringOfToken t
     | toString (Reference t) = CSpace.stringOfToken t
     | toString (TCPair ({token,constructor}, cs)) =
-       CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConstructor constructor ^ " <-" ^ (String.stringOfList toString cs)
+       CSpace.stringOfToken token ^ " <- " ^ CSpace.nameOfConstructor constructor ^ (String.stringOfList toString cs)
 
   fun sameTCPairs {token = t, constructor = c} {token = t', constructor = c'} =
     CSpace.sameTokens t t' andalso CSpace.sameConstructors c c'
