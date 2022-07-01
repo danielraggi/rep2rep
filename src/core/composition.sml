@@ -146,7 +146,9 @@ struct
   fun attachConstructions CC [] = CC
     | attachConstructions CC (ct::L) =
       (case map (attachConstructionAt ct (Construction.constructOf ct)) (attachConstructions CC L) of
-        CC => if List.exists (fn (b,_) => b) CC then map #2 CC else initFromConstruction ct :: map #2 CC)
+        CCC => if List.exists (fn (b,_) => b) CCC
+                then (print " \n\n attaching \n\n"; map #2 CCC)
+                else (print " \n\n creating \n\n"; initFromConstruction ct :: CC))
 
 
 

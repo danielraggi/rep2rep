@@ -111,9 +111,13 @@ struct
 
   fun replaceGoal st g gs =
     let fun r [] = []
+          | r (x::xs) = if Construction.same x g
+                        then gs @ r xs
+                        else x :: r xs
+        (*fun r [] = []
           | r (x::xs) = if Construction.subConstruction x g
                         then Construction.minus x g @ gs @ r xs
-                        else x :: r xs
+                        else x :: r xs*)
         val newGoals = r (#goals st)
     in updateGoals st newGoals
     end
@@ -121,18 +125,15 @@ struct
   fun removeGoal st g = replaceGoal st g []
 
   fun applyPartialMorphismToCompAndGoals f st =
-    let fun applyPartialF t = (case f t of SOME t' => t' | NONE => t)
-        fun applyToRelationship (ss,ts,R) = (map applyPartialF ss, map applyPartialF ts, R)
-    in {sourceConSpecData = #sourceConSpecData st,
-        targetConSpecData = #targetConSpecData st,
-        interConSpecData = #interConSpecData st,
-        transferProof = TransferProof.applyPartialMorphism f (#transferProof st),
-        construction = #construction st,
-        originalGoal = Pattern.applyPartialMorphism f (#originalGoal st),
-        goals = map (Pattern.applyPartialMorphism f) (#goals st),
-        compositions = map (Composition.applyPartialMorphismToComposition f) (#compositions st),
-        knowledge = #knowledge st}
-    end
+    {sourceConSpecData = #sourceConSpecData st,
+     targetConSpecData = #targetConSpecData st,
+     interConSpecData = #interConSpecData st,
+     transferProof = TransferProof.applyPartialMorphism f (#transferProof st),
+     construction = #construction st,
+     originalGoal = Pattern.applyPartialMorphism f (#originalGoal st),
+     goals = map (Pattern.applyPartialMorphism f) (#goals st),
+     compositions = map (Composition.applyPartialMorphismToComposition f) (#compositions st),
+     knowledge = #knowledge st}
 
   fun tokensInUse {construction,goals,compositions,...} =
     FiniteSet.union

@@ -44,7 +44,8 @@ comment
 
 transfer
     sourceConstruction 1plus2equals3
-    targetTypeSystem dotDiagrams
-    goal ([t:1plus2equals3:formula],[t':arr]) :: formulaIsValid
-    output test
+    targetConSpec dotDiagramsG
+    interConSpec interArithDots
+    goal tt:metaBool <- formulaIsValid[t:1plus2equals3:formula]
+    output interSpaceTest
     limit 10

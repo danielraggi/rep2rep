@@ -66,8 +66,8 @@ struct
   fun wellFormed sT tT {name,source,target,antecedent,consequent,pullList} =
     let fun inTokens (t::L) tseq = List.exists (CSpace.sameTokens t) tseq andalso inTokens L tseq
           | inTokens [] _ = true
-        val sourceTokens = Pattern.fullTokenSequence source
-        val targetTokens = Pattern.fullTokenSequence target
+        val sourceTokens = Pattern.tokensOfConstruction source
+        val targetTokens = Pattern.tokensOfConstruction target
         fun okAtTokens ((sfseq,tfseq,_)::rfs) = inTokens sfseq sourceTokens
                                          andalso inTokens tfseq targetTokens
                                          andalso okAtTokens rfs
@@ -125,7 +125,7 @@ sig
   val nameOf : tSchema -> string;
 
   val pullListOf : tSchema -> (Pattern.construction * Pattern.construction * CSpace.token list) list
-  val ofRelationship : Relation.relationship -> string -> tSchema;
+  (*val ofRelationship : Relation.relationship -> string -> tSchema;*)
   val declareTransferSchema : {name : string,
                                source : Pattern.construction,
                                target : Pattern.construction,
@@ -138,11 +138,11 @@ structure InterCSpace : INTERCSPACE =
 struct
   type interConSpec = {source : CSpace.conSpecData, target : CSpace.conSpecData, inter : CSpace.conSpecData}
   type tSchema = {name : string,
-               source : Pattern.construction,
-               target : Pattern.construction,
-               antecedent : Pattern.construction list,
-               consequent : Pattern.construction,
-               pullList : (Pattern.construction * Pattern.construction * CSpace.token list) list};
+                   source : Pattern.construction,
+                   target : Pattern.construction,
+                   antecedent : Pattern.construction list,
+                   consequent : Pattern.construction,
+                   pullList : (Pattern.construction * Pattern.construction * CSpace.token list) list};
 
   val tSchema_rpc = Rpc.Datatype.convert
                      "TransferSchemma.tSchema"
@@ -173,7 +173,7 @@ struct
   exception badForm
   fun wellFormedTransferSchema iCS {name,source,target,antecedent,consequent,pullList} =
     Pattern.wellFormed (#source iCS) source andalso Pattern.wellFormed (#target iCS) target andalso
-    Pattern.wellFormed (#inter iCS) consequent andalso Pattern.wellFormed (#inter iCS) antecedent
+    Pattern.wellFormed (#inter iCS) consequent andalso List.all (Pattern.wellFormed (#inter iCS)) antecedent
 
   fun nameOf {name,...} = name;
 

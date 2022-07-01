@@ -30,7 +30,6 @@ conSpec arithG:arith =
   imports basicLogicG
   constructors
     infixOp : [numExp,binOp,numExp] -> numExp,
-    infixOp : [formula,binOp,formula] -> formula,
     infixRel : [numExp,binRel,numExp] -> formula,
     frac : [numExp,div,numExp] -> numExp,
     implicitMult : [numExp,numExp] -> numExp,
