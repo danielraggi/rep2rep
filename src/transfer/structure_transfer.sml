@@ -82,19 +82,15 @@ struct
                 (f,SOME x) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
 
-      fun srFun x = (Option.valOf o sourceRenamingFunction) x
-          handle Option => (Logging.write ("\nERROR: source renaming function\n"); raise Option)
-      fun trFun x = (Option.valOf o (partialFunComp targetRenamingFunction targetConstructMap)) x
-          handle Option => (Logging.write ("\nERROR: target renaming function\n"); raise Option)
       (*****)
-      fun f x =  (Pattern.funUnion [partialFunComp targetRenamingFunction targetConstructMap, sourceRenamingFunction]) x
+      fun f x = Pattern.funUnion [partialFunComp targetRenamingFunction targetConstructMap, sourceRenamingFunction] x
       fun update x = Pattern.applyPartialMorphism f x
       (*****)
       val updatedAntecedent = map update antecedent
       val updatedConsequent = update consequent
       val updatedPullList =
             map (fn (R,R',tL) => (update R,update R',map (valOf o f) tL
-                                      handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL; raise Option)))
+                                    handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL; raise Option)))
                 (#pullList tsch)
     in (funComp targetRenamingFunction targetConstructMap,
         InterCSpace.declareTransferSchema {name = #name tsch,
@@ -134,7 +130,7 @@ struct
                       if FiniteSet.isEmpty H then
                          (CSpace.makeToken (CSpace.nameOfToken tt)
                                            (minType (CSpace.typeOfToken tt, CSpace.typeOfToken constructOfTargetPattern)))
-                      else (Logging.write "\n  sorry: mutiple target tokens not possible yet\n";
+                      else (Logging.write "\n  sorry: mutiple target tokens not possible yet (don't worry, we can continue)\n";
                             raise TransferSchemaNotApplicable)
                     )
         fun targetConstructMap x =
@@ -145,13 +141,30 @@ struct
               (case Pattern.findMatchUpTo interT consequent goal givenTokens of
                    (f,SOME _) => instantiateTransferSchema tsch st goal targetConstructMap
                  | _ => raise TransferSchemaNotApplicable)
-        fun renaming x = (if CSpace.sameTokens x (#1(FiniteSet.pull targetTokens)) then ff constructOfTargetPattern else NONE) handle Empty => NONE
+        fun renaming x = (if CSpace.sameTokens x (#1(FiniteSet.pull targetTokens))
+                          then ff constructOfTargetPattern else NONE) handle Empty => NONE
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
         val {antecedent,target,...} = instantiatedTSchema
-        val updatedPatternComps = Composition.attachConstructions (map (Composition.applyPartialMorphismToComposition renaming) patternComps) [target]
+
+        val _ = print "1";
+        val renamedPatternComps = map (Composition.applyPartialMorphism renaming) patternComps
+        val updatedPatternComps = Composition.attachConstructions renamedPatternComps [target]
+
+        val _ = print "2";
+        val goals = State.goalsOf st
+        val updatedGoals = antecedent @ List.filter (fn x => not (Pattern.same goal x)) goals
+
+        val _ = print "3";
         val transferProof = State.transferProofOf st
         val updatedTransferProof = TransferProof.attachTSchemaAt instantiatedTSchema goal transferProof
-      (*)  val updatedTransferProof = TransferProof.attachTSchemaPulls instantiatedTSchema targetToken updatedTransferProof'*)
+
+        val _ = print "4";
+
+        val updatedState = State.applyPartialMorphismToProof renaming
+                              (State.updateTransferProof updatedTransferProof
+                                  (State.updateGoals updatedGoals
+                                      (State.updatePatternComps updatedPatternComps st)))
+
         (*fun applyPullList [] = updatedGoals'
           | applyPullList (pi::pL) = applyPullItem (applyPullList pL) targetToken pi
         val updatedGoals = applyPullList (#pullList instantiatedTSchema)*)
@@ -159,9 +172,7 @@ struct
         val _ = if not (null (#pullList instantiatedTSchema)) andalso List.allZip Relation.sameRelationship gs' updatedGoals
                 then raise TransferSchemaNotApplicable else ()
         *)
-        val stateWithUpdatedGoals = State.replaceGoal st goal antecedent
-        val stateWithUpdatedProof = State.updateTransferProof stateWithUpdatedGoals updatedTransferProof
-    in State.applyPartialMorphismToCompAndGoals renaming (State.updatePatternComps stateWithUpdatedProof updatedPatternComps)
+    in updatedState
     end
 
 
@@ -176,8 +187,8 @@ struct
         fun updateTransferProof (g::gs) = TransferProof.dump "idempotency" g (updateTransferProof gs)
           | updateTransferProof [] = State.transferProofOf st
         val (keep,dump) = rg (State.goalsOf st)
-        val stateWithUpdatedGoals = State.updateGoals st keep
-    in State.updateTransferProof stateWithUpdatedGoals (updateTransferProof dump)
+        val stateWithUpdatedGoals = State.updateGoals keep st
+    in State.updateTransferProof (updateTransferProof dump) stateWithUpdatedGoals
     end
 
   fun applyTransferSchema st tsch =

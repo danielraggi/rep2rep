@@ -33,7 +33,7 @@ sig
   val resultingConstructions : composition -> Construction.construction list;
   val pickICSfromAttachments : Construction.construction -> Construction.construction list -> Construction.construction list;
 
-  val applyPartialMorphismToComposition : (CSpace.token -> CSpace.token option) -> composition -> composition;
+  val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> composition -> composition;
 end;
 
 structure Composition : COMPOSITION =
@@ -146,9 +146,9 @@ struct
   fun attachConstructions CC [] = CC
     | attachConstructions CC (ct::L) =
       (case map (attachConstructionAt ct (Construction.constructOf ct)) (attachConstructions CC L) of
-        CCC => if List.exists (fn (b,_) => b) CCC
-                then (print " \n\n attaching \n\n"; map #2 CCC)
-                else (print " \n\n creating \n\n"; initFromConstruction ct :: CC))
+         CCC => if List.exists (fn (b,_) => b) CCC
+                then map #2 CCC
+                else initFromConstruction ct :: CC)
 
 
 
@@ -200,8 +200,8 @@ struct
         Construction.leavesOfConstruction ct :: (leavesOfComposition (Composition {attachments = L, construct = construct}))
     | leavesOfComposition (Composition {attachments = [], ...}) = []
 
-  fun applyPartialMorphismToComposition f (Composition {construct,attachments}) =
-    let fun applyToAttachment (ct,C) = ((Pattern.applyPartialMorphism f ct, map (applyPartialMorphismToComposition f) C))
+  fun applyPartialMorphism f (Composition {construct,attachments}) =
+    let fun applyToAttachment (ct,C) = ((Pattern.applyPartialMorphism f ct, map (applyPartialMorphism f) C))
     in case f construct of
           SOME t => Composition {construct = t, attachments = map applyToAttachment attachments}
         | NONE => Composition {construct = construct, attachments = map applyToAttachment attachments}

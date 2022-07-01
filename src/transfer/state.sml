@@ -22,16 +22,17 @@ sig
               interConSpecData : CSpace.conSpecData,
               transferProof : TransferProof.tproof,
               construction : Construction.construction,
-              originalGoal : Pattern.construction,
-              goals : Pattern.construction list,
+              originalGoal : Pattern.pattern,
+              goals : Pattern.pattern list,
               compositions : Composition.composition list,
               knowledge : Knowledge.base} -> T;
-  val updatePatternComps : T -> Composition.composition list -> T
-  val updateGoals : T -> Pattern.construction list -> T
-  val updateTransferProof : T -> TransferProof.tproof -> T
-  val replaceGoal : T -> Pattern.construction -> Pattern.construction list -> T
-  val removeGoal : T -> Pattern.construction -> T
-  val applyPartialMorphismToCompAndGoals : (CSpace.token -> CSpace.token option) -> T -> T;
+  val updatePatternComps : Composition.composition list -> T -> T
+  val updateGoals : Pattern.construction list -> T -> T
+  val updateTransferProof : TransferProof.tproof -> T -> T
+  val replaceGoal : Pattern.construction -> Pattern.construction list -> T -> T
+  val removeGoal : Pattern.construction -> T -> T
+  val insertGoals : Pattern.pattern list -> T -> T
+  val applyPartialMorphismToProof : (CSpace.token -> CSpace.token option) -> T -> T;
 
   val tokensInUse : T -> CSpace.token FiniteSet.set
 end;
@@ -66,7 +67,7 @@ struct
 
   fun make st = st
 
-  fun updatePatternComps st L =
+  fun updatePatternComps L st =
          {sourceConSpecData = #sourceConSpecData st,
           targetConSpecData = #targetConSpecData st,
           interConSpecData = #interConSpecData st,
@@ -77,7 +78,7 @@ struct
           compositions = L,
           knowledge = #knowledge st}
 
-  fun updateGoals st gs =
+  fun updateGoals gs st =
            {sourceConSpecData = #sourceConSpecData st,
             targetConSpecData = #targetConSpecData st,
             interConSpecData = #interConSpecData st,
@@ -88,7 +89,7 @@ struct
             compositions = #compositions st,
             knowledge = #knowledge st}
 
-  fun updateTransferProof st tp =
+  fun updateTransferProof tp st =
            {sourceConSpecData = #sourceConSpecData st,
             targetConSpecData = #targetConSpecData st,
             interConSpecData = #interConSpecData st,
@@ -109,7 +110,7 @@ struct
     in updateGoals st newGoals
     end*)
 
-  fun replaceGoal st g gs =
+  fun replaceGoal g gs st =
     let fun r [] = []
           | r (x::xs) = if Construction.same x g
                         then gs @ r xs
@@ -119,20 +120,21 @@ struct
                         then Construction.minus x g @ gs @ r xs
                         else x :: r xs*)
         val newGoals = r (#goals st)
-    in updateGoals st newGoals
+    in updateGoals newGoals st
     end
 
-  fun removeGoal st g = replaceGoal st g []
+  fun removeGoal g st = replaceGoal g [] st
+  fun insertGoals gs st = updateGoals (gs @ #goals st) st
 
-  fun applyPartialMorphismToCompAndGoals f st =
+  fun applyPartialMorphismToProof f st =
     {sourceConSpecData = #sourceConSpecData st,
      targetConSpecData = #targetConSpecData st,
      interConSpecData = #interConSpecData st,
-     transferProof = TransferProof.applyPartialMorphism f (#transferProof st),
+     transferProof = TransferProof.applyPartialMorphism f (#transferProof st) ,
      construction = #construction st,
      originalGoal = Pattern.applyPartialMorphism f (#originalGoal st),
      goals = map (Pattern.applyPartialMorphism f) (#goals st),
-     compositions = map (Composition.applyPartialMorphismToComposition f) (#compositions st),
+     compositions = #compositions st,
      knowledge = #knowledge st}
 
   fun tokensInUse {construction,goals,compositions,...} =
