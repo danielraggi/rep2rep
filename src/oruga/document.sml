@@ -268,27 +268,22 @@ struct
 
   fun tcpair s cspec =
     case String.breakOn "<-" (String.stripSpaces s) of
-          (ts,_,cfgs) => {token = Parser.token ts, constructor = findConstructorInConSpec cfgs cspec}
+           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
+        |  (ts,_,cfgs) => {token = Parser.token ts, constructor = findConstructorInConSpec cfgs cspec}
 
   fun parseConstruction cspec s =
-    let
-      fun c tacc s' =
-        case String.breakOn "[" s' of
-          (ts,"",_) =>
-            let val tok = Parser.token ts
-            in if List.exists (CSpace.sameTokens tok) tacc
-               then Construction.Reference tok
-               else Construction.Source tok
-            end
-        | (tcps,_,ss) =>
-            let val tcp = tcpair tcps cspec
-                val tok = #token tcp
-                val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
-                val _ = if ys = [] then ()
-                        else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-            in Construction.TCPair (tcp, Parser.splitLevelApply ((c (tok::tacc)) o String.removeParentheses) xs)
-            end
-    in Construction.fixReferences (c [] (String.stripSpaces s))
+    let fun c s' =
+          case String.breakOn "[" s' of
+            (ts,"",_) => Construction.Source (Parser.token ts)
+          | (tcps,_,ss) =>
+              let val tcp = tcpair tcps cspec
+                  val tok = #token tcp
+                  val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
+                  val _ = if ys = [] then ()
+                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
+              in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
+              end
+    in Construction.fixReferences (c (String.stripSpaces s))
     end;
 
   fun addTransferSchema (nn,cs) dc =
@@ -315,7 +310,7 @@ struct
                               raise ParseError ("no token rels in tSchema " ^ String.concat cs))
         | getAntecedent ((x,trss) :: L) =
             if x = SOME antecedentKW
-            then Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode trss)
+            then if trss = [] then [] else Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode trss)
             else getAntecedent L
       fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
                                 raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
@@ -556,14 +551,15 @@ struct
       val (listOfResults,_) = Seq.chop limit results;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
-      val _ = print ("done\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
+      val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       val compsAndGoals = getCompsAndGoals listOfResults;
       fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
       val score = Heuristic.multiplicativeScore (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
       val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
     (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
-      val _ = print ("  transfer score: " ^ Real.toString score ^ "\n")
+      val _ = print ("  transfer score: " ^ Real.toString score)
+        val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
       val latexCT = Latex.construction (0.0,0.0) construction;

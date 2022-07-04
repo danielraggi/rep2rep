@@ -273,9 +273,10 @@ struct
   fun removeDuplicates eq [] = []
     | removeDuplicates eq (h::t) = h :: removeDuplicates eq (List.filter (fn x => not(eq x h)) t)
 
+  (* assumes well-formed, otherwise will contain repetition *)
   fun tokensOfConstruction ct =
     let fun fvs (Source t) = [t]
-          | fvs (Reference t) = []
+          | fvs (Reference _) = []
           | fvs (TCPair ({token,constructor},cs)) =
               token :: List.concat (map fvs cs)
     in FiniteSet.ofListQuick (fvs ct)
@@ -292,22 +293,25 @@ struct
 
   fun fixReferences ct =
     let fun fix (Source t) prev =
-              if List.exists (fn x => CSpace.sameTokens x t) prev
+              if List.exists (CSpace.sameTokens t) prev
               then (Reference t,prev)
               else (Source t, t::prev)
           | fix (Reference t) prev =
-              if List.exists (fn x => CSpace.sameTokens x t) prev
+              if List.exists (CSpace.sameTokens t) prev
               then (Reference t,prev)
               else (Source t, t::prev)
           | fix (TCPair (tc, cs)) prev =
-            let fun fixr [] prev' = ([],prev')
-                  | fixr (ct'::L) prev' =
-                    (case fix ct' prev' of (fixedct',tokenSeqX) =>
-                      (case fixr L tokenSeqX of (fixedctL',tokenSeqY) =>
-                        (fixedct'::fixedctL', tokenSeqY)))
-                val (fixedcs,uprev) = fixr cs (#token tc :: prev)
-            in (TCPair (tc, fixedcs),uprev)
-            end
+              let fun fixr [] prev' = ([],prev')
+                    | fixr (ct'::L) prev' =
+                      (case fix ct' prev' of (fixedct',tokenSeqX) =>
+                        (case fixr L tokenSeqX of (fixedctL',tokenSeqY) =>
+                          (fixedct'::fixedctL', tokenSeqY)))
+                  val _ = if List.exists (CSpace.sameTokens (#token tc)) prev
+                          then (raise MalformedConstructionTerm (toString ct))
+                          else ()
+                  val (fixedcs,uprev) = fixr cs (#token tc :: prev)
+              in (TCPair (tc, fixedcs),uprev)
+              end
     in #1 (fix ct [])
     end
 

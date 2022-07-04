@@ -33,20 +33,20 @@ struct
   fun refreshNamesOfConstructionAvoiding ct avoid =
     let
       fun firstUnusedName Ns =
-        let fun f n =
+        let fun mkFun n =
               let val vcandidate = "v_{"^(Int.toString n)^"}"
-              in if FiniteSet.exists (fn x => x = vcandidate) Ns then f (n+1) else "v_{"^(Int.toString n)^"}"
+              in if FiniteSet.exists (fn x => x = vcandidate) Ns then mkFun (n+1) else "v_{"^(Int.toString n)^"}"
               end
-        in f 0
+        in mkFun 0
         end
       val tokensInConstruction = Construction.tokensOfConstruction ct
       val names = FiniteSet.map CSpace.nameOfToken avoid
       fun mkRenameFunction _ [] = (fn _ => NONE)
         | mkRenameFunction Ns (y::ys) =
-            let
-              fun f x = if CSpace.sameTokens x y
-                        then SOME (CSpace.makeToken (firstUnusedName Ns) (CSpace.typeOfToken x))
-                        else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
+            let fun f x =
+                  if CSpace.sameTokens x y
+                  then SOME (CSpace.makeToken (firstUnusedName Ns) (CSpace.typeOfToken x))
+                  else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
             in f
             end
       val renameFunction = mkRenameFunction names tokensInConstruction
@@ -54,8 +54,8 @@ struct
     in (renameFunction, updatedConstruction)
     end
 
-  (* The following function takes a tSchema, tsch, with construct relation Rc,
-     and a goal assumed to have a superRelation Rg of Rc.
+  (* The following function takes a tSchema, tsch, and a goal assumed to be
+     matched by the consequent of tsch (up to the tokens of the original construction).
      The function will try to find a generator in the given source construction that matches
      the source pattern of tsch. If found, it will use the isomorphic map (from pattern to generator)
      to rename the relationships between the vertices of the source specified by the tSchema.
@@ -76,29 +76,30 @@ struct
       fun partialFunComp f g x = (case g x of NONE => f x | SOME y => f y)
       fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
       val (targetRenamingFunction, updatedTargetPattern) =
-            refreshNamesOfConstructionAvoiding (Pattern.applyPartialMorphism targetConstructMap target) usedTokens
+            (case refreshNamesOfConstructionAvoiding (Pattern.applyPartialMorphism targetConstructMap target) usedTokens of
+              (f,x) => (partialFunComp f targetConstructMap,x))
       val (sourceRenamingFunction, matchingGenerator) =
             (case Pattern.matchToSubConstructionWithConstruct T ct source sourceToken of
                 (f,SOME x) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
 
       (*****)
-      fun f x = Pattern.funUnion [partialFunComp targetRenamingFunction targetConstructMap, sourceRenamingFunction] x
-      fun update x = Pattern.applyPartialMorphism f x
+      val renaming = Pattern.funUnion [targetRenamingFunction, sourceRenamingFunction]
+      fun update x = Pattern.applyPartialMorphism renaming x
       (*****)
       val updatedAntecedent = map update antecedent
       val updatedConsequent = update consequent
       val updatedPullList =
-            map (fn (R,R',tL) => (update R,update R',map (valOf o f) tL
-                                    handle Option => (map (print o (fn x => CSpace.stringOfToken x ^ "\n")) tL; raise Option)))
+            map (fn (R,R',tL) => (update R,update R',map (valOf o renaming) tL
+                                    handle Option => (map (print o (fn x => "unkown token: " ^ CSpace.stringOfToken x ^ "\n")) tL; raise Option)))
                 (#pullList tsch)
     in (funComp targetRenamingFunction targetConstructMap,
         InterCSpace.declareTransferSchema {name = #name tsch,
-                                            source = matchingGenerator,
-                                            target = updatedTargetPattern,
-                                            antecedent = updatedAntecedent,
-                                            consequent = updatedConsequent,
-                                            pullList = updatedPullList})
+                                           source = matchingGenerator,
+                                           target = updatedTargetPattern,
+                                           antecedent = updatedAntecedent,
+                                           consequent = updatedConsequent,
+                                           pullList = updatedPullList})
     end
 
   fun applyPullItem [] _ _ = []
@@ -130,8 +131,7 @@ struct
                       if FiniteSet.isEmpty H then
                          (CSpace.makeToken (CSpace.nameOfToken tt)
                                            (minType (CSpace.typeOfToken tt, CSpace.typeOfToken constructOfTargetPattern)))
-                      else (Logging.write "\n  sorry: mutiple target tokens not possible yet (don't worry, we can continue)\n";
-                            raise TransferSchemaNotApplicable)
+                      else raise TransferSchemaNotApplicable
                     )
         fun targetConstructMap x =
               if CSpace.sameTokens x constructOfTargetPattern
@@ -146,19 +146,14 @@ struct
       (*  val _ = print ((CSpace.nameOfToken targetToken) ^ CSpace.nameOfToken(Pattern.constructOf targetPattern) ^ "\n")*)
         val {antecedent,target,...} = instantiatedTSchema
 
-        val _ = print "1";
         val renamedPatternComps = map (Composition.applyPartialMorphism renaming) patternComps
         val updatedPatternComps = Composition.attachConstructions renamedPatternComps [target]
 
-        val _ = print "2";
         val goals = State.goalsOf st
         val updatedGoals = antecedent @ List.filter (fn x => not (Pattern.same goal x)) goals
 
-        val _ = print "3";
         val transferProof = State.transferProofOf st
         val updatedTransferProof = TransferProof.attachTSchemaAt instantiatedTSchema goal transferProof
-
-        val _ = print "4";
 
         val updatedState = State.applyPartialMorphismToProof renaming
                               (State.updateTransferProof updatedTransferProof
