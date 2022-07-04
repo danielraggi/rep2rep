@@ -99,17 +99,20 @@ fun multProp (x::L) = x * multProp L
   | multProp [] = 1.0
 
 
-fun hasTokensInTypeSystem ct TS = FiniteSet.exists (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty TS)) (Construction.tokensOfConstruction ct)
-fun multiplicativeScore' p CS (TransferProof.Closed (r,npp,L)) =
-      (case p (#name npp) of
+fun hasTokensInTypeSystem ct TS =
+  FiniteSet.exists (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty TS))
+                   (Construction.tokensOfConstruction ct)
+fun multiplicativeScore' strength CS (TransferProof.Closed (r,npp,L)) =
+      (case strength (#name npp) of
           SOME s => s
-        | NONE => 1.0) * multProp (map (multiplicativeScore' p CS) L)
-  | multiplicativeScore' p CS (TransferProof.Open r) =
+        | NONE => 1.0) * multProp (map (multiplicativeScore' strength CS) L)
+  | multiplicativeScore' _ CS (TransferProof.Open r) =
       if hasTokensInTypeSystem r (#typeSystem (#typeSystemData CS))
       then 0.1
-      else 0.9
+      else 0.99
 
-fun multiplicativeScore p st = multiplicativeScore' p (State.sourceConSpecDataOf st) (State.transferProofOf st)
+fun multiplicativeScore strength st =
+  multiplicativeScore' strength (State.sourceConSpecDataOf st) (State.transferProofOf st)
 
 fun transferProofMultStrengths (st,st') =
   let val gsn = length (State.goalsOf st)

@@ -229,7 +229,7 @@ struct
   in (f, SOME g)
   end handle Undefined => (fn _ => NONE,NONE)
 
-  (* *)
+  (* returns the map from ct' to a generator of ct that matches ct' (if it exists) *)
   fun findMapFromPatternToGenerator T ct ct' =
   let fun mpg (Source t) (Source t') =
             if tokenMatches T t t'
@@ -276,16 +276,16 @@ struct
     | firstSome ((_,NONE) :: L) = firstSome L
     | firstSome ((f,SOME x) :: L) = (f,SOME x)
 
-(* finds a subconstruction, sct, of ct with construct t that matches pattern p
-    under type system T, and returns the map from p to sct as the first argument
+(* finds a subconstruction, sct, of ct with construct t that matches pattern pt
+    under type system T, and returns the map from pt to sct as the first argument
     and sct as the second argument *)
-  fun matchToSubConstructionWithConstruct T ct p t =
+  fun matchToSubConstructionWithConstruct T ct pt t =
     if CSpace.sameTokens t (constructOf ct)
-    then findMapAndGeneratorMatching T (fixReferences ct) p
+    then findMapAndGeneratorMatching T (fixReferences ct) pt
     else (case ct of
             TCPair (_, cs) =>
               let fun fmg (x::xs) =
-                        (case matchToSubConstructionWithConstruct T x p t of
+                        (case matchToSubConstructionWithConstruct T x pt t of
                             (_,NONE) => fmg xs
                           | P => P)
                     | fmg [] = (fn _ => NONE,NONE)

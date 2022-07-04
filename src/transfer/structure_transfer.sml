@@ -29,30 +29,51 @@ struct
   type goal = Pattern.pattern
   exception TransferSchemaNotApplicable
   exception Error
+(*)
+  fun applyInferenceSchemaToGoal st isch goal =
+    let val {antecedent,consequent,construction} = isch
+        val T = #typeSystem (#typeSystemData (State.interConSpecDataOf st))
+        val ct = State.constructionOf st
+        val _ = Pattern.matchToSubConstructionWithConstruct
+        val _ = Pattern.findMatch T consequent goal
+    in
+    end*)
+
   (*  *)
-  fun refreshNamesOfConstructionAvoiding ct avoid =
-    let
-      fun firstUnusedName Ns =
-        let fun mkFun n =
-              let val vcandidate = "v_{"^(Int.toString n)^"}"
-              in if FiniteSet.exists (fn x => x = vcandidate) Ns then mkFun (n+1) else "v_{"^(Int.toString n)^"}"
-              end
-        in mkFun 0
-        end
-      val tokensInConstruction = Construction.tokensOfConstruction ct
-      val names = FiniteSet.map CSpace.nameOfToken avoid
-      fun mkRenameFunction _ [] = (fn _ => NONE)
-        | mkRenameFunction Ns (y::ys) =
-            let fun f x =
+  fun applyMorphismRefreshingNONEs given avoid CTs =
+      let fun firstUnusedName Ns =
+            let fun mkFun n =
+                  let val vcandidate = "v_{"^(Int.toString n)^"}"
+                  in if FiniteSet.exists (fn x => x = vcandidate) Ns
+                     then mkFun (n+1)
+                     else vcandidate
+                  end
+            in mkFun 0
+            end
+          fun mkRenameFunction Ns Tks =
+            let val (y,ys) = FiniteSet.pull Tks
+                fun f x =
                   if CSpace.sameTokens x y
                   then SOME (CSpace.makeToken (firstUnusedName Ns) (CSpace.typeOfToken x))
                   else mkRenameFunction (CSpace.nameOfToken (Option.valOf (f y)) :: Ns) ys x
             in f
-            end
-      val renameFunction = mkRenameFunction names tokensInConstruction
-      val updatedConstruction = Pattern.applyMorphism renameFunction ct
-    in (renameFunction, updatedConstruction)
-    end
+            end handle Empty => (fn _ => NONE)
+          fun joinToks (x,y) = FiniteSet.union (Construction.tokensOfConstruction x) y
+          val tokensInConstructions = foldl joinToks FiniteSet.empty CTs
+          val names = FiniteSet.map CSpace.nameOfToken avoid
+          fun renameFunction x =
+              (case given x of
+                  SOME y => SOME y
+                | NONE => mkRenameFunction names tokensInConstructions x)
+          val updatedConstructions = map (Pattern.applyMorphism renameFunction) CTs
+      in (renameFunction, updatedConstructions)
+      end
+
+  (*  *)
+  fun refreshNamesOfConstructionAvoiding ct avoid =
+    (case applyMorphismRefreshingNONEs (fn _ => NONE) avoid [ct] of
+        (f,[x]) => (f,x)
+      | _ => raise Error)
 
   (* The following function takes a tSchema, tsch, and a goal assumed to be
      matched by the consequent of tsch (up to the tokens of the original construction).
@@ -85,12 +106,14 @@ struct
 
       (*****)
       val renaming = Pattern.funUnion [targetRenamingFunction, sourceRenamingFunction]
-      fun update x = Pattern.applyPartialMorphism renaming x
+      val updatedConsequent = Pattern.applyPartialMorphism renaming consequent
+      val moreUsedTokens = FiniteSet.union (Construction.tokensOfConstruction updatedTargetPattern)
+                                           (FiniteSet.union (Construction.tokensOfConstruction updatedConsequent)
+                                                            usedTokens)
       (*****)
-      val updatedAntecedent = map update antecedent
-      val updatedConsequent = update consequent
+      val (_,updatedAntecedent) = applyMorphismRefreshingNONEs renaming moreUsedTokens antecedent
       val updatedPullList =
-            map (fn (R,R',tL) => (update R,update R',map (valOf o renaming) tL
+            map (fn (R,R',tL) => (Pattern.applyPartialMorphism renaming R,Pattern.applyPartialMorphism renaming R',map (valOf o renaming) tL
                                     handle Option => (map (print o (fn x => "unkown token: " ^ CSpace.stringOfToken x ^ "\n")) tL; raise Option)))
                 (#pullList tsch)
     in (funComp targetRenamingFunction targetConstructMap,
