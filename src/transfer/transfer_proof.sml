@@ -12,6 +12,7 @@ sig
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> tproof -> tproof
   val attachTSchema : InterCSpace.tSchema -> tproof -> tproof;
   val attachTSchemaAt : InterCSpace.tSchema -> Pattern.pattern -> tproof -> tproof;
+  val attachISchemaAt : Knowledge.iSchema -> Pattern.pattern -> tproof -> tproof;
   (*val attachTSchemaPulls : InterCSpace.tSchema -> CSpace.token -> tproof -> tproof*)
   val dump : string -> Pattern.pattern -> tproof -> tproof
 
@@ -36,6 +37,8 @@ struct
 
   fun ofTransferSchema tApp =
     Closed (#consequent tApp, dataOfTransferSchema tApp, map Open (#antecedent tApp))
+  fun ofInferenceSchema tApp =
+    Closed (#consequent tApp, {name = #name tApp,source = #context tApp,target = #context tApp}, map Open (#antecedent tApp))
 
   fun sameSimilarTSchemas c c' = #name c = #name c' andalso
                           Pattern.same (#source c) (#source c') andalso
@@ -57,6 +60,12 @@ struct
     | attachTSchemaAt tApp r' (Open r) =
         if Construction.same r' r
         then ofTransferSchema tApp
+        else Open r
+
+  fun attachISchemaAt tApp r' (Closed (r,npp,L)) = Closed (r,npp, map (attachISchemaAt tApp r') L)
+    | attachISchemaAt tApp r' (Open r) =
+        if Construction.same r' r
+        then ofInferenceSchema tApp
         else Open r
 
 (*)

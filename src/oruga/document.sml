@@ -29,11 +29,12 @@ struct
   val importKW = "import"
   val typeSystemKW = "typeSystem"
   val conSpecKW = "conSpec"
+  val iSchemaKW = "iSchema"
   val tSchemaKW = "tSchema"
   val constructionKW = "construction"
   val transferKW = "transfer"
   val commentKW = "comment"
-  val bigKeywords = [importKW,typeSystemKW,conSpecKW,tSchemaKW,constructionKW,transferKW,commentKW]
+  val bigKeywords = [importKW,typeSystemKW,conSpecKW,iSchemaKW,tSchemaKW,constructionKW,transferKW,commentKW]
 
   val typesKW = "types"
   val subTypeKW = "order"
@@ -43,6 +44,12 @@ struct
   val constructorsKW = "constructors"
   val conSpecImportsKW = "imports"
   val conSpecKeywords = [constructorsKW,conSpecImportsKW]
+
+  val contextKW = "context"
+  val antecedentKW = "antecedent"
+  val consequentKW = "consequent"
+  val strengthKW = "strength"
+  val iSchemaKeywords = [contextKW,antecedentKW,consequentKW,strengthKW]
 
   val targetKW = "target"
   val sourceKW = "source"
@@ -245,17 +252,17 @@ struct
       val crs = map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") chars)*)
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
       val cspec = {name = name, typeSystemData = findTypeSystemDataWithName dc typeSystemN, constructors = allConstructors}
-      val updatedCSpec =
+      val updatedConSpec =
         case CSpace.wellDefinedConSpec cspec of
           (true,true) => cspec
         | (true,false) => CSpace.fixClashesInConSpec cspec
         | (false,_) => (Logging.write "ERROR: some constructor is not well defined... cannot proceed\n"; raise CSpace.ImpossibleOverload)
-      val updatedTSD = #typeSystemData updatedCSpec
+      val updatedTSD = #typeSystemData updatedConSpec
 
       val _ = Logging.write "...done\n"
 
   in {typeSystemsData = updatedTSD :: List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc),
-      conSpecsData = updatedCSpec :: #conSpecsData dc,
+      conSpecsData = updatedConSpec :: #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc,
@@ -286,25 +293,88 @@ struct
     in Construction.fixReferences (c (String.stripSpaces s))
     end;
 
+  fun addInferenceSchema (nn,cs) dc =
+  let val (name,x,cspecNs) = String.breakOn ":" nn
+      val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+      val (contextConSpecN,y,idConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
+      val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+      val contextConSpec = findConSpecWithName dc contextConSpecN
+      val contextTySys = #typeSystem (#typeSystemData contextConSpec)
+      val idConSpec = findConSpecWithName dc idConSpecN
+      val idTySys = #typeSystem (#typeSystemData idConSpec)
+      val _ = Logging.write ("\nAdding inference schema " ^ name ^ "...")
+      fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
+                              raise ParseError ("no " ^ k ^ " in iSchema " ^ String.concat cs))
+        | getPattern k ((x,ps) :: L) =
+            if x = SOME k
+            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (String.concat ps)
+            else getPattern k L
+      fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
+                              raise ParseError ("no token rels in iSchema " ^ String.concat cs))
+        | getAntecedent ((x,trss) :: L) =
+            if x = SOME antecedentKW
+            then if trss = [] then [] else Parser.splitLevelApply (parseConstruction idConSpec) (List.maps explode trss)
+            else getAntecedent L
+      fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
+                                raise ParseError ("no construct rel in iSchema " ^ String.concat cs))
+        | getConsequent ((x,crs) :: L) =
+            if x = SOME consequentKW
+            then parseConstruction idConSpec (String.concat crs)
+            else getConsequent L
+      fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
+                            raise ParseError ("no strength in iSchema " ^ String.concat cs))
+        | getStrength ((x,ss) :: L) =
+            if x = SOME strengthKW
+            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in iSchema " ^ String.concat cs);raise Option)
+            else getStrength L
+      val blocks = contentForKeywords iSchemaKeywords cs
+      val context = getPattern contextKW blocks
+      val antecedent = getAntecedent blocks
+      val consequent = getConsequent blocks
+      val _ = if Construction.wellFormed idConSpec context
+              then Logging.write "\n  context pattern is well formed"
+              else Logging.write "\n  WARNING: context pattern is not well formed"
+      val _ = if List.all (Construction.wellFormed idConSpec) antecedent
+              then Logging.write "\n  antecedent patterns are well formed"
+              else Logging.write "\n  WARNING: some antecedent pattern is not well formed"
+      val _ = if Construction.wellFormed idConSpec consequent
+              then Logging.write "\n  consequent pattern is well formed\n"
+              else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
+      val isch = {name = name,
+                  context = context,
+                  antecedent = antecedent,
+                  consequent = consequent}
+      val strengthVal = getStrength blocks
+      fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
+      val _ = Logging.write ("done\n");
+      fun ff (c,c') = Real.compare (valOf (strengthsUpd (#name c')), valOf (strengthsUpd (#name c)))
+  in {typeSystemsData = #typeSystemsData dc,
+      conSpecsData = #conSpecsData dc,
+      knowledge = Knowledge.addInferenceSchema (#knowledge dc) isch strengthVal ff,
+      constructionsData = #constructionsData dc,
+      transferRequests = #transferRequests dc,
+      strengths = strengthsUpd}
+  end
+
   fun addTransferSchema (nn,cs) dc =
   let val (name,x,cspecNs) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
-      val (sourceCSpecN,y,targetInterCSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
+      val (sourceConSpecN,y,targetInterConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
       val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
-      val (targetCSpecN,y,interCSpecN) = String.breakOn "," (String.removeParentheses targetInterCSpecN)
+      val (targetConSpecN,y,interConSpecN) = String.breakOn "," (String.removeParentheses targetInterConSpecN)
       val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
-      val sourceCSpec = findConSpecWithName dc sourceCSpecN
-      val sourceTySys = #typeSystem (#typeSystemData sourceCSpec)
-      val targetCSpec = findConSpecWithName dc targetCSpecN
-      val targetTySys = #typeSystem (#typeSystemData targetCSpec)
-      val interConSpec = findConSpecWithName dc interCSpecN
+      val sourceConSpec = findConSpecWithName dc sourceConSpecN
+      val sourceTySys = #typeSystem (#typeSystemData sourceConSpec)
+      val targetConSpec = findConSpecWithName dc targetConSpecN
+      val targetTySys = #typeSystem (#typeSystemData targetConSpec)
+      val interConSpec = findConSpecWithName dc interConSpecN
       val interTySys = #typeSystem (#typeSystemData interConSpec)
       val _ = Logging.write ("\nAdding transfer schema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
                               raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = sourceKW then sourceCSpec else targetCSpec) (String.concat ps)
+            then parseConstruction (if k = sourceKW then sourceConSpec else targetConSpec) (String.concat ps)
             else getPattern k L
       fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in tSchema " ^ String.concat cs))
@@ -348,10 +418,10 @@ struct
       val target = getPattern targetKW blocks
       val antecedent = getAntecedent blocks
       val consequent = getConsequent blocks
-      val _ = if Construction.wellFormed sourceCSpec source
+      val _ = if Construction.wellFormed sourceConSpec source
               then Logging.write "\n  source pattern is well formed"
               else Logging.write "\n  WARNING: source pattern is not well formed"
-      val _ = if Construction.wellFormed targetCSpec target
+      val _ = if Construction.wellFormed targetConSpec target
               then Logging.write "\n  target pattern is well formed"
               else Logging.write "\n  WARNING: target pattern is not well formed"
       val _ = if List.all (Construction.wellFormed interConSpec) antecedent
@@ -603,6 +673,7 @@ struct
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
           in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
              if x = SOME conSpecKW then addConSpec (hd n, ws) dc else
+             if x = SOME iSchemaKW then addInferenceSchema (hd n,ws) dc else
              if x = SOME tSchemaKW then addTransferSchema (hd n,ws) dc else
              if x = SOME constructionKW then addConstruction (hd n,String.concat ws) dc else
              if x = SOME transferKW then addTransferRequests c dc else

@@ -25,13 +25,17 @@ sig
   val findMatchUpTo : Type.typeSystem -> pattern -> pattern -> CSpace.token FiniteSet.set -> (CSpace.token -> CSpace.token option) * construction option
   val findEmbeddingUpTo : Type.typeSystem -> pattern -> pattern -> CSpace.token FiniteSet.set -> (CSpace.token -> CSpace.token option) * construction option
   val findMapFromPatternToGenerator : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option);
-  val findMapAndGeneratorMatching : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
+  val findMatchToGenerator : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
   val matchToSubConstructionWithConstruct : Type.typeSystem
-                                         -> construction
-                                         -> pattern
-                                         -> CSpace.token
-                                         -> ((CSpace.token -> CSpace.token option) * construction option) ;
-
+                                             -> construction
+                                             -> pattern
+                                             -> CSpace.token
+                                             -> ((CSpace.token -> CSpace.token option) * construction option) ;
+  val findConsistentMatchToSubConstruction : Type.typeSystem
+                                               -> construction
+                                               -> pattern
+                                               -> (CSpace.token -> CSpace.token option)
+                                               -> ((CSpace.token -> CSpace.token option) * construction option);
 end;
 
 structure Pattern : PATTERN =
@@ -71,7 +75,7 @@ struct
       | (NONE,NONE) => NONE
       | (SOME y, SOME z) => if CSpace.sameTokens y z
                             then SOME y
-                            else (Logging.write "funUnion!\n"; raise Undefined))
+                            else raise Undefined)
     | funUnion [] _ = NONE
 
     (* Assumes well-formedness *)
@@ -175,28 +179,22 @@ struct
   (* *)
   fun findEmbeddingUpTo T ct ct' tokens =
   let fun fm (Source t) (Source t') =
-            if tokenMatches T t t'
+            if tokenMatches T t t' orelse (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t)
             then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
-            else if FiniteSet.elementOf t' tokens andalso tokenMatches T t' t
-                 then (fn x => if CSpace.sameTokens x t then SOME t else NONE)
-                 else (fn _ => NONE)
+            else (fn _ => NONE)
         | fm (Reference t) (Reference t') =
-            if tokenMatches T t t'
+            if tokenMatches T t t' orelse (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t)
             then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
-            else if (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t)
-                 then (fn x => if CSpace.sameTokens x t then SOME t else NONE)
-                 else (fn _ => NONE)
+            else (fn _ => NONE)
         | fm (TCPair ({token = t, constructor = c},cs))
              (TCPair ({token = t', constructor = c'},cs')) =
-            if CSpace.sameConstructors c c'
-            then if tokenMatches T t t'
-                 then let val CHfunctions = List.funZip fm cs cs'
+            if CSpace.sameConstructors c c' andalso
+               (tokenMatches T t t' orelse
+                (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t))
+            then let val CHfunctions = List.funZip fm cs cs'
                           fun nodeFunction x = if CSpace.sameTokens x t then SOME t' else NONE
                       in funUnion (nodeFunction :: CHfunctions)
                       end
-                 else if FiniteSet.elementOf t' tokens andalso tokenMatches T t' t
-                      then (fn x => if CSpace.sameTokens x t then SOME t else NONE)
-                      else (fn _ => NONE)
             else (fn _ => NONE)
         | fm _ _ = (fn _ => NONE)
     val f = fm ct ct'
@@ -260,7 +258,7 @@ struct
   in mpg ct ct'
   end
 
-  fun findMapAndGeneratorMatching T ct ct' =
+  fun findMatchToGenerator T ct ct' =
     let val f = findMapFromPatternToGenerator T ct ct'
         val g = applyMorphism f ct'
     in (f, SOME g)
@@ -281,7 +279,7 @@ struct
     and sct as the second argument *)
   fun matchToSubConstructionWithConstruct T ct pt t =
     if CSpace.sameTokens t (constructOf ct)
-    then findMapAndGeneratorMatching T (fixReferences ct) pt
+    then findMatchToGenerator T (fixReferences ct) pt
     else (case ct of
             TCPair (_, cs) =>
               let fun fmg (x::xs) =
@@ -292,6 +290,39 @@ struct
               in fmg cs
               end
           | _ => (fn _ => NONE,NONE))
+
+
+  fun findConsistentMatchToSubConstruction T ct pt f =
+    let val (h,x) = findMatchToGenerator T (fixReferences ct) pt
+        fun w () =
+          (case ct of
+              TCPair (_, cs) =>
+                let fun fmg (x::xs) =
+                          (case findConsistentMatchToSubConstruction T x pt f of
+                              (_,NONE) => fmg xs
+                            | P => P)
+                      | fmg [] = (fn _ => NONE,NONE)
+                in fmg cs
+                end
+            | _ => (fn _ => NONE,NONE))
+    in if isSome x
+       then (applyMorphism (funUnion [f,h]) pt; (h,x)) handle Undefined => w ()
+       else w ()
+    end
+(*)
+    case findMatchToGenerator T (fixReferences ct) pt of
+      (h,SOME _) => (case applyMorphism (funUnion [f,h]) pt of
+                        y => (h,SOME y)) handle Undefined =>
+    | _ => (case ct of
+              TCPair (_, cs) =>
+                let fun fmg (x::xs) =
+                          (case findConsistentMatchToSubConstruction T x pt f of
+                              (_,NONE) => fmg xs
+                            | P => P)
+                      | fmg [] = (fn _ => NONE,NONE)
+                in fmg cs
+                end
+            | _ => (fn _ => NONE,NONE))*)
 
       (*firstSome (List.map (fn x => matchToSubConstructionWithConstruct T x p t) cs)
                                   | _ => (fn _ => NONE,NONE))*)

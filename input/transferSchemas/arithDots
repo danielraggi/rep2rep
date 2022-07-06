@@ -15,6 +15,20 @@ conSpec interArithDots:interArithDotsT =
         formulaIsValid : [formula] -> metaBool,
         canRectangulate : [arr,arr] -> metaBool
 
+iSchema disjIntra1:(dotDiagramsG,interArithDots) =
+    context t':arr <- join[t1:arr,t2:arr]
+    antecedent :metaTrue <- disjoint[t'':arr,t1:arr],
+               :metaTrue <- disjoint[t'':arr,t2:arr]
+    consequent :metaTrue <- disjoint[t'':arr,t':arr]
+    strength 1.1
+
+iSchema disjIntra2:(dotDiagramsG,interArithDots) =
+    context t':arr <- join[t1:arr,t2:arr]
+    antecedent :metaTrue <- disjoint[t1:arr,t'':arr],
+               :metaTrue <- disjoint[t2:arr,t'':arr]
+    consequent :metaTrue <- disjoint[t':arr,t'':arr]
+    strength 1.1
+
 tSchema plusJoin:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- infixOp[n:numExp,p:plus,m:numExp]
     target t':arr <- join[a:arr,b:arr]
@@ -58,47 +72,47 @@ tSchema multRectangle:(arithG,dotDiagramsG,interArithDots) =
 
 tSchema oneCirc:(arithG,dotDiagramsG,interArithDots) =
     source t:1:numeral
-    target t':\crc:arr
+    target t':1:arr
     antecedent
     consequent :metaTrue <- count[t':\crc:arr,t:1:numeral]
     strength 1
 
-tSchema twoHorizontal:(arithG,dotDiagramsG,interArithDots) =
+tSchema twoCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:2:numeral
-    target t':\oo:arr
+    target t':2:arr
     antecedent
     consequent :metaTrue <- count[t':\oo:arr,t:2:numeral]
     strength 1
 
-tSchema threeHorizontal:(arithG,dotDiagramsG,interArithDots) =
+tSchema threeCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:3:numeral
-    target t':\ooo:arr
+    target t':3:arr
     antecedent
     consequent :metaTrue <- count[t':\ooo:arr,t:3:numeral]
     strength 1
 
-tSchema fourHorizontal:(arithG,dotDiagramsG,interArithDots) =
+tSchema fourCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:4:numeral
-    target t':\oooo:arr
+    target t':4:arr
     antecedent
     consequent :metaTrue <- count[t':\oooo:arr,t:4:numeral]
     strength 1
 
-tSchema twoVertical:(arithG,dotDiagramsG,interArithDots) =
+comment twoVertical:(arithG,dotDiagramsG,interArithDots) =
     source t:2:numeral
     target t':\ooV:arr
     antecedent
     consequent :metaTrue <- count[t':\ooV:arr,t:2:numeral]
     strength 1
 
-tSchema threeVertical:(arithG,dotDiagramsG,interArithDots) =
+comment threeVertical:(arithG,dotDiagramsG,interArithDots) =
     source t:3:numeral
     target t':\oooV:arr
     antecedent
     consequent :metaTrue <- count[t':\oooV:arr,t:3:numeral]
     strength 1
 
-tSchema fourVertical:(arithG,dotDiagramsG,interArithDots) =
+comment fourVertical:(arithG,dotDiagramsG,interArithDots) =
     source t:4:numeral
     target t':\ooooV:arr
     antecedent
