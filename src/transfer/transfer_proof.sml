@@ -13,12 +13,7 @@ sig
   val attachTSchema : InterCSpace.tSchema -> tproof -> tproof;
   val attachTSchemaAt : InterCSpace.tSchema -> Pattern.pattern -> tproof -> tproof;
   val attachISchemaAt : Knowledge.iSchema -> Pattern.pattern -> tproof -> tproof;
-  (*val attachTSchemaPulls : InterCSpace.tSchema -> CSpace.token -> tproof -> tproof*)
   val dump : string -> Pattern.pattern -> tproof -> tproof
-
-(*)
-  val mapRelsAndAttachTSchema : (Relation.relationship -> Relation.relationship)
-                              -> InterCSpace.tSchema -> tproof -> tproof;*)
 
   val toConstruction : tproof -> Construction.construction;
 end;
@@ -68,25 +63,6 @@ struct
         then ofInferenceSchema tApp
         else Open r
 
-(*)
-  fun attachTSchemaPulls tApp t (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchemaPulls tApp t) L)
-    | attachTSchemaPulls tApp t (Open (x,y,R)) =
-      let val pullList = InterCSpace.pullListOf tApp
-          (*val t = Pattern.constructOf (#target tApp)*)
-          fun applyPullItems ((R',R'',tL) :: L) =
-                if Relation.same R R' andalso List.exists (CSpace.sameTokens t) y
-                then map (fn t' => (x,map (fn s => if CSpace.sameTokens s t then t' else s) y,R'')) tL
-                else applyPullItems L
-            | applyPullItems [] = []
-      in case applyPullItems pullList of
-            [] => Open (x,y,R)
-          | rL => Closed ((x,y,R),
-                          {name = #name tApp ^ "\\_pull",
-                           source = #source tApp,
-                           target = #target tApp},
-                           map Open rL)
-      end
-*)
   fun dump s g (Closed (r,npp,L)) = Closed (r,npp, map (dump s g) L)
     | dump s r' (Open r) =
       if Pattern.similar r' r
@@ -104,16 +80,6 @@ struct
 
   fun mapRels f (Closed (r,npp,L)) = Closed (f r, npp, map (mapRels f) L)
     | mapRels f (Open r) = Open (f r)
-
-(*)
-  fun mapRelsAndAttachTSchema f tApp (Closed (r,npp,L)) =
-        Closed (f r, npp, map (mapRelsAndAttachTSchema f tApp) L)
-    | mapRelsAndAttachTSchema f tApp (Open r) =
-      let val r' = f r
-      in if Relation.sameRelationship r' (#consequent tApp)
-         then ofTransferSchema tApp
-         else Open r'
-      end*)
 
   fun nodeName (Closed (r,_,_)) = Construction.toString r
     | nodeName (Open r) = Construction.toString r

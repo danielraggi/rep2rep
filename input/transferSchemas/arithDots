@@ -36,7 +36,6 @@ tSchema plusJoin:(arithG,dotDiagramsG,interArithDots) =
                :metaTrue <- count[b:arr,m:numExp],
                :metaTrue <- disjoint[a:arr,b:arr]
     consequent :metaTrue <- count[t':arr,t:numExp]
-    pull :metaTrue <- disjoint[x:arr,y:arr] to [a:arr,b:arr]
     strength 1
 
 tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =

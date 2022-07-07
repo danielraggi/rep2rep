@@ -55,9 +55,8 @@ struct
   val sourceKW = "source"
   val antecedentKW = "antecedent"
   val consequentKW = "consequent"
-  val pullListKW = "pull"
   val strengthKW = "strength"
-  val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,pullListKW,strengthKW]
+  val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,strengthKW]
 
   val sourceConstructionKW = "sourceConstruction"
   val goalKW = "goal"
@@ -167,8 +166,25 @@ struct
     in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
     end
 
+  fun renameTypeInTypeSystemData (t1,t2) {name,typeSystem,principalTypes} =
+    let val {Ty,subType} = typeSystem
+        val _ = if Set.elementOf t2 Ty then raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t2 ^ " already exists") else ()
+        val _ = if Set.elementOf t1 Ty then () else raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t1 ^ " doesn't exist")
+        val updatedTy = Set.union (Set.minus Ty (Set.singleton t1)) (Set.singleton t2)
+        fun m x = if x = t2 then t1 else x
+        fun updatedSubType (x,y) = if x = t1 orelse y = t1 then false else subType (m x, m y)
+        val updatedTypeSystem = {Ty = updatedTy, subType = updatedSubType}
+        val (pt,npt) = (case FiniteSet.find (fn x => #typ x = t1) principalTypes of
+                      SOME {typ,subTypeable} => (FiniteSet.singleton {typ = t1, subTypeable = subTypeable},
+                                                  FiniteSet.singleton {typ = t2, subTypeable = subTypeable})
+                    | _ => (FiniteSet.empty,FiniteSet.empty))
+        val updatedPrincipalTypes = FiniteSet.union (FiniteSet.minus principalTypes pt) npt
+    in {name = name,typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes}
+    end
+
   fun addTypeSystem (name, tss) dc =
   let val _ = print ("\nAdding type system " ^ name ^ "...");
+      val _ = (findTypeSystemDataWithName dc name;Logging.write ("\nWARNING: type systems have same name. Overwriting!\n")) handle ParseError => ()
       val blocks = contentForKeywords typeKeywords tss
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
@@ -180,10 +196,21 @@ struct
             if x = SOME subTypeKW
             then map inequality (String.tokens (fn k => k = #",") (String.concat c))
             else getOrder L
+      fun parseImport s =
+        (case String.breakOn " with " s of
+            (tsName," with ",mapString) =>
+              let fun getMap ss = (case String.breakOn " as " ss of
+                                    (s1," as ",s2) => (String.stripSpaces s1,String.stripSpaces s2)
+                                  | _ => raise ParseError ("no type mapping: expected syntax \"with t1 as t2\" in "^s))
+                  val mapPairs = Parser.splitLevelWithSepFunApply getMap (fn x => x = #",") (String.explode mapString)
+                  val TS = findTypeSystemDataWithName dc (String.stripSpaces tsName)
+              in foldl (uncurry renameTypeInTypeSystemData) TS mapPairs
+              end
+          | (tsName,_,_) => findTypeSystemDataWithName dc (String.stripSpaces tsName))
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME typeImportsKW
-            then map (findTypeSystemDataWithName dc) (String.tokens (fn k => k = #",") (String.concat c))
+            then map parseImport (String.tokens (fn k => k = #",") (Parser.deTokenise " " c))
             else getImports L
 
       fun processTys ((Ty,prtyp)::L) =
@@ -209,7 +236,7 @@ struct
               then print ("done\n")
               else print ("\n  WARNING: Type System " ^ name ^ " is not well defined and it's probably not your fault!\n")
 
-  in {typeSystemsData = typeSystemData :: (#typeSystemsData dc),
+  in {typeSystemsData = typeSystemData :: List.filter (fn x => #name x <> name) (#typeSystemsData dc),
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
@@ -388,30 +415,13 @@ struct
             if x = SOME consequentKW
             then parseConstruction interConSpec (String.concat crs)
             else getConsequent L
-      fun parsePull s =
-        (case String.breakOn " to " s of
-          (Rs," to ",S) =>
-            (case String.breakOn " as " S of
-                (tks," as ",Rs') =>
-                  (parseConstruction interConSpec (String.stripSpaces Rs),
-                   parseConstruction interConSpec (String.stripSpaces Rs'),
-                   Parser.list Parser.token (String.stripSpaces tks))
-              | _ =>
-                  (parseConstruction interConSpec (String.stripSpaces Rs),
-                   parseConstruction interConSpec (String.stripSpaces Rs),
-                   Parser.list Parser.token (String.stripSpaces S)))
-        | _ =>
-            raise ParseError ("badly specified pull list in tSchema " ^ s))
-      fun getPullList [] = []
-        | getPullList ((x,pl) :: L) =
-            if x = SOME pullListKW
-            then Parser.splitLevelApply parsePull (explode (Parser.deTokenise " " pl))
-            else getPullList L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in tSchema " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
             if x = SOME strengthKW
-            then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);raise Option)
+            then valOf (Real.fromString (String.concat ss))
+                  handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);
+                                    raise Option)
             else getStrength L
       val blocks = contentForKeywords tSchemaKeywords cs
       val source = getPattern sourceKW blocks
@@ -434,8 +444,7 @@ struct
                   source = source,
                   target = target,
                   antecedent = antecedent,
-                  consequent = consequent,
-                  pullList = getPullList blocks}
+                  consequent = consequent}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
@@ -601,11 +610,9 @@ struct
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();
-      val targetTokens = FiniteSet.minus
-                            (FiniteSet.filter
-                               (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
-                               (Construction.leavesOfConstruction goal))
-                            (Construction.tokensOfConstruction construction)
+      val targetTokens = FiniteSet.filter
+                             (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
+                             (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "WARNING : goal has no tokens in target construction space\n"; raise BadGoal)
       val state = State.make {sourceConSpecData = sourceConSpecData,
                               targetConSpecData = targetConSpecData,

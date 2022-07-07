@@ -68,11 +68,15 @@ struct
     let
       fun wfds [] =  true
         | wfds ((ct,Ds)::L) =
-            Construction.wellFormed CS ct
-            andalso CSpace.sameTokens construct (Construction.constructOf ct)
-            andalso List.all (fn x => FiniteSet.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (Construction.tokensOfConstruction ct)) Ds
-            andalso List.all (wellFormedComposition CS) Ds
-            andalso wfds L
+            let val a = Construction.wellFormed CS ct
+                val _ = if a then () else print ("\nconstruction " ^ Construction.toString ct ^ " in composition is not well formed\n")
+                val b = CSpace.sameTokens construct (Construction.constructOf ct)
+                val _ = if b then () else print "\ncomposition has construction whose construct don't match the attachment place\n"
+                val c = List.all (fn x => FiniteSet.exists (fn y => CSpace.sameTokens (constructOfComposition x) y) (Construction.tokensOfConstruction ct)) Ds
+                val _ = if c then () else print "\nan attachment in the composition doesn't match the token to which it's attached\n"
+                val d = List.all (wellFormedComposition CS) Ds
+            in a andalso b andalso c andalso d andalso wfds L
+            end
       val result = wfds attachments
     in result
     end
@@ -148,7 +152,7 @@ struct
       (case map (attachConstructionAt ct (Construction.constructOf ct)) (attachConstructions CC L) of
          CCC => if List.exists (fn (b,_) => b) CCC
                 then map #2 CCC
-                else initFromConstruction ct :: CC)
+                else (initFromConstruction ct :: CC))
 
 
 

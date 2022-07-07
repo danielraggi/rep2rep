@@ -23,7 +23,7 @@ sig
   val findEmbedding : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option
   val findMatch : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option
   val findMatchUpTo : Type.typeSystem -> pattern -> pattern -> CSpace.token FiniteSet.set -> (CSpace.token -> CSpace.token option) * construction option
-  val findEmbeddingUpTo : Type.typeSystem -> pattern -> pattern -> CSpace.token FiniteSet.set -> (CSpace.token -> CSpace.token option) * construction option
+  val findEmbeddingUpTo : Type.typeSystem -> pattern -> pattern -> CSpace.token FiniteSet.set -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
   val findMapFromPatternToGenerator : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option);
   val findMatchToGenerator : Type.typeSystem -> pattern -> pattern -> (CSpace.token -> CSpace.token option) * construction option;
   val matchToSubConstructionWithConstruct : Type.typeSystem
@@ -176,31 +176,35 @@ struct
   in (f, SOME g)
   end handle Undefined => (fn _ => NONE,NONE)
 
+  fun unzip [] = ([],[])
+    | unzip ((x,y)::L) = (case unzip L of (L1,L2) => (x::L1,y::L2))
   (* *)
   fun findEmbeddingUpTo T ct ct' tokens =
   let fun fm (Source t) (Source t') =
-            if tokenMatches T t t' orelse (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t)
-            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
-            else (fn _ => NONE)
+            if tokenMatches T t t' orelse FiniteSet.elementOf t tokens
+            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+            else (fn _ => NONE,fn _ => NONE)
         | fm (Reference t) (Reference t') =
-            if tokenMatches T t t' orelse (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t)
-            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE)
-            else (fn _ => NONE)
+            if tokenMatches T t t' orelse FiniteSet.elementOf t tokens
+            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE)
+            else (fn _ => NONE,fn _ => NONE)
         | fm (TCPair ({token = t, constructor = c},cs))
              (TCPair ({token = t', constructor = c'},cs')) =
             if CSpace.sameConstructors c c' andalso
-               (tokenMatches T t t' orelse
-                (FiniteSet.elementOf t' tokens andalso tokenMatches T t' t))
-            then let val CHfunctions = List.funZip fm cs cs'
-                          fun nodeFunction x = if CSpace.sameTokens x t then SOME t' else NONE
-                      in funUnion (nodeFunction :: CHfunctions)
-                      end
-            else (fn _ => NONE)
-        | fm _ _ = (fn _ => NONE)
-    val f = fm ct ct'
-    val g = applyMorphism f ct
-  in (f, SOME g)
-  end handle Undefined => (fn _ => NONE,NONE)
+               (tokenMatches T t t' orelse FiniteSet.elementOf t tokens)
+            then let val (CHfunctions1,CHfunctions2) = unzip (List.funZip fm cs cs')
+                     fun nodeFunction1 x = if CSpace.sameTokens x t then SOME t' else NONE
+                     fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME t else NONE
+                  in (funUnion (nodeFunction1 :: CHfunctions1),funUnion (nodeFunction2 :: CHfunctions2))
+                  end
+            else (fn _ => NONE,fn _ => NONE)
+        | fm _ _ = (fn _ => NONE,fn _ => NONE)
+    val (f1,f2) = fm ct ct'
+    val g = applyMorphism f1 ct
+  in (f1, f2, SOME g)
+  end handle Undefined => (fn _ => NONE,fn _ => NONE,NONE)
 
   (* *)
   fun findEmbedding T ct ct' =
