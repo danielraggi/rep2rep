@@ -207,7 +207,7 @@ struct
   fun applyTransferSchemaForGoal st tsch goal =
     let
         val (renaming,instantiatedTSchema) = instantiateTransferSchema st tsch goal
-        
+
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism renaming) patternComps
         val updatedPatternComps = Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
@@ -287,7 +287,7 @@ struct
 
 (* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
 fun structureTransfer unistructured st =
-  let val ignT = Heuristic.ignore 15 99 45 unistructured
+  let val ignT = Heuristic.ignore 15 1999 45 unistructured
       val ignI = Heuristic.ignoreRelaxed 15 199
       val transferTac = structureTransferTac Heuristic.transferProofMultStrengths ignT Heuristic.forgetRelaxed
       val inferenceTac = Search.bestFirstSortIgnoreForget singleStepInference Heuristic.transferProofMultStrengths ignI Heuristic.forgetRelaxed
