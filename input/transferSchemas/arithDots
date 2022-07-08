@@ -73,28 +73,28 @@ tSchema oneCirc:(arithG,dotDiagramsG,interArithDots) =
     source t:1:numeral
     target t':1:arr
     antecedent
-    consequent :metaTrue <- count[t':\crc:arr,t:1:numeral]
+    consequent :metaTrue <- count[t':1:arr,t:1:numeral]
     strength 1
 
 tSchema twoCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:2:numeral
     target t':2:arr
     antecedent
-    consequent :metaTrue <- count[t':\oo:arr,t:2:numeral]
+    consequent :metaTrue <- count[t':2:arr,t:2:numeral]
     strength 1
 
 tSchema threeCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:3:numeral
     target t':3:arr
     antecedent
-    consequent :metaTrue <- count[t':\ooo:arr,t:3:numeral]
+    consequent :metaTrue <- count[t':3:arr,t:3:numeral]
     strength 1
 
 tSchema fourCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:4:numeral
     target t':4:arr
     antecedent
-    consequent :metaTrue <- count[t':\oooo:arr,t:4:numeral]
+    consequent :metaTrue <- count[t':4:arr,t:4:numeral]
     strength 1
 
 comment twoVertical:(arithG,dotDiagramsG,interArithDots) =

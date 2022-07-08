@@ -16,7 +16,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                      t3:4oB4plus1cBdiv2:numExp
                         <- frac[t31:4oB4plus1cB:numExp
                                     <- implicitMult[t311:4:numeral,
-                                                    t312:oB3plus1cB:numExp
+                                                    t312:oB4plus1cB:numExp
                                                         <- addParentheses[t3121:oB,
                                                                           t3122:4plus1:numExp
                                                                                 <- infixOp[t31221:4:numeral,
@@ -50,3 +50,9 @@ transfer
     goal :metaBool <- formulaIsValid[t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula]
     output interSpaceTest
     limit 10
+
+construction test1:arithG =
+    t:formula <- applyUnary[t1:unary,t2:y:formula <- applyUnary[t21:unary,t22:w:formula <- applyUnary[t221:unary,t:formula]]]
+
+construction test2:arithG =
+    t22:w:formula <- applyUnary[t221:unary,t3:formula <- applyUnary[tx1:unary,tx2:formula]]

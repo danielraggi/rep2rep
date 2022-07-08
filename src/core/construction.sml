@@ -327,7 +327,7 @@ struct
         then SOME (TCPair (tc, cs))
         else findFirstSOME (map (fn x => findSubConstructionWithConstruct x t) cs)
 
-  exception TokenNotPresent
+  exception TokenNotPresent of (string * string)
   fun takeGeneratorUntil L (Source t) =
         if List.exists (fn x => CSpace.sameTokens x t) L
         then Reference t
@@ -344,11 +344,11 @@ struct
           | expandReferencesUntil (Reference t') = takeGeneratorUntil tokensOfSmallConstruction (valOf (findSubConstructionWithConstruct ct t'))
           | expandReferencesUntil (TCPair (tc,cs)) = TCPair (tc, map expandReferencesUntil cs)
     in fixReferences (expandReferencesUntil smallConstruction)
-    end handle Option => raise TokenNotPresent
+    end handle Option => raise TokenNotPresent (toString ct,CSpace.stringOfToken t)
 
   fun subConstruction ct ct' =
     isGenerator ct (largestSubConstructionWithConstruct ct' (constructOf ct))
-    handle TokenNotPresent => false
+    handle TokenNotPresent _ => false
 
   fun childrenOf (Source t) = []
     | childrenOf (Reference t) = []
