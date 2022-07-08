@@ -234,7 +234,7 @@ struct
       val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
       val _ = if Type.wellDefined typeSystemData
               then print ("done\n")
-              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined and it's probably not your fault!\n")
+              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined (either there's a cycle in your order, or the there's a bug in oruga!)\n")
 
   in {typeSystemsData = typeSystemData :: List.filter (fn x => #name x <> name) (#typeSystemsData dc),
       conSpecsData = #conSpecsData dc,
