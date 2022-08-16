@@ -34,7 +34,8 @@ fun make files =
         Rpc.provide spaces_sig (fn () => spaces),
         Rpc.provide getSpace_sig (fn name => getSpace spaces name),
         Rpc.provide typeSystems_sig (fn () => typeSystems),
-        Rpc.provide getPrincipalTypes_sig (fn name => Option.map #2 (getPrincipalTypes typeSystems name))
+        Rpc.provide getPrincipalTypes_sig (fn name => Option.map #2 (getPrincipalTypes typeSystems name)),
+        Construction.R.toString
     ] end;
 
 end;
