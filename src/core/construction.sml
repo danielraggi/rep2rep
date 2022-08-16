@@ -104,7 +104,7 @@ struct
     | isTrivial _ = false
 
   fun toString (Source t) = CSpace.stringOfToken t
-    | toString (Reference t) = ("**"^CSpace.stringOfToken t)
+    | toString (Reference t) = CSpace.stringOfToken t
     | toString (TCPair ({token,constructor}, cs)) =
        CSpace.stringOfToken token ^ " <- " ^ CSpace.nameOfConstructor constructor ^ (String.stringOfList toString cs)
 
