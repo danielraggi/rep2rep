@@ -1,5 +1,28 @@
 import transferSchemas/arithDots
 
+construction 1plus2plus3equalsStuff:arithG =
+    t:1plus2plus3equals3oB3plus1cBdiv2:formula
+        <- infixRel[t1:1plus2plus3:numExp
+                        <- infixOp[t11:1plus2:numExp
+                                        <- infixOp[t111:1:numeral,
+                                                    t112:plus,
+                                                    t113:2:numeral],
+                                    t12:plus,
+                                    t13:3:numeral],
+                     t2:equals,
+                     t3:3oB3plus1cBdiv2:numExp
+                        <- frac[t31:3oB3plus1cB:numExp
+                                    <- implicitMult[t311:3:numeral,
+                                                    t312:oB3plus1cB:numExp
+                                                        <- addParentheses[t3121:oB,
+                                                                          t3122:3plus1:numExp
+                                                                                <- infixOp[t31221:3:numeral,
+                                                                                            t31222:plus,
+                                                                                            t31223:1:numeral],
+                                                                          t3123:cB]],
+                                t32:div,
+                                t33:2:numeral]]
+
 construction 1plus2plus3plus4equalsStuff:arithG =
     t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3plus4:numExp
@@ -16,7 +39,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                      t3:4oB4plus1cBdiv2:numExp
                         <- frac[t31:4oB4plus1cB:numExp
                                     <- implicitMult[t311:4:numeral,
-                                                    t312:oB3plus1cB:numExp
+                                                    t312:oB4plus1cB:numExp
                                                         <- addParentheses[t3121:oB,
                                                                           t3122:4plus1:numExp
                                                                                 <- infixOp[t31221:4:numeral,
@@ -26,9 +49,33 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                 t32:div,
                                 t33:2:numeral]]
 
+construction 1plus2equals3:arithG =
+    t:1plus2equals3:formula
+        <- infixRel[t1:1plus2:numExp
+                        <- infixOp[t11:1:numeral,
+                                    t12:plus,
+                                    t13:2:numeral],
+                     t2:equals,
+                     t3:3:numeral]
+
 transfer
-    sourceConstruction 1plus2plus3plus4equalsStuff
-    targetTypeSystem dotDiagrams
-    goal ([t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula],[t':arr]) :: formulaIsValid
+    sourceConstruction 1plus2plus3equalsStuff
+    targetConSpec dotDiagramsG
+    interConSpec interArithDots
+    goal :metaBool <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
     output test
     limit 1
+
+transfer
+    sourceConstruction 1plus2plus3plus4equalsStuff
+    targetConSpec dotDiagramsG
+    interConSpec interArithDots
+    goal :metaBool <- formulaIsValid[t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula]
+    output interSpaceTest
+    limit 2
+
+construction test1:arithG =
+    t:formula <- applyUnary[t1:unary,t2:y:formula <- applyUnary[t21:unary,t22:w:formula <- applyUnary[t221:unary,t:formula]]]
+
+construction test2:arithG =
+    t22:w:formula <- applyUnary[t221:unary,t3:formula <- applyUnary[tx1:unary,tx2:formula]]

@@ -17,6 +17,7 @@ sig
   val fromString : string -> typ
   val any : typ
   val equal : typ -> typ -> bool
+  val emptySystem : typeSystem
 
   val nameOfType : typ -> string;
 
@@ -39,6 +40,11 @@ sig
 
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
+
+  val greatestCommonSubType : typeSystemData
+                                -> typ
+                                -> typ
+                                -> typ option
 
   val addLeastCommonSuperType : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
                                 -> typ
@@ -69,16 +75,36 @@ struct
   val any = "" (* emtpy string *)
   fun equal x y = (x = y)
 
+  val emptySystem = {Ty = Set.empty, subType = (fn x => false)}
 
   fun reflexive Ty R = FiniteSet.all (fn x => R (x,x)) Ty;
-  fun transitive Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => FiniteSet.all (fn z => not (R (x,y) andalso R (y,z)) orelse R (x,z)) Ty) Ty) Ty;
-  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => not (R (x,y) andalso R (y,x)) orelse x = y) Ty) Ty;
+
+  fun transitive Ty R =
+    let fun f1 x =
+          let val Ty' = FiniteSet.minus Ty (FiniteSet.singleton x)
+              fun f2 y =
+                let fun f3 z = not (R (y,z)) orelse R (x,z)
+                in not (R (x,y)) orelse FiniteSet.all f3 (FiniteSet.minus Ty' (FiniteSet.singleton y))
+                end
+          in FiniteSet.all f2 Ty'
+          end
+    in FiniteSet.all f1 Ty
+    end;
+  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
   fun respectsAny Ty R = FiniteSet.all (fn x => R (x,any)) Ty
 
   fun wellDefined {typeSystem,principalTypes,...} =
-    let val Tys = FiniteSet.map #typ principalTypes
-        val R = #subType typeSystem
-    in reflexive Tys R andalso transitive Tys R andalso antisymmetric Tys R
+    let val PTys = FiniteSet.map #typ principalTypes
+        val {Ty,subType} = typeSystem
+        fun correctPrincipalType {typ,subTypeable} =
+          Set.elementOf typ Ty andalso
+          (not subTypeable orelse
+           (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
+            FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
+    in reflexive PTys subType andalso
+       transitive PTys subType andalso
+       antisymmetric PTys subType andalso
+       FiniteSet.all correctPrincipalType principalTypes
     end
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
@@ -93,7 +119,7 @@ struct
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
-  fun closureOverFiniteSet Ty = respectAnyClosure o reflexiveClosure o (transitiveClosure Ty);
+  fun closureOverFiniteSet Ty = reflexiveClosure o (transitiveClosure Ty);
   fun nameOfType x = x
 
   (* assumes subType is an order for the principal types and extends it to
@@ -115,11 +141,30 @@ struct
       if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
       else FiniteSet.insert pt P
 
-
-  fun superTypes {typeSystem,principalTypes} ty =
+  fun superTypes {typeSystem,principalTypes,...} ty =
     let val {Ty,subType} = typeSystem
-        val pTys = map #typ principalTypes
-    in FiniteSet.filter (fn typ => subType (ty,typ)) pTys
+        val pTys = FiniteSet.map #typ principalTypes
+    in FiniteSet.filter (fn x => subType (ty,x)) pTys
+    end
+
+  fun subTypes {typeSystem,principalTypes,...} ty =
+    let val {Ty,subType} = typeSystem
+        val pTys = FiniteSet.map #typ principalTypes
+    in FiniteSet.filter (fn x => subType (x,ty)) pTys
+    end
+
+  fun supremum R s =
+    FiniteSet.find (fn x => FiniteSet.all (fn y => R (y,x)) s) s
+
+  fun greatestCommonSubType TSD ty ty' =
+    let val subType = #subType (#typeSystem TSD)
+    in  if subType (ty,ty') then SOME ty
+        else if subType (ty',ty) then SOME ty'
+        else let val stys = subTypes TSD ty
+                 val stys' = subTypes TSD ty'
+                 val cstys = FiniteSet.intersection stys stys'
+             in supremum subType cstys
+             end
     end
 
   fun addLeastCommonSuperType (TP as {typeSystem,principalTypes}) ty ty' =

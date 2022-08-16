@@ -504,4 +504,9 @@ fun findFirst f xq =
 
 fun exists f xq = case findFirst f xq of NONE => false | SOME _ => true;
 
+fun fiterThenMap f m xq =
+  make (fn () =>
+    (case pull xq of
+      NONE => NONE
+    | SOME (x, xq') => if f x then SOME (m x, fiterThenMap f m xq') else pull (fiterThenMap f m xq')));
 end;
