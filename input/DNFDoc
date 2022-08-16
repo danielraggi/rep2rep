@@ -79,37 +79,38 @@ construction -A-B|-A-C|B-C:propDNFG =
                 <- disj[t21:-A-C:nonliteralDNF <- conj[t211:-A:nonvar <- neg[t2111:A:var],t212:-C:nonvar <- neg[t2121:C:var]],
                         t22:B-C:nonliteralDNF <- conj[t221:B:var,t222:-C:nonvar <- neg[t2221:C:var]]]]
 
-transfer
+comment
    sourceConstruction -A-B|-A-C|B-C
    targetConSpec propCNFG
    interConSpec interDNFCNFG
-   goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':clauseCNF]
+   goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
    unistructured
    output AinBdisjCTest
    limit 50
 
 comment
    sourceConstruction AinB
-   targetTypeSystem propCNF
-   goal ([t:AB|-AB|-A-B:nonclauseDNF],[t':clauseCNF]) :: entails
+   targetConSpec propCNFG
+   interConSpec interDNFCNFG
+   goal :metaTrue <- entails[t:AB|-AB|-A-B:nonclauseDNF,t':nonliteralCNF]
    unistructured
    output AinB
    limit 50
 
-comment
-    sourceConstruction AinBdisjC
-    targetTypeSystem propCNF
-    goal ([t:AB-C|-AB-C|-A-BC|-A-B-C:nonclauseDNF],[t':nonliteralCNF]) :: entails
+transfer
+    sourceConstruction -A-B|-A-C|B-C
+    targetConSpec propCNFG
+    interConSpec interDNFCNFG
+    goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
     output AinBdisjC
     unistructured
     limit 50
-    matchTarget t:nonliteralDNF <- disj[t1:nonvar <- neg[t11:var], t2:nonvar <- neg[t21:var]]
-    targetConSpec propCNFG
+    matchTarget t:nonliteralCNF <- disj[t1:nonvar, t2:nonvar]
 
 comment
     sourceConstruction AinBdisjCinD
     targetTypeSystem propCNF
-    goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF],[t':clauseCNF]) :: entails
+    goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF],[t':nonliteralCNF]) :: entails
     matchTarget t:nonliteralDNF <- disj[t1:B:var, t2:nonvar <- neg[t21:A:var]]
     targetConSpec propCNFG
     limit 10

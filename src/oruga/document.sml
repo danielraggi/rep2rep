@@ -25,7 +25,9 @@ structure Document : DOCUMENT =
 struct
 
   val ParseError = Parser.ParseError;
-  type constructionData = {name : string, conSpecN : string, construction : Construction.construction}
+  type constructionData = {name : string,
+                           conSpecN : string,
+                           construction : Construction.construction}
 
   val importKW = "import"
   val typeSystemKW = "typeSystem"
@@ -35,7 +37,8 @@ struct
   val constructionKW = "construction"
   val transferKW = "transfer"
   val commentKW = "comment"
-  val bigKeywords = [importKW,typeSystemKW,conSpecKW,iSchemaKW,tSchemaKW,constructionKW,transferKW,commentKW]
+  val bigKeywords = [importKW,typeSystemKW,conSpecKW,iSchemaKW,
+                     tSchemaKW,constructionKW,transferKW,commentKW]
 
   val typesKW = "types"
   val subTypeKW = "order"
@@ -69,11 +72,51 @@ struct
   val sourceConSpecKW = "sourceConSpec"
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,sourceConSpecKW,interConSpecKW]
+  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,
+                          iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
+                          sourceConSpecKW,interConSpecKW]
 
 
-  fun breakOn s [] = ([],"",[])
-  | breakOn s (w::ws) = if w = s then ([],s,ws) else (case breakOn s ws of (x,s',y) => (w::x,s',y))
+  fun breakListOn s [] = ([],"",[])
+    | breakListOn s (w::ws) =
+        if w = s
+        then ([],s,ws)
+        else (case breakListOn s ws of (x,s',y) => (w::x,s',y))
+
+  fun parseToken s = case String.breakOn ":" (String.stripSpaces s) of
+                  (ts,_,tys) => CSpace.makeToken ts (Type.fromString tys)
+  fun parseCTyp s = case Parser.list Type.fromString (String.stripSpaces s) of
+                  (ty::tys) => (tys,ty)
+                | _ => raise ParseError ("bad constructor sig: " ^ s)
+  fun parseConstructor s = case String.breakOn ":" (String.stripSpaces s) of
+                        (cs,_,ctys) => CSpace.makeConstructor (cs, parseCTyp ctys)
+  fun parseConfigurator s = case String.breakOn ":" (String.stripSpaces s) of
+                         (us,_,ccs) => CSpace.makeConfigurator (us, parseConstructor ccs)
+
+
+   fun findConstructorInConSpec s cspec =
+     valOf (CSpace.findConstructorWithName s cspec)
+     handle Option => raise ParseError ("no constructor " ^ s ^ " in " ^ (#name cspec))
+
+  fun parseTCPair s cspec =
+    case String.breakOn "<-" (String.stripSpaces s) of
+          (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
+       |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec cfgs cspec}
+
+  fun parseConstruction cspec s =
+    let fun c s' =
+         case String.breakOn "[" s' of
+           (ts,"",_) => Construction.Source (parseToken ts)
+         | (tcps,_,ss) =>
+             let val tcp = parseTCPair tcps cspec
+                 val tok = #token tcp
+                 val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
+                 val _ = if ys = [] then ()
+                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
+             in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
+             end
+    in Construction.fixReferences (c (String.stripSpaces s))
+    end;
 
   fun contentForKeywords _ [] = []
   | contentForKeywords ks (w::ws) =
@@ -88,19 +131,23 @@ struct
                     | L => (NONE,[w]) :: L))
     end
 
-  type documentContent = {typeSystemsData : Type.typeSystemData list,
-                          conSpecsData : CSpace.conSpecData list,
-                          knowledge : Knowledge.base,
-                          constructionsData : {name : string, conSpecN : string, construction : Construction.construction} list,
-                          transferRequests : (string list) list,
-                          strengths : string -> real option}
+  type documentContent =
+       {typeSystemsData : Type.typeSystemData list,
+        conSpecsData : CSpace.conSpecData list,
+        knowledge : Knowledge.base,
+        constructionsData : {name : string,
+                             conSpecN : string,
+                             construction : Construction.construction} list,
+        transferRequests : (string list) list,
+        strengths : string -> real option}
 
-  val emptyDocContent = {typeSystemsData = [],
-                         conSpecsData = [],
-                         knowledge = Knowledge.empty,
-                         constructionsData = [],
-                         transferRequests = [],
-                         strengths = (fn _ => NONE)}
+  val emptyDocContent =
+      {typeSystemsData = [],
+       conSpecsData = [],
+       knowledge = Knowledge.empty,
+       constructionsData = [],
+       transferRequests = [],
+       strengths = (fn _ => NONE)}
 
   val typeSystemsDataOf = #typeSystemsData
   val conSpecsDataOf = #conSpecsData
@@ -159,9 +206,12 @@ struct
               in {typeSystem = jointTS, principalTypes = jointPTys}
               end
         val {typeSystem,principalTypes} = joinData TSDs
+        val _ = print "\n";
         val strippedPrincipalTypes = map #typ principalTypes
-        val subTypeableTypes = map #typ (FiniteSet.filter #subTypeable principalTypes)
+        val _ = map (fn x => print ("  " ^ x)) strippedPrincipalTypes
+        val _ = print "\n"
         val principalSubType = Type.closureOverFiniteSet strippedPrincipalTypes (#subType typeSystem)
+        val subTypeableTypes = List.filterThenMap #subTypeable #typ principalTypes
         val subType = Type.fixForSubtypeable subTypeableTypes principalSubType
         val typeSystem = {Ty = #Ty typeSystem, subType = subType}
     in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
@@ -169,8 +219,12 @@ struct
 
   fun renameTypeInTypeSystemData (t1,t2) {name,typeSystem,principalTypes} =
     let val {Ty,subType} = typeSystem
-        val _ = if Set.elementOf t2 Ty then raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t2 ^ " already exists") else ()
-        val _ = if Set.elementOf t1 Ty then () else raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t1 ^ " doesn't exist")
+        val _ = if Set.elementOf t2 Ty
+                then raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t2 ^ " already exists")
+                else ()
+        val _ = if Set.elementOf t1 Ty
+                then ()
+                else raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t1 ^ " doesn't exist")
         val updatedTy = Set.union (Set.minus Ty (Set.singleton t1)) (Set.singleton t2)
         fun m x = if x = t2 then t1 else x
         fun updatedSubType (x,y) = if x = t1 orelse y = t1 then false else subType (m x, m y)
@@ -185,7 +239,8 @@ struct
 
   fun addTypeSystem (name, tss) dc =
   let val _ = print ("\nAdding type system " ^ name ^ "...");
-      val _ = (findTypeSystemDataWithName dc name;Logging.write ("\nWARNING: type systems have same name. Overwriting!\n")) handle ParseError => ()
+      val _ = (findTypeSystemDataWithName dc name;Logging.write ("\nWARNING: type systems have same name. Overwriting!\n"))
+                handle ParseError => ()
       val blocks = contentForKeywords typeKeywords tss
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
@@ -234,8 +289,8 @@ struct
       val importsTSDs = getImports blocks
       val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
       val _ = if Type.wellDefined typeSystemData
-              then print ("done\n")
-              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined (either there's a cycle in your order, or the there's a bug in oruga!)\n")
+              then print ("...done\n")
+              else print ("\n  WARNING: Type System " ^ name ^ " is not well defined (probably a cycle, unless the there's a bug in oruga!)\n")
 
   in {typeSystemsData = typeSystemData :: List.filter (fn x => #name x <> name) (#typeSystemsData dc),
       conSpecsData = #conSpecsData dc,
@@ -248,10 +303,10 @@ struct
   fun parseConstructor s =
     case String.breakOn ":" s of
       (cname,":",csig) =>
-          (case String.breakOn "->" csig of
+        (case String.breakOn "->" csig of
             (inTyps,"->",outTyp) => CSpace.makeConstructor (cname, CSpace.makeCTyp (Parser.list Type.fromString inTyps, Type.fromString outTyp))
           | _ => raise ParseError ("bad signature for constructor: " ^ s)
-          )
+        )
     | _ => raise ParseError ("badly specified constructor: " ^ s)
 
 
@@ -279,12 +334,15 @@ struct
       (*val chars = List.concat (map String.explode tss)
       val crs = map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") chars)*)
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
-      val cspec = {name = name, typeSystemData = findTypeSystemDataWithName dc typeSystemN, constructors = allConstructors}
+      val cspec = {name = name,
+                   typeSystemData = findTypeSystemDataWithName dc typeSystemN,
+                   constructors = allConstructors}
       val updatedConSpec =
         case CSpace.wellDefinedConSpec cspec of
           (true,true) => cspec
         | (true,false) => CSpace.fixClashesInConSpec cspec
-        | (false,_) => (Logging.write "ERROR: some constructor is not well defined... cannot proceed\n"; raise CSpace.ImpossibleOverload)
+        | (false,_) => (Logging.write "ERROR: some constructor is not well defined... cannot proceed\n";
+                        raise CSpace.ImpossibleOverload)
       val updatedTSD = #typeSystemData updatedConSpec
 
       val _ = Logging.write "...done\n"
@@ -296,30 +354,6 @@ struct
       transferRequests = #transferRequests dc,
       strengths = #strengths dc}
   end
-
-  fun findConstructorInConSpec s cspec =
-    valOf (CSpace.findConstructorWithName s cspec)
-      handle Option => raise ParseError ("no constructor " ^ s ^ " in " ^ (#name cspec))
-
-  fun tcpair s cspec =
-    case String.breakOn "<-" (String.stripSpaces s) of
-           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
-        |  (ts,_,cfgs) => {token = Parser.token ts, constructor = findConstructorInConSpec cfgs cspec}
-
-  fun parseConstruction cspec s =
-    let fun c s' =
-          case String.breakOn "[" s' of
-            (ts,"",_) => Construction.Source (Parser.token ts)
-          | (tcps,_,ss) =>
-              let val tcp = tcpair tcps cspec
-                  val tok = #token tcp
-                  val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
-                  val _ = if ys = [] then ()
-                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-              in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
-              end
-    in Construction.fixReferences (c (String.stripSpaces s))
-    end;
 
   fun addInferenceSchema (nn,cs) dc =
   let val (name,x,cspecNs) = String.breakOn ":" nn
@@ -547,17 +581,19 @@ struct
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
-            then (let val mtct = parseConstruction (getTargetConSpec C) (String.concat c)
-                      (*val _ = if Construction.wellFormed targetTypeSystem mtct
+            then (let val mtct = parseConstruction targetConSpecData (String.concat c)
+                      val _ = if Construction.wellFormed targetConSpecData mtct
                               then Logging.write "\n  pattern for matching is well formed"
-                              else Logging.write "\n  WARNING: pattern for matching is not well formed"*)
+                              else Logging.write "\n  WARNING: pattern for matching is not well formed"
                   in SOME mtct
                   end)
             else getMatchTarget L
       fun getIterative [] = false
         | getIterative ((x,_)::L) =
             if x = SOME iterativeKW
-            then (case getMatchTarget C of NONE => true | _ => raise ParseError "iterative and matchTarget are incompatible")
+            then (case getMatchTarget C of
+                      NONE => true
+                    | _ => raise ParseError "iterative and matchTarget are incompatible")
             else getIterative L
       fun getUnistructured [] = false
         | getUnistructured ((x,_)::L) =
@@ -571,20 +607,20 @@ struct
       val KB = knowledgeOf DC
       val unistructured = getUnistructured C
       val targetPattern = getMatchTarget C
-      fun getCompsAndGoals [] = []
-        | getCompsAndGoals (h::t) = (State.patternCompsOf h, State.transferProofOf h, State.originalGoalOf h, State.goalsOf h) :: getCompsAndGoals t
       fun mkLatexGoals res =
         let val goal = State.originalGoalOf res
             val goals = State.goalsOf res
-            val goalsS = if List.null goals then "NO\\ OPEN\\ GOALS!" else String.concatWith "\\\\ \n " (map (Latex.construction (0.0,0.0)) goals)
+            val goalsS = if List.null goals
+                         then "NO\\ OPEN\\ GOALS!"
+                         else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goals)
             val originalGoalS = Latex.construction (0.0,0.0) goal ^ "\\\\ \n"
             val IS = Heuristic.multiplicativeScore (strengthsOf DC) res
-            val alignedGoals = "\n " ^ (Latex.environment "align*" "" ("\\mathbf{Original\\ goal}\\\\\n"
+            val alignedGoals = "\n " ^ ("\\textbf{Original\\ goal}\\\\\n"
                                                                       ^ originalGoalS
-                                                                      ^ "\\\\ \\mathbf{Open\\ goals}\\\\\n"
+                                                                      ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
                                                                       ^ goalsS ^ "\\\\"
-                                                                      ^ "\\\\ \\mathbf{transfer\\ score}\\\\\n"
-                                                                      ^ Real.toString IS))
+                                                                      ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
+                                                                      ^ Real.toString IS)
         in alignedGoals
         end
       fun mkLatexProof tproof =
@@ -602,12 +638,12 @@ struct
             val _ = if List.all (Composition.wellFormedComposition targetConSpecData) comps
                     then ()
                     else print ("\nWARNING! some composition at the target is not well formed!")
-            val latexLeft = Latex.environment "minipage" "[t]{0.45\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
+            val latexLeft = Latex.environment "minipage" "[t]{0.5\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals res
-            val latexRight = Latex.environment "minipage" "[t]{0.35\\linewidth}" latexGoals
+            val latexRight = Latex.environment "minipage" "[t]{0.45\\linewidth}" latexGoals
             val latexProof = ""(*mkLatexProof tproof*)
-            val CSize = List.sumMapInt Composition.size comps
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,Int.toString CSize, latexProof]))
+            (*val CSize = List.sumMapInt Composition.size comps*)
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,(*Int.toString CSize,*)latexProof]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();
@@ -631,11 +667,10 @@ struct
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
-      val compsAndGoals = getCompsAndGoals listOfResults;
-      fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)
+      (*fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)*)
       val score = Heuristic.multiplicativeScore (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
-      val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
-    (*  val _ = print (Construction.toString  (hd tproofConstruction))*)
+      (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
+      val _ = print (Construction.toString  (hd tproofConstruction))*)
       val _ = print ("  transfer score: " ^ Real.toString score)
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
@@ -643,7 +678,7 @@ struct
       val latexCT = Latex.construction (0.0,0.0) construction;
       val _ = print "done\n";
       val _ = print "\nGenerating LaTeX document...";
-      val latexOriginalConsAndGoals = Latex.environment "center" "" (latexCT);
+      val latexOriginalConsAndGoals = Latex.environment "center" "" latexCT;
       val outputFile = TextIO.openOut outputFilePath
       val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
@@ -653,14 +688,25 @@ struct
   in ()
   end
 
-  fun joinDocumentContents ({typeSystemsData = ts, conSpecsData = sp, knowledge = kb, constructionsData = cs, transferRequests = tr, strengths = st} :: L) =
-  (case joinDocumentContents L of {typeSystemsData = ts', conSpecsData = sp', knowledge = kb', constructionsData = cs', transferRequests = tr', strengths = st'} =>
-      {typeSystemsData = ts @ ts',
-       conSpecsData = sp @ sp',
-       knowledge = Knowledge.join kb kb',
-       constructionsData = cs @ cs',
-       transferRequests = tr @ tr',
-       strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
+  fun joinDocumentContents ({typeSystemsData = ts,
+                             conSpecsData = sp,
+                             knowledge = kb,
+                             constructionsData = cs,
+                             transferRequests = tr,
+                             strengths = st} :: L) =
+    (case joinDocumentContents L of
+      {typeSystemsData = ts',
+       conSpecsData = sp',
+       knowledge = kb',
+       constructionsData = cs',
+       transferRequests = tr',
+       strengths = st'} =>
+          {typeSystemsData = ts @ ts',
+           conSpecsData = sp @ sp',
+           knowledge = Knowledge.join kb kb',
+           constructionsData = cs @ cs',
+           transferRequests = tr @ tr',
+           strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
   | joinDocumentContents [] = emptyDocContent
 
   fun read filename =
@@ -677,7 +723,7 @@ struct
       fun distribute [] = importedContent
         | distribute ((x,c)::L) =
           let val dc = distribute L
-              val (n,eq,ws) = breakOn "=" c
+              val (n,eq,ws) = breakListOn "=" c
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
           in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
              if x = SOME conSpecKW then addConSpec (hd n, ws) dc else
@@ -694,6 +740,4 @@ struct
   in allContent
   end
 
-
-(* TODO: a parser for propagator functions! figure out if you can export ML code from string! *)
 end

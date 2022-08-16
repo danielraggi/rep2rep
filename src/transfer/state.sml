@@ -133,7 +133,7 @@ struct
      transferProof = TransferProof.applyPartialMorphism f (#transferProof st) ,
      construction = #construction st,
      originalGoal = Pattern.applyPartialMorphism f (#originalGoal st),
-     goals = map (Pattern.applyPartialMorphism f) (#goals st),
+     goals = #goals st,
      compositions = #compositions st,
      knowledge = #knowledge st}
 

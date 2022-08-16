@@ -39,7 +39,8 @@ fun ignore ngoals nresults csize unistructured (st,L) =
   List.sumMapInt Composition.size (State.patternCompsOf st) > csize orelse
   List.exists (fn x => similarTransferProofs (x,st)) L orelse
   (unistructured andalso
-   List.exists (fn x => not (Composition.unistructurable (#typeSystem (State.targetTypeSystemOf st)) x)) (State.patternCompsOf st))
+    (length (State.patternCompsOf st) > 1 orelse
+      not (Composition.unistructurable (#typeSystem (State.targetTypeSystemOf st)) (hd (State.patternCompsOf st)))))
 
 fun ignoreRelaxed ngoals nresults (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
@@ -101,7 +102,7 @@ fun multProp (x::L) = x * multProp L
 
 fun hasTokensInTypeSystem ct TS =
   FiniteSet.exists (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty TS))
-                   (Construction.tokensOfConstruction ct)
+                   (Construction.leavesOfConstruction ct)
 fun multiplicativeScore' strength CS (TransferProof.Closed (r,npp,L)) =
       (case strength (#name npp) of
           SOME s => s

@@ -132,6 +132,7 @@ sig
     val allZip : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool;
     val funZip : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list;
     val maps : ('a -> 'b list) -> 'a list -> 'b list;
+    val filterThenMap : ('a -> bool) -> ('a -> 'b) -> 'a list -> 'b list
 end;
 
 structure List : LIST =
@@ -318,6 +319,10 @@ fun funZip _ [] [] = []
 
 fun maps f [] = []
   | maps f (x :: xs) = f x @ maps f xs;
+
+fun filterThenMap f m [] = []
+  | filterThenMap f m (x::L) =
+      if f x then m x :: filterThenMap f m L else filterThenMap f m L
 end;
 
 

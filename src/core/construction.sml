@@ -42,6 +42,7 @@ sig
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
 
   val minus : construction -> construction -> construction list;
+  val subConstructionsRaw : construction -> construction Seq.seq;
 
   val toString : construction -> string;
 
@@ -105,7 +106,7 @@ struct
     | isTrivial _ = false
 
   fun toString (Source t) = CSpace.stringOfToken t
-    | toString (Reference t) = CSpace.stringOfToken t
+    | toString (Reference t) = ("**"^CSpace.stringOfToken t)
     | toString (TCPair ({token,constructor}, cs)) =
        CSpace.stringOfToken token ^ " <- " ^ CSpace.nameOfConstructor constructor ^ (String.stringOfList toString cs)
 
@@ -459,6 +460,10 @@ struct
 
   fun minus ct ct' = minusTCPairs ct (collectTCPairs ct')
 
+  fun subConstructionsRaw (Source t) = Seq.cons (Source t) Seq.empty
+    | subConstructionsRaw (Reference t) = Seq.cons (Reference t) Seq.empty
+    | subConstructionsRaw (TCPair (tc,cs)) =
+        Seq.cons (TCPair (tc,cs)) (Seq.maps subConstructionsRaw (Seq.of_list cs))
 
 (*)
   exception NotSubConstruction;

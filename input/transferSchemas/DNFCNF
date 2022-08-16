@@ -12,63 +12,56 @@ conSpec interDNFCNFG:interDNFCNF =
     constructors
         entails : [prop,prop] -> metaBool
 
-tSchema basicA1:(propDNFG,propCNFG,interDNFCNFG) =
+tSchema basicA:(propDNFG,propCNFG,interDNFCNFG) =
     source t:A:var
     target t':A:var
     antecedent
     consequent :metaTrue <- entails[t:A:var,t':A:var]
     strength 2
 
-tSchema basicA2:(propDNFG,propCNFG,interDNFCNFG) =
-    source t:A:var
-    target t':A:var
-    antecedent
-    consequent :metaTrue <- entails[t':A:var,t:A:var]
-    strength 2
-
-tSchema basicB1:(propDNFG,propCNFG,interDNFCNFG) =
+tSchema basicB:(propDNFG,propCNFG,interDNFCNFG) =
     source t:B:var
     target t':B:var
     antecedent
     consequent :metaTrue <- entails[t:B:var,t':B:var]
     strength 2
 
-tSchema basicB2:(propDNFG,propCNFG,interDNFCNFG) =
-    source t:B:var
-    target t':B:var
-    antecedent
-    consequent :metaTrue <- entails[t':B:var,t:B:var]
-    strength 2
-
-tSchema basicC1:(propDNFG,propCNFG,interDNFCNFG) =
+tSchema basicC:(propDNFG,propCNFG,interDNFCNFG) =
     source t:C:var
     target t':C:var
     antecedent
     consequent :metaTrue <- entails[t:C:var,t':C:var]
     strength 2
 
-tSchema basicC2:(propDNFG,propCNFG,interDNFCNFG) =
-    source t:C:var
-    target t':C:var
+tSchema basicA1:(propDNFG,propCNFG,interDNFCNFG) =
+    source t:-A:nonvar
+    target t':-A:nonvar
     antecedent
-    consequent :metaTrue <- entails[t':C:var,t:C:var]
+    consequent :metaTrue <- entails[t:-A:nonvar,t':-A:nonvar]
     strength 2
 
-tSchema basicD1:(propDNFG,propCNFG,interDNFCNFG) =
+tSchema basicB2:(propDNFG,propCNFG,interDNFCNFG) =
+    source t:-B:nonvar
+    target t':-B:nonvar
+    antecedent
+    consequent :metaTrue <- entails[t:-B:nonvar,t':-B:nonvar]
+    strength 2
+
+tSchema basicC3:(propDNFG,propCNFG,interDNFCNFG) =
+    source t:-C:nonvar
+    target t':-C:nonvar
+    antecedent
+    consequent :metaTrue <- entails[t:-C:nonvar,t':-C:nonvar]
+    strength 2
+
+comment basicD:(propDNFG,propCNFG,interDNFCNFG) =
     source t:D:var
     target t':D:var
     antecedent
     consequent :metaTrue <- entails[t:D:var,t':D:var]
     strength 2
 
-tSchema basicD2:(propDNFG,propCNFG,interDNFCNFG) =
-    source t:D:var
-    target t':D:var
-    antecedent
-    consequent :metaTrue <- entails[t':D:var,t:D:var]
-    strength 2
-
-tSchema neg:(propDNFG,propCNFG,interDNFCNFG) =
+comment neg:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonvar <- neg[t1:var]
     target t':nonvar <- neg[t1':var]
     antecedent :metaTrue <- entails[t1':var,t1:var]
@@ -78,22 +71,23 @@ tSchema neg:(propDNFG,propCNFG,interDNFCNFG) =
 tSchema disjE:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonclauseDNF <- disj[t1:clauseDNF,t2:dnf]
     target t':cnf
-    antecedent :metaTrue <- entails[t1:clauseDNF,t':cnf], :metaTrue <- entails[t2:dnf,t':cnf]
+    antecedent :metaTrue <- entails[t1:clauseDNF,t':cnf],
+               :metaTrue <- entails[t2:dnf,t':cnf]
     consequent :metaTrue <- entails[t:nonclauseDNF,t':cnf]
-    strength 1.5
+    strength 2
 
 tSchema disjI1:(propDNFG,propCNFG,interDNFCNFG) =
     source t:dnf
     target t':nonliteralCNF <- disj[t1':literal,t2':clauseCNF]
     antecedent :metaTrue <- entails[t:dnf,t1':literal]
     consequent :metaTrue <- entails[t:dnf,t':nonliteralCNF]
-    strength 1.5
+    strength 1
 
-comment disjI2:(propDNFG,propCNFG,interDNFCNFG) =
+tSchema disjI2:(propDNFG,propCNFG,interDNFCNFG) =
     source t:dnf
     target t':nonliteralCNF <- disj[t1':literal,t2':clauseCNF]
     antecedent :metaTrue <- entails[t:dnf,t2':clauseCNF]
-    consequent :metaTrue <- entails[t:dnf,t':nonliteral]
+    consequent :metaTrue <- entails[t:dnf,t':nonliteralCNF]
     strength 1
 
 tSchema conjE1:(propDNFG,propCNFG,interDNFCNFG) =
@@ -101,14 +95,14 @@ tSchema conjE1:(propDNFG,propCNFG,interDNFCNFG) =
     target t':cnf
     antecedent :metaTrue <- entails[t1:literal,t':cnf]
     consequent :metaTrue <- entails[t:nonliteralDNF,t':cnf]
-    strength 1.5
+    strength 2
 
 tSchema conjE2:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonliteralDNF <- conj[t1:literal,t2:clauseDNF]
     target t':cnf
     antecedent :metaTrue <- entails[t2:clauseDNF,t':cnf]
     consequent :metaTrue <- entails[t:nonliteralDNF,t':cnf]
-    strength 1.5
+    strength 2
 
 comment conjI:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonliteral
