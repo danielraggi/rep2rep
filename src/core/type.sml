@@ -44,6 +44,7 @@ sig
   datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ
   val subTypeDAG : typeSystemData -> typ -> typeDAG
   val superTypeDAG : typeSystemData -> typ -> typeDAG
+  val typeDAGtoString : typeDAG -> string
 
   val greatestCommonSubType : typeSystemData
                                 -> typ
@@ -159,13 +160,13 @@ struct
 
   fun maximal typeSystem tys =
     let val subType = #subType typeSystem
-        fun noGreaterType x = FiniteSet.all (fn y => not (subType (x,y))) tys
+        fun noGreaterType x = FiniteSet.all (fn y => equal x y orelse not (subType (x,y))) tys
     in FiniteSet.filter noGreaterType tys
     end
 
   fun minimal typeSystem tys =
     let val subType = #subType typeSystem
-        fun noLesserType x = FiniteSet.all (fn y => not (subType (y,x))) tys
+        fun noLesserType x = FiniteSet.all (fn y => equal x y orelse not (subType (y,x))) tys
     in FiniteSet.filter noLesserType tys
     end
 
@@ -195,6 +196,9 @@ struct
   fun inTypeDAG ty (Node (ty',tTs)) = equal ty ty' orelse FiniteSet.exists (inTypeDAG ty) tTs
     | inTypeDAG ty (Leaf ty') = equal ty ty'
     | inTypeDAG ty (Ref ty') = equal ty ty'
+  fun typeDAGtoString (Node (ty,tTs)) = ty ^ String.stringOfList typeDAGtoString tTs
+    | typeDAGtoString (Leaf ty) = ty
+    | typeDAGtoString (Ref ty) = ty
 
   fun superTypeDAG TSD ty =
     let fun makeDAG rtys rty =
@@ -202,10 +206,12 @@ struct
           in if FiniteSet.isEmpty strictSuperTys
              then Leaf rty
              else let val immediateSuperTys = minimal (#typeSystem TSD) strictSuperTys
+                      val _ = print "\nhere: "
+                      val _ = map print strictSuperTys
                       fun mapUnless prevDAGs (isty::istys) =
-                          if FiniteSet.exists (inTypeDAG isty) prevDAGs
-                          then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
-                          else mapUnless (FiniteSet.insert (makeDAG strictSuperTys isty) prevDAGs) istys
+                            if FiniteSet.exists (inTypeDAG isty) prevDAGs
+                            then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
+                            else mapUnless (FiniteSet.insert (makeDAG strictSuperTys isty) prevDAGs) istys
                         | mapUnless prevDAGs [] = prevDAGs
                   in Node (rty, mapUnless [] immediateSuperTys)
                   end
@@ -218,7 +224,7 @@ struct
           let val strictSubTys = subTypesIn TSD rty (FiniteSet.filter (fn x => not (equal x rty)) rtys)
           in if FiniteSet.isEmpty strictSubTys
              then Leaf rty
-             else let val immediateSubTys = minimal (#typeSystem TSD) strictSubTys
+             else let val immediateSubTys = maximal (#typeSystem TSD) strictSubTys
                       fun mapUnless prevDAGs (isty::istys) =
                           if FiniteSet.exists (inTypeDAG isty) prevDAGs
                           then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
