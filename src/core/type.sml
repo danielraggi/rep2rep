@@ -206,8 +206,6 @@ struct
           in if FiniteSet.isEmpty strictSuperTys
              then Leaf rty
              else let val immediateSuperTys = minimal (#typeSystem TSD) strictSuperTys
-                      val _ = print "\nhere: "
-                      val _ = map print strictSuperTys
                       fun mapUnless prevDAGs (isty::istys) =
                             if FiniteSet.exists (inTypeDAG isty) prevDAGs
                             then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
