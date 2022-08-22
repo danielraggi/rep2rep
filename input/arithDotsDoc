@@ -62,7 +62,7 @@ transfer
     sourceConstruction 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaBool <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
+    goal :metaTrue <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
     output test
     limit 1
 
@@ -70,12 +70,12 @@ transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaBool <- formulaIsValid[t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula]
+    goal :metaTrue <- formulaIsValid[t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula]
     output interSpaceTest
     limit 2
 
 construction test1:arithG =
-    t:formula <- applyUnary[t1:unary,t2:y:formula <- applyUnary[t21:unary,t22:w:formula <- applyUnary[t221:unary,t:formula]]]
+    t:formula <- logicApplyUnary[t1:unary,t2:y:formula <- logicApplyUnary[t21:unary,t22:w:formula <- logicApplyUnary[t221:unary,t:formula]]]
 
 construction test2:arithG =
-    t22:w:formula <- applyUnary[t221:unary,t3:formula <- applyUnary[tx1:unary,tx2:formula]]
+    t22:w:formula <- logicApplyUnary[t221:unary,t3:formula <- logicApplyUnary[tx1:unary,tx2:formula]]
