@@ -23,8 +23,8 @@ typeSystem arith =
 
 conSpec basicLogicG:basicLogic =
   constructors
-    infixOp : [formula,binary,formula] -> formula,
-    applyUnary : [unary,formula] -> formula
+    logicInfixOp : [formula,binary,formula] -> formula,
+    logicApplyUnary : [unary,formula] -> formula
 
 conSpec arithG:arith =
   imports basicLogicG
