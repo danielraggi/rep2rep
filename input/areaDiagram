@@ -1,0 +1,15 @@
+import num
+
+typeSystem areaDiagram =
+  imports num, shade
+  types  _:label, _:area, _:rect, _:point, empty
+  order empty < area
+
+conSpec areaDiagramG:areaDiagram =
+  imports numG
+  constructors
+    notLabel: [label] -> label,
+    cPoint:[numExp, numExp] -> point,
+    cRect: [point, point] -> rect,
+    overlayRect: [area, rect, label, shading] -> area,
+    combine: [area, area] -> area
