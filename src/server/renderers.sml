@@ -21,10 +21,13 @@ fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
                                            Rpc.Datatype.tuple3(String.string_rpc,
                                                                Real.real_rpc,
                                                                Real.real_rpc))))
-        renderer;
+        (fn c => let val _ = print ("Starting render of " ^ cspace ^ "\n");
+                    val result = renderer(c);
+                    val _ = print ("Finished!\n");
+                in result end);
 
 (* To provide a new renderer, update all to have a new entry, such as
-        ("arithG", mkEndpoint("arithG", my_arithg_renderer))
+        ("arithG", mkEndpoint "arithG" my_arithg_renderer)
    where my_arithg_renderer is your renderer for the construction space.
  *)
 val all = [("contTable",    mkEndpoint "contTable" ProbRender.drawTable),
