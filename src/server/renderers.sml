@@ -30,8 +30,8 @@ fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
         ("arithG", mkEndpoint "arithG" my_arithg_renderer)
    where my_arithg_renderer is your renderer for the construction space.
  *)
-val all = [("contTable",    mkEndpoint "contTable" ProbRender.drawTable),
-           ("probTree",     mkEndpoint "probTree" ProbRender.drawTree),
-           ("areaDiagram",  mkEndpoint "areaDiagram" ProbRender.drawArea)];
+val all = [("contTableG",    mkEndpoint "contTableG" ProbRender.drawTable),
+           ("probTreeG",     mkEndpoint "probTreeG" ProbRender.drawTree),
+           ("areaDiagramG",  mkEndpoint "areaDiagramG" ProbRender.drawArea)];
 
 end;
