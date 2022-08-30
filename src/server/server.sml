@@ -3,6 +3,7 @@ import "core.type";
 import "core.cspace";
 import "core.construction";
 import "oruga.document";
+import "server.renderers";
 
 signature SERVER = sig
     val make: string list -> Rpc.endpoint list;
@@ -48,6 +49,7 @@ val getPrincipalTypes_sig = ("server.getPrincipalTypes",
 val getTypeContext_sig = ("server.getTypeContext",
                           Rpc.Datatype.tuple2 (String.string_rpc, Type.typ_rpc),
                           List.list_rpc (Rpc.Datatype.tuple2 (Type.typ_rpc, Type.typ_rpc)));
+val renderers_sig = ("server.renderers", unit_rpc, List.list_rpc(Rpc.Datatype.tuple2 (String.string_rpc, String.string_rpc)));
 
 fun make files =
     let
@@ -58,9 +60,10 @@ fun make files =
         Rpc.provide spaces_sig (fn () => spaces),
         Rpc.provide getSpace_sig (fn name => getSpace spaces name),
         Rpc.provide typeSystems_sig (fn () => map makeTSDescription typeSystems),
+        Rpc.provide renderers_sig (fn () => map (mapsnd Rpc.endpointName) Renderers.all),
         Rpc.provide getPrincipalTypes_sig (fn name => getPrincipalTypes typeSystems name),
         Rpc.provide getTypeContext_sig (fn (systemName, typ) => getTypeContext typeSystems systemName typ),
         Construction.R.toString
-    ] end;
+    ] @ map #2 Renderers.all end;
 
 end;
