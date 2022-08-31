@@ -57,18 +57,19 @@ fun eventToString (SEVENT(x)) = x
     |eventToString (NEVENT(x)) = x
 
 fun parseShading (Construction.Source(x)) =
-    let val a = #2 x in
-        if String.substring(a, 0, 3) = "red" then RED
-        else if String.substring(a, 0, 4) = "blue" then BLUE
-        else if String.substring(a, 0, 5) = "white" then WHITE
-        else if String.substring(a, 0, 5) = "green" then GREEN
-        else if String.substring(a, 0, 7) = "pattern" then PATTERN
-        else WHITE
+    let val a = #2 x 
+        val b = #1 x in
+        if String.substring(a, 0, 3) = "red" then (RED, [(b, "RED")])
+        else if String.substring(a, 0, 4) = "blue" then (BLUE, [(b, "BLUE")])
+        else if String.substring(a, 0, 5) = "white" then (WHITE, [(b, "WHITE")])
+        else if String.substring(a, 0, 5) = "green" then (GREEN, [(b, "GREEN")])
+        else if String.substring(a, 0, 7) = "pattern" then (PATTERN, [(b, "PATTERN")])
+        else (WHITE, [(b, "WHITE")])
     end
     |parseShading _ = raise ShadeError;
 
 fun parseNum (Construction.Source(x)) =
-        if (Char.isAlpha(String.sub(#2 x, 0)) andalso (not (String.substring(#2 x, 0, 2) = "fp"))) then VAR(String.substring(#2 x, 0, 1))
+        if (Char.isAlpha(String.sub(#2 x, 0)) andalso (not (String.substring(#2 x, 0, 2) = "fp"))) then (VAR(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
         else let fun range_num x s = 
                     if(Char.isDigit(String.sub(x, s))) then range_num x (s+1)
                     else s
@@ -82,25 +83,35 @@ fun parseNum (Construction.Source(x)) =
             in
             if(String.substring(#2 x, 0, 2) = "fp") then 
                 let val m = range_num (#2 x) 2 in
-                    DEC(String.substring(#2 x, 2, m-2))
+                    (DEC(String.substring(#2 x, 2, m-2)), [(#1 x, "0."^String.substring(#2 x, 2, m-2))])
                 end
-            else NUM(f x 0)
+            else (NUM(f x 0), [(#1 x, Int.toString (f x 0))])
         end
     |parseNum (Construction.TCPair(x,y)) =
         if (#1 (#constructor x)) = "infixOp" then
-            let val a = parseNum (List.nth (y,0)) 
-                val b = parseNum (List.nth (y,2)) in
+            let val (a,y1) = parseNum (List.nth (y,0)) 
+                val (b,y2) = parseNum (List.nth (y,2)) in
                 case (List.nth (y,1)) of
                     Construction.Source(z) => (case (#2 z) of
-                                                "plus" => PLUS(a,b)
-                                                |"minus" => MINUS(a,b)
+                                                "plus" => (PLUS(a,b), (#1 z, "+")::y1@y2)
+                                                |"minus" => (MINUS(a,b), (#1 z, "-")::y1@y2)
                                                 |_ => raise NumError)
                     |_ => raise NumError
             end
-        else if (#1 (#constructor x)) = "frac" then FRAC(parseNum (hd(y)), parseNum (List.last(y)))
-        else if (#1 (#constructor x)) = "implicitMult" then MULT(parseNum (hd(y)), parseNum (List.last(y)))
+        else if (#1 (#constructor x)) = "frac" then 
+            let val (a,y1) = parseNum (List.nth (y,0)) 
+                val (b,y2) = parseNum (List.last(y)) in
+                case (List.nth (y,1)) of
+                    Construction.Source(z) => (FRAC(a,b), (#1 z, "/")::y1@y2)
+                    |_ => raise NumError
+            end
+        else if (#1 (#constructor x)) = "implicitMult" then 
+            let val (a,y1) = parseNum (List.nth (y,0)) 
+                val (b,y2) = parseNum (List.last(y)) in
+                (MULT(a,b), y1@y2)
+            end
         else raise NumError
-    |parseNum (Construction.Reference(x)) = VAR(String.substring(#2 x, 0, 1))
+    |parseNum (Construction.Reference(x)) = (VAR(String.substring(#2 x, 0, 1)), [])
 
 fun onlyNum U = false
     |onlyNum (NUM(x)) = true
@@ -1206,20 +1217,63 @@ fun resolve a b (n:int) =
         filterNum x y (countU a) (countU b)
     end
 
+fun stringToHTML xs =
+    case xs of
+    [] => []
+    |(a,b)::xs => if b = "empty" then (a,  ("<div>\n"^
+                                            "<svg width=\"200\" height=\"200\">\n"^
+                                            "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
+                                            "</svg>\n"^
+                                            "</div>",
+                                            200.0,200.0))::stringToHTML xs
+                  else if String.substring(b,0,1) = "!" then 
+                    (a,("<div>\n"^
+                        "<svg width=\"60\" height=\"18\" font-size=\"12px\">\n"^
+                        "<rect width=\"60\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
+                        "<text text-anchor=\"middle\" transform=\"translate(30,14)\"><tspan text-decoration=\"overline\">"^(String.substring(b,1,(String.size b)-1))^"</tspan></text>"^
+                        "</svg>\n"^
+                        "</div>",
+                        60.0,18.0))::stringToHTML xs
+                  else  (a,("<div>\n"^
+                            "<svg width=\"60\" height=\"18\" font-size=\"12px\">\n"^
+                            "<rect width=\"60\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
+                            "<text text-anchor=\"middle\" transform=\"translate(30,14)\">"^b^"</text>\n"^
+                            "</svg>\n"^
+                            "</div>",
+                            60.0,18.0))::stringToHTML xs
+
 fun drawArea x =
     let fun parseArea (Construction.Source(x)) =
-                if String.substring(#2 x, 0, 5) = "empty" then EMPTY
-                else if Char.isAlpha(String.sub(#2 x, 0)) then LABEL(String.substring(#2 x, 0, 1))
+                if String.substring(#2 x, 0, 5) = "empty" then (EMPTY, [(#1 x, "empty")])
+                else if Char.isAlpha(String.sub(#2 x, 0)) then (LABEL(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
                 else raise AreaError
             |parseArea (Construction.TCPair(x,y)) =
                 if (#1 (#constructor x)) = "notLabel" then 
                     (case (parseArea (hd(y))) of
-                        LABEL(a) => NLABEL(a)
+                        (LABEL(a),b) => (NLABEL(a),[((#1 (hd(b))), "!"^(#2 (hd(b))))])
                         |_ => raise AreaError)
-                else if (#1 (#constructor x)) = "cPoint" then POINT(parseNum (hd(y)), parseNum (List.last(y)))
-                else if (#1 (#constructor x)) = "cRect" then RECT(parseArea (hd(y)), parseArea (List.last(y)))
-                else if (#1 (#constructor x)) = "overlay" then OVERLAY((#1 (#token x)), parseArea (hd(y)), parseArea (List.nth(y,1)), parseArea (List.nth(y,2)), parseShading (List.last(y)))
-                else if (#1 (#constructor x)) = "combine" then COMBAREA((#1 (#token x)), parseArea (hd(y)), parseArea (List.last(y)))
+                else if (#1 (#constructor x)) = "cPoint" then 
+                    let val (x1,z1) = parseNum (hd(y))
+                        val (x2,z2) = parseNum (List.last(y)) in
+                        (POINT(x1,x2),z1@z2)
+                    end
+                else if (#1 (#constructor x)) = "cRect" then 
+                    let val (x1,y1) = parseArea (hd(y))
+                        val (x2,y2) = parseArea (List.last(y)) in
+                        (RECT(x1,x2),y1@y2)
+                    end
+                else if (#1 (#constructor x)) = "overlayRect" then 
+                    let val (x1,y1) = parseArea (hd(y))
+                        val (x2,y2) = parseArea (List.nth(y,1))
+                        val (x3,y3) = parseArea (List.nth(y,2))
+                        val (x4,y4) = parseShading (List.last(y)) in
+                        (OVERLAY((#1 (#token x)),x1,x2,x3,x4),y1@y2@y3@y4)
+                    end
+                else if (#1 (#constructor x)) = "combine" then 
+                    let val (x1,y1) = parseArea (hd(y))
+                        val (x2,y2) = parseArea (List.last(y)) in
+                        (COMBAREA((#1 (#token x)),x1,x2),y1@y2)
+                    end
                 else raise AreaError
             |parseArea (Construction.Reference(x)) = raise AreaError 
         fun convertArea EMPTY = (([],[],[],[]),[])
@@ -1333,9 +1387,9 @@ fun drawArea x =
                     else numToString (NUM(245))
                 fun shadeToString x =
                     case x of
-                    BLUE => "lightblue"
-                    |RED => "ligthcoral"
-                    |GREEN => "lightyellow"
+                    BLUE => "#99b3ff"
+                    |RED => "#f08080"
+                    |GREEN => "#8cd98c"
                     |WHITE => "white"
                     |PATTERN => "url(#diagonalHatch)"
                 fun toDocArea (x,y,z,w) =
@@ -1371,22 +1425,37 @@ fun drawArea x =
                 val content = toDocArea ((List.map eventToString a), b, (List.map shadeToString c), d)
                 in (m,((header^content^footer),300.0,240.0))
             end
-        val (_,n) = convertArea (parseArea x)
+        val (a,b) = parseArea x
+        val (_,n) = convertArea a
         val ns = List.map areaToHTML n in
-        ns
+        ns@(stringToHTML b)
     end
 
 fun drawTable x =
     let fun parseTable (Construction.Source(x)) =
-                if Char.isAlpha(String.sub(#2 x, 0)) then NAME(String.substring(#2 x, 0, 1))
+                if Char.isAlpha(String.sub(#2 x, 0)) then (NAME(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
                 else raise TableError
             |parseTable (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "constructOne" then ONEWAY((#1 (#token x)), parseTable (hd(y)), parseNum (List.last(y)))
-                else if (#1 (#constructor x)) = "constructTwo" then TWOWAY((#1 (#token x)), parseTable (hd(y)), parseTable (List.nth(y, 1)), parseNum (List.last(y)))
-                else if (#1 (#constructor x)) = "combine" then COMB((#1 (#token x)), parseTable (hd(y)), parseTable (List.last(y)))
-                else if (#1 (#constructor x)) = "notName" then (case (parseTable (hd(y))) of 
-                                                                NAME(a) => NNAME(a) 
-                                                                |_ => raise TableError)
+                if (#1 (#constructor x)) = "constructOne" then 
+                    let val (x1,y1) = parseTable (hd(y))
+                        val (x2,y2) = parseNum (List.last(y)) in 
+                        (ONEWAY((#1 (#token x)), x1, x2), y1@y2)
+                    end
+                else if (#1 (#constructor x)) = "constructTwo" then 
+                    let val (x1,y1) = parseTable (hd(y))
+                        val (x2,y2) = parseTable (List.nth(y, 1))
+                        val (x3,y3) = parseNum (List.last(y)) in 
+                        (TWOWAY((#1 (#token x)), x1, x2, x3), y1@y2@y3)
+                    end
+                else if (#1 (#constructor x)) = "combine" then 
+                    let val (x1,y1) = parseTable (hd(y))
+                        val (x2,y2) = parseTable (List.last(y)) in 
+                        (COMB((#1 (#token x)), x1, x2), y1@y2)
+                    end
+                else if (#1 (#constructor x)) = "notName" then 
+                    (case (parseTable (hd(y))) of 
+                        (NAME(a),b) => (NNAME(a),[(#1 (hd(b)), "!"^(#2 (hd(b))))]) 
+                        |_ => raise TableError)
                 else raise TableError
             |parseTable _ = raise TableError
         fun convertTable (NAME(x)) = (([SEVENT(x)], []),[])
@@ -1439,7 +1508,7 @@ fun drawTable x =
                                                 "<tr>\n"^
                                                 "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">Total</th>\n"^
                                                 "<td style=\"border: 1px solid;\">1</td>\n",
-                                                150.0)
+                                                140.0)
                     else   ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
                             "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">"^(List.nth(x,1))^"</th>\n"^
                             "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,1))^"</span></th>\n"^
@@ -1462,7 +1531,7 @@ fun drawTable x =
                             "<td style=\"border: 1px solid;\">"^(List.nth(y,2))^"</td>\n"^
                             "<td style=\"border: 1px solid;\">"^(List.nth(y,3))^"</td>\n"^
                             "<td style=\"border: 1px solid;\">1</td>\n",
-                            290.0)
+                            280.0)
                 val header =    "<div>\n"^
                                 "<table style=\"text-align:center; border-collapse:collapse; background-color:white; font-size:12px;\">\n"^
                                 "<tr>\n"
@@ -1471,23 +1540,38 @@ fun drawTable x =
                                 "</div>\n"
                 val (content,w) = toDocTable ((List.map eventToString a),(List.map numToString b))
                 in
-                (m, ((header^content^footer),w,110.0))
+                (m, ((header^content^footer),w,100.0))
             end
-        val (_,n) = convertTable (parseTable x)
+        val (a,b) = parseTable x
+        val (_,n) = convertTable a
         val ns = List.map tableToHTML n
         in
-        ns
+        ns@(stringToHTML b)
     end
 
 fun drawTree x =
-    let fun parseTree (Construction.Source(x)) = BRANCH(String.substring(#2 x, 0, 1))
+    let fun parseTree (Construction.Source(x)) = (BRANCH(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
             |parseTree (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "construct" then TREE((#1 (#token x)), parseTree (hd(y)), parseNum (List.last(y)))
-                else if (#1 (#constructor x)) = "add" then ADD((#1 (#token x)), parseTree (hd(y)), parseTree (List.nth(y, 1)), parseNum (List.last(y)))
-                else if (#1 (#constructor x)) = "resolve" then RESOLVE((#1 (#token x)), parseTree (hd(y)), parseTree (List.last(y)))
-                else if (#1 (#constructor x)) = "notLabel" then (case (parseTree (hd(y))) of
-                                                                    BRANCH(a) => NBRANCH(a)
-                                                                    |_ => raise TreeError)
+                if (#1 (#constructor x)) = "construct" then 
+                    let val (x1,y1) = parseTree (hd(y))
+                        val (x2,y2) = parseNum (List.last(y)) in
+                        (TREE((#1 (#token x)),x1,x2), y1@y2)
+                    end
+                else if (#1 (#constructor x)) = "addBranch" then 
+                    let val (x1,y1) = parseTree (hd(y))
+                        val (x2,y2) = parseTree (List.nth(y, 1)) 
+                        val (x3,y3) = parseNum (List.last(y)) in
+                        (ADD((#1 (#token x)), x1, x2, x3), y1@y2@y3)
+                    end
+                else if (#1 (#constructor x)) = "resolve" then 
+                    let val (x1,y1) = parseTree (hd(y))
+                        val (x2,y2) = parseTree (List.last(y)) in
+                        (RESOLVE((#1 (#token x)),x1,x2), y1@y2)
+                    end   
+                else if (#1 (#constructor x)) = "notLabel" then 
+                    (case (parseTree (hd(y))) of
+                        (BRANCH(a),b) => (NBRANCH(a),[((#1 (hd(b))), "!"^(#2 (hd(b))))])
+                        |_ => raise TreeError)
                 else raise TreeError
             |parseTree (Construction.Reference(x)) = raise TreeError
         fun convertTree (BRANCH(x)) = (([SEVENT(x)],[]), [])
@@ -1585,10 +1669,11 @@ fun drawTree x =
                 in
                 (m, ((header^content^footer),w,h))
             end
-        val (_,n) = (convertTree (parseTree x))
+        val (a,b) = parseTree x
+        val (_,n) = convertTree a
         val ns = List.map treeToHTML n
         in
-        ns
+        ns@(stringToHTML b)
     end
 
 end;

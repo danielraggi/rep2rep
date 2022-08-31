@@ -13,7 +13,7 @@ conSpec numG:num =
     implicitMult : [numExp,numExp] -> numExp
 
 typeSystem shade =
-    types white, blue, red, pattern, _:shading
+    types white, blue, red, green, pattern, _:shading
     order white < shading, 
           blue < shading, 
           red < shading, 
