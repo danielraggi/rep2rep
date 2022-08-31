@@ -1,0 +1,76 @@
+import bayes
+import contTable
+import metaLogic
+import transferSchemas/numNum-inter
+
+typeSystem interBayesTableT =
+    imports bayes, contTable, metaLogicT
+    types
+    order
+
+conSpec interBayesTable:interBayesTableT =
+    imports contTableG, bayesG, interNumNum
+    constructors
+        match : [events,name] -> metaBool,
+        encode : [probSys,table] -> metaBool
+
+tSchema eventA:(bayesG,contTableG,interBayesTable) =
+    source t:A:event
+    target t':A:name
+    antecedent
+    consequent :metaTrue <- match[t:A:event,t':A:name]
+    strength 1
+
+tSchema eventB:(bayesG,contTableG,interBayesTable) =
+    source t:B:event
+    target t':B:name
+    antecedent
+    consequent :metaTrue <- match[t:B:event,t':B:name]
+    strength 1
+
+tSchema complEvent:(bayesG,contTableG,interBayesTable) =
+    source t:event <- complement[t1:overline,t2:event]
+    target t':name <- notName[t1':name]
+    antecedent :metaTrue <- match[t2:event,t1':name]
+    consequent :metaTrue <- match[t:event,t':name]
+    strength 1
+
+tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
+    source t:probEqn <- prob[t1:events,t2:numExp]
+    target t':oneway <- constructOne[t1':name,t2':numExp]
+    antecedent :metaTrue <- match[t1:events,t1':name],
+               :metaTrue <- equal[t2:numExp,t2':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':oneway]
+    strength 1
+
+tSchema condProb:(bayesG,contTableG,interBayesTable) =
+    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+                             t2:numExp]
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':a:numExp],
+                                     t2':oneway <- constructOne[t21':name,t22':b:numExp], 
+                                     t3':numExp <- implicitMult[t31':numExp,t22':b:numExp]]
+    antecedent :metaTrue <- match[t11:event,t11':name],
+               :metaTrue <- match[t13:event,t21':name],
+               :metaTrue <- equal[t2:numExp,t31':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':twoway]
+    strength 1
+
+tSchema jointProb:(bayesG,contTableG,interBayesTable) =
+    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+                             t2:numExp]
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':a:numExp],
+                                     t2':oneway <- constructOne[t21':name,t22':b:numExp], 
+                                     t3':numExp]
+    antecedent :metaTrue <- match[t11:event,t11':name],
+               :metaTrue <- match[t13:event,t21':name],
+               :metaTrue <- equal[t2:numExp,t3':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':twoway]
+    strength 1
+
+tSchema combineEqn:(bayesG,contTableG,interBayesTable) =
+    source t:probSys <- addEqn[t1:probEqn,t2:probSys]
+    target t':table <- combine[t1':table,t2':table]
+    antecedent :metaTrue <- encode[t1:probEqn,t1':table],
+               :metaTrue <- encode[t2:probSys,t2':table]
+    consequent :metaTrue <- encode[t:probSys,t':table]
+    strength 1

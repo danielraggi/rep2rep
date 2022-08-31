@@ -1,0 +1,93 @@
+import bayes
+import areaDiagram
+import metaLogic
+import transferSchemas/numNum-inter
+
+typeSystem interBayesAreaT =
+    imports bayes, areaDiagram, metaLogicT
+    types
+    order
+
+conSpec interBayesArea:interBayesAreaT =
+    imports areaDiagramG, bayesG, interNumNum
+    constructors
+        match : [events,label] -> metaBool,
+        encode : [probSys,area] -> metaBool
+
+tSchema eventA:(bayesG,areaDiagramG,interBayesArea) =
+    source t:A:event
+    target t':A:label
+    antecedent
+    consequent :metaTrue <- match[t:A:event,t':A:label]
+    strength 1
+
+tSchema eventB:(bayesG,areaDiagramG,interBayesArea) =
+    source t:B:event
+    target t':B:label
+    antecedent
+    consequent :metaTrue <- match[t:B:event,t':B:label]
+    strength 1
+
+tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
+    source t:event <- complement[t1:overline,t2:event]
+    target t':label <- notLabel[t1':label]
+    antecedent :metaTrue <- match[t2:event,t1':label]
+    consequent :metaTrue <- match[t:event,t':label]
+    strength 1
+
+tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
+    source t:probEqn <- prob[t1:events,t2:numExp]
+    target t':area <- overlayRect[t1':empty,
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
+                                                    t22':point <- cPoint[t221':numExp,t222':1:numExp]],
+                                  t3':label,
+                                  t4':pattern]
+    antecedent :metaTrue <- match[t1:events,t3':label],
+               :metaTrue <- equal[t2:numExp,t221':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
+    strength 1
+
+tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
+    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+                             t2:numExp]
+    target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
+                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:numExp,t1212':0:numExp],
+                                                                            t122':point <- cPoint[t1221':a:numExp,t1222':1:numExp]],
+                                                          t13':label,
+                                                          t14':blue],
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
+                                                    t22':point <- cPoint[t1221':a:numExp,t222':numExp]],
+                                  t3':label,
+                                  t4':pattern]
+    antecedent :metaTrue <- match[t11:event,t3':label],
+               :metaTrue <- match[t13:event,t13':label],
+               :metaTrue <- equal[t2:numExp,t222':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
+    strength 1
+
+tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
+    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+                             t2:numExp]
+    target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
+                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:numExp,t1212':0:numExp],
+                                                                            t122':point <- cPoint[t1221':a:numExp,t1222':1:numExp]],
+                                                          t13':label,
+                                                          t14':white],
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
+                                                    t22':point <- cPoint[t1221':a:numExp,
+                                                                         t222':numExp <- frac[t2221':numExp,t2222':div,t1221':a:numExp]]],
+                                  t3':label,
+                                  t4':pattern]
+    antecedent :metaTrue <- match[t11:event,t13':label],
+               :metaTrue <- match[t13:event,t3':label],
+               :metaTrue <- equal[t2:numExp,t2221':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
+    strength 1 
+
+tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
+    source t:probSys <- addEqn[t1:probEqn,t2:probSys]
+    target t':area <- combine[t1':area,t2':area]
+    antecedent :metaTrue <- encode[t1:probEqn,t1':area],
+               :metaTrue <- encode[t2:probSys,t2':area]
+    consequent :metaTrue <- encode[t:probSys,t':area]
+    strength 1
