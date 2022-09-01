@@ -32,6 +32,7 @@ fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
  *)
 val all = [("contTableG",    mkEndpoint "contTableG" ProbRender.drawTable),
            ("probTreeG",     mkEndpoint "probTreeG" ProbRender.drawTree),
-           ("areaDiagramG",  mkEndpoint "areaDiagramG" ProbRender.drawArea)];
+           ("areaDiagramG",  mkEndpoint "areaDiagramG" ProbRender.drawArea),
+           ("bayesG",        mkEndpoint "bayesG" ProbRender.drawBayes)];
 
 end;
