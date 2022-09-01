@@ -1,0 +1,11 @@
+typeSystem basicLogic =
+  types formula, and, or, implies, not, binary, unary
+  order and < binary,
+        or < binary,
+        implies < binary,
+        not < unary
+
+conSpec basicLogicG:basicLogic =
+  constructors
+    logicInfixOp : [formula,binary,formula] -> formula,
+    logicApplyUnary : [unary,formula] -> formula

@@ -24,8 +24,8 @@ construction 1plus2plus3equalsStuff:arithG =
                                 t33:2:numeral]]
 
 construction 1plus2plus3plus4equalsStuff:arithG =
-    t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula
-        <- infixRel[t1:1plus2plus3plus4:numExp
+    t:1+2+3+4=4(4+1)/2:formula
+        <- infixRel[t1:1+2+3+4:numExp
                         <- infixOp[t11:1plus2plus3:numExp
                                         <- infixOp[t111:1plus2:numExp
                                                         <- infixOp[t1111:1:numeral,
@@ -70,7 +70,7 @@ transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaTrue <- formulaIsValid[t:1plus2plus3plus4equals4oB4plus1cBdiv2:formula]
+    goal :metaTrue <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
     output interSpaceTest
     limit 2
 

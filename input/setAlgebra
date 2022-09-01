@@ -1,3 +1,5 @@
+import basicLogic
+
 typeSystem setAlgebra =
     imports basicLogic
     types _:var, _:formula, _:bset, _:set, \emptyset, \in, \cup, \cap, \subseteq,
@@ -11,10 +13,7 @@ typeSystem setAlgebra =
           \subseteq < binaryRel,
           \cup < binaryOp,
           \cap < binaryOp,
-          \powerset < unaryOp,
-          and < binaryLogical,
-          implies < binaryLogical,
-          not < unaryLogical
+          \powerset < unaryOp
 
 conSpec setAlgebraG:setAlgebra =
   imports basicLogicG
