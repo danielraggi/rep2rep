@@ -19,7 +19,7 @@ tSchema test:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- implicitMult[n:numExp,m:numExp]
     target t':rectangle <- fillRectangle[t1':line,t2':line]
     antecedent :metaTrue <- perpendicular[t1':line,t2':line],
-               :metaTrue <- count[t3':arr <- intersection[t1':line,t2':line],l:1:numeral],
+               :metaTrue <- count[t3':arr <- intersect[t1':line,t2':line],l:1:numeral],
                :metaTrue <- count[t1':line,n:numExp],
                :metaTrue <- count[t2':line,m:numExp]
     consequent :metaTrue <- count[t':rectangle,t:numExp]
@@ -58,7 +58,7 @@ tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =
 
 tSchema div2symmetry:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- frac[t1:numExp,line:div,t2:2:numeral]
-    target t':arr <- rotateX[t1':arr <- remove[t2':arr,t':arr]]
+    target t':arr <- manipulate[t1':arr <- remove[t2':arr,t':arr],t2':manipulation]
     antecedent :metaTrue <- count[t2':arr,t1:numExp]
     consequent :metaTrue <- count[t':arr,t:numExp]
     strength 2
