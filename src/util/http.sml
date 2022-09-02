@@ -239,10 +239,22 @@ fun send_http sock vec =
     else raise (HttpError "Failed to send all bytes.")
     end;
 
+fun recvVecNB (sock, chunk_size) =
+    let val ready = Socket.select {
+                rds = [Socket.sockDesc sock],
+                wrs = [],
+                exs = [],
+                timeout = SOME(Time.fromMilliseconds 100)
+            };
+    in if List.length (#rds ready) = 0
+       then NONE
+       else SOME (Socket.recvVec (sock, chunk_size))
+    end handle _ => NONE;
+
 fun recv_bytes sock =
     let fun f ans =
             let val chunk_size = 65536;
-                val inv = Socket.recvVecNB (sock, chunk_size); in
+                val inv = recvVecNB (sock, chunk_size); in
                 case inv of
                     NONE => Word8Vector.concat (List.rev ans)
                   | SOME inv => f (inv::ans)
