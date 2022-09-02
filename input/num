@@ -1,0 +1,21 @@
+typeSystem num =
+    types _:numeral, _:var, _:numExp,
+          plus, minus, div, binOp
+    order var < numExp,
+          numeral < numExp,
+          plus < binOp,
+          minus < binOp
+
+conSpec numG:num =
+  constructors
+    infixOp : [numExp,binOp,numExp] -> numExp,
+    frac : [numExp,div,numExp] -> numExp,
+    implicitMult : [numExp,numExp] -> numExp
+
+typeSystem shade =
+    types white, blue, red, green, pattern, _:shading
+    order white < shading, 
+          blue < shading, 
+          red < shading, 
+          green < shading,
+          pattern < shading

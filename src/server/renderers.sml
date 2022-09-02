@@ -1,5 +1,6 @@
 import "core.construction";
 import "util.rpc";
+import "server.prob_renderers";
 
 signature RENDERERS = sig
     val all: (string * Rpc.endpoint) list;
@@ -20,12 +21,18 @@ fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
                                            Rpc.Datatype.tuple3(String.string_rpc,
                                                                Real.real_rpc,
                                                                Real.real_rpc))))
-        renderer;
+        (fn c => let val _ = print ("Starting render of " ^ cspace ^ "\n");
+                    val result = renderer(c);
+                    val _ = print ("Finished!\n");
+                in result end);
 
 (* To provide a new renderer, update all to have a new entry, such as
-        ("arithG", mkEndpoint("arithG", my_arithg_renderer))
+        ("arithG", mkEndpoint "arithG" my_arithg_renderer)
    where my_arithg_renderer is your renderer for the construction space.
  *)
-val all = [];
+val all = [("contTableG",    mkEndpoint "contTableG" ProbRender.drawTable),
+           ("probTreeG",     mkEndpoint "probTreeG" ProbRender.drawTree),
+           ("areaDiagramG",  mkEndpoint "areaDiagramG" ProbRender.drawArea),
+           ("bayesG",        mkEndpoint "bayesG" ProbRender.drawBayes)];
 
 end;

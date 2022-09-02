@@ -1,0 +1,17 @@
+import num
+
+typeSystem bayes =
+  imports num
+  types _:event, _:condEvent, _:events,
+        _:probEqn, _:probSys, 
+        cond, overline, inter, union, bin
+  order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
+
+conSpec bayesG:bayes =
+  imports numG
+  constructors
+    prob : [events,numExp] -> probEqn,
+    complement : [overline,event] -> event,
+    infix : [event,bin,event] -> event,
+    condition : [event,cond,event] -> condEvent,
+    addEqn : [probEqn,probSys] -> probSys

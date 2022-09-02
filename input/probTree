@@ -1,0 +1,14 @@
+import num
+
+typeSystem probTree =
+  imports num
+  types  _:outcome, _:tree
+  order
+
+conSpec probTreeG:probTree =
+  imports numG
+  constructors
+    notOutcome: [outcome] -> outcome,
+    construct: [outcome, numExp] -> tree,
+    addBranch: [tree, outcome, numExp] -> tree,
+    resolve: [tree, tree] -> tree
