@@ -2,13 +2,13 @@ import num
 
 typeSystem probTree =
   imports num
-  types  _:outcome, _:tree
+  types  _:label, _:tree
   order
 
 conSpec probTreeG:probTree =
   imports numG
   constructors
-    notOutcome: [outcome] -> outcome,
-    construct: [outcome, numExp] -> tree,
-    addBranch: [tree, outcome, numExp] -> tree,
+    notLabel: [label] -> label,
+    construct: [label, numExp] -> tree,
+    addBranch: [tree, label, numExp] -> tree,
     resolve: [tree, tree] -> tree

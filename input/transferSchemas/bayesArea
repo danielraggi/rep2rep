@@ -4,23 +4,23 @@ import transferSchemas/numNum
 
 tSchema eventA:(bayesG,areaDiagramG) =
     source t:A:event
-    target t':A:label
+    target t':A:tag
     antecedent
-    consequent ([t:A:event],[t':A:label]) :: match
+    consequent ([t:A:event],[t':A:tag]) :: match
     strength 1
 
 tSchema eventB:(bayesG,areaDiagramG) =
     source t:B:event
-    target t':B:label
+    target t':B:tag
     antecedent
-    consequent ([t:B:event],[t':B:label]) :: match
+    consequent ([t:B:event],[t':B:tag]) :: match
     strength 1
 
 tSchema notEvent:(bayesG,areaDiagramG) =
     source t:event <- complement[t1:overline,t2:event]
-    target t':label <- notLabel[t1':label]
-    antecedent ([t2:event],[t1':label]) :: match
-    consequent ([t:event],[t':label]) :: match
+    target t':tag <- reverseTag[t1':tag]
+    antecedent ([t2:event],[t1':tag]) :: match
+    consequent ([t:event],[t':tag]) :: match
     strength 1
 
 tSchema constructEvent:(bayesG,areaDiagramG) =
@@ -28,9 +28,9 @@ tSchema constructEvent:(bayesG,areaDiagramG) =
     target t':area <- overlayRect[t1':empty,
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
                                                     t22':point <- cPoint[t221':numExp,t222':1:numExp]],
-                                  t3':label,
+                                  t3':tag,
                                   t4':pattern]
-    antecedent ([t1:events],[t3':label]) :: match, ([t2:numExp],[t221':numExp]) :: equal
+    antecedent ([t1:events],[t3':tag]) :: match, ([t2:numExp],[t221':numExp]) :: equal
     consequent ([t:probEqn],[t':area]) :: encode
     strength 1
 
@@ -40,13 +40,13 @@ tSchema constructCond:(bayesG,areaDiagramG) =
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numExp,t1212':0:numExp],
                                                                             t122':point <- cPoint[t1221':a:numExp,t1222':1:numExp]],
-                                                          t13':label,
+                                                          t13':tag,
                                                           t14':blue],
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
                                                     t22':point <- cPoint[t1221':a:numExp,t222':numExp]],
-                                  t3':label,
+                                  t3':tag,
                                   t4':pattern]
-    antecedent ([t13:event],[t13':label]) :: match, ([t11:event],[t3':label]) :: match, ([t2:numExp],[t222':numExp]) :: equal
+    antecedent ([t13:event],[t13':tag]) :: match, ([t11:event],[t3':tag]) :: match, ([t2:numExp],[t222':numExp]) :: equal
     consequent ([t:probEqn],[t':area]) :: encode
     strength 1
 
@@ -56,14 +56,14 @@ tSchema constructInter:(bayesG,areaDiagramG) =
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numExp,t1212':0:numExp],
                                                                             t122':point <- cPoint[t1221':a:numExp,t1222':1:numExp]],
-                                                          t13':label,
+                                                          t13':tag,
                                                           t14':white],
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numExp,t212':0:numExp],
                                                     t22':point <- cPoint[t1221':a:numExp,
                                                                          t222':numExp <- frac[t2221':numExp,t2222':div,t1221':a:numExp]]],
-                                  t3':label,
+                                  t3':tag,
                                   t4':pattern]
-    antecedent ([t11:event],[t13':label]) :: match, ([t13:event],[t3':label]) :: match, ([t2:numExp],[t2221':numExp]) :: equal
+    antecedent ([t11:event],[t13':tag]) :: match, ([t13:event],[t3':tag]) :: match, ([t2:numExp],[t2221':numExp]) :: equal
     consequent ([t:probEqn],[t':area]) :: encode
     strength 1
 

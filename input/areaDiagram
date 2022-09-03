@@ -2,14 +2,14 @@ import num
 
 typeSystem areaDiagram =
   imports num, shade
-  types  _:label, _:area, _:rect, _:point, empty
+  types  _:tag, _:area, _:rect, _:point, empty
   order empty < area
 
 conSpec areaDiagramG:areaDiagram =
   imports numG
   constructors
-    notLabel: [label] -> label,
+    reverseTag: [tag] -> tag,
     cPoint:[numExp, numExp] -> point,
     cRect: [point, point] -> rect,
-    overlayRect: [area, rect, label, shading] -> area,
+    overlayRect: [area, rect, tag, shading] -> area,
     combine: [area, area] -> area
