@@ -257,7 +257,9 @@ fun recv_bytes sock =
                 val inv = recvVecNB (sock, chunk_size); in
                 case inv of
                     NONE => Word8Vector.concat (List.rev ans)
-                  | SOME inv => f (inv::ans)
+                  | SOME inv => if Word8Vector.length inv = 0
+                                then Word8Vector.concat(List.rev ans)
+                                else f (inv::ans)
             end
         val invec = f [];
     in if Word8Vector.length invec = 0

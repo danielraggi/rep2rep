@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+
+if [ "$EUID" -ne 0 ]; then
+	echo "Run with sudo, please!"
+	exit 1
+fi
+
+cd /usr/local/rep2rep
+
+echo "$@"
+
+echo "Starting server..."
+
+./dist/rep2rep "$@" >> rep2rep.log &
+if [ $? -eq 0 ]; then
+	disown -h
+
+	echo "Server should be running!"
+	echo 'Please run `ps aux | grep rep2rep` to check.'
+	exit 0
+else
+	echo "Server failed to start."
+	exit 1
+fi
