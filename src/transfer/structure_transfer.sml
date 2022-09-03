@@ -498,6 +498,7 @@ fun structureTransfer unistructured targetPattOption st =
                                compositions = map Composition.makePlaceholderComposition targetTokens,
                                knowledge = KB}
           val stateSeq = structureTransfer false NONE st;
-          val structureGraphs = List.flatmap (Composition.resultingConstructions) (State.patternCompsOf (Seq.hd stateSeq));
-      in structureGraphs end
+          val structureGraphs = Seq.map (List.flatmap (Composition.resultingConstructions)) (Seq.map State.patternCompsOf (stateSeq));
+          val last = (List.hd o List.rev o Seq.list_of) structureGraphs;
+      in last end
 end;
