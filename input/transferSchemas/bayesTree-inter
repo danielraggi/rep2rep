@@ -11,34 +11,34 @@ typeSystem interBayesTreeT =
 conSpec interBayesTree:interBayesTreeT =
     imports probTreeG, bayesG, interNumNum
     constructors
-        match : [events,outcome] -> metaBool,
+        match : [events,label] -> metaBool,
         encode : [probSys,tree] -> metaBool
 
 tSchema eventA:(bayesG,probTreeG,interBayesTree) =
     source t:A:event
-    target t':A:outcome
+    target t':A:label
     antecedent
-    consequent :metaTrue <- match[t:A:event,t':A:outcome]
+    consequent :metaTrue <- match[t:A:event,t':A:label]
     strength 1
 
 tSchema eventB:(bayesG,probTreeG,interBayesTree) =
     source t:B:event
-    target t':B:outcome
+    target t':B:label
     antecedent
-    consequent :metaTrue <- match[t:B:event,t':B:outcome]
+    consequent :metaTrue <- match[t:B:event,t':B:label]
     strength 1
 
 tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
     source t:event <- complement[t1:overline,t2:event]
-    target t':outcome <- notOutcome[t1':outcome]
-    antecedent :metaTrue <- match[t2:event,t1':outcome]
-    consequent :metaTrue <- match[t:event,t':outcome]
+    target t':label <- notLabel[t1':label]
+    antecedent :metaTrue <- match[t2:event,t1':label]
+    consequent :metaTrue <- match[t:event,t':label]
     strength 1
 
 tSchema makeEvent:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- prob[t1:event,t2:numExp]
-    target t':tree <- construct[t1':outcome,t2':numExp]
-    antecedent :metaTrue <- match[t1:event,t1':outcome],
+    target t':tree <- construct[t1':label,t2':numExp]
+    antecedent :metaTrue <- match[t1:event,t1':label],
                :metaTrue <- equal[t2:numExp,t2':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1
@@ -46,11 +46,11 @@ tSchema makeEvent:(bayesG,probTreeG,interBayesTree) =
 tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
                              t2:numExp]
-    target t':tree <- addBranch[t1':tree <-construct[t11':outcome,t12':b:numExp],
-                                t2':outcome,
+    target t':tree <- addBranch[t1':tree <-construct[t11':label,t12':b:numExp],
+                                t2':label,
                                 t3':numExp]
-    antecedent :metaTrue <- match[t13:event,t11':outcome],
-               :metaTrue <- match[t11:event,t2':outcome],
+    antecedent :metaTrue <- match[t13:event,t11':label],
+               :metaTrue <- match[t11:event,t2':label],
                :metaTrue <- equal[t2:numExp,t3':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1
@@ -58,11 +58,11 @@ tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
 tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
-    target t':tree <- addBranch[t1':tree <- construct[t11':outcome, t12':a:numExp],
-                                t2':outcome, 
+    target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':a:numExp],
+                                t2':label, 
                                 t3':numExp <- frac[t31':numExp,t32':div,t12':a:numExp]]
-    antecedent :metaTrue <- match[t11:event,t11':outcome],
-               :metaTrue <- match[t13:event,t2':outcome],
+    antecedent :metaTrue <- match[t11:event,t11':label],
+               :metaTrue <- match[t13:event,t2':label],
                :metaTrue <- equal[t2:numExp,t31':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1

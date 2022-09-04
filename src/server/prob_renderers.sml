@@ -62,21 +62,21 @@ fun eventToString (SEVENT(x)) = x
 fun parseShading (Construction.Source(x)) =
     let val a = #2 x 
         val b = #1 x in
-        if String.substring(a, 0, 3) = "red" then (RED, [(b, "RED")])
-        else if String.substring(a, 0, 4) = "blue" then (BLUE, [(b, "BLUE")])
-        else if String.substring(a, 0, 5) = "white" then (WHITE, [(b, "WHITE")])
-        else if String.substring(a, 0, 5) = "green" then (GREEN, [(b, "GREEN")])
-        else if String.substring(a, 0, 7) = "pattern" then (PATTERN, [(b, "PATTERN")])
-        else (WHITE, [(b, "WHITE")])
+        if String.substring(a,0,3) = "red" then (RED,[(b,"RED",3)])
+        else if String.substring(a,0,4) = "blue" then (BLUE,[(b,"BLUE",4)])
+        else if String.substring(a,0,5) = "white" then (WHITE,[(b,"WHITE",5)])
+        else if String.substring(a,0,5) = "green" then (GREEN,[(b,"GREEN",5)])
+        else if String.substring(a,0,7) = "pattern" then (PATTERN,[(b,"PATTERN",6)])
+        else (WHITE,[(b,"WHITE",5)])
     end
     |parseShading _ = raise ShadeError;
 
 fun parseNum (Construction.Source(x)) =
         (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2))])
-                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a), [(#1 x, a)])
+            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2),(String.size a)-1)])
+                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,String.size a)])
                          else (case Int.fromString a of 
-                            SOME b => (NUM(b), [(#1 x, a)])
+                            SOME b => (NUM(b), [(#1 x,a,String.size a)])
                             |NONE => raise NumError) 
             | _ => raise NumError)
     |parseNum (Construction.TCPair(x,y)) =
@@ -85,8 +85,8 @@ fun parseNum (Construction.Source(x)) =
                 val (b,y2) = parseNum (List.nth (y,2)) in
                 case (List.nth (y,1)) of
                     Construction.Source(z) => (case (#2 z) of
-                                                "plus" => (PLUS(a,b),(#1 (#token x),(#2 (hd(y1)))^"+"^(#2 (hd(y2))))::y1@[(#1 z,"+")]@y2)
-                                                |"minus" => (MINUS(a,b),(#1 (#token x),(#2 (hd(y1)))^"+"^(#2 (hd(y2))))::y1@[((#1 z,"-"))]@y2)
+                                                "plus" => (PLUS(a,b),(#1 (#token x),(#2 (hd(y1)))^"+"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+1)::y1@[(#1 z,"+",1)]@y2)
+                                                |"minus" => (MINUS(a,b),(#1 (#token x),(#2 (hd(y1)))^"+"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+1)::y1@[((#1 z,"-",1))]@y2)
                                                 |_ => raise NumError)
                     |_ => raise NumError
             end
@@ -94,23 +94,23 @@ fun parseNum (Construction.Source(x)) =
             let val (a,y1) = parseNum (List.nth (y,0)) 
                 val (b,y2) = parseNum (List.last(y)) in
                 case (List.nth (y,1)) of
-                    Construction.Source(z) => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))))::y1@[(#1 z,"/")]@y2)
+                    Construction.Source(z) => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+1)::y1@[(#1 z,"/",1)]@y2)
                     |_ => raise NumError
             end
         else if (#1 (#constructor x)) = "implicitMult" then 
             let val (a,y1) = parseNum (List.nth (y,0)) 
                 val (b,y2) = parseNum (List.last(y)) in
-                (MULT(a,b),(#1 (#token x),(#2 (hd(y1)))^"*"^(#2 (hd(y2))))::y1@y2)
+                (MULT(a,b),(#1 (#token x),(#2 (hd(y1)))^"*"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+1)::y1@y2)
             end
         else raise NumError
     |parseNum (Construction.Reference(x)) = 
         (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2))])
-                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x, a)])
+            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2),String.size a)])
+                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,String.size a)])
                          else (case Int.fromString a of 
-                            SOME b => (NUM(b), [(#1 x, a)])
+                            SOME b => (NUM(b), [(#1 x,a,String.size a)])
                             |NONE => raise NumError) 
-            | _ => raise NumError)
+            | _ => raise NumError)   
 
 fun onlyNum U = false
     |onlyNum (NUM(x)) = true
@@ -1219,75 +1219,43 @@ fun resolve a b (n:int) =
 fun stringToHTML xs =
     case xs of
     [] => []
-    |(a,b)::xs => if b = "empty" then (a,  ("<div>\n"^
+    |(a,b,c)::xs => if b = "EMPTY" then (a,("<div>\n"^
                                             "<svg width=\"200\" height=\"200\">\n"^
                                             "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
                                             "</svg>\n"^
                                             "</div>",
                                             200.0,200.0))::stringToHTML xs
-                  else if (String.substring(b,0,1) = "(" andalso (String.isSubstring " - " b)) then 
-                    let val mid = ((String.size b)-7)*5
-                        val len = ((String.size b)-7)*10 in 
-                            (a,("<div>\n"^
-                                "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\">"^b^"</text>\n"^
-                                "</svg>\n"^
-                                "</div>",
-                                (Real.fromInt len),18.0))::stringToHTML xs
-                    end
-                  else if String.substring(b,0,1) = "(" then
-                    let val mid = ((String.size b)-2)*5
-                        val len = ((String.size b)-2)*10 in 
-                            (a,("<div>\n"^
-                                "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\">"^b^"</text>\n"^
-                                "</svg>\n"^
-                                "</div>",
-                                (Real.fromInt len),18.0))::stringToHTML xs
-                    end
-                  else if String.substring(b,0,1) = "!" then
-                    let val mid = ((String.size b)-1)*5
-                        val len = ((String.size b)-1)*10 in 
-                            (a,("<div>\n"^
-                                "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\"><tspan text-decoration=\"overline\">"^(String.substring(b,1,(String.size b)-1))^"</tspan></text>"^
-                                "</svg>\n"^
-                                "</div>",
-                                (Real.fromInt len),18.0))::stringToHTML xs
-                    end
-                  else let val mid = (String.size b)*5
-                           val len = (String.size b)*10 in 
-                            (a,("<div>\n"^
-                                "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\">"^b^"</text>\n"^
-                                "</svg>\n"^
-                                "</div>",
-                                (Real.fromInt len),18.0))::stringToHTML xs
-                       end 
+                    else let val mid = c*5
+                             val len = c*10 in 
+                                (a,("<div>\n"^
+                                    "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
+                                    "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
+                                    "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\">"^b^"</text>\n"^
+                                    "</svg>\n"^
+                                    "</div>",
+                                    (Real.fromInt len),18.0))::stringToHTML xs
+                         end
 
 fun drawArea x =
     let fun parseArea (Construction.Source(x)) =
-                if String.substring(#2 x, 0, 5) = "empty" then (EMPTY, [(#1 x, "empty")])
-                else if Char.isAlpha(String.sub(#2 x, 0)) then (LABEL(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
-                else raise AreaError
+                if String.substring(#2 x, 0, 5) = "empty" then (EMPTY,[(#1 x,"EMPTY",0)])
+                else (case String.breakOn ":" (#2 x) of
+                        (a,":",_) => (LABEL(a),[(#1 x,a,String.size a)])
+                        |_ => raise AreaError)
             |parseArea (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "notLabel" then 
+                if (#1 (#constructor x)) = "reverseTag" then 
                     (case (parseArea (hd(y))) of
-                        (LABEL(a),b) => (NLABEL(a),[((#1 (hd(b))), "!"^(#2 (hd(b))))])
+                        (LABEL(a),b) => (NLABEL(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
                         |_ => raise AreaError)
                 else if (#1 (#constructor x)) = "cPoint" then 
                     let val (x1,z1) = parseNum (hd(y))
                         val (x2,z2) = parseNum (List.last(y)) in
-                        (POINT(x1,x2),(#1 (#token x),"("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")")::z1@z2)
+                        (POINT(x1,x2),(#1 (#token x),"("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")",(#3 (hd(z1)))+(#3 (hd(z2)))+1)::z1@z2)
                     end
                 else if (#1 (#constructor x)) = "cRect" then 
                     let val (x1,y1) = parseArea (hd(y))
                         val (x2,y2) = parseArea (List.last(y)) in
-                        (RECT(x1,x2),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))))::y1@y2)
+                        (RECT(x1,x2),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+1)::y1@y2)
                     end
                 else if (#1 (#constructor x)) = "overlayRect" then 
                     let val (x1,y1) = parseArea (hd(y))
@@ -1323,11 +1291,14 @@ fun drawArea x =
                     val ((x3,_,_,_),_) = convertArea z in
                     if w1 = [] then 
                         case (hd(x3)) of
-                        SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1), List.nth(y2,2))]),(m,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
+                        SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(m,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
                         |NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(m,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
-                    else case (hd(x3)) of
-                        SEVENT(a) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                        |NEVENT(a) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2), NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                    else case (hd(x1),hd(x3)) of
+                        (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                        |(SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                        |(NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                        |(NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                
                 end
             |convertArea (COMBAREA(m,x,y)) =
                 let fun toRects ws = [NUM(0),NUM(0),(hd(ws)),NUM(1),NUM(0),NUM(0),(hd(ws)),(List.nth(ws,2)),(hd(ws)),NUM(0),NUM(1),(List.nth(ws,4))]
@@ -1343,27 +1314,26 @@ fun drawArea x =
                             SEVENT(a) => w@[U,U]
                             |NEVENT(a) => List.take(w,2)@[U,U]@List.drop(w,2)
                     fun areaMerge x2 y2 a x3 y3 b =
-                        let fun createNums xs = [NUM(0),NUM(0),List.nth(xs,0),NUM(1),NUM(0),NUM(0),List.nth(xs,0),List.nth(xs,2),List.nth(xs,0),NUM(0),NUM(1),List.nth(xs,4)]
-                            fun ff b =
+                        let fun ff b =
                                 if List.nth(b,2) = U then 
                                 let val xs = [VAR("z"),MINUS(NUM(1),VAR("z")),
                                             MINUS(NUM(1),FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z"))), FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z")), 
                                             MINUS(NUM(1),FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))), FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))]
                                     val xss = List.map simplify xs in 
-                                    (xss, (createNums xss))
+                                    (xss, (toRects xss))
                                 end
                                 else if List.nth(b,4) = U then 
                                 let val xs = [VAR("z"), MINUS(NUM(1),VAR("z")),
                                             FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z")), MINUS(NUM(1),FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z"))),
                                             FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))))]
                                     val xss = List.map simplify xs in 
-                                    (xss, (createNums xss))
+                                    (xss, (toRects xss))
                                 end
                                 else let val xs = [PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1))), PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))), 
                                                 FRAC(MULT(List.nth(b,2), List.nth(b,0)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))), FRAC(MULT(List.nth(b,4), List.nth(b,1)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))), 
                                                 FRAC(MULT(List.nth(b,3),List.nth(b,0)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1)))),  FRAC(MULT(List.nth(b,5),List.nth(b,1)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))))] 
                                         val xss = List.map simplify xs in 
-                                    (xss, (createNums xss))
+                                    (xss, (toRects xss))
                                 end 
                             in
                             if eventToString (hd(x2)) = eventToString (hd(x3)) then 
@@ -1381,7 +1351,7 @@ fun drawArea x =
                                 end
                             else if List.length x2 = List.length x3 andalso List.length x2 = 1 then 
                                 let val xss = [VAR("z"),MINUS(NUM(1),VAR("z")), VAR("x"), MINUS(NUM(1),VAR("x")), FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),MINUS(NUM(1),VAR("z"))))] in 
-                                    (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (createNums xss))
+                                    (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss))
                                 end 
                             else if List.length x2 = List.length x3 andalso List.length y2 = 8 then 
                                 let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
@@ -1461,47 +1431,48 @@ fun drawArea x =
 
 fun drawTable x =
     let fun parseTable (Construction.Source(x)) =
-                if Char.isAlpha(String.sub(#2 x, 0)) then (NAME(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
-                else raise TableError
+                (case String.breakOn ":" (#2 x) of
+                    (a,":",_) => (NAME(a),[(#1 x,a,String.size a)])
+                    |_ => raise TableError)
             |parseTable (Construction.TCPair(x,y)) =
                 if (#1 (#constructor x)) = "constructOne" then 
                     let val (x1,y1) = parseTable (hd(y))
                         val (x2,y2) = parseNum (List.last(y)) in 
-                        (ONEWAY((#1 (#token x)), x1, x2), y1@y2)
+                        (ONEWAY((#1 (#token x)),x1,x2),y1@y2)
                     end
                 else if (#1 (#constructor x)) = "constructTwo" then 
                     let val (x1,y1) = parseTable (hd(y))
                         val (x2,y2) = parseTable (List.nth(y, 1))
                         val (x3,y3) = parseNum (List.last(y)) in 
-                        (TWOWAY((#1 (#token x)), x1, x2, x3), y1@y2@y3)
+                        (TWOWAY((#1 (#token x)),x1,x2,x3),y1@y2@y3)
                     end
                 else if (#1 (#constructor x)) = "combine" then 
                     let val (x1,y1) = parseTable (hd(y))
                         val (x2,y2) = parseTable (List.last(y)) in 
-                        (COMB((#1 (#token x)), x1, x2), y1@y2)
+                        (COMB((#1 (#token x)),x1,x2),y1@y2)
                     end
                 else if (#1 (#constructor x)) = "notName" then 
                     (case (parseTable (hd(y))) of 
-                        (NAME(a),b) => (NNAME(a),[(#1 (hd(b)), "!"^(#2 (hd(b))))]) 
+                        (NAME(a),b) => (NNAME(a),[(#1 (hd(b)),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))]) 
                         |_ => raise TableError)
                 else raise TableError
             |parseTable _ = raise TableError
-        fun convertTable (NAME(x)) = (([SEVENT(x)], []),[])
-            |convertTable (NNAME(x)) = (([NEVENT(x)], []),[])
+        fun convertTable (NAME(x)) = (([SEVENT(x)],[]),[])
+            |convertTable (NNAME(x)) = (([NEVENT(x)],[]),[])
             |convertTable (ONEWAY(m,x,y)) = 
                 let val ((x2,_),_) = convertTable x in
                     case (hd(x2)) of 
-                    SEVENT(a) => ((x2, [y, MINUS(NUM(1),y)]),[(m, x2, [y, MINUS(NUM(1),y)])])
-                    |NEVENT(a) => ((x2, [MINUS(NUM(1),y), y]),[(m, x2, [MINUS(NUM(1),y), y])])
+                    SEVENT(a) => ((x2,[y,MINUS(NUM(1),y)]),[(m,x2,[y,MINUS(NUM(1),y)])])
+                    |NEVENT(a) => ((x2,[MINUS(NUM(1),y), y]),[(m,x2,[MINUS(NUM(1),y),y])])
                 end
             |convertTable (TWOWAY(m,x,y,z)) = 
                 let val ((x2,y2),n1) = convertTable x
                     val ((x3,y3),n2) = convertTable y in
                         case ((hd(x2)),(hd(x3))) of 
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3, y2@y3@[z, MINUS((hd(y2)),z), MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))]),(m, x2@x3, y2@y3@[z, MINUS((hd(y2)),z), MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))])::n1@n2)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3, y2@y3@[MINUS(List.nth(y2,0), z), z, MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)]), (m, x2@x3, y2@y3@[MINUS(List.nth(y2,0), z), z, MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)])::n1@n2)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3, y2@y3@[MINUS((List.nth(y3,0)),z), MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)]), (m, x2@x3, y2@y3@[MINUS((List.nth(y3,0)),z), MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)])::n1@n2)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3, y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z]), (m, x2@x3, y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z])::n1@n2)
+                        (SEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[z,MINUS((hd(y2)),z),MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))]),(m, x2@x3, y2@y3@[z, MINUS((hd(y2)),z), MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))])::n1@n2)
+                        |(SEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[MINUS(List.nth(y2,0),z),z,MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)]), (m, x2@x3, y2@y3@[MINUS(List.nth(y2,0), z), z, MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)])::n1@n2)
+                        |(NEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[MINUS((List.nth(y3,0)),z),MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)]), (m, x2@x3, y2@y3@[MINUS((List.nth(y3,0)),z), MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)])::n1@n2)
+                        |(NEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z]), (m, x2@x3, y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z])::n1@n2)
                 end
             |convertTable (COMB(m,x,y)) =
                 let fun tableMerge x2 y2 x3 y3 =
@@ -1569,7 +1540,7 @@ fun drawTable x =
                 val (content,w) = toDocTable ((List.map eventToString a),(List.map numToString b))
                 in
                 (m, ((header^content^footer),w,100.0))
-            end      
+            end
         val (a,b) = parseTable x
         val (_,n) = convertTable a
         val ns = List.map tableToHTML n
@@ -1578,7 +1549,10 @@ fun drawTable x =
     end
 
 fun drawTree x =
-    let fun parseTree (Construction.Source(x)) = (BRANCH(String.substring(#2 x, 0, 1)), [(#1 x, String.substring(#2 x, 0, 1))])
+    let fun parseTree (Construction.Source(x)) = 
+                (case String.breakOn ":" (#2 x) of
+                    (a,":",_) => (BRANCH(a),[(#1 x,a,String.size a)])
+                    |_ => raise TreeError)
             |parseTree (Construction.TCPair(x,y)) =
                 if (#1 (#constructor x)) = "construct" then 
                     let val (x1,y1) = parseTree (hd(y))
@@ -1587,18 +1561,18 @@ fun drawTree x =
                     end
                 else if (#1 (#constructor x)) = "addBranch" then 
                     let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseTree (List.nth(y, 1)) 
+                        val (x2,y2) = parseTree (List.nth(y,1)) 
                         val (x3,y3) = parseNum (List.last(y)) in
-                        (ADD((#1 (#token x)), x1, x2, x3), y1@y2@y3)
+                        (ADD((#1 (#token x)),x1,x2,x3),y1@y2@y3)
                     end
                 else if (#1 (#constructor x)) = "resolve" then 
                     let val (x1,y1) = parseTree (hd(y))
                         val (x2,y2) = parseTree (List.last(y)) in
-                        (RESOLVE((#1 (#token x)),x1,x2), y1@y2)
+                        (RESOLVE((#1 (#token x)),x1,x2),y1@y2)
                     end   
-                else if (#1 (#constructor x)) = "notOutcome" then 
+                else if (#1 (#constructor x)) = "notLabel" then 
                     (case (parseTree (hd(y))) of
-                        (BRANCH(a),b) => (NBRANCH(a),[((#1 (hd(b))), "!"^(#2 (hd(b))))])
+                        (BRANCH(a),b) => (NBRANCH(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
                         |_ => raise TreeError)
                 else raise TreeError
             |parseTree (Construction.Reference(x)) = raise TreeError
@@ -1607,17 +1581,17 @@ fun drawTree x =
             |convertTree (TREE(m,x,y)) =
                 let val ((x2,_),_) = convertTree x in
                     case (hd(x2)) of
-                    NEVENT(a) => ((x2, [MINUS(NUM(1), y), y]),[(m, x2, [MINUS(NUM(1), y), y])])
-                    |SEVENT(a) => ((x2, [y, MINUS(NUM(1), y)]),[(m, x2, [y, MINUS(NUM(1), y)])])
+                    NEVENT(a) => ((x2,[MINUS(NUM(1),y),y]),[(m,x2,[MINUS(NUM(1),y),y])])
+                    |SEVENT(a) => ((x2,[y,MINUS(NUM(1),y)]),[(m,x2,[y,MINUS(NUM(1),y)])])
                 end
             |convertTree (ADD(m,x,y,z)) =
                 let val ((x2,y2),n) = convertTree x
                     val ((x3,_),_) = convertTree y in
                     case ((hd(x2)), (hd(x3))) of
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3, y2@[z, MINUS(NUM(1),z), U, U]),(m,x2@x3, y2@[z, MINUS(NUM(1),z), U, U])::n)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3, y2@[MINUS(NUM(1),z), z, U, U]),(m,x2@x3, y2@[MINUS(NUM(1),z), z, U, U])::n)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3, y2@[U, U, z, MINUS(NUM(1),z)]),(m,x2@x3, y2@[U, U, z, MINUS(NUM(1),z)])::n)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3, y2@[U, U, MINUS(NUM(1),z), z]),(m,x2@x3, y2@[U, U, MINUS(NUM(1),z), z])::n)
+                        (SEVENT(a),SEVENT(b)) => ((x2@x3, y2@[z,MINUS(NUM(1),z),U,U]),(m,x2@x3,y2@[z,MINUS(NUM(1),z),U,U])::n)
+                        |(SEVENT(a),NEVENT(b)) => ((x2@x3, y2@[MINUS(NUM(1),z),z,U,U]),(m,x2@x3,y2@[MINUS(NUM(1),z),z,U,U])::n)
+                        |(NEVENT(a),SEVENT(b)) => ((x2@x3, y2@[U,U,z,MINUS(NUM(1),z)]),(m,x2@x3,y2@[U,U,z,MINUS(NUM(1),z)])::n)
+                        |(NEVENT(a),NEVENT(b)) => ((x2@x3, y2@[U,U,MINUS(NUM(1),z),z]),(m,x2@x3,y2@[U,U,MINUS(NUM(1),z),z])::n)
                 end 
             |convertTree ((RESOLVE(m,x,y))) =
                 let fun treeMerge x2 y2 x3 y3 =
@@ -1693,7 +1667,7 @@ fun drawTree x =
                 val header = "<div>\n"
                 val footer = "</svg>\n"^
                              "</div>"
-                val (content, h, w) = toDocTree ((List.map eventToString a),(List.map numToString b))
+                val (content,h,w) = toDocTree ((List.map eventToString a),(List.map numToString b))
                 in
                 (m, ((header^content^footer),w,h))
             end
@@ -1735,13 +1709,8 @@ fun drawBayes x =
             |parseEvent (Construction.Reference(x)) = raise BayesError
         fun parseBayes (Construction.TCPair(x,y)) = 
                 if (#1 (#constructor x)) = "prob" then
-                    let fun addLen xs =
-                            case xs of 
-                            [] => []
-                            |(a,b)::xs => (a,b,String.size b)::addLen xs
-                        val y1 = parseEvent (hd(y)) 
-                        val (_,z2) = parseNum (List.last y) 
-                        val y2 = addLen z2
+                    let val y1 = parseEvent (hd(y)) 
+                        val (_,y2) = parseNum (List.last y) 
                         in  
                         (#1 (#token x),"Pr("^(#2 (hd(y1)))^") = "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+3)::y1@y2
                     end
@@ -1752,22 +1721,9 @@ fun drawBayes x =
                     end
                 else raise BayesError
             |parseBayes _ = raise BayesError
-        fun bayesToHTML xs =
-            case xs of
-            [] => []
-            |(a,b,c)::xs => let val mid = c*5
-                                val len = c*10 in 
-                                    (a,("<div>\n"^
-                                        "<svg width=\""^(Int.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                        "<rect width=\""^(Int.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                        "<text text-anchor=\"middle\" transform=\"translate("^(Int.toString mid)^",14)\">"^b^"</text>\n"^
-                                        "</svg>\n"^
-                                        "</div>",
-                                        (Real.fromInt len),18.0))::bayesToHTML xs
-                            end
-        val a = (parseBayes x)
+        val a = parseBayes x
         in
-        bayesToHTML a
+        stringToHTML a
     end;
 
 end;
