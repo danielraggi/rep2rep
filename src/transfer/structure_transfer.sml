@@ -487,7 +487,7 @@ fun structureTransfer unistructured targetPattOption st =
       let val tTS = #typeSystem (#typeSystemData tCSD)
           val targetTokens = FiniteSet.filter
                                  (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
-                                 (Construction.leavesOfConstruction goal)
+                                 (Construction.leavesOfConstruction goal);
           val st = State.make {sourceConSpecData = sCSD,
                                targetConSpecData = tCSD,
                                interConSpecData = iCSD,
@@ -498,7 +498,9 @@ fun structureTransfer unistructured targetPattOption st =
                                compositions = map Composition.makePlaceholderComposition targetTokens,
                                knowledge = KB}
           val stateSeq = structureTransfer false NONE st;
-          val structureGraphs = Seq.map (List.flatmap (Composition.resultingConstructions)) (Seq.map State.patternCompsOf (stateSeq));
-          val last = (List.hd o List.rev o Seq.list_of) structureGraphs;
-      in last end
+          fun getStructureGraph st =
+              List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
+          val firstState = Seq.hd stateSeq;
+          val structureGraph = getStructureGraph firstState;
+      in structureGraph end
 end;
