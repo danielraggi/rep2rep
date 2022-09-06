@@ -73,12 +73,12 @@ fun parseShading (Construction.Source(x)) =
 
 fun parseNum (Construction.Source(x)) =
         (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2),Real.fromInt(String.size a)-0.5)])
-                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
+            (a,":",_) => if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
+                         else if String.isSubstring "0." a then (DEC(a), [(#1 x,a,Real.fromInt(String.size a)-0.5)])
                          else (case Int.fromString a of 
-                            SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                            |NONE => raise NumError) 
-            | _ => raise NumError)
+                                SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
+                                |NONE => raise NumError)
+            |_ => raise NumError)
     |parseNum (Construction.TCPair(x,y)) =
         if (#1 (#constructor x)) = "infixOp" then
             let val (a,y1) = parseNum (List.nth (y,0)) 
@@ -105,12 +105,12 @@ fun parseNum (Construction.Source(x)) =
         else raise NumError
     |parseNum (Construction.Reference(x)) = 
         (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if String.size a > 2 andalso (String.substring(a,0,2) = "fp") then (DEC(String.substring(a,2,(String.size a)-2)), [(#1 x,"0."^String.substring(a,2,(String.size a)-2),Real.fromInt(String.size a)-0.5)])
-                         else if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
+            (a,":",_) => if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
+                         else if String.isSubstring "0." a then (DEC(a), [(#1 x,a,Real.fromInt(String.size a)-0.5)])
                          else (case Int.fromString a of 
-                            SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                            |NONE => raise NumError) 
-            | _ => raise NumError)
+                                SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
+                                |NONE => raise NumError)
+            |_ => raise NumError)  
 
 fun onlyNum U = false
     |onlyNum (NUM(x)) = true
@@ -174,11 +174,9 @@ fun numToString x =
             |convertNum (VAR(x)) = V x
             |convertNum (U) = V " "
             |convertNum (DEC(x)) = 
-                let val x2 = Real.fromString ("0."^x) in
-                (case x2 of
-                    NONE => raise NumError
-                    |SOME x => R x)
-                end
+                (case (Real.fromString x) of
+                NONE => raise NumError
+                |SOME z => R z)
             |convertNum (NUM(x)) = R (Real.fromInt x)
         fun f (V(x)) = x
             |f (R(x)) = Real.toString (round x) 
@@ -1238,7 +1236,7 @@ fun stringToHTML xs =
 
 fun drawArea x =
     let fun parseArea (Construction.Source(x)) =
-                if String.substring(#2 x, 0, 5) = "empty" then (EMPTY,[(#1 x,"EMPTY",0.0)])
+                if String.isSubstring "empty" (#2 x) then (EMPTY,[(#1 x,"EMPTY",0.0)])
                 else (case String.breakOn ":" (#2 x) of
                         (a,":",_) => (LABEL(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
                         |_ => raise AreaError)
@@ -1270,7 +1268,7 @@ fun drawArea x =
                         (COMBAREA((#1 (#token x)),x1,x2),y1@y2)
                     end
                 else raise AreaError
-            |parseArea (Construction.Reference(x)) = raise AreaError 
+            |parseArea (Construction.Reference(x)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[])
             |convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
             |convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
