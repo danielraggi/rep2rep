@@ -501,6 +501,7 @@ fun structureTransfer unistructured targetPattOption st =
           fun getStructureGraph st =
               List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
           val firstState = Seq.hd stateSeq;
+          val _ = print("UNCLOSED GOALS: " ^ Int.toString(List.length(State.goalsOf firstState)) ^ "\n");
           val structureGraph = getStructureGraph firstState;
       in structureGraph end
 end;

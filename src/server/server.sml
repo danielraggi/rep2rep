@@ -7,10 +7,20 @@ import "oruga.document";
 import "server.renderers";
 
 signature SERVER = sig
-    val make: string list -> Rpc.endpoint list;
+    val readTransferMap: string -> (string * string * string) list;
+    val make: string list -> (string * string * string) list -> Rpc.endpoint list;
 end;
 
 structure Server: SERVER = struct
+
+fun readTransferMap fname =
+    let val fname = "input/" ^ fname;
+        val infile = TextIO.openIn fname;
+        val lines = TextIO.inputLines infile;
+        fun readLine l = case String.splitStrip " " l of
+                             [src, tgt, intr] => SOME(src, tgt, intr)
+                           | vs => NONE
+    in List.mapPartial readLine lines end;
 
 fun makeTSDescription {name=name, typeSystem=_, principalTypes=principalTypes} = (name, principalTypes);
 
@@ -39,16 +49,10 @@ fun getTypeContext systems name typ =
          | _ =>  []
     end;
 
-fun guessInterSpaceName srcSpaceName tgtSpaceName =
-    let val dropGAndCapitalize = String.implode
-                                 o (fn x::xs => (Char.toUpper x)::xs | ys => ys)
-                                 o List.rev
-                                 o (fn (#"G"::xs) => xs | ys => ys)
-                                 o List.rev
-                                 o String.explode;
-        val s = dropGAndCapitalize srcSpaceName;
-        val t = dropGAndCapitalize tgtSpaceName;
-    in "inter" ^ s ^ t end;
+fun getInterSpaceName srcSpaceName tgtSpaceName transferMap =
+    case List.find (fn (a, b, c) => a = srcSpaceName andalso b = tgtSpaceName) transferMap of
+        SOME(_, _, inter) => SOME(inter)
+      | NONE => NONE;
 
 (* Huge hack, we assume it's "encode" *)
 fun mkGoal constr interSpace =
@@ -71,14 +75,20 @@ fun mkGoal constr interSpace =
          | _ => NONE
     end;
 
-fun transfer constr srcSpaceName tgtSpaceName spaces knowledge =
+fun transfer constr srcSpaceName tgtSpaceName transferMap spaces knowledge =
     let val srcSpace = getSpace spaces srcSpaceName;
         val tgtSpace = getSpace spaces tgtSpaceName;
-        val intSpace = getSpace spaces (guessInterSpaceName srcSpaceName tgtSpaceName);
+        val intSpace = Option.mapPartial
+                           (getSpace spaces)
+                           (getInterSpaceName srcSpaceName tgtSpaceName transferMap);
         val goal = Option.mapPartial (mkGoal constr) intSpace;
     in case (srcSpace, tgtSpace, intSpace, goal) of
            (SOME(s), SOME(t), SOME(i), SOME(g)) => Transfer.applyTransfer s t i knowledge constr g
-        | _ => [] end;
+         | (NONE, _, _, _) => (print "ERROR no srcSpace\n"; [])
+         | (_, NONE, _, _) => (print "ERROR no tgtSpace\n"; [])
+         | (_, _, NONE, _) => (print "ERROR no intSpace\n"; [])
+         | (_, _, _, NONE) => (print "ERROR no goal\n"; [])
+    end;
 
 val spaces_sig = ("server.spaces", unit_rpc, List.list_rpc(CSpace.conSpecData_rpc));
 val getSpace_sig = ("server.getSpace", String.string_rpc, Option.option_rpc(CSpace.conSpecData_rpc));
@@ -98,7 +108,7 @@ val transfer_sig = ("server.transfer",
                     Rpc.Datatype.tuple3 (Construction.construction_rpc, String.string_rpc, String.string_rpc),
                     List.list_rpc Construction.construction_rpc);
 
-fun make files =
+fun make files transferMap =
     let
         val docs = List.map Document.read files;
         val spaces = List.flatmap Document.conSpecsDataOf docs;
@@ -111,7 +121,8 @@ fun make files =
         Rpc.provide renderers_sig (fn () => map (mapsnd Rpc.endpointName) Renderers.all),
         Rpc.provide getPrincipalTypes_sig (fn name => getPrincipalTypes typeSystems name),
         Rpc.provide getTypeContext_sig (fn (systemName, typ) => getTypeContext typeSystems systemName typ),
-        Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace) => transfer constr srcSpace tgtSpace spaces knowledge),
+        Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace) =>
+                                     transfer constr srcSpace tgtSpace transferMap spaces knowledge),
         Construction.R.toString
     ] @ map #2 Renderers.all end;
 
