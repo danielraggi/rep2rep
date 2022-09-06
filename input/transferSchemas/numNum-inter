@@ -12,213 +12,213 @@ conSpec interNumNum:interNumNumT =
         equal : [numExp,numExp] -> metaBool
 
 tSchema equalZero:(numG,numG,interNumNum) =
-    source t:0:numExp
-    target t':0:numExp
+    source t:0:numeral
+    target t':0:numeral
     antecedent
-    consequent :metaTrue <-equal[t:0:numExp,t':0:numExp]
+    consequent :metaTrue <-equal[t:0:numeral,t':0:numeral]
     strength 1
 
 tSchema equalOne:(numG,numG,interNumNum) =
-    source t:1:numExp
-    target t':1:numExp
+    source t:1:numeral
+    target t':1:numeral
     antecedent
-    consequent :metaTrue <-equal[t:1:numExp,t':1:numExp]
+    consequent :metaTrue <-equal[t:1:numeral,t':1:numeral]
     strength 1
 
 tSchema equalTwo:(numG,numG,interNumNum) =
-    source t:2:numExp
-    target t':2:numExp
+    source t:2:numeral
+    target t':2:numeral
     antecedent
-    consequent :metaTrue <-equal[t:2:numExp,t':2:numExp]
+    consequent :metaTrue <-equal[t:2:numeral,t':2:numeral]
     strength 1
 
 tSchema equalThree:(numG,numG,interNumNum) =
-    source t:3:numExp
-    target t':3:numExp
+    source t:3:numeral
+    target t':3:numeral
     antecedent
-    consequent :metaTrue <-equal[t:3:numExp,t':3:numExp]
+    consequent :metaTrue <-equal[t:3:numeral,t':3:numeral]
     strength 1
 
 tSchema equalFour:(numG,numG,interNumNum) =
-    source t:4:numExp
-    target t':4:numExp
+    source t:4:numeral
+    target t':4:numeral
     antecedent
-    consequent :metaTrue <-equal[t:4:numExp,t':4:numExp]
+    consequent :metaTrue <-equal[t:4:numeral,t':4:numeral]
     strength 1
 
 tSchema equalFive:(numG,numG,interNumNum) =
-    source t:5:numExp
-    target t':5:numExp
+    source t:5:numeral
+    target t':5:numeral
     antecedent
-    consequent :metaTrue <-equal[t:5:numExp,t':5:numExp]
+    consequent :metaTrue <-equal[t:5:numeral,t':5:numeral]
     strength 1
 
 tSchema equalSix:(numG,numG,interNumNum) =
-    source t:6:numExp
-    target t':6:numExp
+    source t:6:numeral
+    target t':6:numeral
     antecedent
-    consequent :metaTrue <-equal[t:6:numExp,t':6:numExp]
+    consequent :metaTrue <-equal[t:6:numeral,t':6:numeral]
     strength 1
 
 tSchema equalSeven:(numG,numG,interNumNum) =
-    source t:7:numExp
-    target t':7:numExp
+    source t:7:numeral
+    target t':7:numeral
     antecedent
-    consequent :metaTrue <-equal[t:7:numExp,t':7:numExp]
+    consequent :metaTrue <-equal[t:7:numeral,t':7:numeral]
     strength 1
 
 tSchema equalEight:(numG,numG,interNumNum) =
-    source t:8:numExp
-    target t':8:numExp
+    source t:8:numeral
+    target t':8:numeral
     antecedent
-    consequent :metaTrue <-equal[t:8:numExp,t':8:numExp]
+    consequent :metaTrue <-equal[t:8:numeral,t':8:numeral]
     strength 1
 
 tSchema equalNine:(numG,numG,interNumNum) =
-    source t:9:numExp
-    target t':9:numExp
+    source t:9:numeral
+    target t':9:numeral
     antecedent
-    consequent :metaTrue <-equal[t:9:numExp,t':9:numExp]
+    consequent :metaTrue <-equal[t:9:numeral,t':9:numeral]
     strength 1
 
 tSchema equalTen:(numG,numG,interNumNum) =
-    source t:10:numExp
-    target t':10:numExp
+    source t:10:numeral
+    target t':10:numeral
     antecedent
-    consequent :metaTrue <-equal[t:10:numExp,t':10:numExp]
+    consequent :metaTrue <-equal[t:10:numeral,t':10:numeral]
     strength 1
 
 tSchema equalHund:(numG,numG,interNumNum) =
-    source t:100:numExp
-    target t':100:numExp
+    source t:100:numeral
+    target t':100:numeral
     antecedent
-    consequent :metaTrue <-equal[t:100:numExp,t':100:numExp]
+    consequent :metaTrue <-equal[t:100:numeral,t':100:numeral]
     strength 1
 
 tSchema equalThou:(numG,numG,interNumNum) =
-    source t:1000:numExp
-    target t':1000:numExp
+    source t:1000:numeral
+    target t':1000:numeral
     antecedent
-    consequent :metaTrue <-equal[t:1000:numExp,t':1000:numExp]
+    consequent :metaTrue <-equal[t:1000:numeral,t':1000:numeral]
     strength 1
 
 tSchema equalFPOne:(numG,numG,interNumNum) =
-    source t:fp1:numExp
-    target t':fp1:numExp
+    source t:fp1:numeral
+    target t':fp1:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp1:numExp,t':fp1:numExp]
+    consequent :metaTrue <-equal[t:fp1:numeral,t':fp1:numeral]
     strength 1
 
 tSchema equalFPTwo:(numG,numG,interNumNum) =
-    source t:fp2:numExp
-    target t':fp2:numExp
+    source t:fp2:numeral
+    target t':fp2:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp2:numExp,t':fp2:numExp]
+    consequent :metaTrue <-equal[t:fp2:numeral,t':fp2:numeral]
     strength 1
 
 tSchema equalFPThree:(numG,numG,interNumNum) =
-    source t:fp3:numExp
-    target t':fp3:numExp
+    source t:fp3:numeral
+    target t':fp3:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp3:numExp,t':fp3:numExp]
+    consequent :metaTrue <-equal[t:fp3:numeral,t':fp3:numeral]
     strength 1
 
 tSchema equalFPFour:(numG,numG,interNumNum) =
-    source t:fp4:numExp
-    target t':fp4:numExp
+    source t:fp4:numeral
+    target t':fp4:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp4:numExp,t':fp4:numExp]
+    consequent :metaTrue <-equal[t:fp4:numeral,t':fp4:numeral]
     strength 1
 
 tSchema equalFPFive:(numG,numG,interNumNum) =
-    source t:fp5:numExp
-    target t':fp5:numExp
+    source t:fp5:numeral
+    target t':fp5:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp5:numExp,t':fp5:numExp]
+    consequent :metaTrue <-equal[t:fp5:numeral,t':fp5:numeral]
     strength 1
 
 tSchema equalFPSix:(numG,numG,interNumNum) =
-    source t:fp6:numExp
-    target t':fp6:numExp
+    source t:fp6:numeral
+    target t':fp6:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp6:numExp,t':fp6:numExp]
+    consequent :metaTrue <-equal[t:fp6:numeral,t':fp6:numeral]
     strength 1
 
 tSchema equalFPSeven:(numG,numG,interNumNum) =
-    source t:fp7:numExp
-    target t':fp7:numExp
+    source t:fp7:numeral
+    target t':fp7:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp7:numExp,t':fp7:numExp]
+    consequent :metaTrue <-equal[t:fp7:numeral,t':fp7:numeral]
     strength 1
 
 tSchema equalFPEight:(numG,numG,interNumNum) =
-    source t:fp8:numExp
-    target t':fp8:numExp
+    source t:fp8:numeral
+    target t':fp8:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp8:numExp,t':fp8:numExp]
+    consequent :metaTrue <-equal[t:fp8:numeral,t':fp8:numeral]
     strength 1
 
 tSchema equalFPNine:(numG,numG,interNumNum) =
-    source t:fp9:numExp
-    target t':fp9:numExp
+    source t:fp9:numeral
+    target t':fp9:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp9:numExp,t':fp9:numExp]
+    consequent :metaTrue <-equal[t:fp9:numeral,t':fp9:numeral]
     strength 1
 
 tSchema equalFPTwoFive:(numG,numG,interNumNum) =
-    source t:fp25:numExp
-    target t':fp25:numExp
+    source t:fp25:numeral
+    target t':fp25:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp25:numExp,t':fp25:numExp]
+    consequent :metaTrue <-equal[t:fp25:numeral,t':fp25:numeral]
     strength 1
 
 tSchema equalFPNineNine:(numG,numG,interNumNum) =
-    source t:fp99:numExp
-    target t':fp99:numExp
+    source t:fp99:numeral
+    target t':fp99:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp99:numExp,t':fp99:numExp]
+    consequent :metaTrue <-equal[t:fp99:numeral,t':fp99:numeral]
     strength 1
 
 tSchema equalFPNineNineNine:(numG,numG,interNumNum) =
-    source t:fp999:numExp
-    target t':fp999:numExp
+    source t:fp999:numeral
+    target t':fp999:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp999:numExp,t':fp999:numExp]
+    consequent :metaTrue <-equal[t:fp999:numeral,t':fp999:numeral]
     strength 1
 
 tSchema equalFPZeroOne:(numG,numG,interNumNum) =
-    source t:fp01:numExp
-    target t':fp01:numExp
+    source t:fp01:numeral
+    target t':fp01:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp01:numExp,t':fp01:numExp]
+    consequent :metaTrue <-equal[t:fp01:numeral,t':fp01:numeral]
     strength 1
 
 tSchema equalFPZeroZeroOne:(numG,numG,interNumNum) =
-    source t:fp001:numExp
-    target t':fp001:numExp
+    source t:fp001:numeral
+    target t':fp001:numeral
     antecedent
-    consequent :metaTrue <-equal[t:fp001:numExp,t':fp001:numExp]
+    consequent :metaTrue <-equal[t:fp001:numeral,t':fp001:numeral]
     strength 1
 
 tSchema equalX:(numG,numG,interNumNum) =
-    source t:x:numExp
-    target t':x:numExp
+    source t:x:var
+    target t':x:var
     antecedent
-    consequent :metaTrue <-equal[t:x:numExp,t':x:numExp]
+    consequent :metaTrue <-equal[t:x:var,t':x:var]
     strength 1
 
 tSchema equalY:(numG,numG,interNumNum) =
-    source t:y:numExp
-    target t':y:numExp
+    source t:y:var
+    target t':y:var
     antecedent
-    consequent :metaTrue <-equal[t:y:numExp,t':y:numExp]
+    consequent :metaTrue <-equal[t:y:var,t':y:var]
     strength 1
 
 tSchema equalZ:(numG,numG,interNumNum) =
-    source t:z:numExp
-    target t':z:numExp
+    source t:z:var
+    target t':z:var
     antecedent
-    consequent :metaTrue <-equal[t:z:numExp,t':z:numExp]
+    consequent :metaTrue <-equal[t:z:var,t':z:var]
     strength 1
 
 tSchema equalPlus:(numG,numG,interNumNum) =

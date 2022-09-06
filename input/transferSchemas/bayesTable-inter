@@ -46,9 +46,9 @@ tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
 tSchema condProb:(bayesG,contTableG,interBayesTable) =
     source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
                              t2:numExp]
-    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':a:numExp],
-                                     t2':oneway <- constructOne[t21':name,t22':b:numExp], 
-                                     t3':numExp <- implicitMult[t31':numExp,t22':b:numExp]]
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
+                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
+                                     t3':numExp <- implicitMult[t31':numExp,t22':y:var]]
     antecedent :metaTrue <- match[t11:event,t11':name],
                :metaTrue <- match[t13:event,t21':name],
                :metaTrue <- equal[t2:numExp,t31':numExp]
@@ -58,8 +58,8 @@ tSchema condProb:(bayesG,contTableG,interBayesTable) =
 tSchema jointProb:(bayesG,contTableG,interBayesTable) =
     source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
-    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':a:numExp],
-                                     t2':oneway <- constructOne[t21':name,t22':b:numExp], 
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
+                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
                                      t3':numExp]
     antecedent :metaTrue <- match[t11:event,t11':name],
                :metaTrue <- match[t13:event,t21':name],

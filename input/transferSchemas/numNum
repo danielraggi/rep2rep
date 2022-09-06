@@ -1,213 +1,213 @@
 import num
 
 tSchema equalZero:(numG,numG) =
-    source t:0:numExp
-    target t':0:numExp
+    source t:0:numeral
+    target t':0:numeral
     antecedent
-    consequent ([t:0:numExp],[t':0:numExp]) :: equal
+    consequent ([t:0:numeral],[t':0:numeral]) :: equal
     strength 1
 
 tSchema equalOne:(numG,numG) =
-    source t:1:numExp
-    target t':1:numExp
+    source t:1:numeral
+    target t':1:numeral
     antecedent
-    consequent ([t:1:numExp],[t':1:numExp]) :: equal
+    consequent ([t:1:numeral],[t':1:numeral]) :: equal
     strength 1
 
 tSchema equalTwo:(numG,numG) =
-    source t:2:numExp
-    target t':2:numExp
+    source t:2:numeral
+    target t':2:numeral
     antecedent
-    consequent ([t:2:numExp],[t':2:numExp]) :: equal
+    consequent ([t:2:numeral],[t':2:numeral]) :: equal
     strength 1
 
 tSchema equalThree:(numG,numG) =
-    source t:3:numExp
-    target t':3:numExp
+    source t:3:numeral
+    target t':3:numeral
     antecedent
-    consequent ([t:3:numExp],[t':3:numExp]) :: equal
+    consequent ([t:3:numeral],[t':3:numeral]) :: equal
     strength 1
 
 tSchema equalFour:(numG,numG) =
-    source t:4:numExp
-    target t':4:numExp
+    source t:4:numeral
+    target t':4:numeral
     antecedent
-    consequent ([t:4:numExp],[t':4:numExp]) :: equal
+    consequent ([t:4:numeral],[t':4:numeral]) :: equal
     strength 1
 
 tSchema equalFive:(numG,numG) =
-    source t:5:numExp
-    target t':5:numExp
+    source t:5:numeral
+    target t':5:numeral
     antecedent
-    consequent ([t:5:numExp],[t':5:numExp]) :: equal
+    consequent ([t:5:numeral],[t':5:numeral]) :: equal
     strength 1
 
 tSchema equalSix:(numG,numG) =
-    source t:6:numExp
-    target t':6:numExp
+    source t:6:numeral
+    target t':6:numeral
     antecedent
-    consequent ([t:6:numExp],[t':6:numExp]) :: equal
+    consequent ([t:6:numeral],[t':6:numeral]) :: equal
     strength 1
 
 tSchema equalSeven:(numG,numG) =
-    source t:7:numExp
-    target t':7:numExp
+    source t:7:numeral
+    target t':7:numeral
     antecedent
-    consequent ([t:7:numExp],[t':7:numExp]) :: equal
+    consequent ([t:7:numeral],[t':7:numeral]) :: equal
     strength 1
 
 tSchema equalEight:(numG,numG) =
-    source t:8:numExp
-    target t':8:numExp
+    source t:8:numeral
+    target t':8:numeral
     antecedent
-    consequent ([t:8:numExp],[t':8:numExp]) :: equal
+    consequent ([t:8:numeral],[t':8:numeral]) :: equal
     strength 1
 
 tSchema equalNine:(numG,numG) =
-    source t:9:numExp
-    target t':9:numExp
+    source t:9:numeral
+    target t':9:numeral
     antecedent
-    consequent ([t:9:numExp],[t':9:numExp]) :: equal
+    consequent ([t:9:numeral],[t':9:numeral]) :: equal
     strength 1
 
 tSchema equalTen:(numG,numG) =
-    source t:10:numExp
-    target t':10:numExp
+    source t:10:numeral
+    target t':10:numeral
     antecedent
-    consequent ([t:10:numExp],[t':10:numExp]) :: equal
+    consequent ([t:10:numeral],[t':10:numeral]) :: equal
     strength 1
 
 tSchema equalHund:(numG,numG) =
-    source t:100:numExp
-    target t':100:numExp
+    source t:100:numeral
+    target t':100:numeral
     antecedent
-    consequent ([t:100:numExp],[t':100:numExp]) :: equal
+    consequent ([t:100:numeral],[t':100:numeral]) :: equal
     strength 1
 
 tSchema equalThou:(numG,numG) =
-    source t:1000:numExp
-    target t':1000:numExp
+    source t:1000:numeral
+    target t':1000:numeral
     antecedent
-    consequent ([t:1000:numExp],[t':1000:numExp]) :: equal
+    consequent ([t:1000:numeral],[t':1000:numeral]) :: equal
     strength 1
 
 tSchema equalFPOne:(numG,numG) =
-    source t:fp1:numExp
-    target t':fp1:numExp
+    source t:fp1:numeral
+    target t':fp1:numeral
     antecedent
-    consequent ([t:fp1:numExp],[t':fp1:numExp]) :: equal
+    consequent ([t:fp1:numeral],[t':fp1:numeral]) :: equal
     strength 1
 
 tSchema equalFPTwo:(numG,numG) =
-    source t:fp2:numExp
-    target t':fp2:numExp
+    source t:fp2:numeral
+    target t':fp2:numeral
     antecedent
-    consequent ([t:fp2:numExp],[t':fp2:numExp]) :: equal
+    consequent ([t:fp2:numeral],[t':fp2:numeral]) :: equal
     strength 1
 
 tSchema equalFPThree:(numG,numG) =
-    source t:fp3:numExp
-    target t':fp3:numExp
+    source t:fp3:numeral
+    target t':fp3:numeral
     antecedent
-    consequent ([t:fp3:numExp],[t':fp3:numExp]) :: equal
+    consequent ([t:fp3:numeral],[t':fp3:numeral]) :: equal
     strength 1
 
 tSchema equalFPFour:(numG,numG) =
-    source t:fp4:numExp
-    target t':fp4:numExp
+    source t:fp4:numeral
+    target t':fp4:numeral
     antecedent
-    consequent ([t:fp4:numExp],[t':fp4:numExp]) :: equal
+    consequent ([t:fp4:numeral],[t':fp4:numeral]) :: equal
     strength 1
 
 tSchema equalFPFive:(numG,numG) =
-    source t:fp5:numExp
-    target t':fp5:numExp
+    source t:fp5:numeral
+    target t':fp5:numeral
     antecedent
-    consequent ([t:fp5:numExp],[t':fp5:numExp]) :: equal
+    consequent ([t:fp5:numeral],[t':fp5:numeral]) :: equal
     strength 1
 
 tSchema equalFPSix:(numG,numG) =
-    source t:fp6:numExp
-    target t':fp6:numExp
+    source t:fp6:numeral
+    target t':fp6:numeral
     antecedent
-    consequent ([t:fp6:numExp],[t':fp6:numExp]) :: equal
+    consequent ([t:fp6:numeral],[t':fp6:numeral]) :: equal
     strength 1
 
 tSchema equalFPSeven:(numG,numG) =
-    source t:fp7:numExp
-    target t':fp7:numExp
+    source t:fp7:numeral
+    target t':fp7:numeral
     antecedent
-    consequent ([t:fp7:numExp],[t':fp7:numExp]) :: equal
+    consequent ([t:fp7:numeral],[t':fp7:numeral]) :: equal
     strength 1
 
 tSchema equalFPEight:(numG,numG) =
-    source t:fp8:numExp
-    target t':fp8:numExp
+    source t:fp8:numeral
+    target t':fp8:numeral
     antecedent
-    consequent ([t:fp8:numExp],[t':fp8:numExp]) :: equal
+    consequent ([t:fp8:numeral],[t':fp8:numeral]) :: equal
     strength 1
 
 tSchema equalFPNine:(numG,numG) =
-    source t:fp9:numExp
-    target t':fp9:numExp
+    source t:fp9:numeral
+    target t':fp9:numeral
     antecedent
-    consequent ([t:fp9:numExp],[t':fp9:numExp]) :: equal
+    consequent ([t:fp9:numeral],[t':fp9:numeral]) :: equal
     strength 1
 
 tSchema equalFPTwoFive:(numG,numG) =
-    source t:fp25:numExp
-    target t':fp25:numExp
+    source t:fp25:numeral
+    target t':fp25:numeral
     antecedent
-    consequent ([t:fp25:numExp],[t':fp25:numExp]) :: equal
+    consequent ([t:fp25:numeral],[t':fp25:numeral]) :: equal
     strength 1
 
 tSchema equalFPNineNine:(numG,numG) =
-    source t:fp99:numExp
-    target t':fp99:numExp
+    source t:fp99:numeral
+    target t':fp99:numeral
     antecedent
-    consequent ([t:fp99:numExp],[t':fp99:numExp]) :: equal
+    consequent ([t:fp99:numeral],[t':fp99:numeral]) :: equal
     strength 1
 
 tSchema equalFPNineNineNine:(numG,numG) =
-    source t:fp999:numExp
-    target t':fp999:numExp
+    source t:fp999:numeral
+    target t':fp999:numeral
     antecedent
-    consequent ([t:fp999:numExp],[t':fp999:numExp]) :: equal
+    consequent ([t:fp999:numeral],[t':fp999:numeral]) :: equal
     strength 1
 
 tSchema equalFPZeroOne:(numG,numG) =
-    source t:fp01:numExp
-    target t':fp01:numExp
+    source t:fp01:numeral
+    target t':fp01:numeral
     antecedent
-    consequent ([t:fp01:numExp],[t':fp01:numExp]) :: equal
+    consequent ([t:fp01:numeral],[t':fp01:numeral]) :: equal
     strength 1
 
 tSchema equalFPZeroZeroOne:(numG,numG) =
-    source t:fp001:numExp
-    target t':fp001:numExp
+    source t:fp001:numeral
+    target t':fp001:numeral
     antecedent
-    consequent ([t:fp001:numExp],[t':fp001:numExp]) :: equal
+    consequent ([t:fp001:numeral],[t':fp001:numeral]) :: equal
     strength 1
 
 tSchema equalX:(numG,numG) =
-    source t:x:numExp
-    target t':x:numExp
+    source t:x:var
+    target t':x:var
     antecedent
-    consequent ([t:x:numExp],[t':x:numExp]) :: equal
+    consequent ([t:x:var],[t':x:var]) :: equal
     strength 1
 
 tSchema equalY:(numG,numG) =
-    source t:y:numExp
-    target t':y:numExp
+    source t:y:var
+    target t':y:var
     antecedent
-    consequent ([t:y:numExp],[t':y:numExp]) :: equal
+    consequent ([t:y:var],[t':y:var]) :: equal
     strength 1
 
 tSchema equalZ:(numG,numG) =
-    source t:z:numExp
-    target t':z:numExp
+    source t:z:var
+    target t':z:var
     antecedent
-    consequent ([t:z:numExp],[t':z:numExp]) :: equal
+    consequent ([t:z:var],[t':z:var]) :: equal
     strength 1
 
 tSchema equalPlus:(numG,numG) =
