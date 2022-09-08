@@ -24,14 +24,14 @@ tSchema notEvent:(bayesG,probTreeG) =
     strength 1
 
 tSchema makeEvent:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:events,t2:numExp]
+    source t:probEqn <- makeEqn[t1:events,t2:numExp]
     target t':tree <- construct[t1':label,t2':numExp]
     antecedent ([t1:events],[t1':label]) :: match, ([t2:numExp],[t2':numExp]) :: equal
     consequent ([t:probEqn],[t':tree]) :: encode
     strength 1
 
 tSchema makeCond:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                              t2:numExp]
     target t':tree <- addBranch[t1':tree <- construct[t11':label,t12':y:var],
                                 t2':label,
@@ -41,7 +41,7 @@ tSchema makeCond:(bayesG,probTreeG) =
     strength 1
 
 tSchema makeInter:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
     target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':x:var],
                                 t2':label, 

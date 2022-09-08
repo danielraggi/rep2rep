@@ -36,35 +36,35 @@ tSchema complEvent:(bayesG,contTableG,interBayesTable) =
     strength 1
 
 tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- prob[t1:events,t2:numExp]
-    target t':oneway <- constructOne[t1':name,t2':numExp]
+    source t:probEqn <- makeEqn[t1:events,t2:numExp]
+    target t':oneDim <- buildOne[t1':name,t2':numExp]
     antecedent :metaTrue <- match[t1:events,t1':name],
                :metaTrue <- equal[t2:numExp,t2':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':oneway]
+    consequent :metaTrue <- encode[t:probEqn,t':oneDim]
     strength 1
 
 tSchema condProb:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                              t2:numExp]
-    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
-                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
-                                     t3':numExp <- implicitMult[t31':numExp,t22':y:var]]
+    target t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
+                                     t2':oneDim <- buildOne[t21':name,t22':y:var],
+                                     t3':numExp <- multiply[t31':numExp,t22':y:var]]
     antecedent :metaTrue <- match[t11:event,t11':name],
-               :metaTrue <- match[t13:event,t21':name],
+               :metaTrue <- match[t12:event,t21':name],
                :metaTrue <- equal[t2:numExp,t31':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':twoway]
+    consequent :metaTrue <- encode[t:probEqn,t':twoDim]
     strength 1
 
 tSchema jointProb:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
-    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
-                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
+    target t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
+                                     t2':oneDim <- buildOne[t21':name,t22':y:var],
                                      t3':numExp]
     antecedent :metaTrue <- match[t11:event,t11':name],
                :metaTrue <- match[t13:event,t21':name],
                :metaTrue <- equal[t2:numExp,t3':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':twoway]
+    consequent :metaTrue <- encode[t:probEqn,t':twoDim]
     strength 1
 
 tSchema combineEqn:(bayesG,contTableG,interBayesTable) =

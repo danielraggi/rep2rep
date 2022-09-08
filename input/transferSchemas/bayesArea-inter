@@ -36,7 +36,7 @@ tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
     strength 1
 
 tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
-    source t:probEqn <- prob[t1:events,t2:numExp]
+    source t:probEqn <- makeEqn[t1:events,t2:numExp]
     target t':area <- overlayRect[t1':empty,
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
                                                     t22':point <- cPoint[t221':numExp,t222':1:numeral]],
@@ -48,7 +48,7 @@ tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
     strength 1
 
 tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
-    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                              t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
@@ -66,7 +66,7 @@ tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
     strength 1
 
 tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
-    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
