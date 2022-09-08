@@ -36,7 +36,7 @@ tSchema makeCond:(bayesG,probTreeG) =
     target t':tree <- addBranch[t1':tree <- construct[t11':label,t12':y:var],
                                 t2':label,
                                 t3':numExp]
-    antecedent ([t13:event],[t11':label]) :: match, ([t11:event],[t2':label]) :: match, ([t2:numExp],[t3':numExp]) :: equal
+    antecedent ([t12:event],[t11':label]) :: match, ([t11:event],[t2':label]) :: match, ([t2:numExp],[t3':numExp]) :: equal
     consequent ([t:probEqn],[t':tree]) :: encode
     strength 1
 
@@ -44,7 +44,7 @@ tSchema makeInter:(bayesG,probTreeG) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
     target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':x:var],
-                                t2':label, 
+                                t2':label,
                                 t3':numExp <- frac[t31':numExp,t32':div,t12':x:var]]
     antecedent ([t11:event],[t11':label]) :: match, ([t13:event],[t2':label]) :: match, ([t2:numExp],[t31':numExp]) :: equal
     consequent ([t:probEqn],[t':tree]) :: encode

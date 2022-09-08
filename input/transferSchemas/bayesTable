@@ -36,7 +36,7 @@ tSchema condProb:(bayesG,contTableG) =
     target t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
                                      t2':oneDim <- buildOne[t21':name,t22':y:var],
                                      t3':numExp <- multiply[t31':numExp,t22':y:var]]
-    antecedent ([t11:event],[t11':name]) :: match, ([t13:event],[t21':name]) :: match, ([t2:numExp],[t31':numExp]) :: equal
+    antecedent ([t11:event],[t11':name]) :: match, ([t12:event],[t21':name]) :: match, ([t2:numExp],[t31':numExp]) :: equal
     consequent ([t:probEqn],[t':twoDim]) :: encode
     strength 1
 

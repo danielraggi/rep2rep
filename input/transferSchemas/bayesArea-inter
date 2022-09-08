@@ -60,7 +60,7 @@ tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
                                   t3':tag,
                                   t4':pattern]
     antecedent :metaTrue <- match[t11:event,t3':tag],
-               :metaTrue <- match[t13:event,t13':tag],
+               :metaTrue <- match[t12:event,t13':tag],
                :metaTrue <- equal[t2:numExp,t222':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
     strength 1
@@ -82,7 +82,7 @@ tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
                :metaTrue <- match[t13:event,t3':tag],
                :metaTrue <- equal[t2:numExp,t2221':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
-    strength 1 
+    strength 1
 
 tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]

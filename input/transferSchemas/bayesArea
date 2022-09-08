@@ -46,7 +46,7 @@ tSchema constructCond:(bayesG,areaDiagramG) =
                                                     t22':point <- cPoint[t1221':x:var,t222':numExp]],
                                   t3':tag,
                                   t4':pattern]
-    antecedent ([t13:event],[t13':tag]) :: match, ([t11:event],[t3':tag]) :: match, ([t2:numExp],[t222':numExp]) :: equal
+    antecedent ([t12:event],[t13':tag]) :: match, ([t11:event],[t3':tag]) :: match, ([t2:numExp],[t222':numExp]) :: equal
     consequent ([t:probEqn],[t':area]) :: encode
     strength 1
 
