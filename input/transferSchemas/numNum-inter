@@ -246,8 +246,8 @@ tSchema equalFrac:(numG,numG,interNumNum) =
     strength 1
 
 tSchema equalMult:(numG,numG,interNumNum) =
-    source t:numExp <- implicitMult[t1:numExp,t2:numExp]
-    target t':numExp <- implicitMult[t1':numExp,t2':numExp]
+    source t:numExp <- multiply[t1:numExp,t2:numExp]
+    target t':numExp <- multiply[t1':numExp,t2':numExp]
     antecedent :metaTrue <-equal[t1:numExp,t1':numExp],
                :metaTrue <-equal[t2:numExp,t2':numExp]
     consequent :metaTrue <-equal[t:numExp,t':numExp]

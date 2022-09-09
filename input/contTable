@@ -2,13 +2,13 @@ import num
 
 typeSystem contTable =
  imports num
- types _:name, _:oneway, _:twoway, _:table
- order oneway < table, twoway < table
+ types _:name, _:oneDim, _:twoDim, _:table
+ order oneDim < table, twoDim < table
 
 conSpec contTableG:contTable = 
  imports numG
  constructors
   notName : [name] -> name,
-  constructOne : [name,numExp] -> oneway,
-  constructTwo : [oneway,oneway,numExp] -> twoway,
+  buildOne : [name,numExp] -> oneDim,
+  buildTwo : [oneDim,oneDim,numExp] -> twoDim,
   combine : [table,table] -> table
