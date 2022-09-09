@@ -97,7 +97,7 @@ fun parseNum (Construction.Source(x)) =
                     Construction.Source(z) => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"/",1.5)]@y2)
                     |_ => raise NumError
             end
-        else if (#1 (#constructor x)) = "multiply" then 
+        else if (#1 (#constructor x)) = "multiply" then
             let val (a,y1) = parseNum (List.nth (y,0))
                 val (b,y2) = parseNum (List.last(y)) in
                 (MULT(a,b),(#1 (#token x),(#2 (hd(y1)))^"*"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@y2)
@@ -1691,7 +1691,7 @@ fun drawBayes x =
                         end
                     else let val y1 = parseEvent (hd(y))
                              val y2 = parseEvent (List.last(y)) in
-                                if (#1 (#constructor x)) = "condition" then
+                                if (#1 (#constructor x)) = "makeCond" then
                                     (case (List.nth (y,1)) of
                                     Construction.Source(z) => (t,(#2 (hd(y1)))^"|"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"|",1.5)]@y2
                                     |_ => raise BayesError)
@@ -1706,7 +1706,7 @@ fun drawBayes x =
                 end
             |parseEvent (Construction.Reference(x)) = raise BayesError
         fun parseBayes (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "prob" then
+                if (#1 (#constructor x)) = "makeEqn" then
                     let val y1 = parseEvent (hd(y))
                         val (_,y2) = parseNum (List.last y)
                         in
