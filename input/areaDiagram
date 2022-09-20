@@ -1,0 +1,17 @@
+import num
+
+typeSystem areaDiagram =
+  imports num, shade
+  types  _:tag, _:area, _:rect, _:point, _:coloured, empty
+  order empty < area, empty < coloured
+
+conSpec areaDiagramG:areaDiagram =
+  imports numG
+  constructors
+    reverseTag: [tag] -> tag,
+    cPoint:[numExp, numExp] -> point,
+    cRect: [point, point] -> rect,
+    overlayRect: [area, rect, tag, shading] -> area,
+    colour: [coloured, tag, shading] -> coloured,
+    addColour: [area, coloured] -> area,
+    combine: [area,area] -> area

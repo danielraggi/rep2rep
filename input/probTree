@@ -1,0 +1,16 @@
+import num
+
+typeSystem probTree =
+  imports num, shade
+  types  _:label, _:tree, _:coloured, empty
+  order empty < coloured
+
+conSpec probTreeG:probTree =
+  imports numG
+  constructors
+    notLabel: [label] -> label,
+    construct: [label, numExp] -> tree,
+    addBranch: [tree, label, numExp] -> tree,
+    resolve: [tree, tree] -> tree,
+    colour : [coloured, label, shading] -> coloured,
+    colourTree: [tree, coloured] -> tree

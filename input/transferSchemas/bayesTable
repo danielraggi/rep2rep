@@ -1,0 +1,104 @@
+import bayes
+import contTable
+import transferSchemas/numNum
+
+tSchema eventA:(bayesG,contTableG) =
+    source t:A:event
+    target t':A:name
+    antecedent
+    consequent ([t:A:event],[t':A:name]) :: match
+    strength 1
+
+tSchema eventB:(bayesG,contTableG) =
+    source t:B:event
+    target t':B:name
+    antecedent
+    consequent ([t:B:event],[t':B:name]) :: match
+    strength 1
+
+tSchema complEvent:(bayesG,contTableG) =
+    source t:event <- complement[t1:overline,t2:event]
+    target t':name <- notName[t1':name]
+    antecedent ([t2:event],[t1':name]) :: match
+    consequent ([t:event],[t':name]) :: match
+    strength 1
+
+tSchema singleEqn:(bayesG,contTableG) =
+    source t:probEqn <- prob[t1:events,t2:numExp]
+    target t':oneway <- constructOne[t1':name,t2':numExp]
+    antecedent ([t1:events],[t1':name]) :: match, ([t2:numExp],[t2':numExp]) :: equal
+    consequent ([t:probEqn],[t':oneway]) :: encode
+    strength 1
+
+tSchema condProb:(bayesG,contTableG) =
+    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+                             t2:numExp]
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
+                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
+                                     t3':numExp <- implicitMult[t31':numExp,t22':y:var]]
+    antecedent ([t11:event],[t11':name]) :: match, ([t13:event],[t21':name]) :: match, ([t2:numExp],[t31':numExp]) :: equal
+    consequent ([t:probEqn],[t':twoway]) :: encode
+    strength 1
+
+tSchema jointProb:(bayesG,contTableG) =
+    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+                             t2:numExp]
+    target t':twoway <- constructTwo[t1':oneway <- constructOne[t11':name,t12':x:var],
+                                     t2':oneway <- constructOne[t21':name,t22':y:var], 
+                                     t3':numExp]
+    antecedent ([t11:event],[t11':name]) :: match, ([t13:event],[t21':name]) :: match, ([t2:numExp],[t3':numExp]) :: equal
+    consequent ([t:probEqn],[t':twoway]) :: encode
+    strength 1
+
+tSchema combineEqn:(bayesG,contTableG) =
+    source t:probSys <- addEqn[t1:probEqn,t2:probSys]
+    target t':table <- combine[t1':table,t2':table]
+    antecedent ([t1:probEqn],[t1':table]) :: encode, ([t2:probSys],[t2':table]) :: encode
+    consequent ([t:probSys],[t':table]) :: encode
+    strength 1
+
+tSchema colourA:(bayesG,contTableG) =
+    source t:A:event
+    target t':coloured <- highlight[t1':blank,t2':A:name,t3':blue]
+    antecedent
+    consequent ([t:A:event],[t':coloured]) :: cMatch
+    strength 1
+
+tSchema colourB:(bayesG,contTableG) =
+    source t:B:event
+    target t':coloured <- highlight[t1':blank,t2':B:name,t3':blue]
+    antecedent
+    consequent ([t:B:event],[t':coloured]) :: cMatch
+    strength 1
+
+tSchema complColour:(bayesG,contTableG) =
+    source t:event <- complement[t1:overline,t2:event]
+    target t':coloured <- highlight[t1':blank,
+                                    t2':name <- notName[t21':name],
+                                    t3':blue]
+    antecedent ([t2:event],[t21':name]) :: match
+    consequent ([t:event],[t':coloured]) :: cMatch
+    strength 1
+
+tSchema condColour:(bayesG,contTableG) =
+    source t:condEvent <- condition[t1:event,t2:cond,t3:event]
+    target t':coloured <- highlight[t1':coloured,t2':name,t3':pattern]
+    antecedent ([t3:event],[t1':coloured]) :: cMatch, ([t1:event],[t2':name]) :: match
+    consequent ([t:condEvent],[t':coloured]) :: cMatch
+    strength 1
+
+tSchema jointColour:(bayesG,contTableG) =
+    source t:event <- infix[t1:event,t2:inter,t3:event]
+    target t':coloured <- highlight[t1':coloured <- highlight[t11':blank,t12':name,t13':white],
+                                    t2':name,
+                                    t3':blue]
+    antecedent ([t1:event],[t12':name]) :: match, ([t3:event],[t2':name]) :: match
+    consequent ([t:event],[t':coloured]) :: cMatch
+    strength 1
+
+tSchema colourTable:(bayesG,contTableG) =
+    source t:probSys <- calculate[t1:probSys,t2:events]
+    target t':table <- colourTable[t1':table, t2':coloured]
+    antecedent ([t1:probSys],[t1':table]) :: encode, ([t2:events],[t2':coloured]) :: cMatch
+    consequent ([t:probSys],[t':table]) :: encode
+    strength 1

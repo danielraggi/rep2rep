@@ -1,0 +1,16 @@
+import num
+
+typeSystem contTable =
+ imports num, shade
+ types _:name, _:oneway, _:twoway, _:table, blank, _:coloured
+ order oneway < table, twoway < table, blank < coloured
+
+conSpec contTableG:contTable = 
+ imports numG
+ constructors
+  notName : [name] -> name,
+  constructOne : [name,numExp] -> oneway,
+  constructTwo : [oneway,oneway,numExp] -> twoway,
+  highlight : [coloured, name, shading] -> coloured,
+  colourTable : [table, coloured] -> table,
+  combine : [table,table] -> table
