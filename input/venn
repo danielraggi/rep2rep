@@ -1,0 +1,14 @@
+typeSystem venn = 
+    types 1, _:var, _:diagram       
+    order 1 < diagram,
+          var < diagram
+    
+conSpec vennG:venn = 
+  constructors  
+    contrast : [diagram] -> diagram,
+    addCircles : [diagram] -> diagram,
+    addCircle : [var,diagram] -> diagram,
+    fillAnd : [diagram,diagram] -> diagram,
+    fillOr : [diagram,diagram] -> diagram,
+    fillImply : [diagram,diagram] -> diagram,
+    fillIff : [diagram,diagram] -> diagram

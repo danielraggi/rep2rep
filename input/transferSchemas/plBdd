@@ -1,0 +1,80 @@
+import pl
+import bdd
+
+tSchema not:(plG,bddG) =
+    source t:plExp <- unaryOp[n:not,p:plExp]
+    target t':bddTree <- flip[a:bddTree]
+    antecedent ([p:plExp],[a:bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema or:(plG,bddG) =
+    source t:plExp <- infixOp[p:plExp,o:or,q:plExp]
+    target t':bddTree <- removeDup[t2:bddTree <- replace0[a':bddTree <- addNodes[a:bddTree],b:bddTree]]
+    antecedent ([p:plExp],[a:bddTree]) :: match, ([q:plExp],[b:bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema and:(plG,bddG) =
+    source t:plExp <- infixOp[p:plExp,o:and,q:plExp]
+    target t':bddTree <- removeDup[t2:bddTree <- replace1[a':bddTree <- addNodes[a:bddTree],b:bddTree]]
+    antecedent ([p:plExp],[a:bddTree]) :: match, ([q:plExp],[b:bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema imply:(plG,bddG) =
+    source t:plExp <- infixOp[p:plExp,o:imply,q:plExp]
+    target t':bddTree <- removeDup[t2:bddTree <- replace0[a':bddTree <- addNodes[a2:bddTree <- flip[a:bddTree]],b:bddTree]]
+    antecedent ([p:plExp],[a:bddTree]) :: match, ([q:plExp],[b:bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema iff:(plG,bddG) =
+    source t:plExp <- infixOp[p:plExp,o:iff,q:plExp]
+    target t':bddTree <- removeDup[t2:bddTree <- replace1[t21:bddTree <- replace0[a2:bddTree <-addNodes[a:bddTree], b2:bddTree <-flip[b:bddTree]],
+                                                          t22:bddTree <- replace0[a3:bddTree <- flip[a2:bddTree], b:bddTree]]]
+    antecedent ([p:plExp],[a:bddTree]) :: match, ([q:plExp],[b:bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema removeParentheses:(plG,bddG) =
+    source t:plExp <- addParentheses[o:oB,p:plExp,c:cB]
+    target t':bddTree
+    antecedent ([p:plExp],[t':bddTree]) :: match
+    consequent ([t:plExp],[t':bddTree]) :: match
+    strength 1.0
+
+tSchema false:(plG,bddG) =
+    source t:false
+    target t':0
+    antecedent
+    consequent ([t:false],[t':0]) :: match
+    strength 1.0
+ 
+tSchema true:(plG,bddG) =
+    source t:true
+    target t':1
+    antecedent
+    consequent ([t:true],[t':1]) :: match
+    strength 1.0   
+
+tSchema pVar:(plG,bddG) =
+    source t:p:plExp
+    target t':p:bddTree
+    antecedent
+    consequent ([t:p:plExp],[t':p:bddTree]) :: match
+    strength 1.0
+
+tSchema qVar:(plG,bddG) =
+    source t:q:plExp
+    target t':q:bddTree
+    antecedent
+    consequent ([t:q:plExp],[t':q:bddTree]) :: match
+    strength 1.0
+
+tSchema rVar:(plG,bddG) =
+    source t:r:plExp
+    target t':r:bddTree
+    antecedent
+    consequent ([t:r:plExp],[t':r:bddTree]) :: match
+    strength 1.0
