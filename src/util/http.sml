@@ -364,6 +364,17 @@ fun listen addr callback =
         val sock = INetSock.TCP.socket ();
         val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 512);
+        fun cleanup () =
+            let val _ = print ("Stopping server...\n");
+                val () = Socket.close sock;
+            in () end;
+        val _ = Signal.signal (Posix.Signal.int,
+                               Signal.SIG_HANDLE (
+                                   fn _ => (
+                                       cleanup();
+                                       Signal.signal (Posix.Signal.int, Signal.SIG_DFL);
+                                       Posix.Process.kill (Posix.Process.K_SAME_GROUP,
+                                                           Posix.Signal.int))));
     in
         forever
             (fn () =>
