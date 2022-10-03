@@ -24,3 +24,9 @@ conSpec arithG:arith =
     frac : [numExp,div,numExp] -> numExp,
     implicitMult : [numExp,numExp] -> numExp,
     addParentheses : [oB,numExp,cB] -> numExp
+
+conSpec arithE:arith =
+  constructors
+    apply : [formula,binOp,numExp] -> formula,
+    rewrite : [formula,numExp,numExp] -> formula,
+    substitute : [formula,var,numExp] -> formula
