@@ -1,6 +1,6 @@
 typeSystem dotDiagrams =
     types _:dot, _:line, _:rectangle, _:triangle, _:arr, _:manipulation
-    order dot < line, line < rectangle, dot < triangle, triangle < arrangement, rectangle < arr
+    order dot < line, line < rectangle, dot < triangle, triangle < arr, rectangle < arr
 
 conSpec dotDiagramsG:dotDiagrams =
   constructors
