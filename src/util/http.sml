@@ -240,11 +240,12 @@ fun send_http sock vec =
     end;
 
 fun recvVecNB (sock, chunk_size) =
-    let val ready = Socket.select {
+    let val () = print ("RECV_NB\n");
+        val ready = Socket.select {
                 rds = [Socket.sockDesc sock],
                 wrs = [],
                 exs = [],
-                timeout = SOME(Time.fromMilliseconds 100)
+                timeout = SOME(Time.fromMilliseconds 10)
             };
     in if List.length (#rds ready) = 0
        then NONE
@@ -262,10 +263,7 @@ fun recv_bytes sock =
                                 else f (inv::ans)
             end
         val invec = f [];
-    in if Word8Vector.length invec = 0
-        then recv_bytes sock
-        else invec
-    end;
+    in invec end;
 
 fun recv_http sock reader =
     let fun loop old_bytes =
@@ -381,7 +379,10 @@ fun listen addr callback =
                 let val (sock', remote_addr) = Socket.accept sock;
                     fun handler () = let
                         val response =
-                            let val request = recv_request sock' in
+                            let val () = print ("Recieving request...\n");
+                                val request = recv_request sock' ;
+                                val () = print("Request for " ^ (#endpoint request) ^ "\n");
+                            in
                                 case #method request of
                                     OPTIONS => preflight
                                   | _ =>  callback request
@@ -393,10 +394,11 @@ fun listen addr callback =
                                              internalError);
                         val () = send_response sock' response;
                         val () = Socket.close sock';
+                        val () = print ("Handled Request.\n");
                     in () end handle e => printDiagnostics e;
                     val _ = Thread.Thread.fork (handler, []);
                 in () end)
-    end;
+    end handle e as (OS.SysErr (msg, _)) => let val () = print("ERROR: " ^ msg ^ "\n"); in raise e end;
 
 end;
 
