@@ -10,12 +10,12 @@ conSpec numG:num =
   constructors
     infixOp : [numExp,binOp,numExp] -> numExp,
     frac : [numExp,div,numExp] -> numExp,
-    implicitMult : [numExp,numExp] -> numExp
+    multiply : [numExp,numExp] -> numExp
 
 typeSystem shade =
     types white, blue, red, green, pattern, _:shading
-    order white < shading, 
-          blue < shading, 
-          red < shading, 
+    order white < shading,
+          blue < shading,
+          red < shading,
           green < shading,
           pattern < shading

@@ -21,6 +21,14 @@ sig
                             -> Pattern.pattern option
                             -> State.T -> State.T Seq.seq
 
+  val applyTransfer:
+      CSpace.conSpecData -> (* Source Constructor Specification *)
+      CSpace.conSpecData -> (* Target Constructor Specification *)
+      CSpace.conSpecData -> (* Inter-space Constructor Specification *)
+      Knowledge.base -> (* Transfer schemas *)
+      Construction.construction -> (* The construction to transform *)
+      Construction.construction -> (* The goal to satisfy *)
+      Construction.construction list (* Your new transformed structure graph :-) *)
 end;
 
 structure Transfer : TRANSFER =
@@ -474,4 +482,26 @@ fun structureTransfer unistructured targetPattOption st =
               NONE => structureTransfer unistructured st
             | SOME targetPattern => targetedTransfer targetPattern st)*)
 
+
+  fun applyTransfer sCSD tCSD iCSD KB ct goal =
+      let val tTS = #typeSystem (#typeSystemData tCSD)
+          val targetTokens = FiniteSet.filter
+                                 (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
+                                 (Construction.leavesOfConstruction goal);
+          val st = State.make {sourceConSpecData = sCSD,
+                               targetConSpecData = tCSD,
+                               interConSpecData = iCSD,
+                               transferProof = TransferProof.ofPattern goal,
+                               construction = ct,
+                               originalGoal = goal,
+                               goals = [goal],
+                               compositions = map Composition.makePlaceholderComposition targetTokens,
+                               knowledge = KB}
+          val stateSeq = structureTransfer false NONE st;
+          fun getStructureGraph st =
+              List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
+          val firstState = Seq.hd stateSeq;
+          val _ = print("UNCLOSED GOALS: " ^ Int.toString(List.length(State.goalsOf firstState)) ^ "\n");
+          val structureGraph = getStructureGraph firstState;
+      in structureGraph end
 end;
