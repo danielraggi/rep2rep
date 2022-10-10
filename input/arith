@@ -1,0 +1,37 @@
+typeSystem basicLogic =
+  types formula, and, or, implies, not, binary, unary
+  order and < binary,
+        or < binary,
+        implies < binary,
+        not < unary
+
+typeSystem arith =
+    imports basicLogic
+    types _:numeral, _:var, _:numExp, _:formula,
+          plus, minus, times, div, binOp,
+          leq, equals, binRel,
+          oB, cB, par
+    order var < numExp,
+          numeral < numExp,
+          plus < binOp,
+          minus < binOp,
+          times < binOp,
+          equals < binRel,
+          leq < binRel,
+          oB < par,
+          cB < par
+
+conSpec basicLogicG:basicLogic =
+  constructors
+    logicInfixOp : [formula,binary,formula] -> formula,
+    logicApplyUnary : [unary,formula] -> formula
+
+conSpec arithG:arith =
+  imports basicLogicG
+  constructors
+    infixOp : [numExp,binOp,numExp] -> numExp,
+    infixOp : [formula,binOp,formula] -> formula,
+    infixRel : [numExp,binRel,numExp] -> formula,
+    frac : [numExp,div,numExp] -> numExp,
+    implicitMult : [numExp,numExp] -> numExp,
+    addParentheses : [oB,numExp,cB] -> numExp

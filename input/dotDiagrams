@@ -1,0 +1,10 @@
+typeSystem dotDiagrams =
+    types _:arr
+    order
+
+conSpec dotDiagramsG:dotDiagrams =
+  constructors
+    join : [arr,arr] -> arr,
+    rotateX : [arr] -> arr,
+    remove : [arr,arr] -> arr,
+    makeRectangle : [arr,arr] -> arr

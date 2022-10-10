@@ -1,0 +1,62 @@
+import transferSchemas/setAlgebraEuler
+
+construction x:setAlgebraG =
+    t1:A_subseteq_B:formula
+        <- infixRel[t11:A:bset,
+                    t12:\subseteq,
+                    t13:B:bset]
+
+construction y:setAlgebraG =
+    t3:B_intersection_C_eq_emptyset:formula
+       <- infixRel[t31:B_intersection_C:set
+                       <-infixOp[t311:B:bset,
+                                 t312:\cap,
+                                 t313:C:bset],
+                   t32:=,
+                   t33:\emptyset]
+
+construction A_subseteq_B_and_B_intersection_C_eq_emptyset:setAlgebraG =
+    t:A_subseteq_B_and_B_intersection_C_eq_emptyset:formula
+        <- infixLogical[t1:A_subseteq_B:formula
+                            <- infixRel[t11:A:bset,
+                                        t12:\subseteq,
+                                        t13:B:bset],
+                         t2:and,
+                         t3:B_intersection_C_eq_emptyset:formula
+                            <- infixRel[t31:B_intersection_C:set
+                                            <-infixOp[t311:B:bset,
+                                                      t312:\cap,
+                                                      t313:C:bset],
+                                        t32:=,
+                                        t33:\emptyset]]
+
+construction A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset:setAlgebraG =
+    t:A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset:formula
+        <- infixLogical[t1:A_subseteq_B_and_B_intersection_C_eq_emptyset:formula
+                             <- infixLogical[t11:A_subseteq_B:formula
+                                                 <- infixRel[t111:A:bset,
+                                                             t112:\subseteq,
+                                                             t113:B:bset],
+                                              t12:and,
+                                              t13:B_intersection_C_eq_emptyset:formula
+                                                 <- infixRel[t131:B_intersection_C:set
+                                                                 <-infixOp[t1311:B:bset,
+                                                                           t1312:\cap,
+                                                                           t1313:C:bset],
+                                                             t132:=,
+                                                             t133:\emptyset]],
+                        t2:implies,
+                        t3:A_intersection_C_eq_emptyset:formula
+                           <- infixRel[t31:A_intersection_C:set
+                                           <-infixOp[t311:A:bset,
+                                                     t312:\cap,
+                                                     t313:C:bset],
+                                       t32:=,
+                                       t33:\emptyset]]
+
+transfer
+    sourceConstruction A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset
+    targetTypeSystem Euler
+    goal ([t:A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset:formula],[t':diagram]) :: draw
+    output draw_A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset
+    limit 50

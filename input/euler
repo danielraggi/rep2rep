@@ -1,0 +1,10 @@
+typeSystem Euler =
+    types _:curve, _:label, _:basicDiagram, _:diagram
+    order basicDiagram < diagram
+
+conSpec EulerG:Euler =
+  constructors
+    assignLabel : [curve,label] -> basicDiagram,
+    submerge : [basicDiagram,basicDiagram] -> diagram,
+    dismerge : [basicDiagram,basicDiagram] -> diagram,
+    unify : [diagram,diagram] -> diagram

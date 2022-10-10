@@ -1,0 +1,14 @@
+typeSystem propCNF =
+    types _:var, _:literal, _:clause, _:cnf, _:nonvar, _:nonliteral, _:nonclause
+    order var < literal,
+          nonvar < literal,
+          literal < clause,
+          nonliteral < clause,
+          clause < cnf,
+          nonclause < cnf
+
+conSpec propCNFG:propCNF =
+  constructors
+    conj : [clause, cnf] -> nonclause,
+    disj : [literal, clause] -> nonliteral,
+    neg : [var] -> nonvar

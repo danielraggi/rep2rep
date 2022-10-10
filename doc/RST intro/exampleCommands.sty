@@ -1,0 +1,2450 @@
+
+%% First order arithmetic $$$
+
+%% subscript for spaces
+
+\newcommand{\FOA}{A}
+
+%% grammatical types
+
+\newcommand{\FOAnum}{\textsf{num}}
+\newcommand{\FOAvar}{\textsf{var}}
+\newcommand{\FOAnumexp}{\textsf{numExp}}
+\newcommand{\FOAopenb}{\textsf{oB} }
+\newcommand{\FOAcloseb}{\textsf{cB}}
+\newcommand{\FOAbop}{\textsf{bop}}
+\newcommand{\FOAbrel}{\textsf{brel}}
+\newcommand{\FOAquant}{\textsf{uQ}}
+%\renewcommand{\FOAquant}{\textsf{\forall}}
+\newcommand{\FOAform}{\textsf{form}}
+\newcommand{\FOApar}{\textsf{par}}
+
+\newcommand{\FOAplus}{\textsf{pl}}
+\newcommand{\FOAminus}{\textsf{mi}}
+\newcommand{\FOAdiv}{\textsf{div}}
+\newcommand{\FOAhasBrackets}{\textsf{bracketedNumExp}}
+
+
+\newcommand{\FOAleq}{\textsf{leq}}
+\newcommand{\FOAgr}{\textsf{gr}}
+\newcommand{\FOAeq}{\textsf{eq}}
+
+
+
+%\newcommand{\FOAplus}{\textsf{plus}}
+\newcommand{\FOAsum}{\textsf{sum}}
+%\newcommand{\FOAminus}{\textsf{minus}}
+\newcommand{\FOAdifference}{\textsf{diff}}
+\newcommand{\FOAequals}{\textsf{equals}}
+
+%% grammatical constructors
+
+\newcommand{\FOAcnum}{\textsf{p-num}}
+\newcommand{\FOAcvar}{\textsf{p-var}}
+\newcommand{\FOAcopenb}{\textsf{p-openB}}
+\newcommand{\FOAccloseb}{\textsf{p-closeB}}
+\newcommand{\FOAcbop}{\textsf{p-bop}}
+\newcommand{\FOAcbrel}{\textsf{p-brel}}
+\newcommand{\FOAcquant}{\textsf{p-quant}}
+
+\newcommand{\FOAcinfixop}{\textsf{infixOp}}
+\newcommand{\FOAcaddPar}{\textsf{addPar}}
+\newcommand{\FOAcinfixrel}{\textsf{infixRel}}
+\newcommand{\FOAcquantify}{\textsf{quantify}}
+\newcommand{\FOAcisValid}{\textsf{isValid}}
+\newcommand{\FOAcfrac}{\textsf{frac}}
+\newcommand{\FOAcimplicitMult}{\textsf{implicitMult}}
+
+\newcommand{\FOAcsum}{\textsf{infixPlus}}
+
+% entailment constructors
+
+\newcommand{\FOAceqtran}{\textsf{tran}_=} %transitivity of equals
+\newcommand{\FOAexplosion}{\textsf{explode}} % inconsistency implies anything (prinicple of explosion)
+
+
+% identification types
+%
+
+\newcommand{\FOAboolean}{\textsf{bool}} %true or false
+\newcommand{\FOAnat}{\textsf{nat}} % natural numbers
+
+\newcommand{\typetrue}{\textsf{true}}
+\newcommand{\typefalse}{\textsf{false}}
+\newcommand{\typebool}{\textsf{bool}}
+\newcommand{\constructorObserve}{\textsf{observe}}
+\newcommand{\constructorRepresentedBy}{\textsf{representedBy}}
+\newcommand{\constructorRepresents}{\textsf{represents}}
+\newcommand{\constructorAnd}{\textsf{and}}
+
+%%% dot diagrams
+
+\newcommand{\DDdotDiagram}{\textsf{dotDiagram}}
+\newcommand{\DDstack}{\textsf{stack}}
+\newcommand{\DDhorDots}{\textsf{horDots}}
+\newcommand{\DDverDots}{\textsf{verDots}}
+\newcommand{\DDrectangulation}{\textsf{rectangle}}
+\newcommand{\DDtriangulation}{\textsf{triangle}}
+\newcommand{\DDsingleDot}{\textsf{singleDot}}
+
+\newcommand{\DDcjoin}{\textsf{join}}
+\newcommand{\DDcstackLeft}{\textsf{stackLeft}}
+\newcommand{\DDcremove}{\textsf{remove}}
+\newcommand{\DDcrectangulate}{\textsf{rectangulate}}
+\newcommand{\DDcappend}{\textsf{append}}
+\newcommand{\DDcrotate}{\textsf{reflect}}
+\newcommand{\DDcrotateTri}{\textsf{reflect}}
+\newcommand{\DDcreflect}{\textsf{reflect}}
+
+\newcommand{\DDcdisjoint}{\textsf{areDisjoint}}
+\newcommand{\DDcareIsomorphic}{\textsf{areIsomorphic}}
+\newcommand{\DDcisSubArrangement}{\textsf{isSubArrangement}}
+\newcommand{\DDisTranslationOf}{\textsf{isTranslationOf}}
+\newcommand{\DDcisTranslationOf}{\textsf{isTranslationOf}}
+\newcommand{\DDcisJoinOf}{\textsf{isJoinOf}}
+\newcommand{\DDcsameNumOfDots}{\textsf{sameNumberOfDots}}
+%
+% \identification constructors}
+
+\newcommand{\FOAcprovable}{\textsf{isValid}} % provable
+\newcommand{\FOAccount}{\textsf{primCount}} % number of symbols
+
+
+%%%% Geomstric Representation of Vectors
+
+% types
+
+%\newcommand{\GRVvec}{\nearrow}
+\newcommand{\GRVvec}{\textsf{drawnVector}}
+% constructors
+
+\newcommand{\diagArrow}{\scalebox{0.9}{$\nearrow$}}
+\newcommand{\GRVcvecadd}{\diagArrow\hspace{-1.5pt}+\hspace{-2.5pt}\diagArrow}
+\newcommand{\GRVcvecsub}{\diagArrow\hspace{-1.5pt}-\hspace{-2.5pt}\diagArrow}
+
+%%% semantics section
+
+\newcommand{\represents}{\textsf{represents}}
+
+
+%%%% Pie Charts
+
+
+%% grammatical constructors
+
+\newcommand{\PCcsubDivide}{\textsf{subDivide}}
+\newcommand{\PCcinitialise}{\textsf{initialise}}
+
+\newcommand{\pchline}[1]{%
+	\begin{tikzpicture}[scale = 1.2]
+	\draw (0,0) -- (#1:1) ;
+	\end{tikzpicture}}
+\newcommand{\piechart}{%
+	\begin{tikzpicture}[scale = 1.2]
+	\draw (0,0) circle (1cm) ;
+	\draw (0,0) -- (90:1) ;
+	\draw (0,0) -- (110:1) ;
+	\draw (0,0) -- (135:1) ;
+	\draw (0,0) -- (250:1) ;
+	\node () at (-10:0.5) {\large 364};
+	\node () at (100:0.86) {{\footnotesize 43}};
+	\node () at (122.5:0.8) {\small 45};
+	\node () at (189:0.57) {198};
+	\end{tikzpicture}}
+\newcommand{\piechartOne}{%
+	\begin{tikzpicture}[scale = 1.2]
+	\draw (0,0) circle (1cm) ;
+	\draw (0,0) -- (90:1) ;
+	\draw (0,0) -- (135:1) ;
+	\draw (0,0) -- (250:1) ;
+	\node (x) at (-10:0.5) {\large 364};
+	\node (y) at (122.5:0.8) {\small 45};
+	\node (z) at (189:0.57) {198};
+	\end{tikzpicture}}
+\newcommand{\piechartTwo}{%
+	\begin{tikzpicture}[scale = 1.2]
+	\draw (0,0) circle (1cm) ;
+	\draw (0,0) -- (90:1) ;
+	\draw (0,0) -- (250:1) ;
+	\node (x) at (-10:0.5) {\large 364};
+	\node (y) at (189:0.57) {198};
+	\end{tikzpicture}}
+\newcommand{\piechartThree}{%
+	\begin{tikzpicture}[scale = 1.2]
+	\draw (0,0) circle (1cm) ;
+	\end{tikzpicture}}
+
+
+%%%% Tree Maps
+
+\newcommand{\TMemptyTreeMap}{\textsf{emptyTreeMap}}
+\newcommand{\TMtreeMap}{\textsf{treeMap}}
+\newcommand{\TMpartFilledTreeMap}{\textsf{partFilledTreeMap}}
+\newcommand{\TMincompleteTreeMap}{\textsf{incompleteTreeMap}}
+\newcommand{\TMfilledTreeMap}{\textsf{completeTreeMap}}
+\newcommand{\TMcompleteTreeMap}{\textsf{completeTreeMap}}
+\newcommand{\TMnumeral}{\textsf{numeral}}
+
+%% grammatical constructors
+
+\newcommand{\TMcannotateRectangle}{\textsf{annotate}}
+\newcommand{\TMcinsertTreeMap}{\textsf{insertTreeMap}}
+\newcommand{\TMcannotate}{\textsf{annotate}}
+
+
+\newcommand{\rectangle}[3]{%
+	\begin{tikzpicture}[rounded corners=false,scale=0.8]
+	\draw (#1) rectangle node {#3} (#2);
+	\end{tikzpicture}}
+\newcommand{\treemap}{%
+	\begin{tikzpicture}[rounded corners=false,scale=0.8]
+	\draw (0,0) rectangle (3,2);
+	\draw (0.1,0.1) rectangle node {\large 364} (1.6,1.9);
+	\draw (1.7,0.8) rectangle node {198} (2.9,1.9);
+	\draw (1.7,0.1) rectangle node {\small 45} (2.3,0.7);
+	\draw (2.4,0.1) rectangle node {\footnotesize 43} (2.9,0.7);
+	\end{tikzpicture}}
+\newcommand{\treemapOne}{%
+	\begin{tikzpicture}[rounded corners=false,scale=0.8]
+	\draw (0,0) rectangle (3,2);
+	\draw (0.1,0.1) rectangle node {\large 364} (1.6,1.9);
+	\draw (1.7,0.8) rectangle node {198} (2.9,1.9);
+	\draw (1.7,0.1) rectangle node {\small 45} (2.3,0.7);
+	\end{tikzpicture}}
+\newcommand{\treemapTwo}{%
+	\begin{tikzpicture}[rounded corners=false,scale=0.8]
+	\draw (0,0) rectangle (3,2);
+	\draw (0.1,0.1) rectangle node {\large 364} (1.6,1.9);
+	\draw (1.7,0.8) rectangle node {198} (2.9,1.9);
+	\end{tikzpicture}}
+\newcommand{\treemapThree}{%
+	\begin{tikzpicture}[rounded corners=false,scale=0.8]
+	\draw (0,0) rectangle (3,2);
+	\draw (0.1,0.1) rectangle node {\large 364} (1.6,1.9);
+	\end{tikzpicture}}
+
+%%%% Tables
+
+%% grammatical constructors
+
+\newcommand{\TcaddRow}{\textsf{addRow}}
+\newcommand{\TcaddCell}{\textsf{addCell}}
+\newcommand{\TcinsertText}{\textsf{insertText}}
+\newcommand{\TcinsertNumValue}{\textsf{insertNumValue}}
+\renewcommand{\TcinsertText}{\textsf{insert}}
+\renewcommand{\TcinsertNumValue}{\textsf{insert}}
+
+
+%% types
+
+
+\newcommand{\Ttext}{\textsf{text}}
+\newcommand{\Tnum}{\textsf{numeral}}
+\newcommand{\TcellEntry}{\textsf{cellEntry}}
+
+\newcommand{\TemptyCell}{\textsf{emptyCell}}
+\newcommand{\Tcell}{\textsf{cell}}
+\newcommand{\Trow}{\textsf{row}}
+\newcommand{\Ttable}{\textsf{table}}
+
+\newcommand{\tableCellLeft}[3]{\draw (0,#1) rectangle node[yshift=-1pt] {\vphantom{y}#3} (2.2,#2);}
+
+\newcommand{\tableCellRight}[3]{\draw (2.2,#1) rectangle node[yshift=-1pt] {\vphantom{y}#3} (3.2,#2);}
+
+\newcommand{\mytable}[1]{%
+\begin{tikzpicture}[rounded corners=false,scale=0.9,anchor=center]\small
+#1
+\end{tikzpicture}%
+}
+
+\newcommand{\myrow}[1]{%
+\begin{tikzpicture}[rounded corners=false,scale=0.9,anchor=center]\small
+#1
+\end{tikzpicture}%
+}
+
+
+\newcommand{\cellonel}[1]{\tableCellLeft{2}{2.5}{#1}}
+\newcommand{\celloner}[1]{\tableCellRight{2}{2.5}{#1}}
+
+\newcommand{\celltwol}[1]{\tableCellLeft{1.5}{2}{#1}}
+\newcommand{\celltwor}[1]{\tableCellRight{1.5}{2}{#1}}
+
+\newcommand{\cellthreel}[1]{\tableCellLeft{1}{1.5}{#1}}
+\newcommand{\cellthreer}[1]{\tableCellRight{1}{1.5}{#1}}
+
+\newcommand{\cellfourl}[1]{\tableCellLeft{0.5}{1}{#1}}
+\newcommand{\cellfourr}[1]{\tableCellRight{0.5}{1}{#1}}
+
+\newcommand{\cellfivel}[1]{\tableCellLeft{0}{0.5}{#1}}
+\newcommand{\cellfiver}[1]{\tableCellRight{0}{0.5}{#1}}
+
+\newcommand{\rowone}{%
+\cellonel{\textbf{Party}}
+\celloner{\textbf{Seats}}
+}
+
+\newcommand{\rowtwo}{%
+\celltwol{Conservative}
+\celltwor{364}
+}
+
+\newcommand{\rowthree}{%
+\cellthreel{Labour}
+\cellthreer{198}
+}
+
+\newcommand{\rowfour}{%
+\cellfourl{SNP}
+\cellfourr{45}}
+
+\newcommand{\rowfive}{%
+\cellfivel{Other}
+\cellfiver{43}}
+
+\newcommand{\tableone}{%
+\rowone
+}
+
+\newcommand{\tabletwo}{%
+\tableone
+\rowtwo
+}
+
+\newcommand{\tablethree}{%
+\tabletwo
+\rowthree
+}
+
+\newcommand{\tablefour}{%
+\tablethree
+\rowfour
+}
+
+\newcommand{\tablefive}{%
+\tablefour
+\rowfive
+}
+
+\newcommand{\tableConstructionPattern}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t5) {$v_1$};
+	\node[constructorW = {\TcaddRow}, below = 0.5cm of t5] (u) {$u$};
+	\node[typeS={\Ttable},below = 0.6cm of u] (t4) {};
+	\node[typeN={\Trow},above right = 0.4cm and 2.2cm of u, yshift=-0.0cm] (r5) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {$u_1$};
+	\node[typeS={\Trow},below left = 0.4cm and 0.4cm of u1] (c5l) {};
+	\node[typeS={\Tcell},below right = 0.4cm and 0.4cm of u1] (c5r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {$u_2$};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u2] (c5lb) {};
+	\node[typeS = \Ttext,below right = 0.5cm and 0.25cm of u2] (c5lt) {};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {$u_3$};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u3] (c5rb) {};
+	\node[typeS = \Tnum,below right = 0.5cm and 0.25cm of u3] (c5rt) {};
+	
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -100] node[index label]{\scriptsize1} (u)
+	(r5) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionPatternFoundations}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t2) {$v_2$};
+	%% table 2
+	\node[constructorW = {\TcaddRow}, below = 0.6cm of t2] (u12) {$u_{12}$};
+	\node[typeS = {\Ttable},below = 1.2cm of u12] (t1) {};
+	\node[typeN = {\Trow},above right = 0.5cm and 2.2cm of u12, yshift=-0.0cm] (r2) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.57cm of r2, yshift=-0.0cm] (u13) {$u_{16}$};
+	\node[typeS = {\Trow},below left = 0.4cm and 0.4cm of u13] (c2l) {};
+	\node[typeS = {\Tcell},below right = 0.4cm and 0.4cm of u13] (c2r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c2l, yshift=0.0cm] (u14) {$u_{17}$};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u14] (c2lb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u14] (c2lt) {};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c2r, yshift=0.0cm] (u15) {$u_{18}$};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u15] (c2rb) {};
+	\node[typeS = {\Tnum},below right = 0.5cm and 0.25cm of u15] (c2rt) {};
+	%%
+	%% last construction, for table 1
+	%
+	\node[constructorpos = {\TcaddCell}{0}{0.45cm}, right = 0.6cm of t1] (u16) {$u_{13}$};
+	\node[typeS = {\Trow},below left = 0.6cm and 0.4cm of u16] (c1l) {};
+	\node[typeS = {\Tcell},below right = 0.6cm and 0.4cm of u16] (c1r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{120}{0.14cm}, left = 0.47cm of c1l, yshift=-0.0cm] (u17) {$u_{14}$};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u17] (c1lb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u17] (c1lt) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, right = 0.47cm of c1r, yshift=-0.0cm] (u18) {$u_{15}$};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u18] (c1rb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u18] (c1rt) {};
+	%%
+	%
+	%% layer 2
+	\coordinate[below right = 0.1cm and 0.1cm of t2] (xu12);
+	\path[->]
+	(u12) edge (t2)
+	(t1) edge[out = 110, in = -110] node[index label]{\scriptsize1} (u12)
+	(r2) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u12);
+	%
+	\path[->]
+	(u13) edge (r2)
+	(c2l) edge[bend left = 10] node[index label]{\scriptsize1} (u13)
+	(c2r) edge[bend right = 5] node[index label]{\scriptsize2} (u13)
+	%
+	(u14) edge (c2l)
+	(c2lb) edge[bend left = 10] node[index label]{\scriptsize1} (u14)
+	(c2lt) edge[bend right = 5] node[index label]{\scriptsize2} (u14)
+	%
+	(u15) edge (c2r)
+	(c2rb) edge[bend left = 10] node[index label]{\scriptsize1} (u15)
+	(c2rt) edge[bend right = 5] node[index label]{\scriptsize2} (u15)
+	%
+	(u16) edge (t1)
+	(c1l) edge[bend left = 10] node[index label]{\scriptsize1} (u16)
+	(c1r) edge[bend right = 5] node[index label]{\scriptsize2} (u16)
+	%
+	(u17) edge (c1l)
+	(c1lb) edge[bend left = 10] node[index label]{\scriptsize1} (u17)
+	(c1lt) edge[bend right = 5] node[index label]{\scriptsize2} (u17)
+	%
+	(u18) edge (c1r)
+	(c1rb) edge[bend left = 10] node[index label]{\scriptsize1} (u18)
+	(c1rt) edge[bend right = 5] node[index label]{\scriptsize2} (u18);
+	;
+	\end{tikzpicture}}
+
+\newcommand{\tableConstruction}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[termrep] (t5) {\mytable{\tablefive}};
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t5] (u) {$u$};
+	\node[termrep,below = 0.6cm of u] (t4) {\mytable{\tablefour}};
+	\node[termrep,above right = 1.3cm and 2cm of u, yshift=-0.0cm] (r5) {\myrow{\rowfive}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {$u_1$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u1] (c5l) {\myrow{\cellfivel{Other}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u1] (c5r) {\myrow{\cellfiver{43}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {$u_2$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u2] (c5lb) {\myrow{\cellfivel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u2] (c5lt) {Other};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {$u_3$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u3] (c5rb) {\myrow{\cellfiver{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u3] (c5rt) {43};
+	%%
+	%% table 4
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t4] (u4) {$u_4$};
+	\node[termrep,below = 0.6cm of u4] (t3) {\mytable{\tablethree}};
+	\node[termrep,above right = 1.5cm and 2cm  of u4, yshift=-0.0cm] (r4) {\myrow{\rowfour}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r4, yshift=-0.0cm] (u5) {$u_5$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u5] (c4l) {\myrow{\cellfourl{SNP}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u5] (c4r) {\myrow{\cellfourr{45}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c4l, yshift=0.0cm] (u6) {$u_6$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u6] (c4lb) {\myrow{\cellfivel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u6] (c4lt) {SNP};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c4r, yshift=0.0cm] (u7) {$u_7$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u7] (c4rb) {\myrow{\cellfourr{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u7] (c4rt) {45};
+	%%
+	%% table 3
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t3] (u8) {$u_8$};
+	\node[termrep,below = 0.6cm of u8] (t2) {\mytable{\tabletwo}};
+	\node[termrep,above right = 1.4 and 2cm of u8, yshift=-0.0cm] (r3) {\myrow{\rowthree}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r3, yshift=-0.0cm] (u9) {$u_9$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u9] (c3l) {\myrow{\cellthreel{Labour}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u9] (c3r) {\myrow{\cellthreer{198}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c3l, yshift=0.0cm] (u10) {$u_{10}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u10] (c3lb) {\myrow{\cellthreel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u10] (c3lt) {Labour};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c3r, yshift=0.0cm] (u11) {$u_{11}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u11] (c3rb) {\myrow{\cellthreer{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u11] (c3rt) {198};
+	%%
+	%% table 2
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t2] (u12) {$u_{12}$};
+	\node[termrep,below = 1cm of u12] (t1) {\mytable{\tableone}};
+	\node[termrep,above right = 0.9cm and 2cm of u12, yshift=-0.0cm] (r2) {\myrow{\rowtwo}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.57cm of r2, yshift=-0.0cm] (u13) {$u_{16}$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u13] (c2l) {\myrow{\celltwol{Conservative}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u13] (c2r) {\myrow{\celltwor{364}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c2l, yshift=0.0cm] (u14) {$u_{17}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u14] (c2lb) {\myrow{\celltwol{}}};
+	\node[termrep,below right = 0.6cm and 0.4cm of u14] (c2lt) {Conservative};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c2r, yshift=0.0cm] (u15) {$u_{18}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u15] (c2rb) {\myrow{\celltwor{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u15] (c2rt) {364};
+	%%
+	%% last construction, for table 1
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of t1] (u16) {$u_{13}$};
+	\node[termrep,below left = 0.4cm and -0.4cm of u16] (c1l) {\myrow{\cellonel{\textbf{Party}}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u16] (c1r) {\myrow{\celloner{\textbf{Seats}}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c1l, yshift=-0.0cm] (u17) {$u_{14}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u17] (c1lb) {\myrow{\cellonel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u17] (c1lt) {\textbf{Party}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, right = 0.47cm of c1r, yshift=-0.0cm] (u18) {$u_{15}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u18] (c1rb) {\myrow{\celloner{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u18] (c1rt) {\textbf{Seats}};
+	%%
+	%
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[-] (r5) edge[out = 180, in = 60, looseness = 0.9] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -110] node[index label]{\scriptsize1} (u)
+	(xu) edge[out = -120, in = 0, looseness = 0.9] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\coordinate[below right = 0.1cm and 0.1cm of t4] (xu4);
+	\path[-] (r4) edge[out = 180, in = 60, looseness = 0.9] (xu4);
+	\path[->]
+	(u4) edge (t4)
+	(t3) edge[out = 100, in = -110] node[index label]{\scriptsize1} (u4)
+	(xu4) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u4);
+	%
+	\path[->]
+	(u5) edge (r4)
+	(c4l) edge[bend left = 10] node[index label]{\scriptsize1} (u5)
+	(c4r) edge[bend right = 5] node[index label]{\scriptsize2} (u5)
+	%
+	(u6) edge (c4l)
+	(c4lb) edge[bend left = 10] node[index label]{\scriptsize1} (u6)
+	(c4lt) edge[bend right = 5] node[index label]{\scriptsize2} (u6)
+	%
+	(u7) edge (c4r)
+	(c4rb) edge[bend left = 10] node[index label]{\scriptsize1} (u7)
+	(c4rt) edge[bend right = 5] node[index label]{\scriptsize2} (u7);
+	%%
+	%% layer 3
+	\coordinate[below right = 0.1cm and 0.1cm of t3] (xu8);
+	\path[-] (r3) edge[out = 180, in = 60, looseness = 0.9] (xu8);
+	\path[->]
+	(u8) edge (t3)
+	(t2) edge[out = 105, in = -110] node[index label]{\scriptsize1} (u8)
+	(xu8) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u8);
+	%
+	\path[->]
+	(u9) edge (r3)
+	(c3l) edge[bend left = 10] node[index label]{\scriptsize1} (u9)
+	(c3r) edge[bend right = 5] node[index label]{\scriptsize2} (u9)
+	%
+	(u10) edge (c3l)
+	(c3lb) edge[bend left = 10] node[index label]{\scriptsize1} (u10)
+	(c3lt) edge[bend right = 5] node[index label]{\scriptsize2} (u10)
+	%
+	(u11) edge (c3r)
+	(c3rb) edge[bend left = 10] node[index label]{\scriptsize1} (u11)
+	(c3rt) edge[bend right = 5] node[index label]{\scriptsize2} (u11);
+	%
+	%% layer 2
+	\coordinate[below right = 0.1cm and 0.1cm of t2] (xu12);
+	\path[-] (r2) edge[out = 180, in = 60, looseness = 0.9] (xu12);
+	\path[->]
+	(u12) edge (t2)
+	(t1) edge[out = 110, in = -110] node[index label]{\scriptsize1} (u12)
+	(xu12) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u12);
+	%
+	\path[->]
+	(u13) edge (r2)
+	(c2l) edge[bend left = 10] node[index label]{\scriptsize1} (u13)
+	(c2r) edge[bend right = 5] node[index label]{\scriptsize2} (u13)
+	%
+	(u14) edge (c2l)
+	(c2lb) edge[bend left = 10] node[index label]{\scriptsize1} (u14)
+	(c2lt) edge[bend right = 5] node[index label]{\scriptsize2} (u14)
+	%
+	(u15) edge (c2r)
+	(c2rb) edge[bend left = 10] node[index label]{\scriptsize1} (u15)
+	(c2rt) edge[bend right = 5] node[index label]{\scriptsize2} (u15)
+	%
+	(u16) edge (t1)
+	(c1l) edge[bend left = 10] node[index label]{\scriptsize1} (u16)
+	(c1r) edge[bend right = 5] node[index label]{\scriptsize2} (u16)
+	%
+	(u17) edge (c1l)
+	(c1lb) edge[bend left = 10] node[index label]{\scriptsize1} (u17)
+	(c1lt) edge[bend right = 5] node[index label]{\scriptsize2} (u17)
+	%
+	(u18) edge (c1r)
+	(c1rb) edge[bend left = 10] node[index label]{\scriptsize1} (u18)
+	(c1rt) edge[bend right = 5] node[index label]{\scriptsize2} (u18);
+	;
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionGenerator}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[termrep] (t5) {\mytable{\tablefive}};
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t5] (u) {$u$};
+	\node[termrep,below = 0.6cm of u] (t4) {\mytable{\tablefour}};
+	\node[termrep,above right = 0.5cm and 2.3cm of u, yshift=-0.0cm] (r5) {\myrow{\rowfive}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {$u_1$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u1] (c5l) {\myrow{\cellfivel{Other}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u1] (c5r) {\myrow{\cellfiver{43}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {$u_2$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u2] (c5lb) {\myrow{\cellfivel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u2] (c5lt) {Other};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {$u_3$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u3] (c5rb) {\myrow{\cellfiver{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u3] (c5rt) {43};
+	
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[-] (r5) edge[out = 180, in = 60, looseness = 0.9] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -110] node[index label]{\scriptsize1} (u)
+	(xu) edge[out = -120, in = 0, looseness = 0.9] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionRoot}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[termrep] (t5) {\mytable{\tablefive}};
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t5] (u) {$u$};
+	\node[termrep,below = 0.6cm of u] (t4) {\mytable{\tablefour}};
+	\node[termrep,above right = 0.9cm and 2cm of u, yshift=-0.0cm] (r5) {\myrow{\rowfive}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {$u_1$};
+	\node[termrep,below left = 0.6cm and -0.3cm of u1] (c5l) {\myrow{\cellfivel{Other}}};
+	\node[termrep,below right = 0.6cm and 0.1cm of u1] (c5r) {\myrow{\cellfiver{43}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {$u_2$};
+	\node[termrep,below left = 0.7cm and -0.8cm of u2] (c5lb) {\myrow{\cellfivel{}}};
+	\node[termrep,below right = 0.8 and 0.5cm of u2] (c5lt) {Other};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {$u_3$};
+	\node[termrep,below left = 0.7cm and 0.2cm of u3] (c5rb) {\myrow{\cellfiver{}}};
+	\node[termrep,below right = 0.8cm and -0.4cm of u3] (c5rt) {43};
+	%
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[-] (r5) edge[out = 180, in = 60, looseness = 0.9] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -110] node[index label]{\scriptsize1} (u)
+	(xu) edge[out = -120, in = 0, looseness = 0.9] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionICa}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	%% table 4
+	\node[termrep] (t4) {\mytable{\tablefour}};
+	%
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t4] (u4) {$u_4$};
+	\node[termrep,below = 0.6cm of u4] (t3) {\mytable{\tablethree}};
+	\node[termrep,above right = 0.8cm and 2.1cm  of u4, yshift=-0.0cm] (r4) {\myrow{\rowfour}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r4, yshift=-0.0cm] (u5) {$u_5$};
+	\node[termrep,below left = 0.6cm and -0.3cm of u5] (c4l) {\myrow{\cellfourl{SNP}}};
+	\node[termrep,below right = 0.6cm and 0.1cm of u5] (c4r) {\myrow{\cellfourr{45}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c4l, yshift=0.0cm] (u6) {$u_6$};
+	\node[termrep,below left = 0.6cm and -0.8cm of u6] (c4lb) {\myrow{\cellfivel{}}};
+	\node[termrep,below right = 0.7cm and 0.5cm of u6] (c4lt) {SNP};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c4r, yshift=0.0cm] (u7) {$u_7$};
+	\node[termrep,below left = 0.6cm and 0.2cm of u7] (c4rb) {\myrow{\cellfourr{}}};
+	\node[termrep,below right = 0.7cm and -0.4cm of u7] (c4rt) {45};
+	%% layer 4
+	\coordinate[below right = 0.1cm and 0.1cm of t4] (xu4);
+	\path[-] (r4) edge[out = 180, in = 60, looseness = 0.9] (xu4);
+	\path[->]
+	(u4) edge (t4)
+	(t3) edge[out = 100, in = -110] node[index label]{\scriptsize1} (u4)
+	(xu4) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u4);
+	%
+	\path[->]
+	(u5) edge (r4)
+	(c4l) edge[bend left = 10] node[index label]{\scriptsize1} (u5)
+	(c4r) edge[bend right = 5] node[index label]{\scriptsize2} (u5)
+	%
+	(u6) edge (c4l)
+	(c4lb) edge[bend left = 10] node[index label]{\scriptsize1} (u6)
+	(c4lt) edge[bend right = 5] node[index label]{\scriptsize2} (u6)
+	%
+	(u7) edge (c4r)
+	(c4rb) edge[bend left = 10] node[index label]{\scriptsize1} (u7)
+	(c4rt) edge[bend right = 5] node[index label]{\scriptsize2} (u7);
+	%%
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionICb}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[termrep] (t3) {\mytable{\tablethree}};
+	%% table 3
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t3] (u8) {$u_8$};
+	\node[termrep,below = 0.6cm of u8] (t2) {\mytable{\tabletwo}};
+	\node[termrep,above right = 0.6 and 2.2cm of u8, yshift=-0.0cm] (r3) {\myrow{\rowthree}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r3, yshift=-0.0cm] (u9) {$u_9$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u9] (c3l) {\myrow{\cellthreel{Labour}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u9] (c3r) {\myrow{\cellthreer{198}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c3l, yshift=0.0cm] (u10) {$u_{10}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u10] (c3lb) {\myrow{\cellthreel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u10] (c3lt) {Labour};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c3r, yshift=0.0cm] (u11) {$u_{11}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u11] (c3rb) {\myrow{\cellthreer{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u11] (c3rt) {198};
+	%% layer 3
+	\coordinate[below right = 0.1cm and 0.1cm of t3] (xu8);
+	\path[-] (r3) edge[out = 180, in = 60, looseness = 0.9] (xu8);
+	\path[->]
+	(u8) edge (t3)
+	(t2) edge[out = 105, in = -110] node[index label]{\scriptsize1} (u8)
+	(xu8) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u8);
+	%
+	\path[->]
+	(u9) edge (r3)
+	(c3l) edge[bend left = 10] node[index label]{\scriptsize1} (u9)
+	(c3r) edge[bend right = 5] node[index label]{\scriptsize2} (u9)
+	%
+	(u10) edge (c3l)
+	(c3lb) edge[bend left = 10] node[index label]{\scriptsize1} (u10)
+	(c3lt) edge[bend right = 5] node[index label]{\scriptsize2} (u10)
+	%
+	(u11) edge (c3r)
+	(c3rb) edge[bend left = 10] node[index label]{\scriptsize1} (u11)
+	(c3rt) edge[bend right = 5] node[index label]{\scriptsize2} (u11);
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionICc}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[termrep] (t2) {\mytable{\tabletwo}};
+	%% table 2
+	\node[constructorW = {\TcaddRow}, below = 0.4cm of t2] (u12) {$u_{12}$};
+	\node[termrep,below = 0.7cm of u12] (t1) {\mytable{\tableone}};
+	\node[termrep,above right = 0.9cm and 2cm of u12, yshift=-0.0cm] (r2) {\myrow{\rowtwo}};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.57cm of r2, yshift=-0.0cm] (u13) {$u_{16}$};
+	\node[termrep,below left = 0.4cm and -0.3cm of u13] (c2l) {\myrow{\celltwol{Conservative}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u13] (c2r) {\myrow{\celltwor{364}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c2l, yshift=0.0cm] (u14) {$u_{17}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u14] (c2lb) {\myrow{\celltwol{}}};
+	\node[termrep,below right = 0.6cm and 0.4cm of u14] (c2lt) {Conservative};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c2r, yshift=0.0cm] (u15) {$u_{18}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u15] (c2rb) {\myrow{\celltwor{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u15] (c2rt) {364};
+	%%
+	%% last construction, for table 1
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, below right = -0.1cm and 1.2cm of t1] (u16) {$u_{13}$};
+	\node[termrep,below left = 0.4cm and -0.4cm of u16] (c1l) {\myrow{\cellonel{\textbf{Party}}}};
+	\node[termrep,below right = 0.4cm and 0.1cm of u16] (c1r) {\myrow{\celloner{\textbf{Seats}}}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c1l, yshift=-0.0cm] (u17) {$u_{14}$};
+	\node[termrep,below left = 0.5cm and -0.8cm of u17] (c1lb) {\myrow{\cellonel{}}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u17] (c1lt) {\textbf{Party}};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, right = 0.47cm of c1r, yshift=-0.0cm] (u18) {$u_{15}$};
+	\node[termrep,below left = 0.5cm and 0.2cm of u18] (c1rb) {\myrow{\celloner{}}};
+	\node[termrep,below right = 0.6cm and -0.4cm of u18] (c1rt) {\textbf{Seats}};
+	%%
+	%
+	%% layer 2
+	\coordinate[below right = 0.1cm and 0.1cm of t2] (xu12);
+	\path[-] (r2) edge[out = 180, in = 60, looseness = 0.9] (xu12);
+	\path[->]
+	(u12) edge (t2)
+	(t1) edge[out = 110, in = -110] node[index label]{\scriptsize1} (u12)
+	(xu12) edge[out = -120, in = 0, looseness = 1.3] node[index label]{\scriptsize2} (u12);
+	%
+	\path[->]
+	(u13) edge (r2)
+	(c2l) edge[bend left = 10] node[index label]{\scriptsize1} (u13)
+	(c2r) edge[bend right = 5] node[index label]{\scriptsize2} (u13)
+	%
+	(u14) edge (c2l)
+	(c2lb) edge[bend left = 10] node[index label]{\scriptsize1} (u14)
+	(c2lt) edge[bend right = 5] node[index label]{\scriptsize2} (u14)
+	%
+	(u15) edge (c2r)
+	(c2rb) edge[bend left = 10] node[index label]{\scriptsize1} (u15)
+	(c2rt) edge[bend right = 5] node[index label]{\scriptsize2} (u15)
+	%
+	(u16) edge (t1)
+	(c1l) edge[bend left = 10] node[index label]{\scriptsize1} (u16)
+	(c1r) edge[bend right = 5] node[index label]{\scriptsize2} (u16)
+	%
+	(u17) edge (c1l)
+	(c1lb) edge[bend left = 10] node[index label]{\scriptsize1} (u17)
+	(c1lt) edge[bend right = 5] node[index label]{\scriptsize2} (u17)
+	%
+	(u18) edge (c1r)
+	(c1rb) edge[bend left = 10] node[index label]{\scriptsize1} (u18)
+	(c1rt) edge[bend right = 5] node[index label]{\scriptsize2} (u18);
+	;
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionra}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5r) {\myrow{\cellfivel{}}};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionrb}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lt) {Other};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionrc}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lb) {\myrow{\cellfiver{}}};
+\end{tikzpicture}
+}
+
+
+\newcommand{\tableConstructionrd}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5rt) {43};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionaa}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5r) {\myrow{\cellfourl{}}};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionab}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lt) {SNP};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionac}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lb) {\myrow{\cellfourr{}}};
+\end{tikzpicture}
+}
+
+
+\newcommand{\tableConstructionad}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5rt) {45};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionba}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5r) {\myrow{\cellthreel{}}};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionbb}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lt) {Labour};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionbc}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5lb) {\myrow{\cellthreer{}}};
+\end{tikzpicture}
+}
+
+
+\newcommand{\tableConstructionbd}
+{\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+\node[termrep] (c5rt) {198};
+\end{tikzpicture}
+}
+
+
+\newcommand{\TableDecompositionTree}{%
+\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep=2pt,anchor=center]
+        \node[draw=darkgreen,rounded corners] (Gen) at (0,0) {\tableConstructionRoot};
+        %
+        \node[draw=darkred,  rounded corners, below left = 0.9cm and -5cm of Gen,yshift=0.1cm] (ra) {\tableConstructionra};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -5cm of Gen] (rb) {\tableConstructionrb};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -2.8cm of Gen,yshift=0.1cm] (rc) {\tableConstructionrc};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -0.8cm of Gen] (rd) {\tableConstructionrd};
+        %
+        \node[draw=darkblue, rounded corners] (ICa) at (0,-8.7) {\tableConstructionICa};
+        %
+         %
+        \node[draw=darkred,  rounded corners, below left = 0.9cm and -5cm of ICa,yshift=0.1cm] (aa) {\tableConstructionaa};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -5cm of ICa] (ab) {\tableConstructionab};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -2.8cm of ICa,yshift=0.1cm] (ac) {\tableConstructionac};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -0.8cm of ICa] (ad) {\tableConstructionad};
+        %
+        \node[draw=darkblue, rounded corners] (ICb) at (0,-16.5) {\tableConstructionICb};
+        %
+         %
+        \node[draw=darkred,  rounded corners, below left = 0.9cm and -5cm of ICb,yshift=0.1cm] (ba) {\tableConstructionba};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -5cm of ICb] (bb) {\tableConstructionbb};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -2.8cm of ICb,yshift=0.1cm] (bc) {\tableConstructionbc};
+        \node[draw=darkred,  rounded corners, below right = 0.9cm and -0.9cm of ICb] (bd) {\tableConstructionbd};
+        %
+        \node[draw=darkred,  rounded corners] (ICc) at (0,-24.9) {\tableConstructionICc};
+%
+	\path[->, thick]
+    ([xshift = -3.7cm]ICa.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift = -3.7cm]Gen.south)
+    (ra.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.4cm]Gen.south)
+    (rb.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=0.9cm]Gen.south)
+    (rc.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=3.3cm]Gen.south)
+    (rd.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=4.8cm]Gen.south)
+    %
+    ([xshift = -3.7cm]ICb.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift = -3.7cm]ICa.south)
+    %
+    (aa.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.4cm]ICa.south)
+    (ab.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=0.9cm]ICa.south)
+    (ac.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=3.3cm]ICa.south)
+    (ad.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=4.8cm]ICa.south)
+    %
+    ([xshift = -3.7cm]ICc.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift = -3.7cm]ICb.south)
+    %
+    (ba.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.4cm]ICb.south)
+    (bb.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=1.1cm]ICb.south)
+    (bc.north) edge[out = 95, in = -95, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=3.4cm]ICb.south)
+    (bd.north) edge[out = 85, in = -85, looseness=1] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=5cm]ICb.south)
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\abDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (0.7, 0.31);
+	\draw (0.085,-0.035) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	%\draw (0.7,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\bcDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (1.17, 0.31);
+	%\draw (0.085,-0.035) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	\draw (0.7,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\aDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.31, -0.31) rectangle (0.7, 0.31);
+	\draw (0.0,0) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	%\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	%\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\bDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (0.7, 0.31);
+	%\draw (0.0,0) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	%\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\cDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (0.7, 0.31);
+	%\draw (0.085,-0.035) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	%\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\aCurve}{%
+	\begin{tikzpicture}%
+	\clip (-0.31, -0.31) rectangle (0.7, 0.31);
+	\draw (0.0,0) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {};
+	%\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	%\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\bCurve}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (0.7, 0.31);
+	%\draw (0.0,0) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {};
+	%\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\cCurve}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (0.7, 0.31);
+	%\draw (0.085,-0.035) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	%\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	\draw (0.0,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {};
+	\end{tikzpicture}}
+
+\newcommand{\EDlabelaCurve}{%
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDa) at (0,0.1) {\aDiagram};
+    \node[constructorNE={\textsf{assignLabel}}] (u) at (0,-1) {$u_3'$};
+    \node[termrep] (EDaCurve) at (-1,-2) {\aCurve};
+    \node[termrep] (EDaLabel) at (1,-2) {\scriptsize{A}};
+    \path[->]
+    (u) edge[bend right = 0] (EDa)
+    (EDaCurve) edge[bend right = -10] node[index label] {1} (u)
+    (EDaLabel) edge[bend right = 10] node[index label] {2} (u);
+    \end{tikzpicture}}
+
+\newcommand{\EDlabelbCurve}{%
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDb) at (0,0.1) {\bDiagram};
+    \node[constructorNE={\textsf{assignLabel}}] (u) at (0,-1) {$u_4'$};
+    \node[termrep] (EDbCurve) at (-1,-2) {\bCurve};
+    \node[termrep] (EDbLabel) at (1,-2) {\scriptsize{B}};
+    \path[->]
+    (u) edge[bend right = 0] (EDb)
+    (EDbCurve) edge[bend right = -10] node[index label] {1} (u)
+    (EDbLabel) edge[bend right = 10] node[index label] {2} (u);
+    \end{tikzpicture}}
+
+\newcommand{\EDlabelcCurve}{%
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDc) at (0,0.1) {\cDiagram};
+    \node[constructorNE={\textsf{assignLabel}}] (u) at (0,-1) {$u_5'$};
+    \node[termrep] (EDcCurve) at (-1,-2) {\bCurve};
+    \node[termrep] (EDcLabel) at (1,-2) {\scriptsize{C}};
+    \path[->]
+    (u) edge[bend right = 0] (EDc)
+    (EDcCurve) edge[bend right = -10] node[index label] {1} (u)
+    (EDcLabel) edge[bend right = 10] node[index label] {2} (u);
+    \end{tikzpicture}}
+
+\newcommand{\abcDiagram}{%
+	\begin{tikzpicture}%
+	\clip (-0.45, -0.31) rectangle (1.17, 0.31);
+	\draw (0.085,-0.035) circle [thick,radius=0.125] node[above left= 0.02cm, yshift=-0.1cm, xshift=-0.00cm] {\scriptsize$A$};
+	\draw (0,0) circle [thick,radius=0.3] node[left = 0.2cm, yshift=0.2cm, xshift=0.022cm] {\scriptsize$B$};
+	\draw (0.7,0) circle [thick,radius=0.3] node[right= 0.2cm, yshift=0.2cm, xshift=-0.022cm] {\scriptsize$C$};
+	\end{tikzpicture}}
+
+\newcommand{\EDroot}{
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDabc) at (0,0) {\abcDiagram};
+    \node[constructorNE={\textsf{unify}}] (u) at (0,-1) {$u'$};
+    \node[termrep] (EDab) at (-1,-2) {\abDiagram};
+    \node[termrep] (EDc) at (1,-2) {\bcDiagram};
+    \path[->]
+    (u) edge[bend right = 0] (EDabc)
+    (EDab) edge[bend right = -10] node[index label] {1} (u)
+    (EDc) edge[bend right = 10] node[index label] {2} (u);
+    \end{tikzpicture}}
+
+\newcommand{\EDintab}{
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDab) at (0,0.1) {\abDiagram};
+    \node[constructorNE={\textsf{subsetMerge}}] (u) at (0,-1) {$u_1'$};
+    \node[termrep] (EDb) at (1,-2) {\bDiagram};
+    \node[termrep] (EDa) at (-1,-2) {\aDiagram};
+    \path[->]
+    (u) edge[bend right = 0] (EDab)
+    (EDb) edge[bend right = 10] node[index label] {2} (u)
+    (EDa) edge[bend right = -10] node[index label] {1} (u);
+    \end{tikzpicture}}
+
+\newcommand{\EDintbc}{
+    \begin{tikzpicture}[construction,yscale=0.9]\small
+    \node[termrep] (EDab) at (0,0.1) {\bcDiagram};
+    \node[constructorNE={\textsf{disjointMerge}}] (u) at (0,-1) {$u_2'$};
+    \node[termrep] (EDb) at (-1,-2) {\bDiagram};
+    \node[termrep] (EDa) at (1,-2) {\cDiagram};
+    \path[->]
+    (u) edge[bend right = 0] (EDab)
+    (EDb) edge[bend right = -10] node[index label] {1} (u)
+    (EDa) edge[bend right = 10] node[index label] {2} (u);
+    \end{tikzpicture}}
+
+
+\newcommand{\EDDecompositionTree}{%
+	\begin{tikzpicture}[decomposition,xscale=0.92,yscale=0.95]
+        \node[draw=darkgreen, rounded corners] (EDroot) at (-2,0) {\EDroot};
+        \node[draw=darkblue, rounded corners] (EDintab) at (-6,-3.5) {\EDintab};
+        \node[draw=darkblue, rounded corners] (EDintbc) at (2,-3.5) {\EDintbc};
+        \node[draw=darkred, rounded corners] (EDlabelbCurve) at (-4,-7.3) {\EDlabelbCurve};
+        \node[draw=darkred, rounded corners] (EDlabelaCurve) at (-8,-7.3) {\EDlabelaCurve};
+        \node[draw=darkred, rounded corners] (EDlabelbbCurve) at (0,-7.3) {\EDlabelbCurve};
+        \node[draw=darkred, rounded corners] (EDlabelcCurve) at (4,-7.3) {\EDlabelcCurve};
+        \node[left = 0.6cm of EDroot,outer sep=0.00cm] (v) {\LARGE$v$};
+        \node[left = 0.6cm of EDintab,outer sep=0.00cm] (v2) {\LARGE$v_2$};
+        \node[left = 0.6cm of EDintbc,outer sep=0.00cm] (v3) {\LARGE$v_{3}$};
+        \node[below = 0.85cm of EDlabelbCurve,anchor=center,outer sep=0.08cm] (v7) {\LARGE$v_7$};
+        \node[below = 0.85cm of EDlabelaCurve,anchor=center,outer sep=0.08cm] (v5) {\LARGE$v_5$};
+        \node[below = 0.85cm of EDlabelbbCurve,anchor=center,outer sep=0.08cm] (v11) {\LARGE$v_{8}$};
+        \node[below = 0.85cm of EDlabelcCurve,anchor=center,outer sep=0.08cm] (v13) {\LARGE$v_{10}$};
+        \coordinate[left = 0.08cm of EDroot] (v');
+        \coordinate[left = 0.08cm of EDintab] (v2');
+        \coordinate[left = 0.08cm of EDintbc] (v3');
+        \coordinate[below = 0.08cm of EDlabelbCurve] (v7');
+        \coordinate[below = 0.08cm of EDlabelaCurve] (v5');
+        \coordinate[below = 0.08cm of EDlabelbbCurve] (v11');
+        \coordinate[below = 0.08cm of EDlabelcCurve] (v13');
+	    \draw[|-{angle 90},thick] (v) -- (v');
+	    \draw[|-{angle 90},thick] (v2) -- (v2');
+	    \draw[|-{angle 90},thick] (v3) -- (v3');
+	   	\draw[|-{angle 90},thick] (v7) -- (v7');
+		\draw[|-{angle 90},thick] (v5) -- (v5');
+		\draw[|-{angle 90},thick] (v11) -- (v11');
+		\draw[|-{angle 90},thick] (v13) -- (v13');
+%
+	\path[->]
+    (EDintab) edge[bend right = -10] node[decomp arrow label,inner sep = 0.02cm] {1} (EDroot)
+	(EDintbc) edge[bend right = 10] node[decomp arrow label,inner sep = 0.02cm] {2} (EDroot)
+	(EDlabelbCurve) edge[bend right = 10] node[decomp arrow label,inner sep = 0.02cm] {2} (EDintab)
+	(EDlabelaCurve) edge[bend right = -10] node[decomp arrow label,inner sep = 0.02cm] {1} (EDintab)
+    (EDlabelbbCurve) edge[bend right = -10] node[decomp arrow label,inner sep = 0.02cm] {1} (EDintbc)
+    (EDlabelcCurve) edge[bend right = 10] node[decomp arrow label,inner sep = 0.02cm] {2} (EDintbc);
+	\end{tikzpicture}}
+
+\newcommand{\EDConstruction}{\begin{tikzpicture}[construction]\small
+\node[termrep] (abc) at (0,0) {$\abcDiagram$};
+    \node[constructorNE={\textsf{unify}}] (u) at (0,-1) {$u'$};
+    \node[termrep] (ab) at (-2,-2) {\abDiagram};
+    \node[termrep] (bc) at (2,-2) {\bcDiagram};
+    %
+    \node[constructorNE={\textsf{subsetMerge}}] (u1) at (-2,-3) {$u_1'$};
+    \node[termrep] (a) at (-3,-4) {\aDiagram};
+    \node[termrep] (b) at (0,-4) {\bDiagram};
+    %
+    \node[constructorNE={\textsf{disjointMerge}}] (u2) at (2,-3) {$u_2'$};
+    \node[termrep] (c) at (3,-4) {\cDiagram};
+    %
+    \node[constructorNE={\textsf{assignLabel}}] (u3) at (-3,-5) {$u_3'$};
+    \node[termrep] (ac) at (-4,-6) {\aCurve};
+    \node[termrep] (acl) at (-2,-6) {$A$};
+    %
+    \node[constructorNE={\textsf{assignLabel}}] (u4) at (0,-5) {$u_4'$};
+    \node[termrep] (bc') at (-1,-6) {\bCurve};
+    \node[termrep] (bcl) at (1,-6) {$B$};
+    %
+    \node[constructorNE={\textsf{assignLabel}}] (u5) at (3,-5) {$u_5'$};
+    \node[termrep] (cc) at (2,-6) {\cCurve};
+    \node[termrep] (ccl) at (4,-6) {$C$};
+    %
+    \path[->]
+    (u) edge[bend right = 0] (abc)
+    (ab) edge[bend right = -10] node[index label] {1} (u)
+    (bc) edge[bend right = 10] node[index label] {2} (u)
+    %
+    (u1) edge[bend right = 0] (ab)
+    (a) edge[bend right = -10] node[index label] {1} (u1)
+    (b) edge[bend right = 10] node[index label] {2} (u1)
+    %
+    (u2) edge[bend right = 0] (bc)
+    (b) edge[bend right = -10] node[index label] {1} (u2)
+    (c) edge[bend right = 10] node[index label] {2} (u2)
+    %
+    %
+    (u3) edge[bend right = 0] (a)
+    (ac) edge[bend right = -10] node[index label] {1} (u3)
+    (acl) edge[bend right = 10] node[index label] {2} (u3)
+    %
+    (u4) edge[bend right = 0] (b)
+    (bc') edge[bend right = -10] node[index label] {1} (u4)
+    (bcl) edge[bend right = 10] node[index label] {2} (u4)
+    %
+    (u5) edge[bend right = 0] (c)
+    (cc) edge[bend right = -10] node[index label] {1} (u5)
+    (ccl) edge[bend right = 10] node[index label] {2} (u5)
+     ;
+\end{tikzpicture}
+}
+
+
+\newcommand{\STConstruction}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+	\node[termrep] (STabc) at (0,-0.1) {$\{A\subseteq B, B\cap C=\emptyset\}$};
+    \node[constructorNE={\textsf{asSet}}] (u) at (0,-1) {$u'$};
+    \node[termrep] (ob) at (-2,-2) {$\{$};
+    \node[termrep] (STabs) at (-0.8,-2) {$A\subseteq B$};
+    \node[termrep] (STbcd) at (0.8,-2) {$B\cap C=\emptyset$};
+    \node[termrep] (cb) at (2,-2) {$\}$};
+    %
+    \node[constructorNE={\textsf{isEmpty}}] (u2) at (2.8,-2.9) {$u_2$};
+    \node[termrep] (bc) at (1.8,-3.9) {$B\cap C$};
+    \node[termrep] (=) at (2.8,-3.9) {$=$};
+    \node[termrep] (e) at (3.6,-3.9) {$\emptyset$};
+    %
+    \node[constructorNE={\textsf{isSubset}}] (u1) at (-0.8,-2.9) {$u_1$};
+    \node[termrep] (a) at (-1.6,-3.9) {$A$};
+    \node[termrep] (sub) at (-0.8,-3.9) {$\subseteq$};
+    \node[termrep] (b') at (0.2,-3.9) {$B$};
+    %
+    \node[constructorNE={\textsf{intersect}}] (u3) at (1.8,-4.8) {$u_3$};
+    \node[termrep] (b) at (1,-5.8) {$B$};
+    \node[termrep] (cap) at (1.8,-5.8) {$\cap$};
+    \node[termrep] (c) at (3,-5.8) {$C$};
+    %
+    \path[->]
+    (u) edge[bend right = 0] (STabc)
+    (ob) edge[bend right = -15] node[index label] {1} (u)
+    (STabs) edge[bend right = -5] node[index label] {2} (u)
+    (STbcd) edge[bend right = 5] node[index label] {3} (u)
+    (cb) edge[bend right = 15] node[index label] {4} (u)
+    %
+    (u2) edge[bend right = 0] (STbcd)
+    (bc) edge[bend right = -10] node[index label] {1} (u2)
+    (=) edge[bend right = 0] node[index label] {2} (u2)
+    (e) edge[bend right = 10] node[index label] {3} (u2)
+    %
+    (u1) edge[bend right = 0] (STabs)
+    (a) edge[bend right = -10] node[index label] {1} (u1)
+    (sub) edge[bend right = 0] node[index label] {2} (u1)
+    (b') edge[bend right = 10] node[index label] {3} (u1)
+    %
+    (u3) edge[bend right = 0] (bc)
+    (b) edge[bend right = -10] node[index label] {1} (u3)
+    (cap) edge[bend right = 0] node[index label] {2} (u3)
+    (c) edge[bend right = 10] node[index label] {3} (u3)
+    ;
+\end{tikzpicture}
+}
+
+
+\newcommand{\STroot}{\begin{tikzpicture}[construction, yscale = 0.81]\small
+\node[termrep] (STabc) at (0,-0.1) {$\{A\subseteq B, B\cap C=\emptyset\}$};
+    \node[constructorNE={\textsf{asSet}}] (u) at (0,-1) {$u$};
+    \node[termrep] (ob) at (-2,-2) {$\{$};
+    \node[termrep] (STabs) at (-0.8,-2) {$A\subseteq B$};
+    \node[termrep] (STbcd) at (0.7,-2) {$B\cap C=\emptyset$};
+    \node[termrep] (cb) at (2.1,-2) {$\}$};
+    %
+    \path[->]
+    (u) edge[bend right = 0] (STabc)
+    (ob) edge[bend right = -15] node[index label] {1} (u)
+    (STabs) edge[bend right = -5] node[index label] {2} (u)
+    (STbcd) edge[bend right = 5] node[index label] {3} (u)
+    (cb) edge[bend right = 15] node[index label] {4} (u)
+    ;
+\end{tikzpicture}
+}
+
+\newcommand{\STIntSub}{\begin{tikzpicture}[construction, yscale = 0.8,xscale =0.9]\small
+    %
+    \node[termrep] (STabs) at (-0.8,-2.1) {$A\subseteq B$};
+    \node[constructorNE={\textsf{isSubset}}] (u1) at (-0.8,-3) {$u_1$};
+    \node[termrep] (a) at (-1.6,-4) {$A$};
+    \node[termrep] (sub) at (-0.8,-4) {$\subseteq$};
+    \node[termrep] (b') at (0.2,-4) {$B$};
+    %
+    \path[->]
+    (u1) edge[bend right = 0] (STabs)
+    (a) edge[bend right = -10] node[index label] {1} (u1)
+    (sub) edge[bend right = 0] node[index label] {2} (u1)
+    (b') edge[bend right = 10] node[index label] {3} (u1)
+       ;
+\end{tikzpicture}
+}
+
+\newcommand{\STIntDis}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    %
+    \node[termrep] (STbcd) at (0.8,-2) {$B\subseteq C=\emptyset$};
+    \node[constructorNE={\textsf{isEmpty}}] (u2) at (2.8,-2.9) {$u_2$};
+    \node[termrep] (bc) at (1.8,-3.9) {$B\cap C$};
+    \node[termrep] (=) at (2.8,-3.9) {$=$};
+    \node[termrep] (e) at (3.6,-3.9) {$\emptyset$};
+    %%%
+    %\node[termrep] (bc) at (1.8,-4) {$B\cap C$};
+    \node[constructorNE={\textsf{intersect}}] (u3) at (1.8,-4.8) {$u_3$};
+    \node[termrep] (b) at (1,-5.8) {$B$};
+    \node[termrep] (cap) at (1.8,-5.8) {$\cap$};
+    \node[termrep] (c) at (3,-5.8) {$C$};
+    %
+    \path[->]
+    %
+    (u2) edge[bend right = 0] (STbcd)
+    (bc) edge[bend right = -10] node[index label] {1} (u2)
+    (=) edge[bend right = 0] node[index label] {2} (u2)
+    (e) edge[bend right = 10] node[index label] {3} (u2);
+    %
+    \path[->]
+    (u3) edge[bend right = 0] (bc)
+    (b) edge[bend right = -10] node[index label] {1} (u3)
+    (cap) edge[bend right = 0] node[index label] {2} (u3)
+    (c) edge[bend right = 10] node[index label] {3} (u3)
+    ;
+\end{tikzpicture}
+}
+
+\newcommand{\STLeafOB}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (ob) at (-2,-2) {$\{$};
+\end{tikzpicture}
+}
+
+\newcommand{\STLeafCB}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (cb) at (2,-2) {$\}$};
+\end{tikzpicture}
+}
+
+\newcommand{\STLeafA}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    %
+    \node[termrep] (a) at (-1.6,-4) {$A$};
+\end{tikzpicture}
+}
+
+\newcommand{\STLeafSub}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    %
+    \node[termrep] (sub) at (-0.8,-4) {$\subseteq$};
+\end{tikzpicture}
+}
+
+
+\newcommand{\STLeafB}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    %
+    \node[termrep] (b') at (0.2,-4) {$B$};
+\end{tikzpicture}
+}
+
+
+\newcommand{\STIntCap}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (bc) at (1.8,-4) {$B\cap C$};
+    \node[constructorNE={\textsf{intersect}}] (u3) at (1.8,-5) {$u_3$};
+    \node[termrep] (b) at (1,-6) {$B$};
+    \node[termrep] (cap) at (1.8,-6) {$\cap$};
+    \node[termrep] (c) at (3,-6) {$C$};
+    %
+    \path[->]
+    (u3) edge[bend right = 0] (bc)
+    (b) edge[bend right = 0] node[index label] {1} (u3)
+    (cap) edge[bend right = 0] node[index label] {2} (u3)
+    (c) edge[bend right = 0] node[index label] {3} (u3)
+    ;
+\end{tikzpicture}
+}
+
+
+\newcommand{\STLeafBb}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (b) at (1,-6) {$B$};
+    ;
+\end{tikzpicture}
+}
+
+
+\newcommand{\STLeafCap}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (cap) at (1.8,-6) {$\cap$};
+    ;
+\end{tikzpicture}
+}
+
+
+\newcommand{\STLeafEqual}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (c) at (3,-6) {$=$};
+\end{tikzpicture}
+}
+
+
+\newcommand{\STLeafEmpty}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (c) at (3,-6) {$\emptyset$};
+\end{tikzpicture}
+}
+
+\newcommand{\STLeafC}{\begin{tikzpicture}[construction, yscale = 0.9]\small
+    \node[termrep] (c) at (3,-6) {$C$};
+\end{tikzpicture}
+}
+
+\newcommand{\STDecompositionTree}{%
+\begin{tikzpicture}[decomposition, yscale = 0.83]
+        \node[draw=darkgreen, rounded corners, label=165:{\LARGE$v$}] (STRoot) at (-2,-0.1) {\STroot};
+        \node[draw=darkblue, rounded corners, label=180:{\LARGE$v_2$}] (STIntSub) at (-3.9,-3.7) {\STIntSub};
+        \node[draw=darkblue, rounded corners, label=0:{\LARGE$v_3$}] (STIntDis) at (0,-4.7) {\STIntDis};
+        %\node[draw=darkblue, rounded corners, label=210:{\LARGE$v_8$}] (STIntCap) at (0,-7.4) {\STIntCap};
+        \node[draw=darkred, rounded corners, label=180:{\LARGE$v_1$}] (STLeafOB) at (-6,-2.4) {\STLeafOB};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_5$}] (STLeafA) at (-4.9,-6.4) {\STLeafA};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_6$}] (STLeafSub) at (-4,-6.4) {\STLeafSub};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_7$}] (STLeafB) at (-2.9,-6.4) {\STLeafB};
+        \node[draw=darkred, rounded corners, label=0:{\LARGE$v_4$}] (STLeafCB) at (3,-2.4) {\STLeafCB};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_{8}$}] (STLeafBb) at (-1.2,-8.4) {\STLeafBb};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_{9}$}] (STLeafCap) at (-0.2,-8.4) {\STLeafCap};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_{10}$}] (STLeafC) at (1.1,-8.4) {\STLeafC};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_{11}$}] (STLeafEqual) at (2.5,-8.4) {\STLeafEqual};
+        \node[draw=darkred, rounded corners, label=270:{\LARGE$v_{12}$}] (STLeafEmpty) at (3.4,-8.4) {\STLeafEmpty};
+%
+	\path[->]
+    (STLeafOB) edge[out = 60, in = -160,looseness=0.8] node[decomp arrow label] {1} (STRoot)
+    (STIntSub) edge[bend right = -5] node[decomp arrow label] {2} (STRoot)
+    (STIntDis) edge[bend right = 5] node[decomp arrow label] {3} (STRoot)
+    (STLeafCB) edge[out = 120, in = -20,looseness=0.8] node[decomp arrow label] {4} (STRoot)
+    (STLeafA) edge[out = 90, in = -125,looseness=0.5] node[decomp arrow label] {1} (STIntSub)
+    (STLeafSub) edge[bend right = 0] node[decomp arrow label] {2} (STIntSub)
+    (STLeafB) edge[out = 90, in = -55,looseness=0.8] node[decomp arrow label] {3}  (STIntSub)
+    %(STIntCap) edge node[decomp arrow label] {1} (STIntDis)
+    (STLeafEqual) edge[out =85,in=-27,looseness=0.85] node[decomp arrow label] {4} (STIntDis)
+    (STLeafEmpty) edge[out = 90, in = -13,looseness=0.9] node[decomp arrow label] {5} (STIntDis)
+    (STLeafBb) edge[bend right = -5] node[decomp arrow label] {1} (STIntDis)
+    (STLeafCap) edge[bend right = 0] node[decomp arrow label] {2} (STIntDis)
+    (STLeafC) edge[bend right = 5] node[decomp arrow label] {3} (STIntDis);
+	\end{tikzpicture}
+}
+
+
+\newcommand{\pieChartConstruction}{
+\begin{center}
+\scalebox{0.7}{
+	\begin{tikzpicture}[construction]
+	\node[termrep] (t) {\piechart};
+	\node[constructorNE = {\PCcsubDivide}, below = of t,yshift=0.4cm,xshift = 0.5cm] (u) {$u$};
+	\node[termrep,below left = 1.2cm and 1.8cm of u,anchor=center] (t1) {\piechartOne};
+	\node[termrep,below = of u, xshift=0.3cm] (t2) {\pchline{110}};
+	\node[termrep,below right = of u,yshift=0.6cm,xshift=-0.2cm] (t3) {\footnotesize 43};
+	\node[constructorNE = {\PCcsubDivide}, below = of t1,yshift=0.4cm,xshift = 0.5cm] (u1) {$u'$};
+	\node[termrep,below left = 1.2cm and 1.8cm of u1,anchor=center] (t11) {\piechartTwo};
+	\node[termrep,below = of u1, xshift=0.4cm] (t12) {\pchline{135}};
+	\node[termrep,below right = of u1,yshift=0.6cm,xshift=-0.1cm] (t13) {\small 45};
+	\node[constructorNE = {\PCcinitialise}, below = of t11,yshift=0.4cm,xshift = 0.5cm] (u11) {$u''$};
+	\node[termrep,below left = 1.2cm and 2.2cm of u11,anchor=center] (t111) {\piechartThree};
+	\node[termrep,below = of u11,xshift=-0.6cm,yshift=0.1cm] (t112) {\pchline{90}};
+	\node[termrep,below = of u11,xshift=0.5cm,yshift=-0.1cm] (t113) {\pchline{250}};
+	\node[termrep,below = of u11,xshift = 1.4cm,yshift=0.2cm] (t114) {\large 364};
+	\node[termrep,below right = of u11,xshift = 0.5cm,yshift=0.9cm] (t115) {198};
+	\path[->] (t111) edge node[index label]{1} (u11)
+	(t112) edge node[index label]{2} (u11)
+	(t113) edge node[index label]{3} (u11)
+	(t114) edge node[index label]{4} (u11)
+	(t115) edge node[index label]{5} (u11)
+	(u11) edge (t11)
+	(t11) edge node[index label]{1} (u1)
+	(t12) edge node[index label]{2} (u1)
+	(t13) edge node[index label]{3} (u1)
+	(u1) edge (t1)
+	(t1) edge node[index label]{1} (u)
+	(t2) edge node[index label]{2} (u)
+	(t3) edge node[index label]{3} (u)
+	(u) edge (t);
+	\end{tikzpicture}
+}
+\end{center}
+}
+
+
+
+\newcommand{\treeMapConstruction}{
+\begin{center}
+\scalebox{0.7}{
+	\begin{tikzpicture}[construction]
+	\node[termrep] (t) {\treemap};
+	\node[constructorNE = {\TMcinsertTreeMap}, below = of t,yshift=0.4cm,xshift=0.4cm] (u) {$u$};
+	\node[termrep,below left = 1.2cm and 2.3cm of u,anchor=center] (t1) {\treemapOne};
+	\node[termrep,below right = 0.6cm and 1cm of u,anchor=center] (t2) {\rectangle{2.4,0.1}{2.9,0.7}{\footnotesize 43}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = of t2,yshift=0.5cm,xshift=0.0cm] (u2) {$u'$};
+	\node[termrep,below left = 1cm and 0.2cm of u2,anchor=center] (t21) {\rectangle{2.4,0.1}{2.9,0.7}{}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u2] (t22) {\footnotesize 43};
+	\node[constructorNE = {\TMcinsertTreeMap}, below = of t1,yshift=0.4cm,xshift=0.4cm] (u1) {$u'$};
+	\node[termrep,below left = 1.2cm and 2.3cm of u1,anchor=center] (t11) {\treemapTwo};
+	\node[termrep,below right = 0.6cm and 1.5cm of u1,anchor=center] (t12) {\rectangle{1.7,0.1}{2.3,0.7}{\small 45}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = of t12,yshift=0.4cm,xshift=0.2cm] (u12) {$u'$};
+	\node[termrep,below left = 1cm and 0.3cm of u12,anchor=center] (t121) {\rectangle{1.7,0.1}{2.3,0.7}{}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u12] (t122) {\small 45};
+	\node[constructorNE = {\TMcinsertTreeMap}, below = of t11,yshift=0.4cm,xshift=0.4cm] (u11) {$u''$};
+	\node[termrep,below left = 1.2cm and 2.3cm of u11,anchor=center] (t111) {\treemapThree};
+	\node[termrep,below right= 0.8cm and 1.7cm of u11,anchor=center] (t112) {\rectangle{1.7,0.8}{2.9,1.9}{198}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = of t112,yshift=0.4cm,xshift=0.4cm] (u112) {$u'$};
+	\node[termrep,below left = 1.3cm and 0.3cm of u112,anchor=center] (t1121) {\rectangle{1.7,0.8}{2.9,1.9}{}};
+	\node[termrep,below right = 0.6cm and 0.5cm of u112] (t1122) {198};
+	\node[constructorNE = {\TMcinsertTreeMap}, below = of t111,yshift=0.4cm,xshift=0.4cm] (u111) {$u''$};
+	\node[termrep,below left = 1.7cm and 1.2cm of u111,anchor=center] (t1111) {\rectangle{0,0}{3,2}{}};
+	\node[termrep,below right = 1cm and 1.6cm of u111,anchor=center] (t1112) {\rectangle{0.1,0.1}{1.6,1.9}{\large 364}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = of t1112,yshift=0.4cm,xshift=0.6cm] (u1112) {$u''$};
+	\node[termrep,below left = 1.6cm and 0.5cm of u1112,anchor=center] (t11121) {\rectangle{0.1,0.1}{1.6,1.9}{}};
+	\node[termrep,below right = of u1112,xshift=-0.6cm,yshift=0.4cm] (t11122) {\large 364};
+	\path[->] (u2) edge (t2)
+	(t21) edge node[index label]{1} (u2)
+	(t22) edge node[index label]{2} (u2)
+	(u12) edge (t12)
+	(t121) edge node[index label]{1} (u12)
+	(t122) edge node[index label]{2} (u12)
+	(u1112) edge (t1112)
+	(t11121) edge node[index label]{1} (u1112)
+	(t11122) edge node[index label]{2} (u1112)
+	(u111) edge (t111)
+	(t1111) edge node[index label]{1} (u111)
+	(t1112) edge node[index label]{2} (u111)
+	(u112) edge (t112)
+	(t1121) edge node[index label]{1} (u112)
+	(t1122) edge node[index label]{2} (u112)
+	(u11) edge (t11)
+	(t111) edge node[index label]{1} (u11)
+	(t112) edge node[index label]{2} (u11)
+	(u1) edge (t1)
+	(t11) edge node[index label]{1} (u1)
+	(t12) edge node[index label]{2} (u1)
+	(u1) edge (t1)
+	(t1) edge node[index label]{1} (u)
+	(t2) edge node[index label]{2} (u)
+	(u) edge (t);
+	\end{tikzpicture}
+}
+\end{center}
+}
+
+\newcommand{\tableConstructionPatternRoot}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t5) {$n_1$};
+	\node[constructorNW = {\TcaddRow}, below = 0.5cm of t5] (u) {};
+	\node[typeS={\Ttable},below = 0.6cm of u,xshift = -0.2cm] (t4) {$n_2$};
+	\node[typeN={\Trow},above right = 0.4cm and 2cm of u, yshift=-0.0cm] (r5) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {};
+	\node[typeS={\Trow},below left = 0.4cm and 0.4cm of u1] (c5l) {};
+	\node[typeS={\Tcell},below right = 0.4cm and 0.4cm of u1] (c5r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u2] (c5lb) {$n_{3}$};
+	\node[typeS = \Ttext,below right = 0.5cm and 0.25cm of u2] (c5lt) {$n_{4}$};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u3] (c5rb) {$n_{5}$};
+	\node[typeS = \Tnum,below right = 0.5cm and 0.25cm of u3] (c5rt) {$n_{6}$};
+	
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -100] node[index label]{\scriptsize1} (u)
+	(r5) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionPatternICa}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t5) {$n_2$};
+	\node[constructorNW = {\TcaddRow}, below = 0.5cm of t5] (u) {};
+	\node[typeS={\Ttable},below = 0.6cm of u,xshift = -0.2cm] (t4) {$n_{7}$};
+	\node[typeN={\Trow},above right = 0.4cm and 2cm of u, yshift=-0.0cm] (r5) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {};
+	\node[typeS={\Trow},below left = 0.4cm and 0.4cm of u1] (c5l) {};
+	\node[typeS={\Tcell},below right = 0.4cm and 0.4cm of u1] (c5r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u2] (c5lb) {$n_{8}$};
+	\node[typeS = \Ttext,below right = 0.5cm and 0.25cm of u2] (c5lt) {$n_{9}$};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u3] (c5rb) {$n_{10}$};
+	\node[typeS = \Tnum,below right = 0.5cm and 0.25cm of u3] (c5rt) {$n_{11}$};
+	
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -100] node[index label]{\scriptsize1} (u)
+	(r5) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionPatternICb}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t5) {$n_7$};
+	\node[constructorNW = {\TcaddRow}, below = 0.5cm of t5] (u) {};
+	\node[typeS={\Ttable},below = 0.6cm of u,xshift = -0.2cm] (t4) {$n_{12}$};
+	\node[typeN={\Trow},above right = 0.4cm and 2cm of u, yshift=-0.0cm] (r5) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.6cm of r5, yshift=-0.0cm] (u1) {};
+	\node[typeS={\Trow},below left = 0.4cm and 0.4cm of u1] (c5l) {};
+	\node[typeS={\Tcell},below right = 0.4cm and 0.4cm of u1] (c5r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.45cm of c5l, yshift=0.0cm] (u2) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u2] (c5lb) {$n_{13}$};
+	\node[typeS = \Ttext,below right = 0.5cm and 0.25cm of u2] (c5lt) {$n_{14}$};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c5r, yshift=0.0cm] (u3) {};
+	\node[typeS = \TemptyCell,below left = 0.5cm and 0.25cm of u3] (c5rb) {$n_{15}$};
+	\node[typeS = \Tnum,below right = 0.5cm and 0.25cm of u3] (c5rt) {$n_{16}$};
+	
+	\coordinate[below right = 0cm and 0.2cm of t5] (xu);
+	\path[->]
+	(u) edge[] (t5)
+	(t4) edge[out = 100, in = -100] node[index label]{\scriptsize1} (u)
+	(r5) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u);
+	%
+	\path[->]
+	(u1) edge (r5)
+	(c5l) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(c5r) edge[bend right = 5] node[index label]{\scriptsize2} (u1)
+	%
+	(u2) edge (c5l)
+	(c5lb) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(c5lt) edge[bend right = 5] node[index label]{\scriptsize2} (u2)
+	%
+	(u3) edge (c5r)
+	(c5rb) edge[bend left = 10] node[index label]{\scriptsize1} (u3)
+	(c5rt) edge[bend right = 5] node[index label]{\scriptsize2} (u3);
+	%%
+	%% layer 4
+	\end{tikzpicture}}
+
+\newcommand{\tableConstructionPatternFoundationsICc}{%
+	\begin{tikzpicture}[construction,node distance = 0.95cm and 1cm]\small
+	\node[typeN = {\Ttable}] (t2) {$n_{12}$};
+	%% table 2
+	\node[constructorNW = {\TcaddRow}, below = 0.6cm of t2] (u12) {};
+	\node[typeSW = {\Ttable},below = 0.6cm of u12,xshift=-0.2cm] (t1) {};
+	\node[typeN = {\Trow},above right = 0.5cm and 2cm of u12, yshift=-0.0cm] (r2) {};
+	%
+	\node[constructorpos = {\TcaddCell}{90}{0.14cm}, right = 0.57cm of r2, yshift=-0.0cm] (u13) {};
+	\node[typeS = {\Trow},below left = 0.4cm and 0.4cm of u13] (c2l) {};
+	\node[typeS = {\Tcell},below right = 0.4cm and 0.4cm of u13] (c2r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, left = 0.47cm of c2l, yshift=0.0cm] (u14) {};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u14] (c2lb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u14] (c2lt) {};
+	%
+	\node[constructorpos = {\TcinsertNumValue}{60}{0.14cm}, right = 0.45cm of c2r, yshift=0.0cm] (u15) {};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u15] (c2rb) {};
+	\node[typeS = {\Tnum},below right = 0.5cm and 0.25cm of u15] (c2rt) {};
+	%%
+	%% last construction, for table 1
+	%
+	\node[constructorpos = {\TcaddCell}{0}{0.45cm}, below right = 0.3cm and 1.2cm of t1] (u16) {};
+	\node[typeS = {\Trow},below left = 0.5cm and 0.3cm of u16] (c1l) {};
+	\node[typeS = {\Tcell},below right = 0.5cm and 0.3cm of u16] (c1r) {};
+	%
+	\node[constructorpos = {\TcinsertText}{120}{0.14cm}, left = 0.47cm of c1l, yshift=-0.0cm] (u17) {};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u17] (c1lb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u17] (c1lt) {};
+	%
+	\node[constructorpos = {\TcinsertText}{60}{0.14cm}, right = 0.47cm of c1r, yshift=-0.0cm] (u18) {};
+	\node[typeS = {\TemptyCell},below left = 0.5cm and 0.25cm of u18] (c1rb) {};
+	\node[typeS = {\Ttext},below right = 0.5cm and 0.25cm of u18] (c1rt) {};
+	%%
+	%
+	%% layer 2
+	\coordinate[below right = 0.1cm and 0.1cm of t2] (xu12);
+	\path[->]
+	(u12) edge (t2)
+	(t1) edge[out = 110, in = -120] node[index label]{\scriptsize1} (u12)
+	(r2) edge[out = 180, in = 0, looseness = 1.5] node[index label]{\scriptsize2} (u12);
+	%
+	\path[->]
+	(u13) edge (r2)
+	(c2l) edge[bend left = 10] node[index label]{\scriptsize1} (u13)
+	(c2r) edge[bend right = 5] node[index label]{\scriptsize2} (u13)
+	%
+	(u14) edge (c2l)
+	(c2lb) edge[bend left = 10] node[index label]{\scriptsize1} (u14)
+	(c2lt) edge[bend right = 5] node[index label]{\scriptsize2} (u14)
+	%
+	(u15) edge (c2r)
+	(c2rb) edge[bend left = 10] node[index label]{\scriptsize1} (u15)
+	(c2rt) edge[bend right = 5] node[index label]{\scriptsize2} (u15)
+	%
+	(u16) edge (t1)
+	(c1l) edge[bend left = 10] node[index label]{\scriptsize1} (u16)
+	(c1r) edge[bend right = 5] node[index label]{\scriptsize2} (u16)
+	%
+	(u17) edge (c1l)
+	(c1lb) edge[bend left = 10] node[index label]{\scriptsize1} (u17)
+	(c1lt) edge[bend right = 5] node[index label]{\scriptsize2} (u17)
+	%
+	(u18) edge (c1r)
+	(c1rb) edge[bend left = 10] node[index label]{\scriptsize1} (u18)
+	(c1rt) edge[bend right = 5] node[index label]{\scriptsize2} (u18);
+	;
+	\end{tikzpicture}}
+
+
+\newcommand{\tableConstructionPatternra}[1]{
+\begin{tikzpicture}[construction,inner sep = 3pt]
+\node[typeS={\TemptyCell}] (c5lb) {$#1$};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternrb}[1]{
+\begin{tikzpicture}[construction,inner sep = 3pt]
+\node[typeS={\Ttext}] (c5lt) {$#1$};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternrc}[1]{
+\begin{tikzpicture}[construction,inner sep = 3pt]
+\node[typeS={\TemptyCell}] (c5rb) {$#1$};
+\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternrd}[1]{
+\begin{tikzpicture}[construction,inner sep = 3pt]
+\node[typeS={\Tnum}] (c5rt) {$#1$};
+\end{tikzpicture}
+}
+
+\newcommand{\TableDescription}{%
+\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep=2pt,anchor = center]\small
+        \node[draw=darkgreen,rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (Gen) at (0,0) {\tableConstructionPatternRoot};
+        %
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of Gen] (ra) {\tableConstructionPatternrb{n_4}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of Gen] (rb) {\tableConstructionPatternra{n_3}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of Gen] (rc) {\tableConstructionPatternrc{n_5}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of Gen] (rd) {\tableConstructionPatternrd{n_6}};
+        %
+        \node[draw=darkblue, rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (ICa) at (0,-8.1) {\tableConstructionPatternICa};
+                %
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of ICa] (aa) {\tableConstructionPatternrb{n_9}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of ICa] (ab) {\tableConstructionPatternra{n_8}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of ICa] (ac) {\tableConstructionPatternrc{n_{10}}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of ICa] (ad) {\tableConstructionPatternrd{n_{11}}};
+        %
+        \node[draw=darkblue, rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (ICb) at (0,-16.2) {\tableConstructionPatternICb};
+                %
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of ICb] (ba) {\tableConstructionPatternrb{n_{14}}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of ICb] (bb) {\tableConstructionPatternra{n_{13}}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of ICb] (bc) {\tableConstructionPatternrc{n_{15}}};
+        \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of ICb] (bd) {\tableConstructionPatternrd{n_{16}}};
+        %
+        \node[draw=darkred,  rounded corners, label=62:{\LARGE$\cong (\pgraphn_2,v_2)$}] (ICc) at (0,-24.9) {\tableConstructionPatternFoundationsICc};
+%
+	\path[->]
+    ([xshift=-2.9cm]ICa.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\large,inner sep=0.2pt] {1} ([xshift=-2.9cm]Gen.south)
+    %
+    (ra.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]Gen.south)
+    (rb.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]Gen.south)
+    (rc.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]Gen.south)
+    (rd.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]Gen.south)
+    %
+    ([xshift=-2.9cm]ICb.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\large,inner sep=0.2pt] {1} ([xshift=-2.9cm]ICa.south)
+    %
+    (aa.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]ICa.south)
+    (ab.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]ICa.south)
+    (ac.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]ICa.south)
+    (ad.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]ICa.south)
+    %
+    ([xshift=-2.9cm]ICc.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\large,inner sep=0.2pt] {1} ([xshift=-2.9cm]ICb.south)
+    %
+    (ba.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]ICb.south)
+    (bb.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]ICb.south)
+    (bc.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]ICb.south)
+    (bd.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]ICb.south)
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\TableDescriptionShorterArrows}{%\vspace*{15pt}%
+\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep=2pt,anchor=center]\small
+\node[draw=darkgreen,rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (Gen) at (0,0) {\tableConstructionPatternRoot};
+%
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of Gen] (ra) {\tableConstructionPatternrb{n_4}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of Gen] (rb) {\tableConstructionPatternra{n_3}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of Gen] (rc) {\tableConstructionPatternrc{n_5}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of Gen] (rd) {\tableConstructionPatternrd{n_6}};
+%
+\node[draw=darkblue, rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (ICa) at (0,-7.3) {\tableConstructionPatternICa};
+%
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of ICa] (aa) {\tableConstructionPatternrb{n_9}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of ICa] (ab) {\tableConstructionPatternra{n_8}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of ICa] (ac) {\tableConstructionPatternrc{n_{10}}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of ICa] (ad) {\tableConstructionPatternrd{n_{11}}};
+%
+\node[draw=darkblue, rounded corners, label=50:{\LARGE$\cong (\pgraphn_1,v_1)$}] (ICb) at (0,-14.6) {\tableConstructionPatternICb};
+%
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4,v_4)$}, below left = 0.9cm and -3.3cm of ICb] (ba) {\tableConstructionPatternrb{n_{14}}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below left = 0.9cm and -1.9cm of ICb] (bb) {\tableConstructionPatternra{n_{13}}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_3,v_3)$}, below right = 0.9cm and -3.0cm of ICb] (bc) {\tableConstructionPatternrc{n_{15}}};
+\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5,v_5)$}, below right = 0.9cm and -1.1cm of ICb] (bd) {\tableConstructionPatternrd{n_{16}}};
+%
+\node[draw=darkred,  rounded corners, label=62:{\LARGE$\cong (\pgraphn_2,v_2)$}] (ICc) at (0,-22.9) {\tableConstructionPatternFoundationsICc};
+%
+\path[->]
+([xshift=-2.9cm]ICa.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift=-2.9cm]Gen.south)
+%
+(ra.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]Gen.south)
+(rb.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]Gen.south)
+(rc.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]Gen.south)
+(rd.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]Gen.south)
+%
+([xshift=-2.9cm]ICb.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift=-2.9cm]ICa.south)
+%
+(aa.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]ICa.south)
+(ab.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]ICa.south)
+(ac.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]ICa.south)
+(ad.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]ICa.south)
+%
+([xshift=-2.9cm]ICc.north) edge[out = 120, in = -120, looseness=0.8] node[decomp arrow label,font=\LARGE,inner sep=0.2pt] {1} ([xshift=-2.9cm]ICb.south)
+%
+(ba.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {3} ([xshift=-0.2cm]ICb.south)
+(bb.north) edge[bend left = 5] node[decomp arrow label,font=\large,inner sep=0.2pt] {2} ([xshift=-1.7cm]ICb.south)
+(bc.north) edge[bend left =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {4} ([xshift=1.5cm]ICb.south)
+(bd.north) edge[bend right =5] node[decomp arrow label,font=\large,inner sep=0.2pt] {5} ([xshift=3cm]ICb.south)
+;
+\end{tikzpicture}
+}
+
+\newcommand{\matchesTtoDelta}{%
+\begin{center}
+\scalebox{0.42}{%
+\begin{tikzpicture}[decomposition]
+\path[->,line cap = round]
+    (5.8,5.1) edge  (5.8,3.3)
+   (0,10) edge node[decomp arrow label,rectangle, inner sep=3pt, font=\huge,above] {\textit{matches}} (6,10)
+   (0,20) edge node[decomp arrow label,rectangle, inner sep=3pt, font=\huge,above] {\textit{matches}} (6,20)
+   (0,30) edge node[decomp arrow label,rectangle, inner sep=3pt, font=\huge,above] {\textit{matches}} (6,30);
+\path[-, line join=round, line cap = round]
+   (1,4.1) edge  (1,5.1)
+   (1,5.1) edge node[decomp arrow label,rectangle, inner sep=3pt, font=\huge,above] {\textit{matches}} (5.8,5.1);
+\end{tikzpicture}
+}
+\end{center}
+}
+
+\newcommand{\treemapRoot}{%
+\begin{tikzpicture}[construction,yscale=0.9]
+	\node[termrep] (t) {\treemap};
+	\node[constructorW = {\TMcinsertTreeMap}, below = 0.4cm of t] (u) {$u'$};
+	\node[termrep,below left = 1.4cm and 0.5cm of u,anchor=center] (t1) {\treemapOne};
+	\node[termrep,above right = 0.1cm and 2cm of u,anchor=center] (t2) {\rectangle{2.4,0.1}{2.9,0.7}{\footnotesize 43}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.5cm of t2] (u2) {$u_1'$};
+	\node[termrep,below left = 0.9cm and 0.6cm of u2,anchor=center] (t21) {\rectangle{2.4,0.1}{2.9,0.7}{}};
+	\node[termrep,below right = 0.9cm and 0.6cm of u2,anchor=center] (t22) {\footnotesize 43};
+	\path[->]
+    (u2) edge (t2)
+	(t21) edge[bend left = 10] node[index label]{\scriptsize1} (u2)
+	(t22) edge[bend right = 10] node[index label]{\scriptsize2} (u2)
+	(t1) edge[bend left = 10] node[index label]{\scriptsize1} (u)
+	(t2) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u)
+	(u) edge (t);
+	\end{tikzpicture}
+}
+
+
+\newcommand{\treemapICa}{
+\begin{tikzpicture}[construction,yscale=0.9]
+	\node[termrep,anchor=center] (t1) {\treemapOne};
+	\node[constructorW = {\TMcinsertTreeMap}, below = 0.4cm of t1] (u1) {$u_2'$};
+	\node[termrep,below left = 1.4cm and 0.5cm of u1,anchor=center] (t11) {\treemapTwo};
+	\node[termrep,above right = 0.1cm and 2cm of u1,anchor=center] (t12) {\rectangle{1.7,0.1}{2.3,0.7}{\small 45}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.5cm of t12] (u12) {$u_3'$};
+	\node[termrep,below left = 0.9cm and 0.6cm of u12,anchor=center] (t121) {\rectangle{1.7,0.1}{2.3,0.7}{}};
+	\node[termrep,below right = 0.9cm and 0.6cm of u12,anchor=center] (t122) {\small 45};
+	\path[->]
+	(u12) edge (t12)
+	(t121) edge[bend left = 10] node[index label]{\scriptsize1} (u12)
+	(t122) edge[bend right = 10] node[index label]{\scriptsize2} (u12)
+	(u1) edge (t1)
+	(t11) edge[bend left = 10] node[index label]{\scriptsize1} (u1)
+	(t12) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u1)
+	(u1) edge (t1)
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\treemapICb}{
+\begin{tikzpicture}[construction]
+	\node[termrep,anchor=center] (t11) {\treemapTwo};
+	\node[constructorW = {\TMcinsertTreeMap}, below = 0.4cm of t11] (u11) {$u_4'$};
+	\node[termrep,below left = 1.4cm and 0.5cm of u11,anchor=center] (t111) {\treemapThree};
+	\node[termrep,above right = 0.2cm and 2.2cm of u11,anchor=center] (t112) {\rectangle{1.7,0.8}{2.9,1.9}{198}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.5cm of t112] (u112) {$u_5'$};
+	\node[termrep,below left = 0.9cm and 0.8cm of u112,anchor=center] (t1121) {\rectangle{1.7,0.8}{2.9,1.9}{}};
+	\node[termrep,below right = 0.9cm and 0.5cm of u112,anchor=center] (t1122) {198};
+	\path[->]
+	(u112) edge (t112)
+	(t1121) edge[bend left = 10] node[index label]{\scriptsize1} (u112)
+	(t1122) edge[bend right = 10] node[index label]{\scriptsize2} (u112)
+	(u11) edge (t11)
+	(t111) edge[bend left = 10] node[index label]{\scriptsize1} (u11)
+	(t112) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u11)
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\treemapICc}{
+\begin{tikzpicture}[construction]
+	\node[termrep, anchor=center] (t111) {\treemapThree};
+	\node[constructorW = {\TMcinsertTreeMap}, below = 0.4cm of t111] (u111) {$u_6'$};
+	\node[termrep,below left = 1.4cm and 0.5cm of u111,anchor=center] (t1111) {\rectangle{0,0}{3,2}{}};
+	\node[termrep,above right = 0.7cm and 2.8cm of u111,anchor=center] (t1112) {\rectangle{0.1,0.1}{1.6,1.9}{\large 364}};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.5cm of t1112] (u1112) {$u_7'$};
+	\node[termrep,below left = 0.8cm and 1.3cm of u1112,anchor=center] (t11121) {\rectangle{0.1,0.1}{1.6,1.9}{}};
+	\node[termrep,below right = 0.8cm and 0.5cm of u1112,anchor=center] (t11122) {\large 364};
+	\path[->]
+	(u1112) edge (t1112)
+	(t11121) edge[bend left = 10] node[index label]{\scriptsize1} (u1112)
+	(t11122) edge[bend right = 10] node[index label]{\scriptsize2} (u1112)
+	(u111) edge (t111)
+	(t1111) edge[bend left = 10] node[index label]{\scriptsize1} (u111)
+	(t1112) edge[out = 190, in = 0, looseness = 0.8] node[index label]{\scriptsize2} (u111)
+;
+	\end{tikzpicture}
+}
+
+
+
+\newcommand{\tmcon}[1]{
+\begin{tikzpicture}[construction]
+\node[termrep] (r) {$#1$};
+\end{tikzpicture}
+}
+
+
+\newcommand{\TreeMapDecomposition}{%
+\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep = 2pt,anchor=center]
+        \node[draw=darkgreen,rounded corners, label=90:{\LARGE}] (Gen) at (0,0) {\treemapRoot};
+        %
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.7cm and -2.7cm of Gen] (aa) {\tmcon{\rectangle{2.4,0.1}{2.9,0.7}{}}};
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.9cm and -0.8cm of Gen] (ab) {\tmcon{43}};
+
+        \node[draw=darkblue, rounded corners, label=180:{\LARGE}] (ICa) at (0,-8.2) {\treemapICa};
+        %
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.7cm and -2.7cm of ICa] (ba) {\tmcon{\rectangle{1.7,0.1}{2.3,0.7}{}}};
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.9cm and -0.8cm of ICa] (bb) {\tmcon{45}};
+        %
+        \node[draw=darkblue, rounded corners, label=180:{\LARGE}] (ICb) at (0,-16.4) {\treemapICb};
+        %
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.7cm and -3cm of ICb] (ca) {\tmcon{\rectangle{1.7,0.8}{2.9,1.9}{}}};
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}, below right = 0.9cm and -0.8cm of ICb] (cb) {\tmcon{198}};
+        %
+        \node[draw=darkred,  rounded corners, label=180:{\LARGE}] (ICc) at (0,-24.9) {\treemapICc};
+%
+	\path[->]
+    ([xshift = -1cm]ICa.north) edge[out = 110, in = -100, looseness = 1] node[decomp arrow label] {\large1} ([xshift = -1.6cm]Gen.south)
+    %
+    (aa.north) edge[bend left =5] node[decomp arrow label] {\large2} ([xshift = 0.6cm]Gen.south)
+    (ab.north) edge[bend right =5] node[decomp arrow label] {\large3} ([xshift = 2.3cm]Gen.south)
+    %
+    ([xshift = -1cm]ICb.north) edge[out = 110, in = -100, looseness = 1] node[decomp arrow label] {\large1} ([xshift = -1.6cm]ICa.south)
+    %
+    (ba.north) edge[bend left =5] node[decomp arrow label] {\large2} ([xshift = 0.6cm]ICa.south)
+    (bb.north) edge[bend right =5] node[decomp arrow label] {\large3} ([xshift = 2.3cm]ICa.south)
+    %
+    ([xshift = -1cm]ICc.north) edge[out = 110, in = -100, looseness = 1] node[decomp arrow label] {\large1} ([xshift = -1.6cm]ICb.south)
+    %
+    (ca.north) edge[bend left =5] node[decomp arrow label] {\large2} ([xshift = 0.6cm]ICb.south)
+    (cb.north) edge[bend right =5] node[decomp arrow label] {\large3} ([xshift = 2.4cm]ICb.south)
+    %
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\treemapPatternRoot}[4]{%
+\begin{tikzpicture}[construction,yscale=0.8]\small
+	\node[typeN={\TMcompleteTreeMap},anchor=center] (t1) {$#1$};
+	\node[constructorNW = {\TMcinsertTreeMap}, below = 0.4cm of t1] (u1) {};
+	\node[typeS={\TMincompleteTreeMap},below left = 0.6cm and 0.6cm of u1,anchor=center] (t11) {$#2$};
+	\node[typeN={\TMcompleteTreeMap},above right = 0.5cm and 1.9cm of u1,anchor=center] (t12) {};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.4cm of t12] (u12) {};
+	\node[typeS={\TMemptyTreeMap},below left = 0.7cm and 0.6cm of u12,anchor=center] (t121) {$#3$};
+	\node[typeS={\TMnumeral},below right = 0.7cm and 0.6cm of u12,anchor=center] (t122) {$#4$};
+	\path[->]
+	(u12) edge (t12)
+	(t121) edge[bend right =-10] node[index label]{\scriptsize1} (u12)
+	(t122) edge[bend right =10] node[index label]{\scriptsize2} (u12)
+	(u1) edge (t1)
+	(t11) edge[bend right =-10] node[index label]{\scriptsize1} (u1)
+	(t12) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u1)
+	(u1) edge (t1)
+;
+	\end{tikzpicture}
+}
+
+\newcommand{\treemapPattern}[4]{
+\begin{tikzpicture}[construction]
+	\node[typeN={\TMincompleteTreeMap},anchor=center] (t1) {$#1$};
+	\node[constructorNW = {\TMcinsertTreeMap}, below = 0.4cm of t1] (u1) {};
+	\node[typeS={\TMincompleteTreeMap},below left = 0.6cm and 0.6cm of u1,anchor=center] (t11) {$#2$};
+	\node[typeN={\TMcompleteTreeMap},above right = 0.5cm and 1.9cm of u1,anchor=center] (t12) {};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.4cm of t12] (u12) {};
+	\node[typeS={\TMemptyTreeMap},below left = 0.7cm and 0.6cm of u12,anchor=center] (t121) {$#3$};
+	\node[typeS={\TMnumeral},below right = 0.7cm and 0.6cm of u12,anchor=center] (t122) {$#4$};
+	\path[->]
+	(u12) edge (t12)
+	(t121) edge[bend right =-10] node[index label]{\scriptsize1} (u12)
+	(t122) edge[bend right =10] node[index label]{\scriptsize2} (u12)
+	(u1) edge (t1)
+	(t11) edge[bend right =-10] node[index label]{\scriptsize1} (u1)
+	(t12) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u1)
+	(u1) edge (t1)
+	;
+	\end{tikzpicture}
+}
+
+\newcommand{\treemapPatternLeaf}[1]{
+\begin{tikzpicture}[construction]
+	\node[typeN={\TMincompleteTreeMap},anchor=center] (t1) {$#1$};
+	\node[constructorNW = {\TMcinsertTreeMap}, below = 0.4cm of t1] (u1) {};
+	\node[typeS={\TMemptyTreeMap},below left = 0.6cm and 0.6cm of u1,anchor=center] (t11) {};
+	\node[typeN={\TMcompleteTreeMap},above right = 0.5cm and 1.9cm of u1,anchor=center] (t12) {};
+	\node[constructorNE = {\TMcannotateRectangle}, below = 0.4cm of t12] (u12) {};
+	\node[typeS={\TMemptyTreeMap},below left = 0.7cm and 0.6cm of u12,anchor=center] (t121) {};
+	\node[typeS={\TMnumeral},below right = 0.7cm and 0.6cm of u12,anchor=center] (t122) {};
+	\path[->]
+	(u12) edge (t12)
+	(t121) edge[bend right =-10] node[index label]{\scriptsize1} (u12)
+	(t122) edge[bend right =10] node[index label]{\scriptsize2} (u12)
+	(u1) edge (t1)
+	(t11) edge[bend right =-10] node[index label]{\scriptsize1} (u1)
+	(t12) edge[out = 180, in = 0] node[index label]{\scriptsize2} (u1)
+	(u1) edge (t1)
+	;
+	\end{tikzpicture}
+}
+
+\newcommand{\tmpatternfour}[1]{
+\begin{tikzpicture}[construction]
+\node[typeS={\TMnumeral}] (b) {$n_{#1}'$};
+\end{tikzpicture}
+}
+
+\newcommand{\tmpatternfive}[1]{
+\begin{tikzpicture}[construction]
+\node[typeS={\TMemptyTreeMap}] (c) {$n_{#1}'$};
+\end{tikzpicture}
+}
+
+
+
+\newcommand{\TreeMapDescription}{%
+			\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep = 2pt,anchor=center]\small
+			\node[draw=darkgreen,rounded corners, label=76:{\LARGE$\cong (\pgraphn_1',v_1')$}] (Gen) at (0,0) {\treemapPatternRoot{n_1'}{n_2'}{n_3'}{n_4'}};
+            %
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.9cm and -3.8cm of Gen] (aa) {\tmpatternfive{3}};
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.9cm and -1.4cm of Gen] (ab) {\tmpatternfour{4}};
+            %
+			\node[draw=darkblue, rounded corners, label=76:{\LARGE$\cong (\pgraphn_2',v_2')$}] (ICa) at (0,-8.3) {\treemapPattern{n_2'}{n_5'}{n_6'}{n_7'}};
+            %
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.9cm and -3.8cm of ICa] (ba) {\tmpatternfive{6}};
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.9cm and -1.4cm of ICa] (bb) {\tmpatternfour{7}};
+            %
+			\node[draw=darkblue, rounded corners, label=76:{\LARGE$\cong (\pgraphn_2',v_2')$}] (ICb) at (0,-16.6) {\treemapPattern{n_5'}{n_8'}{n_9'}{n_{10}'}};
+%
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.9cm and -3.8cm of ICb] (ca) {\tmpatternfive{9}};
+            \node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.9cm and -1.4cm of ICb] (cb) {\tmpatternfour{10}};
+            %
+			\node[draw=darkred,  rounded corners, label=80:{\LARGE$\cong (\pgraphn_3',v_3')$}] (ICc) at (0,-24.9) {\treemapPatternLeaf{n_8'}};
+			%
+			\path[->]
+			([xshift=-1cm]ICa.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]Gen.south)
+            %
+            (aa.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]Gen.south)
+            (ab.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]Gen.south)
+            %
+			([xshift=-1cm]ICb.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]ICa.south)
+            %
+            (ba.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]ICa.south)
+            (bb.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]ICa.south)
+            %
+			([xshift=-1cm]ICc.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]ICb.south)
+            %
+            (ca.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]ICb.south)
+            (cb.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]ICb.south)
+            %
+			;
+			\end{tikzpicture}
+}
+
+\newcommand{\TreeMapDescriptionShorterArrows}{%
+			\begin{tikzpicture}[decomposition,yscale=0.88,inner xsep = 1pt, inner ysep = 2pt,anchor=center]\small
+			\node[draw=darkgreen,rounded corners, label=76:{\LARGE$\cong (\pgraphn_1',v_1')$}] (Gen) at (0,0) {\treemapPatternRoot{n_1'}{n_2'}{n_3'}{n_4'}};
+			%
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.8cm and -3.8cm of Gen] (aa) {\tmpatternfive{3}};
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.8cm and -1.4cm of Gen] (ab) {\tmpatternfour{4}};
+			%
+			\node[draw=darkblue, rounded corners, label=76:{\LARGE$\cong (\pgraphn_2',v_2')$}] (ICa) at (0,-7.5) {\treemapPattern{n_2'}{n_5'}{n_6'}{n_7'}};
+			%
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.8cm and -3.8cm of ICa] (ba) {\tmpatternfive{6}};
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.8cm and -1.4cm of ICa] (bb) {\tmpatternfour{7}};
+			%
+			\node[draw=darkblue, rounded corners, label=76:{\LARGE$\cong (\pgraphn_2',v_2')$}] (ICb) at (0,-15) {\treemapPattern{n_5'}{n_8'}{n_9'}{n_{10}'}};
+			%
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_5',v_5')$}, below right = 0.8cm and -3.8cm of ICb] (ca) {\tmpatternfive{9}};
+			\node[draw=darkred,  rounded corners, label=270:{\large$\cong\! (\pgraphn_4',v_4')$}, below right = 0.8cm and -1.4cm of ICb] (cb) {\tmpatternfour{10}};
+			%
+			\node[draw=darkred,  rounded corners, label=80:{\LARGE$\cong (\pgraphn_3',v_3')$}] (ICc) at (0,-22.9) {\treemapPatternLeaf{n_8'}};
+			%
+			\path[->]
+			([xshift=-1cm]ICa.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]Gen.south)
+			%
+			(aa.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]Gen.south)
+			(ab.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]Gen.south)
+			%
+			([xshift=-1cm]ICb.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]ICa.south)
+			%
+			(ba.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]ICa.south)
+			(bb.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]ICa.south)
+			%
+			([xshift=-1cm]ICc.north) edge[out = 110, in = -100] node[decomp arrow label] {\large1} ([xshift=-1.8cm]ICb.south)
+			%
+			(ca.north) edge[bend left = 5] node[decomp arrow label] {\large2} ([xshift=0.2cm]ICb.south)
+			(cb.north) edge[bend right = 5] node[decomp arrow label] {\large3} ([xshift=2cm]ICb.south)
+			%
+			;
+			\end{tikzpicture}
+}
+
+
+\newcommand{\treemapAB}{\begin{tikzpicture}[anchor = center,rounded corners = false,scale=0.8]
+\draw (0,0) rectangle node {} (4,2);
+	\draw (0.1,0.1) rectangle node {\large 5} (0.95,1.9);
+	\draw (1.05,0.1) rectangle node {} (1.95,1.9);
+		\draw (1.15,0.2) rectangle node {\small 3} (1.85,1.09);
+		\draw (1.15,1.19) rectangle node {\footnotesize 2} (1.85,1.8);
+	\draw (2.05,0.1) rectangle node {} (2.95,1.9);
+		\draw (2.15,0.2) rectangle node {4} (2.85,1.4);
+		\draw (2.15,1.5) rectangle node {\scriptsize 1} (2.85,1.8);
+\end{tikzpicture}}
+\newcommand{\treemapA}{\begin{tikzpicture}[anchor = center,rounded corners = false,scale=0.8]
+\draw (0,0) rectangle node {} (4,2);
+	\draw (0.1,0.1) rectangle node {\large 5} (0.95,1.9);
+	\draw (1.05,0.1) rectangle node {} (1.95,1.9);
+		\draw (1.15,0.2) rectangle node {\small 3} (1.85,1.09);
+		\draw (1.15,1.19) rectangle node {\footnotesize 2} (1.85,1.8);
+\end{tikzpicture}}
+\newcommand{\treemapB}{\begin{tikzpicture}[anchor = center,rounded corners = false,scale=0.8]
+\draw (2.05,0.1) rectangle node {} (2.95,1.9);
+	\draw (2.15,0.2) rectangle node {4} (2.85,1.4);
+	\draw (2.15,1.5) rectangle node {\scriptsize 1} (2.85,1.8);
+\end{tikzpicture}}
+
+\newcommand{\treemapC}{\begin{tikzpicture}[anchor = center,rounded corners = false,scale=0.8]
+\draw (2.05,0.1) rectangle node {} (2.95,1.9);
+	%\draw (2.15,0.2) rectangle node {4} (2.85,1.4);
+	%\draw (2.15,1.5) rectangle node {\scriptsize 1} (2.85,1.8);
+\end{tikzpicture}}
+
+
+\newcommand{\tableConstructionPatternoneroot}{
+	\begin{tikzpicture}[construction,yscale=0.8]\small
+	\node[typeN={\Ttable}] (t5) {$v_1$};
+	\node[constructorNE = {\TcaddRow}, below = of t5,yshift=0.6cm,xshift = 0.5cm] (u) {};
+	\node[typeS={\Ttable},below left = of u, yshift=0.8cm, xshift=0.5cm] (t4) {$v_2$};
+	\node[typeS={\Trow},below right = of u,yshift=0.8cm,xshift=1.2cm] (r5) {$v_3$};
+    %
+%    \node[constructorNE = {\TcaddCell}, below = of r5,yshift=0.5cm,xshift = 0.5cm] (u1) {};
+%	\node[typeW={\Trow},below left = of u1, yshift=0.5cm, xshift=0.2cm] (c5l) {$v_4$};
+%	\node[typeNE={\Tcell},below right = of u1, yshift=0.5cm,xshift=-0.2cm] (c5r) {$v_5$};
+%    %
+%    \node[constructorNE = {\TcinsertText}, below = of c5l,yshift=0.5cm,xshift = 0.5cm] (u2) {};
+%	\node[typeSW={\TemptyCell},below left = of u2, yshift=0.5cm, xshift=0.9cm] (c5lb) {$v_6$};
+%	\node[typeS={\Ttext},below right = of u2, yshift=0.5cm, xshift=-0.9cm] (c5lt) {$v_7$};
+%    %
+%    \node[constructorNE = {\TcinsertNumValue}, below = of c5r,yshift=0.5cm,xshift = 0.5cm] (u3) {};
+%	\node[typeS={\TemptyCell},below left = of u3, yshift=0.5cm, xshift=0.9cm] (c5rb) {$v_8$};
+%	\node[typeSE={\Tnum},below right = of u3, yshift=0.5cm, xshift=-0.9cm] (c5rt) {$v_9$};
+    %%
+    %
+	\path[->]
+	(u) edge (t5)
+	(t4) edge[bend right =-10] node[index label]{1} (u)
+    (r5) edge[bend right =10] node[index label]{2} (u);
+    %
+    %(u1) edge (r5)
+%	(c5l) edge node[index label]{1} (u1)
+%    (c5r) edge node[index label]{2} (u1)
+%    %
+%    (u2) edge (c5l)
+%	(c5lb) edge node[index label]{1} (u2)
+%    (c5lt) edge node[index label]{2} (u2)
+%     %
+%    (u3) edge (c5r)
+%	(c5rb) edge node[index label]{1} (u3)
+%    (c5rt) edge node[index label]{2} (u3);
+%    %%
+
+	\end{tikzpicture}
+}
+
+
+
+
+\newcommand{\tableConstructionPatternoneone}{
+	\begin{tikzpicture}[construction,yscale=0.8]\small
+	%\node[typeNW={\Ttable}] (t5) {$v_1$};
+	%\node[constructorNE = {\TcaddRow}, below = of t5,yshift=0.5cm,xshift = 0.5cm] (u) {};
+	%\node[typeS={\Ttable},below left = of u, yshift=0.8cm, xshift=0.5cm] (t4) {$v_2$};
+	\node[typeN={\Trow}] (r5) {$v_3$};
+    %
+    \node[constructorNE = {\TcaddCell}, below = of r5,yshift=0.6cm,xshift = 0.5cm] (u1) {};
+	\node[typeS={\Trow},below left = of u1, yshift=0.5cm, xshift=0.2cm] (c5l) {$v_4$};
+	\node[typeS={\Tcell},below right = of u1, yshift=0.5cm,xshift=-0.2cm] (c5r) {$v_5$};
+    %
+   % \node[constructorNE = {\TcinsertText}, below = of c5l,yshift=0.5cm,xshift = 0.5cm] (u2) {};
+%	\node[typeSW={\TemptyCell},below left = of u2, yshift=0.5cm, xshift=0.9cm] (c5lb) {$v_6$};
+%	\node[typeS={\Ttext},below right = of u2, yshift=0.5cm, xshift=-0.9cm] (c5lt) {$v_7$};
+%    %
+%    \node[constructorNE = {\TcinsertNumValue}, below = of c5r,yshift=0.5cm,xshift = 0.5cm] (u3) {};
+%	\node[typeS={\TemptyCell},below left = of u3, yshift=0.5cm, xshift=0.9cm] (c5rb) {$v_8$};
+%	\node[typeSE={\Tnum},below right = of u3, yshift=0.5cm, xshift=-0.9cm] (c5rt) {$v_9$};
+    %%
+    %
+	\path[->]
+	%(u) edge (t5)
+%	(t4) edge node[index label]{1} (u)
+%    (r5) edge node[index label]{2} (u)
+    %
+    (u1) edge (r5)
+	(c5l) edge[bend right =-10] node[index label]{1} (u1)
+    (c5r) edge[bend right =10] node[index label]{2} (u1);
+    %
+   % (u2) edge (c5l)
+%	(c5lb) edge node[index label]{1} (u2)
+%    (c5lt) edge node[index label]{2} (u2)
+%     %
+%    (u3) edge (c5r)
+%	(c5rb) edge node[index label]{1} (u3)
+%    (c5rt) edge node[index label]{2} (u3);
+%    %%
+
+	\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternonetwo}{
+	\begin{tikzpicture}[construction,yscale=0.8]\small
+	%\node[typeNW={\Ttable}] (t5) {$v_1$};
+	%\node[constructorNE = {\TcaddRow}, below = of t5,yshift=0.5cm,xshift = 0.5cm] (u) {};
+	%\node[typeS={\Ttable}] (t4) {$v_2$};
+	%\node[typeNE={\Trow},below right = of u,yshift=0.8cm,xshift=1.2cm] (r5) {$v_3$};
+   % %
+%    \node[constructorNE = {\TcaddCell}, below = of r5,yshift=0.5cm,xshift = 0.5cm] (u1) {};
+\node[typeW={\Trow}] (c5l) {$v_4$};
+%	\node[typeNE={\Tcell},below right = of u1, yshift=0.5cm,xshift=-0.2cm] (c5r) {$v_5$};
+    %
+    \node[constructorNE = {\TcinsertText}, below = of c5l,yshift=0.7cm,xshift = 0.5cm] (u2) {};
+	\node[typeS={\TemptyCell},below left = of u2, yshift=0.5cm, xshift=0.7cm] (c5lb) {$v_6$};
+	\node[typeS={\Ttext},below right = of u2, yshift=0.5cm, xshift=-0.9cm] (c5lt) {$v_7$};
+    %
+    %\node[constructorNE = {\TcinsertNumValue}, below = of c5r,yshift=0.5cm,xshift = 0.5cm] (u3) {};
+%	\node[typeS={\TemptyCell},below left = of u3, yshift=0.5cm, xshift=0.9cm] (c5rb) {$v_8$};
+%	\node[typeSE={\Tnum},below right = of u3, yshift=0.5cm, xshift=-0.9cm] (c5rt) {$v_9$};
+    %%
+    %
+	\path[->]
+	%(u) edge (t5)
+%	(t4) edge node[index label]{1} (u)
+%    (r5) edge node[index label]{2} (u)
+%    %
+%    (u1) edge (r5)
+%	(c5l) edge node[index label]{1} (u1)
+%    (c5r) edge node[index label]{2} (u1)
+    %
+    (u2) edge (c5l)
+	(c5lb) edge[bend right =-10] node[index label]{1} (u2)
+    (c5lt) edge[bend right =10] node[index label]{2} (u2);
+     %
+    %(u3) edge (c5r)
+%	(c5rb) edge node[index label]{1} (u3)
+%    (c5rt) edge node[index label]{2} (u3);
+    %%
+
+	\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternonethree}{
+	\begin{tikzpicture}[construction,yscale=0.8]\small
+	%\node[typeNW={\Ttable}] (t5) {$v_1$};
+%	\node[constructorNE = {\TcaddRow}, below = of t5,yshift=0.5cm,xshift = 0.5cm] (u) {};
+%	\node[typeS={\Ttable},below left = of u, yshift=0.8cm, xshift=0.5cm] (t4) {$v_2$};
+%	\node[typeNE={\Trow},below right = of u,yshift=0.8cm,xshift=1.2cm] (r5) {$v_3$};
+    %
+    %\node[constructorNE = {\TcaddCell}, below = of r5,yshift=0.5cm,xshift = 0.5cm] (u1) {};
+	%\node[typeW={\Trow},below left = of u1, yshift=0.5cm, xshift=0.2cm] (c5l) {$v_4$};
+	\node[typeW={\Tcell},below right = of u1, yshift=0.5cm,xshift=-0.2cm] (c5r) {$v_5$};
+    %
+  %  \node[constructorNE = {\TcinsertText}, below = of c5l,yshift=0.5cm,xshift = 0.5cm] (u2) {};
+%	\node[typeSW={\TemptyCell},below left = of u2, yshift=0.5cm, xshift=0.9cm] (c5lb) {$v_6$};
+%	\node[typeS={\Ttext},below right = of u2, yshift=0.5cm, xshift=-0.9cm] (c5lt) {$v_7$};
+    %
+    \node[constructorNE = {\TcinsertNumValue}, below = of c5r,yshift=0.7cm,xshift = 0.5cm] (u3) {};
+	\node[typeS={\TemptyCell},below left = of u3, yshift=0.5cm, xshift=0.7cm] (c5rb) {$v_8$};
+	\node[typeS={\Tnum},below right = of u3, yshift=0.5cm, xshift=-0.8cm] (c5rt) {$v_9$};
+    %%
+    %
+	\path[->]
+	%(u) edge (t5)
+%	(t4) edge node[index label]{1} (u)
+%    (r5) edge node[index label]{2} (u)
+%    %
+%    (u1) edge (r5)
+%	(c5l) edge node[index label]{1} (u1)
+%    (c5r) edge node[index label]{2} (u1)
+%    %
+%    (u2) edge (c5l)
+%	(c5lb) edge node[index label]{1} (u2)
+%    (c5lt) edge node[index label]{2} (u2)
+     %
+    (u3) edge (c5r)
+	(c5rb) edge[bend right =-10] node[index label]{1} (u3)
+    (c5rt) edge[bend right =10] node[index label]{2} (u3);
+    %%
+
+	\end{tikzpicture}
+}
+
+\newcommand{\tableConstructionPatternonetrivial}{
+	\begin{tikzpicture}[construction]
+	\node[typeW={\Ttable}] (t4) {$v_2$};
+	\end{tikzpicture}
+}
+
+\newcommand{\decoupling}{%
+	\begin{tikzpicture}[decomposition,yscale=0.7,xscale=0.9]\small
+	\node[draw=darkgreen,rounded corners, label=235:{}] (Gen) at (0,0) {\tableConstructionPatternoneroot};
+	\node[draw=darkblue, rounded corners, label=235:{}] (ICa) at (-6,0) {\tableConstructionPatternoneone};
+	\node[draw=darkred, rounded corners, label=235:{}] (ICb) at (-12,2) {\tableConstructionPatternonetwo};
+	\node[draw=darkred,  rounded corners, label=235:{}] (ICc) at (-12,-2) {\tableConstructionPatternonethree};
+    \node[draw=darkred,  rounded corners, label=235:{}] (ICd) at (-4,3) {\tableConstructionPatternonetrivial};
+	%
+	\path[->]
+	(ICa) edge[bend right =0] node[decomp arrow label] {\large2} (Gen)
+	(ICd) edge[bend right =-10] node[decomp arrow label] {\large1} (Gen)
+	(ICb) edge[bend right =-10] node[decomp arrow label] {\large1} (ICa)
+	(ICc) edge[bend right =10] node[decomp arrow label] {\large2} (ICa)
+	;
+	\end{tikzpicture}
+}
+
+
+\newcommand{\lineartwo}
+{\begin{tikzpicture}[very thick]
+	\node[anchor = east,font = \scriptsize, darkgreen] at (0,1.25) {Cats};
+	\draw[darkgreen] (0,1.25) -- (2,1.25);
+	\node[anchor = east,font = \scriptsize, darkpurple] at (0,0.75) {Lions};
+	\draw[darkpurple] (0,0.75) -- (1,0.75);
+	\node[anchor = east,font = \scriptsize, darkred] at (0,0.25) {Dogs};
+	\draw[darkred] (2,0.25) -- (3,0.25);
+	\draw[gray] (0,0) -- (0,1.5);
+	\draw[gray] (1,0) -- (1,1.5);
+	\draw[gray] (2,0) -- (2,1.5);
+	\draw[gray] (3,0) -- (3,1.5);
+	\end{tikzpicture}
+}
+	
+\newcommand{\linearone}
+{\begin{tikzpicture}[very thick]
+	\node[anchor = east,font = \scriptsize, darkgreen] at (0,1.25) {Cats};
+	\draw[darkgreen] (0,1.25) -- (1,1.25);
+	\draw[darkgreen] (2,1.25) -- (3,1.25);
+	\node[anchor = east,font = \scriptsize, darkpurple] at (0,0.75) {Lions};
+	\draw[darkpurple] (0,0.75) -- (1,0.75);
+	\node[anchor = east,font = \scriptsize, darkred] at (0,0.25) {Dogs};
+	\draw[darkred] (1,0.25) -- (2,0.25);
+	\draw[gray] (0,0) -- (0,1.5);
+	\draw[gray] (1,0) -- (1,1.5);
+	\draw[gray] (2,0) -- (2,1.5);
+	\draw[gray] (3,0) -- (3,1.5);
+	\end{tikzpicture}
+}
+
+\newcommand{\crc}{%
+\begin{tikzpicture}[inner sep = 0pt]
+\draw[fill opacity = 0.2, fill = black] (0,0) circle (.09cm);
+\end{tikzpicture}%
+}
+
+\newcommand{\dotspace}{\hspace{1pt}}
+
+
+\newcommand{\vectorsCon}{\begin{tikzpicture}[construction]
+\begin{scope}[rotate=-90]
+\node[termE={$t_3$},inner sep = 1.5pt] (v) at (3.2,5.6) {\scalebox{.5}{\vectorVis{(1,1.5)}{0.4}}};
+\node[termpos={$t_4$}{20}{0.17cm},inner sep = 1.5pt] (v1) at (2.4,2.6) {\scalebox{.5}{\vectorVis{(3,4)}{0.4}}};
+\node[termpos={$t_5$}{-20}{0.17cm},inner sep = 1.5pt] (v2) at (4.0,2.6) {\scalebox{.5}{\vectorVis{(2,2.5)}{0.4}}};
+\node[constructorEpos={$\GRVcvecsub$}{60}{0.17cm}] (u) at (3.2,4.1) {$u$};
+\node[constructorEpos={$\GRVcvecadd$}{80}{0.18cm}] (u1) at (2.4,1.2) {$u_2$};
+\node[constructorEpos={$\GRVcvecadd$}{80}{0.18cm}] (u2) at (4,1.2) {$u_1$};
+\node[termpos={$t_2$}{160}{0.17cm},inner sep = 1.5pt] (v3) at (2.4,-0.5) {\scalebox{.5}{\vectorVis{(2,3)}{0.4}}};
+\node[termpos={$t_1$}{200}{0.17cm},inner sep = 1.5pt] (v4) at (4,-0.5) {\scalebox{.5}{\vectorVis{(1,1)}{0.4}}};
+\end{scope}
+\path[->]
+(u) edge[bend right = 0] (v)
+(v1) edge[bend right = -10] node[index label] {1} (u)
+(v2) edge[bend right = 10] node[index label] {2} (u)
+(v3) edge[bend right = -10] node[index label] {2} (u1)
+(v4) edge[bend right = 10] node[index label] {1} (u2)
+(u1) edge[bend right = 0] (v1)
+(u2) edge[bend right = 0] (v2)
+(v4) edge[bend right = 10] node[index label] {1} (u1)
+(v) edge[in = -80, out = 250, looseness=0.67] node[index label] {2} (u2);
+\end{tikzpicture}\vspace{-0.55cm}}
