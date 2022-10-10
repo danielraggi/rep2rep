@@ -239,19 +239,31 @@ fun send_http sock vec =
     else raise (HttpError "Failed to send all bytes.")
     end;
 
+fun recvVecNB (sock, chunk_size) =
+    let val () = print ("RECV_NB\n");
+        val ready = Socket.select {
+                rds = [Socket.sockDesc sock],
+                wrs = [],
+                exs = [],
+                timeout = SOME(Time.fromMilliseconds 10)
+            };
+    in if List.length (#rds ready) = 0
+       then NONE
+       else SOME (Socket.recvVec (sock, chunk_size))
+    end handle _ => NONE;
+
 fun recv_bytes sock =
     let fun f ans =
             let val chunk_size = 65536;
-                val inv = Socket.recvVecNB (sock, chunk_size); in
+                val inv = recvVecNB (sock, chunk_size); in
                 case inv of
                     NONE => Word8Vector.concat (List.rev ans)
-                  | SOME inv => f (inv::ans)
+                  | SOME inv => if Word8Vector.length inv = 0
+                                then Word8Vector.concat(List.rev ans)
+                                else f (inv::ans)
             end
         val invec = f [];
-    in if Word8Vector.length invec = 0
-        then recv_bytes sock
-        else invec
-    end;
+    in invec end;
 
 fun recv_http sock reader =
     let fun loop old_bytes =
@@ -350,13 +362,27 @@ fun listen addr callback =
         val sock = INetSock.TCP.socket ();
         val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 512);
+        fun cleanup () =
+            let val _ = print ("Stopping server...\n");
+                val () = Socket.close sock;
+            in () end;
+        val _ = Signal.signal (Posix.Signal.int,
+                               Signal.SIG_HANDLE (
+                                   fn _ => (
+                                       cleanup();
+                                       Signal.signal (Posix.Signal.int, Signal.SIG_DFL);
+                                       Posix.Process.kill (Posix.Process.K_SAME_GROUP,
+                                                           Posix.Signal.int))));
     in
         forever
             (fn () =>
                 let val (sock', remote_addr) = Socket.accept sock;
                     fun handler () = let
                         val response =
-                            let val request = recv_request sock' in
+                            let val () = print ("Recieving request...\n");
+                                val request = recv_request sock' ;
+                                val () = print("Request for " ^ (#endpoint request) ^ "\n");
+                            in
                                 case #method request of
                                     OPTIONS => preflight
                                   | _ =>  callback request
@@ -368,10 +394,11 @@ fun listen addr callback =
                                              internalError);
                         val () = send_response sock' response;
                         val () = Socket.close sock';
+                        val () = print ("Handled Request.\n");
                     in () end handle e => printDiagnostics e;
                     val _ = Thread.Thread.fork (handler, []);
                 in () end)
-    end;
+    end handle e as (OS.SysErr (msg, _)) => let val () = print("ERROR: " ^ msg ^ "\n"); in raise e end;
 
 end;
 
