@@ -172,7 +172,7 @@ struct
 
       (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
       val (consequentMap,goalMap) =
-            (case Pattern.findEmbeddingUpTo interT givenTokens consequent goal of
+            (case Pattern.findEmbeddingMinimisingTypeUpTo interT givenTokens consequent goal of
                 (f,g,SOME _) => (f,g)
               | _ => raise TransferSchemaNotApplicable)
 
@@ -181,52 +181,24 @@ struct
                 SOME ((_,f,x),_) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
 
-      val updatedConsequent = Pattern.applyPartialMorphism consequentMap consequent
+      val updatedConsequent = Pattern.applyMorphism consequentMap consequent
       val csMap = Pattern.funUnion [sourceMap, consequentMap]
       val usedTokensC = FiniteSet.union usedTokens (Pattern.tokensOfConstruction updatedConsequent)
 
-      fun falseDummy x y = false
-      fun compatible xct xct' =
-        let val t = Construction.constructOf xct
-            val t' = Construction.constructOf xct'
-        in (not (FiniteSet.elementOf t targetTokens) orelse
-            CSpace.sameTokens (valOf (goalMap t)) t')(* andalso
-            (if Pattern.tokenMatches tT t' t then Construction.isTrivial xct else Pattern.tokenMatches tT t t')*)
+      val (targetMap, updatedTarget) =
+        let val (f,_) = applyMorphismRefreshingNONEs csMap usedTokensC [target]
+            val tmap = preferentialFunUnion f targetConstructMap
+        in (tmap, Pattern.applyMorphism tmap target)
         end
 
-(*    fun randomPull _ [] () = NONE
-        | randomPull n (x::L) () = if MLtonRandom.oneIn n () then SOME x else randomPull (n-1) L ();
-      (* the following gives a map between target and the pattern comp *)
-      fun findTargetUnification L =
-            let val tct = valOf (randomPull (length L) L ())
-                val res = Seq.list_of (Pattern.findUnificationOfSubConstructionConditionally tTSD compatible tct target)
-            in randomPull (length res) res ()
-            end handle Option => NONE*)
-
-      fun findTargetUnification [] = NONE
-        | findTargetUnification (tct::L) =
-          (case Seq.pull (Pattern.findUnificationOfSubConstructionConditionally tTSD falseDummy tct target) of
-              SOME (x,_) => SOME x
-            | NONE => findTargetUnification L)
-
-      val targetConstructions = List.maps Composition.resultingConstructions patternComps
-      val (compositionMap, targetMap, updatedTarget, targetIncluded) =
-        (case findTargetUnification targetConstructions of
-            SOME (f,g,c) => let val (refresh,p) = refreshNamesOfConstruction c usedTokensC
-                            in (funComp refresh f, funComp refresh g, p, true)
-                            end
-          | NONE => let val (f,_) = applyMorphismRefreshingNONEs csMap usedTokensC [target]
-                        val ff = preferentialFunUnion f targetConstructMap
-                    in (partialFunComp2 ff goalMap, ff, Pattern.applyMorphism ff target, false)
-                    end
-        )
+      fun compositionMap x = if FiniteSet.elementOf x targetTokens then SOME newTargetConstruct else NONE
 
       val cstMap = preferentialFunUnion csMap targetMap
       val usedTokensCT = FiniteSet.union usedTokensC (Construction.tokensOfConstruction updatedTarget)
 
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs cstMap usedTokensCT antecedent
     in
-      (targetIncluded, compositionMap,
+      (preferentialFunUnion goalMap compositionMap,
        InterCSpace.declareTransferSchema {name = name,
                                           source = matchingSubConstruction,
                                           target = updatedTarget,
@@ -298,14 +270,12 @@ struct
 *)
 
   fun applyTransferSchemaForGoal st tsch goal =
-    let val (targetIncluded,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tsch goal
+    let val (stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tsch goal
 
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism stateRenaming) patternComps
         val updatedPatternComps =
-            if targetIncluded
-            then renamedPatternComps
-            else Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
+            Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
 
         val goals = State.goalsOf st
         val updatedGoals = #antecedent instantiatedTSchema @ map (Pattern.applyPartialMorphism stateRenaming) (List.filter (fn x => not (Pattern.same goal x)) goals)
