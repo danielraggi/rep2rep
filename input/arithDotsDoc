@@ -26,8 +26,8 @@ construction 1plus2plus3equalsStuff:arithG =
 construction 1plus2plus3plus4equalsStuff:arithG =
     t:1+2+3+4=4(4+1)/2:formula
         <- infixRel[t1:1+2+3+4:numExp
-                        <- infixOp[t11:1plus2plus3:numExp
-                                        <- infixOp[t111:1plus2:numExp
+                        <- infixOp[t11:1+2+3:numExp
+                                        <- infixOp[t111:1+2:numExp
                                                         <- infixOp[t1111:1:numeral,
                                                                     t1112:plus,
                                                                     t1113:2:numeral],
@@ -36,12 +36,12 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                     t12:plus,
                                     t13:4:numeral],
                      t2:equals,
-                     t3:4oB4plus1cBdiv2:numExp
-                        <- frac[t31:4oB4plus1cB:numExp
+                     t3:4(4+1)/2:numExp
+                        <- frac[t31:4(4+1):numExp
                                     <- implicitMult[t311:4:numeral,
-                                                    t312:oB4plus1cB:numExp
+                                                    t312:(4+1):numExp
                                                         <- addParentheses[t3121:oB,
-                                                                          t3122:4plus1:numExp
+                                                                          t3122:4+1:numExp
                                                                                 <- infixOp[t31221:4:numeral,
                                                                                             t31222:plus,
                                                                                             t31223:1:numeral],
