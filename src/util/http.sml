@@ -360,6 +360,7 @@ fun listen addr callback =
                    ^ "\n");
         fun forever f = (f() handle e => (); forever f);
         val sock = INetSock.TCP.socket ();
+        val () = Socket.Ctl.setREUSEADDR (sock, true);
         val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 512);
         fun cleanup () =
