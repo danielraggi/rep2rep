@@ -70,7 +70,7 @@ transfer
     sourceConstruction 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaTrue <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
+    goal :metaBool <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
     output interSpaceTest
     limit 2
 
