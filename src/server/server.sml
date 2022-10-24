@@ -123,7 +123,8 @@ fun make files transferMap =
         Rpc.provide getTypeContext_sig (fn (systemName, typ) => getTypeContext typeSystems systemName typ),
         Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace) =>
                                      transfer constr srcSpace tgtSpace transferMap spaces knowledge),
-        Construction.R.toString
+        Construction.R.toString,
+        Construction.R.typeCheck (getSpace spaces)
     ] @ map #2 Renderers.all end;
 
 end;

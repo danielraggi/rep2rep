@@ -1,4 +1,6 @@
 import "core.cspace";
+import "util.result";
+import "util.diagnostic";
 import "util.rpc";
 
 signature CONSTRUCTION =
@@ -22,6 +24,7 @@ sig
   val constructOf : construction -> CSpace.token;
   val childrenOf : construction -> construction list;
   val wellFormed : CSpace.conSpecData -> construction -> bool;
+  val typeCheck : CSpace.conSpecData -> construction -> (unit, Diagnostic.t list) Result.t;
   val size : construction -> int;
   (*val almostWellFormed : construction -> bool;*)
 (*
@@ -50,6 +53,7 @@ sig
 
   structure R : sig
                 val toString : Rpc.endpoint
+                val typeCheck: (string -> CSpace.conSpecData option) -> Rpc.endpoint
             end;
 end;
 
@@ -222,7 +226,97 @@ struct
             in (WF,uprev)
             end handle Option => (false,[])
     in #1 (wf ct [])
-    end
+    end;
+
+  fun typeCheck space ct =
+      let val typeSystem = #typeSystem (#typeSystemData space);
+          val types = #Ty typeSystem;
+          val subType = #subType typeSystem;
+          fun check (Source t) seen =
+              let val notAlreadySeen =
+                      if (not (List.exists (fn x => x = t) seen))
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  "'Source' token has been encountered directly twice."
+                                  [CSpace.nameOfToken t]];
+                  val knownType =
+                      if Set.elementOf (CSpace.typeOfToken t) types
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  ("Token has unknown type "
+                                   ^ (Type.nameOfType (CSpace.typeOfToken t))
+                                   ^ ".")
+                                  [CSpace.nameOfToken t]];
+                  val both = Result.allUnit List.concat [notAlreadySeen, knownType];
+              in (both, t::seen) end
+            | check (Reference t) seen =
+              let val alreadySeen =
+                      if List.exists (fn x => x = t) seen
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  "'Reference' token has never been seen before."
+                                  [CSpace.nameOfToken t]];
+              in (alreadySeen, seen) end
+            | check (TCPair ({token, constructor}, cs)) seen =
+              let val ty = CSpace.typeOfToken token;
+                  val inToks = map constructOf cs;
+                  val tys = map CSpace.typeOfToken inToks;
+                  val (ctys, cty) = CSpace.csig constructor;
+                  val rightLength =
+                      let val l = List.length tys;
+                          val lc = List.length ctys;
+                      in if l = lc
+                         then Result.ok ()
+                         else Result.error [
+                                 Diagnostic.create
+                                     Diagnostic.ERROR
+                                     ("Constructor needs "
+                                      ^ (Int.toString lc)
+                                      ^ " input tokens; only given "
+                                      ^ (Int.toString l) ^ ".")
+                                     (List.map CSpace.nameOfToken inToks)]
+                      end;
+                  fun rightType tok (conTyp, realTyp) verb =
+                      if subType (realTyp, conTyp)
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  ("Token has incorrect type; constructor "
+                                   ^ verb
+                                   ^ " "
+                                   ^ (Type.nameOfType conTyp)
+                                   ^ ", but token has type "
+                                   ^ (Type.nameOfType realTyp)
+                                   ^ ".")
+                                  [CSpace.nameOfToken tok]];
+                  val rightOutTy = rightType token (cty, ty) "produces";
+                  val rightInTys = Result.allUnit
+                                       List.concat
+                                       (ListPair.map
+                                            (fn (tok, tys) => rightType tok tys "requires")
+                                            (inToks, (ListPair.zip (ctys, tys))));
+                  val (recs, seen') =
+                      List.foldl
+                          (fn (c, (rs, seen)) => let val (r, seen') = check c seen;
+                                                 in (r::rs, seen') end)
+                          ([], token::seen)
+                          cs;
+                  val recursiveCheck = Result.allUnit List.concat recs;
+                  val allChecks =
+                      Result.allUnit List.concat
+                                     [rightLength,
+                                      rightOutTy,
+                                      rightInTys,
+                                      recursiveCheck];
+              in (allChecks, seen') end;
+      in #1 (check ct []) end;
 
   fun size (Source t) = 1
     | size (Reference t) = 0
@@ -483,6 +577,20 @@ struct
                               construction_rpc,
                               String.string_rpc)
                              toString;
+
+  val typeCheck =
+   fn getSpace =>
+      Rpc.provide (url "typeCheck",
+                   Rpc.Datatype.tuple2 (String.string_rpc, construction_rpc),
+                   Result.t_rpc (unit_rpc, List.list_rpc Diagnostic.t_rpc))
+                  (fn (space, construction) =>
+                      case Option.map (fn s => typeCheck s construction) (getSpace space) of
+                          NONE => Result.error [
+                                     Diagnostic.create
+                                         Diagnostic.ERROR
+                                         ("Unknown Construction Space " ^ space)
+                                         []]
+                        | SOME r => r);
   end;
 
 end;
