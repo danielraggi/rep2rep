@@ -119,7 +119,7 @@ struct
     | quickWidthEstimate (Construction.TCPair ({token,constructor},cs)) =
         List.max Real.compare [sizeOfConstructor constructor,
                                0.9 * sizeOfToken token + sizeOfType token,
-                               List.sumMap quickWidthEstimate cs + nodeConstant]
+                               List.sumMap quickWidthEstimate cs]
 
   fun construction' coor parentName (i,n) (Construction.Source t) =
         (case parentName of

@@ -15,7 +15,7 @@ sig
   val zeroGoalsOtherwiseCompositionSize : State.T * State.T -> order
   val random : State.T * State.T -> order
   val zeroGoalsOtherwiseRandom : State.T * State.T -> order
-  val multiplicativeScore : (string -> real option) -> TransferProof.tproof -> real
+  val multiplicativeScore : (string -> real option) -> State.T -> real
   val transferProofMultStrengths : State.T * State.T -> order
 end
 
@@ -25,10 +25,10 @@ struct
 fun similarGoalsAndComps (st,st') =
   let val gs = State.goalsOf st
       val gs' = State.goalsOf st'
-      val C = State.patternCompOf st
-      val C' = State.patternCompOf st'
-  in List.isPermutationOf (uncurry Relation.stronglyMatchingRelationships) gs gs' andalso
-     Composition.pseudoSimilar C C'
+      val C = State.patternCompsOf st
+      val C' = State.patternCompsOf st'
+  in List.isPermutationOf (uncurry Pattern.similar) gs gs' andalso
+    List.isPermutationOf (uncurry Composition.pseudoSimilar) C C'
   end
 
 fun similarTransferProofs (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
@@ -36,10 +36,11 @@ fun similarTransferProofs (st,st') = TransferProof.similar (State.transferProofO
 fun ignore ngoals nresults csize unistructured (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
   length L > nresults orelse
-  Composition.size (State.patternCompOf st) > csize orelse
+  List.sumMapInt Composition.size (State.patternCompsOf st) > csize orelse
   List.exists (fn x => similarTransferProofs (x,st)) L orelse
   (unistructured andalso
-   not (Composition.unistructurable (State.targetTypeSystemOf st) (State.patternCompOf st)))
+    (length (State.patternCompsOf st) > 1 orelse
+      not (Composition.unistructurable (#typeSystem (State.targetTypeSystemOf st)) (hd (State.patternCompsOf st)))))
 
 fun ignoreRelaxed ngoals nresults (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
@@ -55,9 +56,9 @@ fun forgetRelaxed (st,L) =
 
 
 fun largerComposition (st,st') =
-  let val D = State.patternCompOf st
-      val D' = State.patternCompOf st'
-  in Int.compare (Composition.size D', Composition.size D)
+  let val D = State.patternCompsOf st
+      val D' = State.patternCompsOf st'
+  in Int.compare (List.sumMapInt Composition.size D', List.sumMapInt Composition.size D)
   end
 
 fun fewerGoals (st,st') =
@@ -72,9 +73,9 @@ fun zeroGoalsOtherwiseCompositionSize (st,st') =
       val gs' = State.goalsOf st'
       val gsn = length gs
       val gsn' = length gs'
-      val D = State.patternCompOf st
-      val D' = State.patternCompOf st'
-      val P = Int.compare (Composition.size D,Composition.size D')
+      val D = State.patternCompsOf st
+      val D' = State.patternCompsOf st'
+      val P = Int.compare (List.sumMapInt Composition.size D, List.sumMapInt Composition.size D')
   in if gsn = 0 andalso gsn' = 0 then P
      else if gsn > 0 andalso gsn' > 0 andalso P <> EQUAL then opposite P
      else Int.compare (gsn,gsn')
@@ -97,23 +98,29 @@ fun zeroGoalsOtherwiseRandom (st,st') =
 
 fun multProp (x::L) = x * multProp L
   | multProp [] = 1.0
-fun multiplicativeScore p (TransferProof.Closed (r,npp,L)) =
-      (case p (#name npp) of
+
+
+fun hasTokensInTypeSystem ct TS =
+  FiniteSet.exists (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty TS))
+                   (Construction.leavesOfConstruction ct)
+fun multiplicativeScore' strength CS (TransferProof.Closed (r,npp,L)) =
+      (case strength (#name npp) of
           SOME s => s
-        | NONE => 1.0) * multProp (map (multiplicativeScore p) L)
-  | multiplicativeScore p (TransferProof.Open r) =
-      (case r of ([],_,_) => 0.99
-               | ([_],[_],_) => 0.01
-               | _ => 0.5)
+        | NONE => 1.0) * multProp (map (multiplicativeScore' strength CS) L)
+  | multiplicativeScore' _ CS (TransferProof.Open r) =
+      if hasTokensInTypeSystem r (#typeSystem (#typeSystemData CS))
+      then 0.1
+      else 0.99
+
+fun multiplicativeScore strength st =
+  multiplicativeScore' strength (State.sourceConSpecDataOf st) (State.transferProofOf st)
 
 fun transferProofMultStrengths (st,st') =
   let val gsn = length (State.goalsOf st)
       val gsn' = length (State.goalsOf st')
-      val tproof = State.transferProofOf st
-      val tproof' = State.transferProofOf st'
       val strength = Knowledge.strengthOf (State.knowledgeOf st)
   in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-     then Real.compare (multiplicativeScore strength tproof',multiplicativeScore strength tproof)
+     then Real.compare (multiplicativeScore strength st',multiplicativeScore strength st)
      else Int.compare (gsn,gsn')
   end
 

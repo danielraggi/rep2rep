@@ -17,6 +17,7 @@ sig
   val fromString : string -> typ
   val any : typ
   val equal : typ -> typ -> bool
+  val emptySystem : typeSystem
 
   val nameOfType : typ -> string;
 
@@ -39,6 +40,16 @@ sig
 
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
+
+  datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ
+  val subTypeDAG : typeSystemData -> typ -> typeDAG
+  val superTypeDAG : typeSystemData -> typ -> typeDAG
+  val typeDAGtoString : typeDAG -> string
+
+  val greatestCommonSubType : typeSystemData
+                                -> typ
+                                -> typ
+                                -> typ option
 
   val addLeastCommonSuperType : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
                                 -> typ
@@ -69,16 +80,36 @@ struct
   val any = "" (* emtpy string *)
   fun equal x y = (x = y)
 
+  val emptySystem = {Ty = Set.empty, subType = (fn x => false)}
 
   fun reflexive Ty R = FiniteSet.all (fn x => R (x,x)) Ty;
-  fun transitive Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => FiniteSet.all (fn z => not (R (x,y) andalso R (y,z)) orelse R (x,z)) Ty) Ty) Ty;
-  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => not (R (x,y) andalso R (y,x)) orelse x = y) Ty) Ty;
+
+  fun transitive Ty R =
+    let fun f1 x =
+          let val Ty' = FiniteSet.minus Ty (FiniteSet.singleton x)
+              fun f2 y =
+                let fun f3 z = not (R (y,z)) orelse R (x,z)
+                in not (R (x,y)) orelse FiniteSet.all f3 (FiniteSet.minus Ty' (FiniteSet.singleton y))
+                end
+          in FiniteSet.all f2 Ty'
+          end
+    in FiniteSet.all f1 Ty
+    end;
+  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
   fun respectsAny Ty R = FiniteSet.all (fn x => R (x,any)) Ty
 
   fun wellDefined {typeSystem,principalTypes,...} =
-    let val Tys = FiniteSet.map #typ principalTypes
-        val R = #subType typeSystem
-    in reflexive Tys R andalso transitive Tys R andalso antisymmetric Tys R
+    let val PTys = FiniteSet.map #typ principalTypes
+        val {Ty,subType} = typeSystem
+        fun correctPrincipalType {typ,subTypeable} =
+          Set.elementOf typ Ty andalso
+          (not subTypeable orelse
+           (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
+            FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
+    in reflexive PTys subType andalso
+       transitive PTys subType andalso
+       antisymmetric PTys subType andalso
+       FiniteSet.all correctPrincipalType principalTypes
     end
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
@@ -93,7 +124,7 @@ struct
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
-  fun closureOverFiniteSet Ty = respectAnyClosure o reflexiveClosure o (transitiveClosure Ty);
+  fun closureOverFiniteSet Ty = reflexiveClosure o (transitiveClosure Ty);
   fun nameOfType x = x
 
   (* assumes subType is an order for the principal types and extends it to
@@ -115,11 +146,106 @@ struct
       if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
       else FiniteSet.insert pt P
 
-
-  fun superTypes {typeSystem,principalTypes} ty =
+  fun superTypes {typeSystem,principalTypes,...} ty =
     let val {Ty,subType} = typeSystem
-        val pTys = map #typ principalTypes
-    in FiniteSet.filter (fn typ => subType (ty,typ)) pTys
+        val pTys = FiniteSet.map #typ principalTypes
+    in FiniteSet.filter (fn x => subType (ty,x)) pTys
+    end
+
+  fun subTypes {typeSystem,principalTypes,...} ty =
+    let val {Ty,subType} = typeSystem
+        val pTys = FiniteSet.map #typ principalTypes
+    in FiniteSet.filter (fn x => subType (x,ty)) pTys
+    end
+
+  fun maximal typeSystem tys =
+    let val subType = #subType typeSystem
+        fun noGreaterType x = FiniteSet.all (fn y => equal x y orelse not (subType (x,y))) tys
+    in FiniteSet.filter noGreaterType tys
+    end
+
+  fun minimal typeSystem tys =
+    let val subType = #subType typeSystem
+        fun noLesserType x = FiniteSet.all (fn y => equal x y orelse not (subType (y,x))) tys
+    in FiniteSet.filter noLesserType tys
+    end
+
+  fun immediateSuperTypes TSD ty =
+    minimal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (superTypes TSD ty))
+
+  fun immediateSubTypes TSD ty =
+    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypes TSD ty))
+
+  fun superTypesIn TSD ty tys =
+    let val {subType,...} = #typeSystem TSD
+    in FiniteSet.filter (fn x => subType (ty,x)) tys
+    end
+
+  fun subTypesIn TSD ty tys =
+    let val {subType,...} = #typeSystem TSD
+    in FiniteSet.filter (fn x => subType (x,ty)) tys
+    end
+
+  fun immediateSuperTypesIn TSD ty tys =
+    minimal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (superTypesIn TSD ty tys))
+
+  fun immediateSubTypesIn TSD ty tys =
+    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypesIn TSD ty tys))
+
+  datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ
+  fun inTypeDAG ty (Node (ty',tTs)) = equal ty ty' orelse FiniteSet.exists (inTypeDAG ty) tTs
+    | inTypeDAG ty (Leaf ty') = equal ty ty'
+    | inTypeDAG ty (Ref ty') = equal ty ty'
+  fun typeDAGtoString (Node (ty,tTs)) = ty ^ String.stringOfList typeDAGtoString tTs
+    | typeDAGtoString (Leaf ty) = ty
+    | typeDAGtoString (Ref ty) = ty
+
+  fun superTypeDAG TSD ty =
+    let fun makeDAG rtys rty =
+          let val strictSuperTys = superTypesIn TSD rty (FiniteSet.filter (fn x => not (equal x rty)) rtys)
+          in if FiniteSet.isEmpty strictSuperTys
+             then Leaf rty
+             else let val immediateSuperTys = minimal (#typeSystem TSD) strictSuperTys
+                      fun mapUnless prevDAGs (isty::istys) =
+                            if FiniteSet.exists (inTypeDAG isty) prevDAGs
+                            then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
+                            else mapUnless (FiniteSet.insert (makeDAG strictSuperTys isty) prevDAGs) istys
+                        | mapUnless prevDAGs [] = prevDAGs
+                  in Node (rty, mapUnless [] immediateSuperTys)
+                  end
+          end
+    in makeDAG (map #typ (#principalTypes TSD)) ty
+    end
+
+  fun subTypeDAG TSD ty =
+    let fun makeDAG rtys rty =
+          let val strictSubTys = subTypesIn TSD rty (FiniteSet.filter (fn x => not (equal x rty)) rtys)
+          in if FiniteSet.isEmpty strictSubTys
+             then Leaf rty
+             else let val immediateSubTys = maximal (#typeSystem TSD) strictSubTys
+                      fun mapUnless prevDAGs (isty::istys) =
+                          if FiniteSet.exists (inTypeDAG isty) prevDAGs
+                          then mapUnless (FiniteSet.insert (Ref isty) prevDAGs) istys
+                          else mapUnless (FiniteSet.insert (makeDAG strictSubTys isty) prevDAGs) istys
+                        | mapUnless prevDAGs [] = prevDAGs
+                  in Node (rty, mapUnless [] immediateSubTys)
+                  end
+          end
+    in makeDAG (map #typ (#principalTypes TSD)) ty
+    end
+
+  fun supremum R s =
+    FiniteSet.find (fn x => FiniteSet.all (fn y => R (y,x)) s) s
+
+  fun greatestCommonSubType TSD ty ty' =
+    let val subType = #subType (#typeSystem TSD)
+    in  if subType (ty,ty') then SOME ty
+        else if subType (ty',ty) then SOME ty'
+        else let val stys = subTypes TSD ty
+                 val stys' = subTypes TSD ty'
+                 val cstys = FiniteSet.intersection stys stys'
+             in supremum subType cstys
+             end
     end
 
   fun addLeastCommonSuperType (TP as {typeSystem,principalTypes}) ty ty' =
