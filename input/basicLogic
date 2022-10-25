@@ -1,5 +1,5 @@
 typeSystem basicLogic =
-  types formula, and, or, implies, not, binary, unary
+  types _:formula, and, or, implies, not, binary, unary
   order and < binary,
         or < binary,
         implies < binary,
