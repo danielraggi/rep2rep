@@ -13,18 +13,16 @@ conSpec interArithDots:interArithDotsT =
         count : [arr,numExp] -> metaBool,
         disjoint : [arr,arr] -> metaBool,
         formulaIsValid : [formula] -> metaBool,
-        canRectangulate : [arr,arr] -> metaBool,
-        isRectangle : [arr] -> metaBool,
-        width : [arr] -> numExp,
-        height : [arr] -> numExp
+        perpendicular : [line,line] -> metaBool
 
 tSchema test:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- implicitMult[n:numExp,m:numExp]
-    target t':arr
-    antecedent :metaTrue <- isRectangle[t':arr],
-               n:numExp <- height[t':arr],
-               m:numExp <- width[t':arr]
-    consequent :metaTrue <- count[t':arr,t:numExp]
+    target t':rectangle <- fillRectangle[t1':line,t2':line]
+    antecedent :metaTrue <- perpendicular[t1':line,t2':line],
+               :metaTrue <- count[t3':arr <- intersect[t1':line,t2':line],l:1:numeral],
+               :metaTrue <- count[t1':line,n:numExp],
+               :metaTrue <- count[t2':line,m:numExp]
+    consequent :metaTrue <- count[t':rectangle,t:numExp]
     strength 1
 
 iSchema disjIntra1:(dotDiagramsG,interArithDots) =
@@ -32,14 +30,14 @@ iSchema disjIntra1:(dotDiagramsG,interArithDots) =
     antecedent :metaTrue <- disjoint[t'':arr,t1:arr],
                :metaTrue <- disjoint[t'':arr,t2:arr]
     consequent :metaTrue <- disjoint[t'':arr,t':arr]
-    strength 1.1
+    strength 2
 
 iSchema disjIntra2:(dotDiagramsG,interArithDots) =
     context t':arr <- join[t1:arr,t2:arr]
     antecedent :metaTrue <- disjoint[t1:arr,t'':arr],
                :metaTrue <- disjoint[t2:arr,t'':arr]
     consequent :metaTrue <- disjoint[t':arr,t'':arr]
-    strength 1.1
+    strength 2
 
 tSchema plusJoin:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- infixOp[n:numExp,p:plus,m:numExp]
@@ -60,7 +58,7 @@ tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =
 
 tSchema div2symmetry:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- frac[t1:numExp,line:div,t2:2:numeral]
-    target t':arr <- rotateX[t1':arr <- remove[t2':arr,t':arr]]
+    target t':arr <- manipulate[t1':arr <- remove[t2':arr,t':arr],t2':manipulation]
     antecedent :metaTrue <- count[t2':arr,t1:numExp]
     consequent :metaTrue <- count[t':arr,t:numExp]
     strength 2
@@ -83,30 +81,30 @@ comment multRectangle:(arithG,dotDiagramsG,interArithDots) =
 
 tSchema oneCirc:(arithG,dotDiagramsG,interArithDots) =
     source t:1:numeral
-    target t':1:arr
+    target t':dot
     antecedent
-    consequent :metaTrue <- count[t':1:arr,t:1:numeral]
+    consequent :metaTrue <- count[t':dot,t:1:numeral]
     strength 2
 
 tSchema twoCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:2:numeral
-    target t':2:arr
+    target t':2:line
     antecedent
-    consequent :metaTrue <- count[t':2:arr,t:2:numeral]
+    consequent :metaTrue <- count[t':2:line,t:2:numeral]
     strength 1
 
 tSchema threeCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:3:numeral
-    target t':3:arr
+    target t':3:line
     antecedent
-    consequent :metaTrue <- count[t':3:arr,t:3:numeral]
+    consequent :metaTrue <- count[t':3:line,t:3:numeral]
     strength 1
 
 tSchema fourCircs:(arithG,dotDiagramsG,interArithDots) =
     source t:4:numeral
-    target t':4:arr
+    target t':4:line
     antecedent
-    consequent :metaTrue <- count[t':4:arr,t:4:numeral]
+    consequent :metaTrue <- count[t':4:line,t:4:numeral]
     strength 1
 
 comment twoVertical:(arithG,dotDiagramsG,interArithDots) =

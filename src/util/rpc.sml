@@ -94,6 +94,8 @@ signature RPC = sig
     type endpoint
     type service
 
+    val endpointName: endpoint -> string;
+
     (* create: address * port -> service *)
     val create: (string * int) -> service
 
@@ -459,6 +461,8 @@ type endpoint = {
 type service = {
     address: INetSock.sock_addr
 }
+
+fun endpointName {identifier: string, ...} = identifier;
 
 fun create (host, port) = {
     address = INetSock.toAddr (Option.valOf (NetHostDB.fromString host), port)

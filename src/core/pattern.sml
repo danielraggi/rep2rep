@@ -29,6 +29,11 @@ sig
                             -> pattern
                             -> pattern
                             -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
+  val findEmbeddingMinimisingTypeUpTo : Type.typeSystem
+                                        -> CSpace.token FiniteSet.set
+                                        -> pattern
+                                        -> pattern
+                                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
   val findEmbeddingUpToConditionally : Type.typeSystem
                                         -> CSpace.token FiniteSet.set
                                         -> (pattern -> pattern -> bool)
@@ -156,6 +161,41 @@ struct
             then let val (CHfunctions1,CHfunctions2) = unzip (List.funZip fm cs cs')
                      fun nodeFunction1 x = if CSpace.sameTokens x t then SOME t' else NONE
                      fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME t else NONE
+                  in (funUnion (nodeFunction1 :: CHfunctions1),funUnion (nodeFunction2 :: CHfunctions2))
+                  end
+            else (fn _ => NONE,fn _ => NONE)
+        | fm _ _ = (fn _ => NONE,fn _ => NONE)
+    val (f1,f2) = fm ct ct'
+    val g = applyMorphism f1 ct
+  in (f1, f2, SOME g)
+  end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)
+
+
+  (* *)
+  fun findEmbeddingMinimisingTypeUpTo T tokens ct ct'  =
+  let fun makeToken t t' =
+        let val ty = CSpace.typeOfToken t
+            val ty' = CSpace.typeOfToken t'
+            val mty = if #subType T (ty, ty') then ty else if #subType T (ty', ty) then ty' else raise IllDefined
+        in CSpace.makeToken (CSpace.nameOfToken t') mty
+        end
+      fun fm (Source t) (Source t') =
+            if tokenMatches T t t' orelse FiniteSet.elementOf t tokens
+            then (fn x => if CSpace.sameTokens x t then SOME (makeToken t t') else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME (makeToken t t') else NONE)
+            else (fn _ => NONE,fn _ => NONE)
+        | fm (Reference t) (Reference t') =
+            if tokenMatches T t t' orelse FiniteSet.elementOf t tokens
+            then (fn x => if CSpace.sameTokens x t then SOME (makeToken t t') else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME (makeToken t t') else NONE)
+            else (fn _ => NONE,fn _ => NONE)
+        | fm (TCPair ({token = t, constructor = c},cs))
+             (TCPair ({token = t', constructor = c'},cs')) =
+            if CSpace.sameConstructors c c' andalso
+               (tokenMatches T t t' orelse FiniteSet.elementOf t tokens)
+            then let val (CHfunctions1,CHfunctions2) = unzip (List.funZip fm cs cs')
+                     fun nodeFunction1 x = if CSpace.sameTokens x t then SOME (makeToken t t') else NONE
+                     fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME (makeToken t t') else NONE
                   in (funUnion (nodeFunction1 :: CHfunctions1),funUnion (nodeFunction2 :: CHfunctions2))
                   end
             else (fn _ => NONE,fn _ => NONE)

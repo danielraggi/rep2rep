@@ -1,9 +1,4 @@
-typeSystem basicLogic =
-  types formula, and, or, implies, not, binary, unary
-  order and < binary,
-        or < binary,
-        implies < binary,
-        not < unary
+import basicLogic
 
 typeSystem arith =
     imports basicLogic
@@ -20,11 +15,6 @@ typeSystem arith =
           leq < binRel,
           oB < par,
           cB < par
-
-conSpec basicLogicG:basicLogic =
-  constructors
-    logicInfixOp : [formula,binary,formula] -> formula,
-    logicApplyUnary : [unary,formula] -> formula
 
 conSpec arithG:arith =
   imports basicLogicG
