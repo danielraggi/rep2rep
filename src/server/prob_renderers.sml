@@ -9,49 +9,47 @@ end;
 
 structure ProbRender : PROBRENDER = struct
 
-datatype numExp = U
-                 |NUM of int
-                 |DEC of string
-                 |VAR of string
-                 |PLUS of numExp * numExp
-                 |MINUS of numExp * numExp
-                 |MULT of numExp * numExp
-                 |FRAC of numExp * numExp
-datatype num =  R of real
-               |V of string
+datatype numExp =
+         U
+         | NUM of int
+         | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+         | VAR of string
+         | PLUS of numExp * numExp
+         | MINUS of numExp * numExp
+         | MULT of numExp * numExp
+         | FRAC of numExp * numExp;
+datatype num = R of real | V of string;
 exception NumError;
 
-datatype shading = BLUE
-                  |WHITE
-                  |RED
-                  |GREEN
-                  |PATTERN
+datatype shading = BLUE | WHITE | RED | GREEN | PATTERN;
 exception ShadeError;
 
-datatype eventExp = SEVENT of string
-                    |NEVENT of string
+datatype eventExp = SEVENT of string | NEVENT of string;
 
-datatype areaExp = EMPTY
-                  |LABEL of string
-                  |NLABEL of string
-                  |POINT of numExp * numExp
-                  |RECT of areaExp * areaExp
-                  |OVERLAY of string * areaExp * areaExp * areaExp * shading
-                  |COMBAREA of string * areaExp * areaExp
+datatype areaExp =
+           EMPTY
+         | LABEL of string
+         | NLABEL of string
+         | POINT of numExp * numExp
+         | RECT of areaExp * areaExp
+         | OVERLAY of string * areaExp * areaExp * areaExp * shading
+         | COMBAREA of string * areaExp * areaExp;
 exception AreaError;
 
-datatype tableExp = NAME of string
-                    |NNAME of string
-                    |ONEWAY of string * tableExp * numExp
-                    |TWOWAY of string * tableExp * tableExp * numExp
-                    |COMB of string * tableExp * tableExp
+datatype tableExp =
+           NAME of string
+         | NNAME of string
+         | ONEWAY of string * tableExp * numExp
+         | TWOWAY of string * tableExp * tableExp * numExp
+         | COMB of string * tableExp * tableExp;
 exception TableError;
 
-datatype treeExp = BRANCH of string
-                  |NBRANCH of string
-                  |TREE of string * treeExp * numExp
-                  |ADD of string * treeExp * treeExp * numExp
-                  |RESOLVE of string * treeExp * treeExp
+datatype treeExp =
+           BRANCH of string
+         | NBRANCH of string
+         | TREE of string * treeExp * numExp
+         | ADD of string * treeExp * treeExp * numExp
+         | RESOLVE of string * treeExp * treeExp;
 exception TreeError;
 
 exception BayesError;
@@ -176,24 +174,21 @@ fun numToString x =
                 |(V a, R b) => V (a^"*"^(Real.toString (round b)))
                 |(V a, V b) => V (a^"*"^b))
             |convertNum (FRAC(x,y)) =
-                (case (convertNum x, convertNum y) of
-                (R a, R b) => R (a/b)
-                |(R a, V b) => V ((Real.toString (round a))^"/"^b)
-                |(V a, R b) => if Real.== (b,1.0) then V a else V (a^"/"^(Real.toString (round b)))
-                |(V a, V b) => V (a^"/"^b))
+             (case (convertNum x, convertNum y) of
+                  (R a, R b) => R (a/b)
+                 |(R a, V b) => V ((Real.toString (round a))^"/"^b)
+                 |(V a, R b) => if Real.== (b,1.0) then V a else V (a^"/"^(Real.toString (round b)))
+                 |(V a, V b) => V (a^"/"^b))
             |convertNum (VAR(x)) = V x
             |convertNum (U) = V " "
-            |convertNum (DEC(x)) =
-                (case (Real.fromString x) of
-                NONE => raise NumError
-                |SOME z => R z)
+            |convertNum (DEC(x)) = (case (Real.fromString x) of
+                                        NONE => raise NumError
+                                       |SOME z => R z)
             |convertNum (NUM(x)) = R (Real.fromInt x)
-        fun f (V(x)) = x
-            |f (R(x)) = Real.toString (round x)
-        val str = f (convertNum (simplify x))
-        in
-        if String.size str > 40 then " " else str
-    end
+        val str = case convertNum (simplify x) of
+                      V x => x
+                    | R x => Real.toString (round x)
+        in if String.size str > 40 then " " else str end
 and simplify (PLUS(x,y)) =
         let val a = simplify x
             val b = simplify y in
