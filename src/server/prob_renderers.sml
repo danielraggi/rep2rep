@@ -71,18 +71,22 @@ fun parseShading (Construction.Source((id, typ))) =
     end
   | parseShading _ = raise ShadeError;
 
-fun parseNum (Construction.Source((id, typ))) =
-    let val (subType, _, _) = String.breakOn ":" typ;
-        val subTypeLen = Real.fromInt (String.size subType);
-    in if Char.isAlpha (String.sub(subType, 0))
-       then (VAR(subType), [(id, subType, subTypeLen + 0.5)])
-       else
-           if String.isPrefix "0." subType
-           then (DEC(subType), [(id, subType, subTypeLen - 0.5)])
-           else case Int.fromString subType of
-                    SOME x => (NUM(x), [(id, subType, subTypeLen + 0.5)])
-                  | NONE => raise NumError
-    end
+local
+    fun parseSourceOrReference (id, typ) =
+        let val (subType, _, _) = String.breakOn ":" typ;
+            val subTypeLen = Real.fromInt (String.size subType);
+        in if Char.isAlpha (String.sub(subType, 0))
+           then (VAR(subType), [(id, subType, subTypeLen + 0.5)])
+           else
+               if String.isPrefix "0." subType
+               then (DEC(subType), [(id, subType, subTypeLen - 0.5)])
+               else case Int.fromString subType of
+                        SOME x => (NUM(x), [(id, subType, subTypeLen + 0.5)])
+                      | NONE => raise NumError
+        end;
+in
+fun parseNum (Construction.Source(tok)) = parseSourceOrReference tok
+  | parseNum (Construction.Reference(tok)) = parseSourceOrReference tok
   | parseNum (Construction.TCPair(x,y)) =
         if (#1 (#constructor x)) = "infixOp" then
             let val (a,y1) = parseNum (List.nth (y,0))
@@ -107,14 +111,7 @@ fun parseNum (Construction.Source((id, typ))) =
                 (MULT(a,b),(#1 (#token x),(#2 (hd(y1)))^"*"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@y2)
             end
         else raise NumError
-    |parseNum (Construction.Reference(x)) =
-        (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                         else if String.isSubstring "0." a then (DEC(a), [(#1 x,a,Real.fromInt(String.size a)-0.5)])
-                         else (case Int.fromString a of
-                                SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                                |NONE => raise NumError)
-            |_ => raise NumError)
+end;
 
 fun onlyNum U = false
     |onlyNum (NUM(x)) = true
