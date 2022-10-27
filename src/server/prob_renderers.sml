@@ -135,13 +135,13 @@ fun parseNum (Construction.Source(tok)) = parseSourceOrReference tok
 end;
 
 fun onlyNum U = false
-    |onlyNum (NUM(x)) = true
-    |onlyNum (DEC(x)) = true
-    |onlyNum (VAR(x)) = false
-    |onlyNum (PLUS(x,y)) = (onlyNum x) andalso (onlyNum y)
-    |onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
-    |onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
-    |onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
+  | onlyNum (NUM(x)) = true
+  | onlyNum (DEC(x)) = true
+  | onlyNum (VAR(x)) = false
+  | onlyNum (PLUS(x,y)) = (onlyNum x) andalso (onlyNum y)
+  | onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
+  | onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
+  | onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
 
 fun numToString x =
     let fun round n =
