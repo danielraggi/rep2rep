@@ -57,19 +57,19 @@ exception TreeError;
 exception BayesError;
 
 fun eventToString (SEVENT(x)) = x
-    |eventToString (NEVENT(x)) = x
+  | eventToString (NEVENT(x)) = x
 
-fun parseShading (Construction.Source(x)) =
-    let val a = #2 x
-        val b = #1 x in
-        if String.substring(a,0,3) = "red" then (RED,[(b,"RED",3.0)])
-        else if String.substring(a,0,4) = "blue" then (BLUE,[(b,"BLUE",4.0)])
-        else if String.substring(a,0,5) = "white" then (WHITE,[(b,"WHITE",5.0)])
-        else if String.substring(a,0,5) = "green" then (GREEN,[(b,"GREEN",5.0)])
-        else if String.substring(a,0,7) = "pattern" then (PATTERN,[(b,"PATTERN",6.0)])
-        else (WHITE,[(b,"WHITE",5.0)])
+fun parseShading (Construction.Source((id, typ))) =
+    let val (subType, _, _) = String.breakOn ":" typ;
+    in case subType of
+           "red" => (RED, [(id, "RED", 3.0)])
+         | "blue" => (BLUE, [(id, "BLUE", 4.0)])
+         | "white" => (WHITE, [(id, "WHITE", 5.0)])
+         | "green" => (GREEN, [(id, "GREEN", 5.0)])
+         | "pattern" => (PATTERN, [(id, "PATTERN", 6.0)])
+         | _ => (WHITE, [(id, "WHITE", 5.0)])
     end
-    |parseShading _ = raise ShadeError;
+  | parseShading _ = raise ShadeError;
 
 fun parseNum (Construction.Source(x)) =
         (case String.breakOn ":" (#2 x) of
