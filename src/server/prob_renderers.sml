@@ -84,33 +84,54 @@ local
                         SOME x => (NUM(x), [(id, subType, subTypeLen + 0.5)])
                       | NONE => raise NumError
         end;
+        fun parseWithValAndLength parse c =
+            case parse c of
+                (_, []) => raise NumError
+              | (a, y as (_, value, length)::_) => (a, y, value, length);
 in
 fun parseNum (Construction.Source(tok)) = parseSourceOrReference tok
   | parseNum (Construction.Reference(tok)) = parseSourceOrReference tok
-  | parseNum (Construction.TCPair(x,y)) =
-        if (#1 (#constructor x)) = "infixOp" then
-            let val (a,y1) = parseNum (List.nth (y,0))
-                val (b,y2) = parseNum (List.nth (y,2)) in
-                case (List.nth (y,1)) of
-                    Construction.Source(z) => (case (#2 z) of
-                                                "plus" => (PLUS(a,b),(#1 (#token x),(#2 (hd(y1)))^" + "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[(#1 z,"+",1.5)]@y2)
-                                                |"minus" => (MINUS(a,b),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[((#1 z,"-",1.5))]@y2)
-                                                |_ => raise NumError)
-                    |_ => raise NumError
-            end
-        else if (#1 (#constructor x)) = "frac" then
-            let val (a,y1) = parseNum (List.nth (y,0))
-                val (b,y2) = parseNum (List.last(y)) in
-                case (List.nth (y,1)) of
-                    Construction.Source(z) => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"/",1.5)]@y2)
-                    |_ => raise NumError
-            end
-        else if (#1 (#constructor x)) = "multiply" then
-            let val (a,y1) = parseNum (List.nth (y,0))
-                val (b,y2) = parseNum (List.last(y)) in
-                (MULT(a,b),(#1 (#token x),(#2 (hd(y1)))^"*"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@y2)
-            end
-        else raise NumError
+  | parseNum (Construction.TCPair({token=tok, constructor=con}, inputs)) =
+    let val (id, typ) = tok;
+        val (cname, ctyp) = con;
+        val parseWithValAndLength = parseWithValAndLength parseNum;
+    in case cname of
+           "infixOp" =>
+           (case inputs of
+                [a, Construction.Source((id', op_)), b] =>
+                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+                in case op_ of
+                       "plus" =>
+                       let val sum = (id, String.concat [leftVal, " + ", rightVal], leftLen + rightLen + 0.5);
+                           val plus = (id', "+", 1.5);
+                       in (PLUS(a', b'), sum::y1@(plus::y2)) end
+                     | "minus" =>
+                       let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
+                           val minus = (id', "-", 1.5);
+                       in (MINUS(a', b'), diff::y1@(minus::y2)) end
+                     | _ => raise NumError
+                end
+              | _ => raise NumError)
+         | "frac" =>
+           (case inputs of
+                [a, Construction.Source((id', "div")), b] =>
+                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+                    val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
+                    val divd = (id', "/", 1.5);
+                in (FRAC(a', b'), frac::y1@(divd::y2)) end
+              | _ => raise NumError)
+         | "multiply" =>
+           (case inputs of
+                [a, b] =>
+                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+                    val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
+                in (MULT(a', b'), prod::y1@y2) end
+              | _ => raise NumError)
+         | _ => raise NumError
+    end
 end;
 
 fun onlyNum U = false
