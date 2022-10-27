@@ -144,17 +144,22 @@ fun onlyNum U = false
 fun numToString x =
     let fun round n = Real.roundDecimal n 6;
         fun convertNum (PLUS(x,y)) =
-                (case (convertNum x, convertNum y) of
-                (R a, R b) => if b < 0.0 then R(a-(b*(~1.0)))
-                              else R (a+b)
-                |(R a, V b) => if String.substring(b,0,1) = "~" then V ((Real.toString (round a))^"-"^(String.substring(b,1,(String.size b)-1)))
-                               else if Real.== (a,0.0) then (V b)
-                               else V ((Real.toString (round a))^"+"^b)
-                |(V a, R b) => if b < 0.0 then V (a^"-"^(Real.toString (round (b*(~1.0)))))
-                               else if Real.== (b,0.0) then (V a)
-                               else V (a^"+"^(Real.toString (round b)))
-                |(V a, V b) => if String.substring(b,0,1) = "~" then V (a^"-"^(String.substring(b,1,(String.size b)-1))) else V (a^"+"^b))
-            |convertNum (MINUS(x,y)) =
+            (case (convertNum x, convertNum y) of
+                 (R a, R b) => R (a + b)
+               | (R a, V b) => if Real.== (a, 0.0) then V b
+                               else
+                                   if String.sub(b, 0) = #"~"
+                                   then V ((Real.toString (round a)) ^ "-" ^ (String.extract (b, 1, NONE)))
+                                   else V ((Real.toString (round a)) ^ "+" ^ b)
+               | (V a, R b) => if Real.== (b, 0.0) then V a
+                               else
+                                   if b < 0.0
+                                   then V (a ^ "-" ^ Real.toString (round (b * ~1.0)))
+                                   else V (a ^ "+" ^ Real.toString (round b))
+               | (V a, V b) => if String.sub (b, 0) = #"~"
+                               then V (a ^ "-" ^ (String.extract (b, 1, NONE)))
+                               else V (a ^ "+" ^ b))
+          | convertNum (MINUS(x,y)) =
                 (case (convertNum x, convertNum y) of
                 (R a, R b) => if b < 0.0 then R(a+(b*(~1.0))) else R (a-b)
                 |(R a, V b) => if Real.== (a,0.0) andalso String.substring(b,0,1) = "~" then V (String.substring(b,1,(String.size b)-1))
