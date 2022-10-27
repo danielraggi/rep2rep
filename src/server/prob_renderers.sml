@@ -144,19 +144,7 @@ fun onlyNum U = false
   | onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
 
 fun numToString x =
-    let fun round n =
-            let fun temp f n =
-                    case f n of
-                    NONE => raise NumError
-                    |SOME x => x
-                val s = Real.toString n in
-                if(String.size s > 6) then
-                    let val z = temp (Real.fromString) (String.substring(s, 0, 6)) in
-                         if (temp (Int.fromString) (String.substring(s, 6, 1)) > 4) then z + 0.0001
-                        else z
-                    end
-                else n
-            end
+    let fun round n = Real.roundDecimal n 6;
         fun convertNum (PLUS(x,y)) =
                 (case (convertNum x, convertNum y) of
                 (R a, R b) => if b < 0.0 then R(a-(b*(~1.0)))

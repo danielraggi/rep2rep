@@ -472,3 +472,26 @@ fun inputLines istr =
     in List.unfold getln istr end;
 
 end;
+
+
+
+signature REAL =
+sig
+    include REAL;
+
+    val roundDecimal: real -> int -> real;
+end;
+
+structure Real : REAL =
+struct
+
+open Real;
+
+fun roundDecimal n p =
+    let fun e res 0 = res
+          | e res p = e (res * 10.0) ((Int.-)(p, 1));
+        fun up x = x * (e 1.0 p);
+        fun down x = x / (e 1.0 p);
+    in (down o realRound o up) n end;
+
+end;
