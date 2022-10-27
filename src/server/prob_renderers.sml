@@ -71,15 +71,19 @@ fun parseShading (Construction.Source((id, typ))) =
     end
   | parseShading _ = raise ShadeError;
 
-fun parseNum (Construction.Source(x)) =
-        (case String.breakOn ":" (#2 x) of
-            (a,":",_) => if Char.isAlpha(String.sub(a,0)) then (VAR(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                         else if String.isSubstring "0." a then (DEC(a), [(#1 x,a,Real.fromInt(String.size a)-0.5)])
-                         else (case Int.fromString a of
-                                SOME b => (NUM(b), [(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                                |NONE => raise NumError)
-            |_ => raise NumError)
-    |parseNum (Construction.TCPair(x,y)) =
+fun parseNum (Construction.Source((id, typ))) =
+    let val (subType, _, _) = String.breakOn ":" typ;
+        val subTypeLen = Real.fromInt (String.size subType);
+    in if Char.isAlpha (String.sub(subType, 0))
+       then (VAR(subType), [(id, subType, subTypeLen + 0.5)])
+       else
+           if String.isPrefix "0." subType
+           then (DEC(subType), [(id, subType, subTypeLen - 0.5)])
+           else case Int.fromString subType of
+                    SOME x => (NUM(x), [(id, subType, subTypeLen + 0.5)])
+                  | NONE => raise NumError
+    end
+  | parseNum (Construction.TCPair(x,y)) =
         if (#1 (#constructor x)) = "infixOp" then
             let val (a,y1) = parseNum (List.nth (y,0))
                 val (b,y2) = parseNum (List.nth (y,2)) in
