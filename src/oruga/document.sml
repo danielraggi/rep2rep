@@ -614,7 +614,7 @@ struct
                          then "NO\\ OPEN\\ GOALS!"
                          else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goals)
             val originalGoalS = Latex.construction (0.0,0.0) goal ^ "\\\\ \n"
-            val IS = Heuristic.multiplicativeScore (strengthsOf DC) res
+            val IS = Heuristic.scoreMain (strengthsOf DC) res
             val alignedGoals = "\n " ^ ("\\textbf{Original\\ goal}\\\\\n"
                                                                       ^ originalGoalS
                                                                       ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
@@ -668,7 +668,7 @@ struct
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       (*fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)*)
-      val score = Heuristic.multiplicativeScore (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
+      val score = Heuristic.scoreMain (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
       (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
       val _ = print (Construction.toString  (hd tproofConstruction))*)
       val _ = print ("  transfer score: " ^ Real.toString score)
