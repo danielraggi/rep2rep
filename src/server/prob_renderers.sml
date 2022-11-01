@@ -750,31 +750,6 @@ fun resolve a b (n:int) =
           | replace x y z = if y = z then simplify x else z;
         fun solveVar x y =
             case (simplify x, simplify y) of
-            (VAR(n),y) => SOME (VAR(n),y)
-            |(x,VAR(n)) => SOME (VAR(n),x)
-            |(MINUS(n,MULT(m,VAR(w))),MULT(k,VAR(l))) => if w = l then SOME (VAR(w), FRAC(n,PLUS(m,k))) else NONE
-            |(MULT(k,VAR(l)),MINUS(n,MULT(m,VAR(w)))) => if w = l then SOME (VAR(w), FRAC(n,PLUS(m,k))) else NONE
-            |(FRAC(MINUS(n,MULT(m,VAR(k))),VAR(l)),y) => if k = l then SOME (VAR(k), FRAC(n,PLUS(m,y))) else NONE
-            |(x,FRAC(MINUS(n,MULT(m,VAR(k))),VAR(l))) => if k = l then SOME (VAR(k), FRAC(n,PLUS(m,x))) else NONE
-            |(FRAC(MINUS(n,MULT(m,MINUS(s,VAR(k)))),VAR(l)),y) => if k = l then SOME (VAR(k), FRAC(MINUS(n,MULT(m,s)),MINUS(y,m))) else NONE
-            |(x,FRAC(MINUS(n,MULT(m,MINUS(s,VAR(k)))),VAR(l))) => if k = l then SOME (VAR(k), FRAC(MINUS(n,MULT(m,s)),MINUS(x,m))) else NONE
-            |(FRAC(MINUS(n,MULT(MINUS(s,VAR(k)),m)),VAR(l)),y) => if k = l then SOME (VAR(k), FRAC(MINUS(n,MULT(m,s)),MINUS(y,m))) else NONE
-            |(x,FRAC(MINUS(n,MULT(MINUS(s,VAR(k)),m)),VAR(l))) => if k = l then SOME (VAR(k), FRAC(MINUS(n,MULT(m,s)),MINUS(x,m))) else NONE
-            |(FRAC(PLUS(n,MULT(m,VAR(k))),VAR(l)),y) => if k = l then SOME (VAR(k), FRAC(n,MINUS(y,m))) else NONE
-            |(x,FRAC(PLUS(n,MULT(m,VAR(k))),VAR(l))) => if k = l then SOME (VAR(k), FRAC(n,MINUS(x,m))) else NONE
-            |(x,PLUS(n,MULT(m,VAR(k)))) => SOME (VAR(k),FRAC(MINUS(x,n),m))
-            |(PLUS(n,MULT(m,VAR(k))),y) => SOME (VAR(k),FRAC(MINUS(y,n),m))
-            |(x,MINUS(MULT(m,VAR(k)),n)) => SOME (VAR(k),FRAC(PLUS(x,n),m))
-            |(MINUS(MULT(m,VAR(k)),n),y) => SOME (VAR(k),FRAC(PLUS(y,n),m))
-            |(x,MINUS(n,MULT(m,VAR(k)))) => SOME (VAR(k),FRAC(MINUS(n,x),m))
-            |(MINUS(n,MULT(m,VAR(k))),y) => SOME (VAR(k),FRAC(MINUS(n,y),m))
-            |(MULT(m,VAR(n)),y) => SOME (VAR(n),FRAC(y,m))
-            |(x,MULT(m,VAR(n))) => SOME (VAR(n),FRAC(x,m))
-            |(MINUS(c,VAR(n)),y) => SOME (VAR(n),MINUS(c,y))
-            |(x,MINUS(c,VAR(n))) => SOME (VAR(n),MINUS(c,x))
-            |(MINUS(VAR(n),c),y) => SOME (VAR(n),PLUS(c,y))
-            |(x,MINUS(VAR(n),c)) => SOME (VAR(n),PLUS(c,x))
-            |_ => NONE
         fun filterNum x y nx ny =
             case (x,y) of
             ([],[]) => []
@@ -785,6 +760,57 @@ fun resolve a b (n:int) =
                                 else if nx > ny then y::(filterNum xs ys nx ny)
                                 else x::(filterNum xs ys nx ny)
             |_ => raise NumError
+                (VAR(n), y) => SOME (VAR(n), y) (* N = y => N = y *)
+              | (x, VAR(n)) => SOME (VAR(n), x) (* x = N => N = x *)
+              | (MINUS(n, MULT(m, VAR(w))), MULT(k, VAR(l))) (* n - mW = kW => W = n/(m+k) *)
+                => if w = l then SOME (VAR(w), FRAC(n, PLUS(m, k)))
+                   else NONE
+              | (MULT(k, VAR(l)), MINUS(n, MULT(m, VAR(w)))) (* kW = n - mW => W = n/(m+k) *)
+                => if w = l then SOME (VAR(w), FRAC(n, PLUS(m, k)))
+                   else NONE
+              | (FRAC(MINUS(n, MULT(m, VAR(k))), VAR(l)), y) (* (n-mK)/K = y => K = n/(m+y) *)
+                => if k = l then SOME (VAR(k), FRAC(n, PLUS(m, y)))
+                   else NONE
+              | (x, FRAC(MINUS(n, MULT(m, VAR(k))), VAR(l))) (* x = (n - mK)/K => K = n/(m+x) *)
+                => if k = l then SOME (VAR(k), FRAC(n, PLUS(m, x)))
+                   else NONE
+              | (FRAC(MINUS(n, MULT(m, MINUS(s, VAR(k)))), VAR(l)), y)
+                    (* (n-m(s-K))/K = y => K = (n-ms)/(y-m) *)
+                => if k = l then SOME (VAR(k), FRAC(MINUS(n, MULT(m, s)), MINUS(y, m)))
+                   else NONE
+              | (x, FRAC(MINUS(n, MULT(m, MINUS(s, VAR(k)))), VAR(l)))
+                    (* x = (n-m(s-K))/K => K = (n-ms)/(x-m) *)
+                => if k = l then SOME (VAR(k), FRAC(MINUS(n, MULT(m, s)), MINUS(x, m)))
+                   else NONE
+              | (FRAC(MINUS(n, MULT(MINUS(s, VAR(k)), m)), VAR(l)), y)
+                    (* (n - (s - K)m)/K = y => K = (n-ms)/(y-m) *)
+                => if k = l then SOME (VAR(k), FRAC(MINUS(n, MULT(m, s)), MINUS(y, m)))
+                   else NONE
+              | (x, FRAC(MINUS(n, MULT(MINUS(s, VAR(k)), m)), VAR(l)))
+                    (* x = (n - (s-K)m)/K => K = (n-ms)/(x-m) *)
+                => if k = l then SOME (VAR(k), FRAC(MINUS(n, MULT(m, s)), MINUS(x, m)))
+                   else NONE
+              | (FRAC(PLUS(n, MULT(m, VAR(k))), VAR(l)), y)
+                    (* (n + mK)/K = y => K = n/(y-m) *)
+                => if k = l then SOME (VAR(k), FRAC(n, MINUS(y, m)))
+                   else NONE
+              | (x, FRAC(PLUS(n, MULT(m, VAR(k))), VAR(l)))
+                    (* x = (n + mK)/K => K = n/(x-m) *)
+                => if k = l then SOME (VAR(k), FRAC(n,MINUS(x,m)))
+                   else NONE
+              | (x, PLUS(n, MULT(m, VAR(k)))) => SOME (VAR(k), FRAC(MINUS(x, n), m))
+              | (PLUS(n, MULT(m, VAR(k))), y) => SOME (VAR(k), FRAC(MINUS(y, n), m))
+              | (x, MINUS(MULT(m, VAR(k)), n)) => SOME (VAR(k), FRAC(PLUS(x, n), m))
+              | (MINUS(MULT(m, VAR(k)), n), y) => SOME (VAR(k), FRAC(PLUS(y, n), m))
+              | (x, MINUS(n, MULT(m, VAR(k)))) => SOME (VAR(k), FRAC(MINUS(n, x), m))
+              | (MINUS(n, MULT(m, VAR(k))), y) => SOME (VAR(k), FRAC(MINUS(n, y), m))
+              | (MULT(m, VAR(n)), y) => SOME (VAR(n), FRAC(y, m))
+              | (x, MULT(m, VAR(n))) => SOME (VAR(n), FRAC(x, m))
+              | (MINUS(c, VAR(n)), y) => SOME (VAR(n), MINUS(c, y))
+              | (x, MINUS(c, VAR(n))) => SOME (VAR(n), MINUS(c, x))
+              | (MINUS(VAR(n), c), y) => SOME (VAR(n), PLUS(c, y))
+              | (x, MINUS(VAR(n), c)) => SOME (VAR(n), PLUS(c, x))
+              | _ => NONE;
         fun tResolve a b c d (e:int) =
             if e = 0 then ((List.rev c)@a, (List.rev d)@b)
             else
