@@ -725,8 +725,11 @@ and simplify (PLUS(x,y)) =
   | simplify x = x;
 
 fun resolve a b (n:int) =
-    let fun countU [] = 0
-            |countU (x::xs) = if x = U then (countU xs) + 1 else (countU xs)
+    let fun countU lst =
+            let fun countU' res [] = res
+                  | countU' res (x::xs) = if x = U then countU' (res + 1) xs
+                                          else countU' res xs;
+            in countU' 0 lst end;
         fun contains n (PLUS(a,b)) = contains n a orelse contains n b
             |contains n (MINUS(a,b)) = contains n a orelse contains n b
             |contains n (MULT(a,b)) = contains n a orelse contains n b
