@@ -381,8 +381,8 @@ fun structureTransfer unistructured targetPattOption st =
       fun fgtPT (x,L) = case targetPattOption of
                       SOME tpt => not (matchesTarget targetTypeSystem tpt x) orelse Heuristic.forgetRelaxed (x,L)
                     | NONE => Heuristic.forgetRelaxed (x,L)
-      val tac = structureTransferTac Heuristic.transferProofMultStrengths ignPT fgtPT
-      val tac' = Search.depthFirstSortIgnoreForget singleStepInference Heuristic.transferProofMultStrengths ignI Heuristic.forgetRelaxed
+      val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT
+      val tac' = Search.depthFirstSortIgnoreForget singleStepInference Heuristic.transferProofMain ignI Heuristic.forgetRelaxed
       val rawResults = tac st
       (*val rawResults = Seq.THEN (tac,tac') st*)
   in rawResults (*Seq.sort (Seq.take 100 rawResults) Heuristic.transferProofMultStrengths*)
