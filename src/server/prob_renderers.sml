@@ -812,787 +812,751 @@ fun resolve a b (n:int) =
                     else filterNum' (x::ans) xs ys nx ny
                   | filterNum' _ _ _ _ _ = raise NumError;
             in filterNum' [] xs ys nx ny end;
-        fun tResolve a b c d (e:int) =
-            if e = 0 then ((List.rev c)@a, (List.rev d)@b)
-            else
-            (case (a, b) of
-            ([],[]) => (List.rev c, List.rev d)
-            |(a::aas,b::bbs) =>
-            let val x = simplify a
-                val y = simplify b
-                val xs = List.map simplify aas
-                val ys = List.map simplify bbs in
-                    if x = U then tResolve xs ys (y::c) (y::d) (e-1)
-                    else if y = U then tResolve xs ys (x::c) (x::d) (e-1)
-                    else if (x = y orelse (numToString x) = (numToString y)) andalso String.size (numToString x) > 1 then tResolve xs ys (x::c) (y::d) (e-1)
-                    else if onlyNum y then
-                        (case (x,y) of
-                            (VAR(n),y) => let fun f z = replace y x z
-                                                val zs = List.map f xs
-                                                val ws = List.map f c in
-                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                            end
-                            |(FRAC(k,VAR(n)),y) => if contains (VAR(n)) k then
-                                                     case (solveVar x y) of
-                                                         NONE => tResolve xs ys (y::c) (y::d) (e-1)
-                                                        |SOME(a,b) =>   let fun f z = replace b a z
-                                                                            val zx = List.map f xs
-                                                                            val wx = List.map f c in
-                                                                            tResolve zx ys (y::wx) (y::d) (e-1)
-                                                                        end
-                                                   else if String.size n > 1 then
-                                                        let fun f z = replace (FRAC(k,y)) (VAR(n)) z
-                                                            val zx = List.map f xs
-                                                            val wx = List.map f c
-                                                            val zy = List.map f ys
-                                                            val wy = List.map f d in
-                                                            tResolve zx zy (y::wx) (y::wy) (e-1)
-                                                        end
-                                                   else let fun f z = replace (FRAC(k,y)) (VAR(n)) z
-                                                            val zs = List.map f xs
-                                                            val ws = List.map f c in
-                                                            tResolve zs ys (y::ws) (y::d) (e-1)
-                                                        end
-                            |(FRAC(VAR(n),k),y) =>  let fun f z = replace (MULT(y,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(FRAC(MINUS(VAR(n),m),k),y) => let fun f z = replace (PLUS(MULT(y,k),m)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(FRAC(MULT(m,VAR(n)),MINUS(k,MULT(q,VAR(l)))),y) => if n = l then
-                                                                                let fun f z = replace (FRAC(MULT(y,k),PLUS(m,MULT(y,q)))) (VAR(n)) z
-                                                                                    val zs = List.map f xs
-                                                                                    val ws = List.map f c in
-                                                                                    tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                                end
-                                                                               else let fun f z = replace (FRAC(MULT(y,MINUS(k,MULT(q,VAR(l)))),m)) (VAR(n)) z
-                                                                                        val zs = List.map f xs
-                                                                                        val ws = List.map f c in
-                                                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                                    end
-                            |(FRAC(MULT(m,VAR(n)),MINUS(k,VAR(l))),y) => if n = l then  let fun f z = replace (FRAC(MULT(y,k),PLUS(y,m))) (VAR(n)) z
-                                                                                            val zs = List.map f xs
-                                                                                            val ws = List.map f c in
-                                                                                            tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                                        end
-                                                                        else let fun f z = replace (FRAC(MULT(y,MINUS(k,VAR(l))),m)) (VAR(n)) z
-                                                                                 val zs = List.map f xs
-                                                                                 val ws = List.map f c in
-                                                                                 tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                             end
-                            |(FRAC(k,MULT(m,VAR(n))),y) => let fun f z = replace (FRAC(k,MULT(y,m))) (VAR(n)) z
-                                                                val zx = List.map f xs
-                                                                val zy = List.map f ys
-                                                                val wx = List.map f c
-                                                                val wy = List.map f d in
-                                                                tResolve zx zy (y::wx) (y::wy) (e-1)
-                                                            end
-                            |(FRAC(MULT(m,VAR(n)),k),y) => let fun f z = replace (FRAC(MULT(y,k),m)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(FRAC(k,MINUS(m,VAR(n))),y) => let fun f z = replace (FRAC(MINUS(MULT(y,m),k),y)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(FRAC(k,MINUS(m,MULT(l,VAR(n)))),y) => let fun f z = replace (FRAC(MINUS(MULT(y,m),k),MULT(y,l))) (VAR(n)) z
-                                                                        val zs = List.map f xs
-                                                                        val ws = List.map f c in
-                                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                    end
-                            |(FRAC(MINUS(MULT(m,VAR(n)),k),PLUS(q,MULT(p,VAR(l)))),y) => if n = l then
-                                                                                            let fun f z = replace (FRAC(PLUS(MULT(y,q),k),MINUS(m,MULT(y,p)))) (VAR(n)) z
-                                                                                                val zs = List.map f xs
-                                                                                                val ws = List.map f c in
-                                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                                            end
-                                                                                          else tResolve xs ys (y::c) (y::d) (e-1)
-                            |(MULT(k,VAR(n)),y) =>  let fun f z = replace (FRAC(y,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(MULT(VAR(n),k),y) =>  let fun f z = replace (FRAC(y,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(MULT(PLUS(l,VAR(n)),k),y) =>  let fun f z = replace (MINUS(FRAC(y,k),l)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MULT(k,PLUS(l,VAR(n))),y) =>  let fun f z = replace (MINUS(FRAC(y,k),l)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MINUS(k,VAR(n)),y) => let fun f z = replace (MINUS(k,y)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(MINUS(VAR(n),k),y) => let fun f z = replace (PLUS(y,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(MINUS(k,MULT(VAR(n),m)),y) => let fun f z = replace (FRAC(MINUS(k,y),m)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MINUS(k,MULT(m,VAR(n))),y) => let fun f z = replace (FRAC(MINUS(k,y),m)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MINUS(FRAC(VAR(n),m),k),y) => let fun f z = replace (MULT(PLUS(y,k),m)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(PLUS(k,VAR(n)),y) =>  let fun f z = replace (MINUS(y,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                        tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(PLUS(k,MULT(m,VAR(n))),y) => let fun f z = replace (FRAC(MINUS(y,k),m)) (VAR(n)) z
-                                                               val zs = List.map f xs
-                                                               val ws = List.map f c in
-                                                               tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(PLUS(k,MULT(VAR(n),m)),y) =>  let fun f z = replace (FRAC(MINUS(y,k),m)) (VAR(n)) z
-                                                               val zs = List.map f xs
-                                                               val ws = List.map f c in
-                                                               tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(PLUS(k,FRAC(m,VAR(n))),y) => let fun f z = replace (FRAC(m,MINUS(y,k))) (VAR(n)) z
-                                                               val zs = List.map f xs
-                                                               val ws = List.map f c in
-                                                               tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |_ => tResolve xs ys (y::c) (y::d) (e-1))
-                    else if onlyNum x then
-                        (case (x,y) of
-                            (x,VAR(n)) =>  let fun f z = replace x y z
-                                                val zs = List.map f ys
-                                                val ws = List.map f d in
-                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                            end
-                            |(x,FRAC(VAR(n),k)) => let fun f z = replace (MULT(x,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,FRAC(k,VAR(n))) => if contains (VAR(n)) k then
-                                                     case (solveVar x y) of
-                                                         NONE => tResolve xs ys (x::c) (x::d) (e-1)
-                                                        |SOME(a,b) =>   let fun f z = replace b a z
-                                                                            val zy = List.map f ys
-                                                                            val wy = List.map f d in
-                                                                            tResolve xs zy (x::c) (y::wy) (e-1)
-                                                                        end
-                                                   else if String.size n > 1 then
-                                                        let fun f z = replace (FRAC(k,x)) (VAR(n)) z
-                                                            val zx = List.map f xs
-                                                            val wx = List.map f c
-                                                            val zy = List.map f ys
-                                                            val wy = List.map f d in
-                                                            tResolve zx zy (x::wx) (x::wy) (e-1)
-                                                        end
-                                                    else let fun f z = replace (FRAC(k,x)) (VAR(n)) z
-                                                             val zs = List.map f ys
-                                                             val ws = List.map f d in
-                                                             tResolve xs zs (x::c) (x::ws) (e-1)
-                                                         end
-                            |(x,FRAC(MINUS(VAR(n),m),k)) => let fun f z = replace (PLUS(MULT(x,k),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,FRAC(MULT(m,VAR(n)),MINUS(k,MULT(q,VAR(l))))) => if n = l then
-                                                                                let fun f z = replace (FRAC(MULT(x,k),PLUS(m,MULT(x,q)))) (VAR(n)) z
-                                                                                    val zs = List.map f ys
-                                                                                    val ws = List.map f d in
-                                                                                    tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                                end
-                                                                               else let fun f z = replace (FRAC(MULT(x,MINUS(k,MULT(q,VAR(l)))),m)) (VAR(n)) z
-                                                                                        val zs = List.map f ys
-                                                                                        val ws = List.map f d in
-                                                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                                    end
-                            |(x,FRAC(MULT(m,VAR(n)),MINUS(k,VAR(l)))) => if n = l then  let fun f z = replace (FRAC(MULT(x,k),PLUS(x,m))) (VAR(n)) z
-                                                                                            val zs = List.map f ys
-                                                                                            val ws = List.map f d in
-                                                                                            tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                                        end
-                                                                         else let fun f z = replace (FRAC(MULT(x,MINUS(k,VAR(l))),m)) (VAR(n)) z
-                                                                                  val zs = List.map f ys
-                                                                                  val ws = List.map f d in
-                                                                                  tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                              end
-                            |(x,FRAC(MULT(m,VAR(n)),k)) =>  let fun f z = replace (FRAC(MULT(x,k),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,FRAC(k,MULT(m,VAR(n)))) =>  let fun f z = replace (FRAC(k,MULT(x,m))) (VAR(n)) z
-                                                                val zx = List.map f xs
-                                                                val zy = List.map f ys
-                                                                val wx = List.map f c
-                                                                val wy = List.map f d in
-                                                                tResolve zx zy (x::wx) (x::wy) (e-1)
-                                                            end
-                            |(x,FRAC(k,MINUS(m,VAR(n)))) => let fun f z = replace (FRAC(MINUS(MULT(x,m),k),x)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,FRAC(k,MINUS(m,MULT(l,VAR(n))))) => let fun f z = replace (FRAC(MINUS(MULT(x,m),k),MULT(x,l))) (VAR(n)) z
-                                                                        val zs = List.map f ys
-                                                                        val ws = List.map f d in
-                                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                    end
-                            |(x,FRAC(MINUS(MULT(m,VAR(n)),k),PLUS(q,MULT(p,VAR(l))))) => if n = l then
-                                                                                        let fun f z = replace (FRAC(PLUS(MULT(x,q),k),MINUS(m,MULT(x,p)))) (VAR(n)) z
-                                                                                            val zs = List.map f ys
-                                                                                            val ws = List.map f d in
-                                                                                            tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                                        end
-                                                                                        else tResolve xs ys (x::c) (x::d) (e-1)
-                            |(x,MULT(k,VAR(n))) => let fun f z = replace (FRAC(x,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,MULT(VAR(n),k)) => let fun f z = replace (FRAC(x,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,MULT(PLUS(l,VAR(n)),k)) =>  let fun f z = replace (MINUS(FRAC(x,k),l)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,MULT(k,PLUS(l,VAR(n)))) =>  let fun f z = replace (MINUS(FRAC(x,k),l)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,MINUS(k,VAR(n))) => let fun f z = replace (MINUS(k,x)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,MINUS(VAR(n),k)) => let fun f z = replace (PLUS(x,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,MINUS(k,MULT(m,VAR(n)))) => let fun f z = replace (FRAC(MINUS(k,x),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,MINUS(k,MULT(VAR(n),m))) => let fun f z = replace (FRAC(MINUS(k,x),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,MINUS(FRAC(VAR(n),m),k)) => let fun f z = replace (MULT(PLUS(y,k),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,PLUS(k,VAR(n))) =>  let fun f z = replace (MINUS(x,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                        tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(x,PLUS(k,MULT(m,VAR(n)))) => let fun f z = replace (FRAC(MINUS(x,k),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,PLUS(k,MULT(VAR(n),m))) => let fun f z = replace (FRAC(MINUS(x,k),m)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(x,PLUS(k,FRAC(m,VAR(n)))) => let fun f z = replace (FRAC(m,MINUS(x,k))) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |_ => tResolve xs ys (x::c) (x::d) (e-1))
-                    else (case (x,y) of
-                            (VAR(n),VAR(m)) => let fun fx z = replace (VAR(n^m)) (VAR(n)) z
-                                                        fun fy z = replace (VAR(n^m)) (VAR(m)) z
-                                                        val zx = List.map fx xs
-                                                        val wx = List.map fx c
-                                                        val zy = List.map fy ys
-                                                        val wy = List.map fy d in
-                                                        tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1)
-                                                end
-                            |(VAR(n),MINUS(NUM(1),VAR(m))) =>   let fun fx z = replace (VAR(n^m)) (VAR(n)) z
-                                                                    fun fy z = replace (MINUS(NUM(1),VAR(n^m))) (VAR(m)) z
-                                                                    val zx = List.map fx xs
-                                                                    val wx = List.map fx c
-                                                                    val zy = List.map fy ys
-                                                                    val wy = List.map fy d in
-                                                                    tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1)
-                                                                end
-                            |(MINUS(NUM(1),VAR(n)),VAR(m)) =>   let fun fx z = replace (MINUS(NUM(1),VAR(n^m))) (VAR(n)) z
-                                                                    fun fy z = replace (VAR(n^m)) (VAR(m)) z
-                                                                    val zx = List.map fx xs
-                                                                    val wx = List.map fx c
-                                                                    val zy = List.map fy ys
-                                                                    val wy = List.map fy d in
-                                                                    tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1)
-                                                                end
-                            |(MINUS(NUM(1),VAR(n)),MINUS(NUM(1),VAR(m))) => let fun fx z = replace (VAR(n^m)) (VAR(n)) z
-                                                                                fun fy z = replace (VAR(n^m)) (VAR(m)) z
-                                                                                val zx = List.map fx xs
-                                                                                val wx = List.map fx c
-                                                                                val zy = List.map fy ys
-                                                                                val wy = List.map fy d in
-                                                                                tResolve zx zy ((MINUS(NUM(1),VAR(n^m)))::wx) ((MINUS(NUM(1),VAR(n^m)))::wy) (e-1)
-                                                                            end
-                            |(PLUS(PLUS(k,MULT(m,VAR(n))),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(y,PLUS(k,MULT(m,VAR(n))))) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,PLUS(PLUS(k,MULT(m,VAR(n))),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(x,PLUS(k,MULT(m,VAR(n))))) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(MINUS(k,MULT(m,VAR(n))),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (FRAC(MINUS(MINUS(k,y),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,MULT(m,VAR(n))),y)) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,MINUS(MINUS(k,MULT(m,VAR(n))),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (FRAC(MINUS(MINUS(k,x),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,MULT(m,VAR(n))),x)) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(PLUS(MINUS(k,MULT(m,VAR(n))),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (FRAC(PLUS(MINUS(k,y),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(y,MINUS(k,MULT(m,VAR(n))))) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,PLUS(MINUS(k,MULT(m,VAR(n))),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (FRAC(PLUS(MINUS(k,x),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(x,MINUS(k,MULT(m,VAR(n)))))(VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(PLUS(k,MULT(m,VAR(n))),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (FRAC(PLUS(MINUS(y,k),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(PLUS(k,MULT(m,VAR(n))),y)) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,MINUS(PLUS(k,MULT(m,VAR(n))),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (FRAC(PLUS(MINUS(x,k),VAR(l)),m)) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(PLUS(k,MULT(m,VAR(n))),x)) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(PLUS(PLUS(k,VAR(n)),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(y,PLUS(k,VAR(n)))) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,PLUS(PLUS(k,VAR(n)),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(x,PLUS(k,VAR(n)))) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(MINUS(k,VAR(n)),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,y),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,VAR(n)),y)) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,MINUS(MINUS(k,VAR(n)),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,x),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(MINUS(k,VAR(n)),x)) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(PLUS(MINUS(k,VAR(n)),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (PLUS(MINUS(k,y),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(y,MINUS(k,VAR(n)))) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,PLUS(MINUS(k,VAR(n)),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (PLUS(MINUS(k,x),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(x,MINUS(k,VAR(n))))(VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(PLUS(k,VAR(n)),VAR(l)),y) =>  if not (contains (VAR(n)) y) then
-                                                                            let fun f z = replace (PLUS(MINUS(y,k),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) y) then
-                                                                            let fun f z = replace (MINUS(PLUS(k,VAR(n)),y)) (VAR(l)) z
-                                                                                val zs = List.map f xs
-                                                                                val ws = List.map f c in
-                                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(x,MINUS(PLUS(k,VAR(n)),VAR(l))) => if not (contains (VAR(n)) x) then
-                                                                            let fun f z = replace (PLUS(MINUS(x,k),VAR(l))) (VAR(n)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else if not (contains (VAR(l)) x) then
-                                                                            let fun f z = replace (MINUS(PLUS(k,VAR(n)),x)) (VAR(l)) z
-                                                                                val zs = List.map f ys
-                                                                                val ws = List.map f d in
-                                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                            end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(VAR(n),m),MINUS(k,VAR(l))) =>  if contains (VAR(l)) m orelse contains (VAR(n)) k then tResolve xs ys (x::c) (y::d) (e-1)
-                                                                   else let fun f z = replace (PLUS(m,y)) (VAR(n)) z
-                                                                            fun fy z = replace (MINUS(k,x)) (VAR(l)) z
-                                                                            val zs = List.map f xs
-                                                                            val zy = List.map fy ys
-                                                                            val ws = List.map f c
-                                                                            val wy = List.map fy d in
-                                                                            tResolve zs zy (y::ws) (x::wy) (e-1)
-                                                                        end
-                            |(MINUS(k,VAR(l)),MINUS(VAR(n),m)) =>  if contains (VAR(l)) m orelse contains (VAR(n)) k then tResolve xs ys (x::c) (y::d) (e-1)
-                                                                   else let fun f z = replace (MINUS(k,y)) (VAR(l)) z
-                                                                            fun fy z = replace (PLUS(m,x)) (VAR(n)) z
-                                                                            val zs = List.map f xs
-                                                                            val zy = List.map fy ys
-                                                                            val ws = List.map f c
-                                                                            val wy = List.map fy d in
-                                                                            tResolve zs zy (y::ws) (x::wy) (e-1)
-                                                                        end
-                            |(MINUS(VAR(n),m),MULT(l,VAR(k))) => if n = k then
-                                                                    let fun f z = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n)) z
-                                                                        val zs = List.map f xs
-                                                                        val zy = List.map f ys
-                                                                        val ws = List.map f (x::c)
-                                                                        val wy = List.map f (y::d) in
-                                                                        tResolve zs zy ws wy (e-1)
-                                                                    end
-                                                                else let fun f z = replace (PLUS(y,m)) (VAR(n)) z
-                                                                         val zs = List.map f xs
-                                                                         val ws = List.map f c in
-                                                                            tResolve zs ys (y::ws) (y::d) (e-1)
-                                                                     end
-                            |(MULT(l,VAR(k)),MINUS(VAR(n),m)) => if n = k then
-                                                                    let fun f z = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n)) z
-                                                                        val zs = List.map f xs
-                                                                        val zy = List.map f ys
-                                                                        val ws = List.map f (x::c)
-                                                                        val wy = List.map f (y::d) in
-                                                                        tResolve zs zy ws wy (e-1)
-                                                                    end
-                                                                else let fun f z = replace (PLUS(x,m)) (VAR(n)) z
-                                                                         val zs = List.map f ys
-                                                                         val ws = List.map f d in
-                                                                            tResolve xs zs (x::c) (x::ws) (e-1)
-                                                                     end
-                            |(MINUS(VAR(n),m),k) => if contains (VAR(n)) k then tResolve xs ys (x::c) (y::d) (e-1)
-                                                    else let fun f z = replace (PLUS(k,m)) (VAR(n)) z
-                                                             val zs = List.map f xs
-                                                             val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                         end
-                            |(k,MINUS(VAR(n),m)) => if contains (VAR(n)) k then tResolve xs ys (x::c) (y::d) (e-1)
-                                                   else let fun f z = replace (PLUS(k,m)) (VAR(n)) z
-                                                            val zs = List.map f ys
-                                                            val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                        end
-                            |(k,MINUS(m,VAR(n))) => let fun f z = replace (MINUS(m,k)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                            tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(MINUS(m,VAR(n)),k) => let fun f z = replace (MINUS(m,k)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                            tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(k,PLUS(m,VAR(n))) =>  let fun f z = replace (MINUS(k,m)) (VAR(n)) z
-                                                        val zs = List.map f ys
-                                                        val ws = List.map f d in
-                                                            tResolve xs zs (x::c) (x::ws) (e-1)
-                                                    end
-                            |(PLUS(m,VAR(n)),k) =>  let fun f z = replace (MINUS(k,m)) (VAR(n)) z
-                                                        val zs = List.map f xs
-                                                        val ws = List.map f c in
-                                                            tResolve zs ys (y::ws) (y::d) (e-1)
-                                                    end
-                            |(VAR(n),y) =>  let fun f z = replace y x z
-                                                val zs = List.map f xs
-                                                val ws = List.map f c in
-                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                            end
-                            |(x,VAR(n)) => let fun f z = replace x y z
-                                                val zs = List.map f ys
-                                                val ws = List.map f d in
-                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                            end
-                            |(MULT(q,VAR(l)),PLUS(m,MULT(n,VAR(k)))) => if l = k then
-                                                                        let fun f z = replace (FRAC(m,MINUS(q,n))) (VAR(l)) z
-                                                                            val zx = List.map f xs
-                                                                            val zs = List.map f ys
-                                                                            val wx = List.map f (x::c)
-                                                                            val ws = List.map f (y::d) in
-                                                                            tResolve zx zs wx ws (e-1)
-                                                                        end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(PLUS(m,MULT(n,VAR(k))),MULT(q,VAR(l))) => if l = k then
-                                                                        let fun f z = replace (FRAC(m,MINUS(q,n))) (VAR(l)) z
-                                                                            val zx = List.map f xs
-                                                                            val zs = List.map f ys
-                                                                            val wx = List.map f (x::c)
-                                                                            val ws = List.map f (y::d) in
-                                                                            tResolve zx zs wx ws (e-1)
-                                                                        end
-                                                                        else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(l,MINUS(MINUS(m,VAR(n)),k)) => let fun f z = replace (MINUS(MINUS(m,k),l)) (VAR(n)) z
-                                                                 val zs = List.map f ys
-                                                                 val ws = List.map f d in
-                                                                 tResolve xs zs (x::c) (x::ws) (e-1)
-                                                             end
-                            |(MINUS(MINUS(m,VAR(n)),k),l) => let fun f z = replace (MINUS(MINUS(m,k),l)) (VAR(n)) z
-                                                                 val zs = List.map f xs
-                                                                 val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                             end
-                            |(k,PLUS(m,MULT(l,VAR(n)))) =>  let fun f z = replace (FRAC(MINUS(k,m),l)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(PLUS(m,MULT(l,VAR(n))),k) =>  let fun f z = replace (FRAC(MINUS(k,m),l)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MINUS(MULT(l,VAR(n)),m),k) => let fun f z = replace (FRAC(PLUS(k,m),l)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                    tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(k,MINUS(MULT(l,VAR(n)),m)) => let fun f z = replace (FRAC(PLUS(k,m),l)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                    tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(k,MINUS(m,MULT(l,VAR(n)))) => let fun f z = replace (FRAC(MINUS(m,k),l)) (VAR(n)) z
-                                                                val zs = List.map f ys
-                                                                val ws = List.map f d in
-                                                                    tResolve xs zs (x::c) (x::ws) (e-1)
-                                                            end
-                            |(MINUS(m,MULT(l,VAR(n))),k) => let fun f z = replace (FRAC(MINUS(m,k),l)) (VAR(n)) z
-                                                                val zs = List.map f xs
-                                                                val ws = List.map f c in
-                                                                    tResolve zs ys (y::ws) (y::d) (e-1)
-                                                            end
-                            |(MULT(n,VAR(m)),MULT(k,VAR(l))) => let fun fx z = replace (MULT(FRAC(k,n),VAR(l))) (VAR(m)) z
-                                                                    val zx = List.map fx xs
-                                                                    val wx = List.map fx c in
-                                                                    tResolve zx ys (y::wx) (y::d) (e-1)
-                                                                end
-                            |(FRAC(n,m),FRAC(k,l)) => if l = m then
-                                                        case (solveVar n k) of
-                                                        NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                                        |SOME(a,b) => let fun f z = replace b a z
-                                                                          val zx = List.map f xs
-                                                                          val wx = List.map f (x::c)
-                                                                          val zy = List.map f ys
-                                                                          val wy = List.map f (y::d) in
-                                                                          tResolve zx zy wx wy (e-1)
-                                                                      end
-                                                      else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(MINUS(q,FRAC(n,m)),FRAC(k,l)) => if l = m then
-                                                               case (solveVar k (MINUS(MULT(q,m),n))) of
-                                                               NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                                               |SOME(a,b) => let fun f z = replace b a z
-                                                                                 val zx = List.map f xs
-                                                                                 val wx = List.map f (x::c)
-                                                                                 val zy = List.map f ys
-                                                                                 val wy = List.map f (y::d) in
-                                                                                 tResolve zx zy wx wy (e-1)
-                                                                             end
-                                                                else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(FRAC(k,l),MINUS(q,FRAC(n,m))) => if l = m then
-                                                               case (solveVar k (MINUS(MULT(q,m),n))) of
-                                                               NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                                               |SOME(a,b) => let fun f z = replace b a z
-                                                                                 val zx = List.map f xs
-                                                                                 val wx = List.map f (x::c)
-                                                                                 val zy = List.map f ys
-                                                                                 val wy = List.map f (y::d) in
-                                                                                 tResolve zx zy wx wy (e-1)
-                                                                             end
-                                                                else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(PLUS(q,FRAC(n,m)),FRAC(k,l)) => if l = m then
-                                                               case (solveVar k (PLUS(n,MULT(q,m)))) of
-                                                               NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                                               |SOME(a,b) => let fun f z = replace b a z
-                                                                                 val zx = List.map f xs
-                                                                                 val wx = List.map f (x::c)
-                                                                                 val zy = List.map f ys
-                                                                                 val wy = List.map f (y::d) in
-                                                                                 tResolve zx zy wx wy (e-1)
-                                                                             end
-                                                                else tResolve xs ys (x::c) (y::d) (e-1)
-                            |(FRAC(k,l),PLUS(q,FRAC(n,m))) => if l = m then
-                                                               case (solveVar k (PLUS(n,MULT(q,m)))) of
-                                                               NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                                               |SOME(a,b) => let fun f z = replace b a z
-                                                                                 val zx = List.map f xs
-                                                                                 val wx = List.map f (x::c)
-                                                                                 val zy = List.map f ys
-                                                                                 val wy = List.map f (y::d) in
-                                                                                 tResolve zx zy wx wy (e-1)
-                                                                             end
-                                                                else tResolve xs ys (x::c) (y::d) (e-1)
-                            |_ => case (solveVar x y) of
-                                   NONE => tResolve xs ys (x::c) (y::d) (e-1)
-                                  |SOME(a,b) => let fun f z = replace b a z
-                                                    val zx = List.map f xs
-                                                    val wx = List.map f (x::c)
-                                                    val zy = List.map f ys
-                                                    val wy = List.map f (y::d) in
-                                                    tResolve zx zy wx wy (e-1)
-                                                end)
+        fun tResolve a b c d 0 = (List.revAppend (c, a), List.revAppend (d, b))
+          | tResolve [] [] c d _ = (List.rev c, List.rev d)
+          | tResolve (a::aas) (b::bbs) c d e =
+            let val x = simplify a;
+                val y = simplify b;
+                val xs = List.map simplify aas;
+                val ys = List.map simplify bbs;
+            in if x = U
+               then tResolve xs ys (y::c) (y::d) (e-1)
+               else if y = U
+               then tResolve xs ys (x::c) (x::d) (e-1)
+               else if (x = y orelse (numToString x) = (numToString y)) andalso String.size (numToString x) > 1
+               then tResolve xs ys (x::c) (y::d) (e-1)
+               else if onlyNum y
+               then (case (x,y) of
+                         (VAR(n), y) => let val zs = List.map (replace y x) xs;
+                                            val ws = List.map (replace y x) c;
+                                        in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(k, VAR(n)), y) =>
+                         if contains (VAR(n)) k
+                         then case (solveVar x y) of
+                                  NONE => tResolve xs ys (y::c) (y::d) (e-1)
+                                | SOME(a,b) =>   let val zx = List.map (replace b a) xs;
+                                                     val wx = List.map (replace b a) c;
+                                                 in tResolve zx ys (y::wx) (y::d) (e-1) end
+                         else if String.size n > 1
+                         then let val f = replace (FRAC(k,y)) (VAR(n));
+                                  val zx = List.map f xs;
+                                  val zy = List.map f ys;
+                                  val wx = List.map f c;
+                                  val wy = List.map f d;
+                              in tResolve zx zy (y::wx) (y::wy) (e-1) end
+                         else let val f = replace (FRAC(k,y)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(VAR(n), k), y) =>
+                         let val f = replace (MULT(y,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(MINUS(VAR(n), m), k), y) =>
+                         let val f = replace (PLUS(MULT(y,k),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(MULT(m, VAR(n)), MINUS(k, MULT(q, VAR(l)))), y) =>
+                         if n = l
+                         then let val f = replace (FRAC(MULT(y,k),PLUS(m,MULT(y,q)))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else let val f = replace (FRAC(MULT(y,MINUS(k,MULT(q,VAR(l)))),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(MULT(m, VAR(n)), MINUS(k, VAR(l))), y) =>
+                         if n = l
+                         then let val f = replace (FRAC(MULT(y,k),PLUS(y,m))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else let val f = replace (FRAC(MULT(y,MINUS(k,VAR(l))),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(k, MULT(m, VAR(n))), y) =>
+                         let val f = replace (FRAC(k,MULT(y,m))) (VAR(n));
+                             val zx = List.map f xs;
+                             val zy = List.map f ys;
+                             val wx = List.map f c;
+                             val wy = List.map f d;
+                         in tResolve zx zy (y::wx) (y::wy) (e-1) end
+                       | (FRAC(MULT(m, VAR(n)), k), y) =>
+                         let val f = replace (FRAC(MULT(y,k),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(k, MINUS(m, VAR(n))), y) =>
+                         let val f = replace (FRAC(MINUS(MULT(y,m),k),y)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(k, MINUS(m, MULT(l, VAR(n)))), y) =>
+                         let val f = replace (FRAC(MINUS(MULT(y,m),k),MULT(y,l))) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (FRAC(MINUS(MULT(m, VAR(n)), k), PLUS(q, MULT(p, VAR(l)))), y) =>
+                         if n = l
+                         then let val f = replace (FRAC(PLUS(MULT(y,q),k),MINUS(m,MULT(y,p)))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (y::c) (y::d) (e-1)
+                       | (MULT(k, VAR(n)), y) =>
+                         let val f = replace (FRAC(y,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MULT(VAR(n), k), y) =>
+                         let val f = replace (FRAC(y,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MULT(PLUS(l, VAR(n)), k), y) =>
+                         let val f = replace (MINUS(FRAC(y,k),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MULT(k, PLUS(l, VAR(n))), y) =>
+                         let val f = replace (MINUS(FRAC(y,k),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(k, VAR(n)), y) =>
+                         let val f = replace (MINUS(k,y)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(VAR(n), k), y) =>
+                         let val f = replace (PLUS(y,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(k, MULT(VAR(n), m)), y) =>
+                         let val f = replace (FRAC(MINUS(k,y),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(k, MULT(m, VAR(n))), y) =>
+                         let val f = replace (FRAC(MINUS(k,y),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(FRAC(VAR(n), m), k), y) =>
+                         let val f = replace (MULT(PLUS(y,k),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (PLUS(k, VAR(n)), y) =>
+                         let val f = replace (MINUS(y,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (PLUS(k, MULT(m, VAR(n))), y) =>
+                         let val f = replace (FRAC(MINUS(y,k),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (PLUS(k, MULT(VAR(n), m)), y) =>
+                         let val f = replace (FRAC(MINUS(y,k),m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (PLUS(k, FRAC(m, VAR(n))), y) =>
+                         let val f = replace (FRAC(m,MINUS(y,k))) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | _ => tResolve xs ys (y::c) (y::d) (e-1))
+               else if onlyNum x (* NOTE: I BET THESE ARE A SYMMETRIC COPY OF ABOVE! *)
+               then (case (x,y) of
+                         (x, VAR(n)) => let val zs = List.map (replace x y) ys;
+                                            val ws = List.map (replace x y) d;
+                                        in tResolve xs zs (x::c) (x::ws) (e-1)end
+                       | (x, FRAC(VAR(n), k)) =>
+                         let val f = replace (MULT(x,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(k, VAR(n))) =>
+                         if contains (VAR(n)) k
+                         then case (solveVar x y) of
+                                  NONE => tResolve xs ys (x::c) (x::d) (e-1)
+                                | SOME(a,b) =>
+                                  let val zy = List.map (replace b a) ys;
+                                      val wy = List.map (replace b a) d;
+                                  in tResolve xs zy (x::c) (y::wy) (e-1) end
+                         else if String.size n > 1
+                         then let val f = replace (FRAC(k,x)) (VAR(n));
+                                  val zx = List.map f xs;
+                                  val wx = List.map f c;
+                                  val zy = List.map f ys;
+                                  val wy = List.map f d;
+                              in tResolve zx zy (x::wx) (x::wy) (e-1) end
+                         else let val f = replace (FRAC(k,x)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(MINUS(VAR(n), m), k)) =>
+                         let val f = replace (PLUS(MULT(x,k),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(MULT(m, VAR(n)), MINUS(k, MULT(q, VAR(l))))) =>
+                         if n = l
+                         then let val f = replace (FRAC(MULT(x,k),PLUS(m,MULT(x,q)))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else let val f = replace (FRAC(MULT(x,MINUS(k,MULT(q,VAR(l)))),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(MULT(m, VAR(n)), MINUS(k, VAR(l)))) =>
+                         if n = l
+                         then let val f = replace (FRAC(MULT(x,k),PLUS(x,m))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else let val f = replace (FRAC(MULT(x,MINUS(k,VAR(l))),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(MULT(m, VAR(n)), k)) =>
+                         let val f = replace (FRAC(MULT(x,k),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(k, MULT(m, VAR(n)))) =>
+                         let val f = replace (FRAC(k,MULT(x,m))) (VAR(n));
+                             val zx = List.map f xs;
+                             val zy = List.map f ys;
+                             val wx = List.map f c;
+                             val wy = List.map f d;
+                         in tResolve zx zy (x::wx) (x::wy) (e-1) end
+                       | (x, FRAC(k, MINUS(m, VAR(n)))) =>
+                         let val f = replace (FRAC(MINUS(MULT(x,m),k),x)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(k, MINUS(m, MULT(l, VAR(n))))) =>
+                         let val f = replace (FRAC(MINUS(MULT(x,m),k),MULT(x,l))) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, FRAC(MINUS(MULT(m, VAR(n)), k), PLUS(q, MULT(p, VAR(l))))) =>
+                         if n = l
+                         then let val f = replace (FRAC(PLUS(MULT(x,q),k),MINUS(m,MULT(x,p)))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (x::d) (e-1)
+                       | (x, MULT(k, VAR(n))) =>
+                         let val f = replace (FRAC(x,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MULT(VAR(n), k)) =>
+                         let val f = replace (FRAC(x,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MULT(PLUS(l, VAR(n)), k)) =>
+                         let val f = replace (MINUS(FRAC(x,k),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MULT(k, PLUS(l, VAR(n)))) =>
+                         let val f = replace (MINUS(FRAC(x,k),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MINUS(k, VAR(n))) =>
+                         let val f = replace (MINUS(k,x)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MINUS(VAR(n), k)) =>
+                         let val f = replace (PLUS(x,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MINUS(k, MULT(m, VAR(n)))) =>
+                         let val f = replace (FRAC(MINUS(k,x),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MINUS(k, MULT(VAR(n), m))) =>
+                         let val f = replace (FRAC(MINUS(k,x),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, MINUS(FRAC(VAR(n), m), k)) =>
+                         let val f = replace (MULT(PLUS(y,k),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, PLUS(k, VAR(n))) =>
+                         let val f = replace (MINUS(x,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, PLUS(k, MULT(m, VAR(n)))) =>
+                         let val f = replace (FRAC(MINUS(x,k),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, PLUS(k, MULT(VAR(n), m))) =>
+                         let val f = replace (FRAC(MINUS(x,k),m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (x, PLUS(k, FRAC(m, VAR(n)))) =>
+                         let val f = replace (FRAC(m,MINUS(x,k))) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | _ => tResolve xs ys (x::c) (x::d) (e-1))
+               else (case (x,y) of
+                         (VAR(n), VAR(m)) =>
+                         let val fx = replace (VAR(n^m)) (VAR(n));
+                             val fy = replace (VAR(n^m)) (VAR(m));
+                             val zx = List.map fx xs;
+                             val wx = List.map fx c;
+                             val zy = List.map fy ys;
+                             val wy = List.map fy d;
+                         in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
+                       | (VAR(n), MINUS(NUM(1), VAR(m))) =>
+                         let val fx = replace (VAR(n^m)) (VAR(n));
+                             val fy = replace (MINUS(NUM(1),VAR(n^m))) (VAR(m));
+                             val zx = List.map fx xs;
+                             val wx = List.map fx c;
+                             val zy = List.map fy ys;
+                             val wy = List.map fy d;
+                         in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
+                       | (MINUS(NUM(1), VAR(n)), VAR(m)) =>
+                         let val fx = replace (MINUS(NUM(1),VAR(n^m))) (VAR(n));
+                             val fy = replace (VAR(n^m)) (VAR(m));
+                             val zx = List.map fx xs;
+                             val wx = List.map fx c;
+                             val zy = List.map fy ys;
+                             val wy = List.map fy d;
+                         in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
+                       | (MINUS(NUM(1), VAR(n)), MINUS(NUM(1), VAR(m))) =>
+                         let val fx = replace (VAR(n^m)) (VAR(n));
+                             val fy = replace (VAR(n^m)) (VAR(m));
+                             val zx = List.map fx xs;
+                             val wx = List.map fx c;
+                             val zy = List.map fy ys;
+                             val wy = List.map fy d;
+                         in tResolve zx zy ((MINUS(NUM(1),VAR(n^m)))::wx) ((MINUS(NUM(1),VAR(n^m)))::wy) (e-1) end
+                       | (PLUS(PLUS(k ,MULT(m, VAR(n))), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(y,PLUS(k,MULT(m,VAR(n))))) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, PLUS(PLUS(k, MULT(m, VAR(n))), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(x,PLUS(k,MULT(m,VAR(n))))) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(MINUS(k, MULT(m, VAR(n))), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (FRAC(MINUS(MINUS(k,y),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(MINUS(k,MULT(m,VAR(n))),y)) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, MINUS(MINUS(k, MULT(m, VAR(n))), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (FRAC(MINUS(MINUS(k,x),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(MINUS(k,MULT(m,VAR(n))),x)) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (PLUS(MINUS(k, MULT(m, VAR(n))), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (FRAC(PLUS(MINUS(k,y),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(y,MINUS(k,MULT(m,VAR(n))))) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, PLUS(MINUS(k, MULT(m, VAR(n))), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (FRAC(PLUS(MINUS(k,x),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(x,MINUS(k,MULT(m,VAR(n)))))(VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(PLUS(k, MULT(m, VAR(n))), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (FRAC(PLUS(MINUS(y,k),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(PLUS(k,MULT(m,VAR(n))),y)) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, MINUS(PLUS(k, MULT(m, VAR(n))), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (FRAC(PLUS(MINUS(x,k),VAR(l)),m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(PLUS(k,MULT(m,VAR(n))),x)) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (PLUS(PLUS(k, VAR(n)), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(y,PLUS(k,VAR(n)))) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, PLUS(PLUS(k, VAR(n)), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(x,PLUS(k,VAR(n)))) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(MINUS(k, VAR(n)), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (MINUS(MINUS(k,y),VAR(l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(MINUS(k,VAR(n)),y)) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, MINUS(MINUS(k, VAR(n)), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (MINUS(MINUS(k,x),VAR(l))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(MINUS(k,VAR(n)),x)) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (PLUS(MINUS(k, VAR(n)), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (PLUS(MINUS(k,y),VAR(l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(y,MINUS(k,VAR(n)))) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, PLUS(MINUS(k, VAR(n)), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (PLUS(MINUS(k,x),VAR(l))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(x,MINUS(k,VAR(n))))(VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(PLUS(k, VAR(n)), VAR(l)), y) =>
+                         if not (contains (VAR(n)) y)
+                         then let val f = replace (PLUS(MINUS(y,k),VAR(l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else if not (contains (VAR(l)) y)
+                         then let val f = replace (MINUS(PLUS(k,VAR(n)),y)) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (x, MINUS(PLUS(k, VAR(n)), VAR(l))) =>
+                         if not (contains (VAR(n)) x)
+                         then let val f = replace (PLUS(MINUS(x,k),VAR(l))) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else if not (contains (VAR(l)) x)
+                         then let val f = replace (MINUS(PLUS(k,VAR(n)),x)) (VAR(l));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(VAR(n), m), MINUS(k, VAR(l))) =>
+                         if contains (VAR(l)) m orelse contains (VAR(n)) k
+                         then tResolve xs ys (x::c) (y::d) (e-1)
+                         else let val f = replace (PLUS(m,y)) (VAR(n));
+                                  val fy = replace (MINUS(k,x)) (VAR(l));
+                                  val zs = List.map f xs;
+                                  val zy = List.map fy ys;
+                                  val ws = List.map f c;
+                                  val wy = List.map fy d;
+                              in tResolve zs zy (y::ws) (x::wy) (e-1) end
+                       | (MINUS(k, VAR(l)), MINUS(VAR(n), m)) =>
+                         if contains (VAR(l)) m orelse contains (VAR(n)) k
+                         then tResolve xs ys (x::c) (y::d) (e-1)
+                         else let val f = replace (MINUS(k,y)) (VAR(l));
+                                  val fy = replace (PLUS(m,x)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val zy = List.map fy ys;
+                                  val ws = List.map f c;
+                                  val wy = List.map fy d;
+                              in tResolve zs zy (y::ws) (x::wy) (e-1) end
+                       | (MINUS(VAR(n), m), MULT(l, VAR(k))) =>
+                         if n = k
+                         then let val f = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val zy = List.map f ys;
+                                  val ws = List.map f (x::c);
+                                  val wy = List.map f (y::d);
+                              in tResolve zs zy ws wy (e-1) end
+                         else let val f = replace (PLUS(y,m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MULT(l, VAR(k)), MINUS(VAR(n), m)) =>
+                         if n = k
+                         then let val f = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val zy = List.map f ys;
+                                  val ws = List.map f (x::c);
+                                  val wy = List.map f (y::d);
+                              in tResolve zs zy ws wy (e-1) end
+                         else let val f = replace (PLUS(x,m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (MINUS(VAR(n), m), k) =>
+                         if contains (VAR(n)) k
+                         then tResolve xs ys (x::c) (y::d) (e-1)
+                         else let val f = replace (PLUS(k,m)) (VAR(n));
+                                  val zs = List.map f xs;
+                                  val ws = List.map f c;
+                              in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (k, MINUS(VAR(n), m)) =>
+                         if contains (VAR(n)) k
+                         then tResolve xs ys (x::c) (y::d) (e-1)
+                         else let val f = replace (PLUS(k,m)) (VAR(n));
+                                  val zs = List.map f ys;
+                                  val ws = List.map f d;
+                              in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (k, MINUS(m, VAR(n))) =>
+                         let val f = replace (MINUS(m,k)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (MINUS(m, VAR(n)), k) =>
+                         let val f = replace (MINUS(m,k)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (k, PLUS(m, VAR(n))) =>
+                         let val f = replace (MINUS(k,m)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (PLUS(m, VAR(n)), k) =>
+                         let val f = replace (MINUS(k,m)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (VAR(n), y) =>
+                         let val zs = List.map (replace y x) xs;
+                             val ws = List.map (replace y x) c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (x, VAR(n)) =>
+                         let val zs = List.map (replace x y) ys;
+                             val ws = List.map (replace x y) d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (MULT(q, VAR(l)), PLUS(m, MULT(n, VAR(k)))) =>
+                         if l = k
+                         then let val f = replace (FRAC(m,MINUS(q,n))) (VAR(l));
+                                  val zx = List.map f xs;
+                                  val zs = List.map f ys;
+                                  val wx = List.map f (x::c);
+                                  val ws = List.map f (y::d);
+                              in tResolve zx zs wx ws (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (PLUS(m, MULT(n, VAR(k))), MULT(q, VAR(l))) =>
+                         if l = k
+                         then let val f = replace (FRAC(m,MINUS(q,n))) (VAR(l));
+                                  val zx = List.map f xs;
+                                  val zs = List.map f ys;
+                                  val wx = List.map f (x::c);
+                                  val ws = List.map f (y::d);
+                              in tResolve zx zs wx ws (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (l, MINUS(MINUS(m, VAR(n)), k)) =>
+                         let val f = replace (MINUS(MINUS(m,k),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (MINUS(MINUS(m, VAR(n)), k), l) =>
+                         let val f = replace (MINUS(MINUS(m,k),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (k, PLUS(m, MULT(l, VAR(n)))) =>
+                         let val f = replace (FRAC(MINUS(k,m),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (PLUS(m, MULT(l, VAR(n))), k) =>
+                         let val f = replace (FRAC(MINUS(k,m),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MINUS(MULT(l, VAR(n)), m), k) =
+                         let val f = replace (FRAC(PLUS(k,m),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (k, MINUS(MULT(l, VAR(n)), m)) =>
+                         let val f = replace (FRAC(PLUS(k,m),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (k, MINUS(m, MULT(l, VAR(n)))) =>
+                         let val f = replace (FRAC(MINUS(m,k),l)) (VAR(n));
+                             val zs = List.map f ys;
+                             val ws = List.map f d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (MINUS(m, MULT(l, VAR(n))), k) =>
+                         let val f = replace (FRAC(MINUS(m,k),l)) (VAR(n));
+                             val zs = List.map f xs;
+                             val ws = List.map f c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (MULT(n, VAR(m)), MULT(k, VAR(l))) =>
+                         let val f = replace (MULT(FRAC(k,n),VAR(l))) (VAR(m));
+                             val zx = List.map f xs;
+                             val wx = List.map f c;
+                         in tResolve zx ys (y::wx) (y::d) (e-1) end
+                       | (FRAC(n, m), FRAC(k, l)) =>
+                         if l = m
+                         then case (solveVar n k) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (MINUS(q, FRAC(n, m)), FRAC(k, l)) =>
+                         if l = m
+                         then case (solveVar k (MINUS(MULT(q,m),n))) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (FRAC(k, l), MINUS(q, FRAC(n, m))) =>
+                         if l = m
+                         then case (solveVar k (MINUS(MULT(q,m),n))) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (PLUS(q, FRAC(n, m)), FRAC(k, l)) =>
+                         if l = m
+                         then case (solveVar k (PLUS(n,MULT(q,m)))) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | (FRAC(k, l), PLUS(q, FRAC(n, m))) =>
+                         if l = m
+                         then case (solveVar k (PLUS(n,MULT(q,m)))) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end
+                         else tResolve xs ys (x::c) (y::d) (e-1)
+                       | _ => case (solveVar x y) of
+                                  NONE => tResolve xs ys (x::c) (y::d) (e-1)
+                                | SOME(a, b) => let val zx = List.map (replace b a) xs;
+                                                    val wx = List.map (replace b a) (x::c);
+                                                    val zy = List.map (replace b a) ys;
+                                                    val wy = List.map (replace b a) (y::d);
+                                                in tResolve zx zy wx wy (e-1) end)
             end
-        |_ => raise NumError)
-    val (x,y) = tResolve a b [] [] n
-    in
-        filterNum x y (countU a) (countU b)
-    end
+          | tResolve _ _ _ _ _ = raise NumError;
+        val (x,y) = tResolve a b [] [] n;
+    in filterNum x y (countU a) (countU b) end
 
 fun stringToHTML [] = []
   | stringToHTML ((a, "EMPTY", _)::xs) =
