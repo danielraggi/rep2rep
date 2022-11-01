@@ -1594,25 +1594,26 @@ fun resolve a b (n:int) =
         filterNum x y (countU a) (countU b)
     end
 
-fun stringToHTML xs =
-    case xs of
-    [] => []
-    |(a,b,c)::xs => if b = "EMPTY" then (a,("<div>\n"^
-                                            "<svg width=\"200\" height=\"200\">\n"^
-                                            "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
-                                            "</svg>\n"^
-                                            "</div>",
-                                            200.0,200.0))::stringToHTML xs
-                    else let val mid = c*5.0
-                             val len = c*10.0 in
-                                (a,("<div>\n"^
-                                    "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-                                    "<rect width=\""^(Real.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-                                    "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^b^"</text>\n"^
-                                    "</svg>\n"^
-                                    "</div>",
-                                    len,18.0))::stringToHTML xs
-                         end
+fun stringToHTML [] = []
+  | stringToHTML ((a, "EMPTY", _)::xs) =
+    (a, ("<div>\n"^
+         "<svg width=\"200\" height=\"200\">\n"^
+         "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
+         "</svg>\n"^
+         "</div>",
+         200.0, 200.0))::stringToHTML xs
+  | stringToHTML ((a, b, c)::xs) =
+    let val mid = c*5.0;
+        val len = c*10.0;
+    in
+        (a,("<div>\n"^
+            "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
+            "<rect width=\""^(Real.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
+            "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^b^"</text>\n"^
+            "</svg>\n"^
+            "</div>",
+            len, 18.0))::stringToHTML xs
+    end;
 
 fun drawArea x =
     let fun parseArea (Construction.Source(x)) =
