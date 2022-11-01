@@ -750,16 +750,6 @@ fun resolve a b (n:int) =
           | replace x y z = if y = z then simplify x else z;
         fun solveVar x y =
             case (simplify x, simplify y) of
-        fun filterNum x y nx ny =
-            case (x,y) of
-            ([],[]) => []
-            |(x::xs,y::ys) =>   if onlyNum x then x::(filterNum xs ys nx ny)
-                                else if onlyNum y then y::(filterNum xs ys nx ny)
-                                else if x = U then y::(filterNum xs ys nx ny)
-                                else if y = U then x::(filterNum xs ys nx ny)
-                                else if nx > ny then y::(filterNum xs ys nx ny)
-                                else x::(filterNum xs ys nx ny)
-            |_ => raise NumError
                 (VAR(n), y) => SOME (VAR(n), y) (* N = y => N = y *)
               | (x, VAR(n)) => SOME (VAR(n), x) (* x = N => N = x *)
               | (MINUS(n, MULT(m, VAR(w))), MULT(k, VAR(l))) (* n - mW = kW => W = n/(m+k) *)
@@ -811,6 +801,17 @@ fun resolve a b (n:int) =
               | (MINUS(VAR(n), c), y) => SOME (VAR(n), PLUS(c, y))
               | (x, MINUS(VAR(n), c)) => SOME (VAR(n), PLUS(c, x))
               | _ => NONE;
+        fun filterNum xs ys nx ny =
+            let fun filterNum' ans [] [] _ _ = List.rev ans
+                  | filterNum' ans (x::xs) (y::ys) nx ny =
+                    if onlyNum x then filterNum' (x::ans) xs ys nx ny
+                    else if onlyNum y then filterNum' (y::ans) xs ys nx ny
+                    else if x = U then filterNum' (y::ans) xs ys nx ny
+                    else if y = U then filterNum' (x::ans) xs ys nx ny
+                    else if nx > ny then filterNum' (y::ans) xs ys nx ny
+                    else filterNum' (x::ans) xs ys nx ny
+                  | filterNum' _ _ _ _ _ = raise NumError;
+            in filterNum' [] xs ys nx ny end;
         fun tResolve a b c d (e:int) =
             if e = 0 then ((List.rev c)@a, (List.rev d)@b)
             else
