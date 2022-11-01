@@ -660,34 +660,70 @@ and simplify (PLUS(x,y)) =
            => if onlyNum b then MULT(b,VAR(k)) else MULT(a,b)
          | _ => MULT(a,b)
         end
-    |simplify (FRAC(x,y)) =
-        let val a = simplify x
-            val b = simplify y in
-            if numToString a = numToString (NUM(0)) then NUM(0)
-            else if numToString a = numToString b then NUM(1)
-            else if numToString b = numToString (NUM(0)) then raise NumError
-            else case (a,b) of
-            (a,NUM(1)) => a
-            |(MULT(c,VAR(k)),b) => if c = b then VAR(k)
-                                   else if b = (VAR(k)) then c
-                                   else if onlyNum b andalso onlyNum c then simplify (MULT(FRAC(c,b),VAR(k))) else FRAC(a,b)
-            |(MULT(VAR(k),c),b) => if c = b then VAR(k)
-                                   else if b = (VAR(k)) then c
-                                   else if onlyNum b andalso onlyNum c then simplify (MULT(FRAC(c,b),VAR(k))) else FRAC(a,b)
-            |(MULT(c,k),b)      => if b = c then k else if b = k then c else FRAC(a,b)
-            |(PLUS(c,VAR(k)),VAR(l))            => if k = l then simplify (PLUS(NUM(1),FRAC(c,VAR(l)))) else FRAC(a,b)
-            |(MINUS(c,MULT(d,VAR(k))),VAR(l))   => if k = l then simplify (PLUS(MINUS(NUM(0),d),FRAC(c,VAR(k)))) else FRAC(a,b)
-            |(MINUS(MULT(d,VAR(k)),c),VAR(l))   => if k = l then simplify (MINUS(d,FRAC(c,VAR(k)))) else FRAC(a,b)
-            |(PLUS(c,MULT(d,VAR(k))),VAR(l))    => if k = l then simplify (PLUS(d,FRAC(c,VAR(k)))) else FRAC(a,b)
-            |(MINUS(VAR(k),c),b)    => if onlyNum b andalso onlyNum c then simplify (MINUS(MULT(FRAC(NUM(1),b),VAR(k)),FRAC(c,b))) else FRAC(a,b)
-            |(MINUS(c,VAR(k)),b)    => if onlyNum b andalso onlyNum c then simplify (MINUS(FRAC(c,b),MULT(FRAC(NUM(1),b),VAR(k)))) else FRAC(a,b)
-            |(PLUS(c,VAR(k)),b)     => if onlyNum b andalso onlyNum c then simplify (PLUS(FRAC(c,b),MULT(FRAC(NUM(1),b),VAR(k)))) else FRAC(a,b)
-            |(MINUS(c,MULT(d,VAR(k))),b)    => if onlyNum b andalso onlyNum c andalso onlyNum d then simplify (MINUS(FRAC(c,b),MULT(FRAC(d,b),VAR(k)))) else FRAC(a,b)
-            |(MINUS(MULT(d,VAR(k)),c),b)    => if onlyNum b andalso onlyNum c then simplify (MINUS(MULT(FRAC(d,b),VAR(k)),FRAC(c,b))) else FRAC(a,b)
-            |(PLUS(c,MULT(d,VAR(k))),b)     => if onlyNum b andalso onlyNum c andalso onlyNum d then simplify (PLUS(FRAC(c,b),MULT(FRAC(d,b),VAR(k)))) else FRAC(a,b)
-            |_ => FRAC(a,b)
-        end
-    |simplify x = x;
+  | simplify (FRAC(x,y)) =
+    let val a = simplify x
+        val b = simplify y in
+        (* if numToString a = numToString (NUM(0)) then NUM(0) *)
+        if numToString a = numToString b then NUM(1)
+        else if numToString b = numToString (NUM(0)) then raise NumError
+        else case (a, b) of
+                 (NUM(0), _) => NUM(0)
+               | (a, NUM(1)) => a
+               | (MULT(c, VAR(k)), b)
+                 => if c = b then VAR(k) (* ck/c = k *)
+                    else if b = (VAR(k)) then c (* ck/k = c *)
+                    else if onlyNum b andalso onlyNum c (* ck/b = (c/b)k *)
+                    then simplify (MULT(FRAC(c,b),VAR(k)))
+                    else FRAC(a,b)
+               | (MULT(VAR(k), c), b)
+                 => if c = b then VAR(k) (* kc/c = k *)
+                    else if b = (VAR(k)) then c (* kc/k = c *)
+                    else if onlyNum b andalso onlyNum c (* kc/b = (c/b)k *)
+                    then simplify (MULT(FRAC(c, b), VAR(k)))
+                    else FRAC(a,b)
+               | (MULT(c, k), b)
+                 => if b = c then k (* ck/c = k *)
+                    else if b = k then c (* ck/k = c *)
+                    else FRAC(a,b)
+               | (PLUS(c, VAR(k)), VAR(l)) (* (c+l)/l = 1 + c/l *)
+                 => if k = l then simplify (PLUS(NUM(1), FRAC(c, VAR(l))))
+                    else FRAC(a,b)
+               | (MINUS(c, MULT(d, VAR(k))), VAR(l)) (* (c - dk)/k = (0-d) + c/k *)
+                 => if k = l then simplify (PLUS(MINUS(NUM(0), d), FRAC(c, VAR(k))))
+                    else FRAC(a,b)
+               | (MINUS(MULT(d, VAR(k)), c), VAR(l)) (* (dk - c)/k = d - c/k *)
+                 => if k = l then simplify (MINUS(d, FRAC(c, VAR(k))))
+                    else FRAC(a,b)
+               | (PLUS(c, MULT(d, VAR(k))), VAR(l)) (* (c + dk)/k = d + c/k *)
+                 => if k = l then simplify (PLUS(d, FRAC(c, VAR(k))))
+                    else FRAC(a,b)
+               | (MINUS(VAR(k), c), b)
+                 => if onlyNum b andalso onlyNum c (* (k - c)/b = (1/b)k - c/b *)
+                    then simplify (MINUS(MULT(FRAC(NUM(1), b), VAR(k)), FRAC(c, b)))
+                    else FRAC(a,b)
+               | (MINUS(c, VAR(k)), b)
+                 => if onlyNum b andalso onlyNum c (* (c-k)/b = c/b - (1/b)k *)
+                    then simplify (MINUS(FRAC(c, b), MULT(FRAC(NUM(1), b), VAR(k))))
+                    else FRAC(a,b)
+               | (PLUS(c, VAR(k)), b)
+                 => if onlyNum b andalso onlyNum c (* (c+k)/b = c/b + (1/b)k *)
+                    then simplify (PLUS(FRAC(c, b), MULT(FRAC(NUM(1), b), VAR(k))))
+                    else FRAC(a,b)
+               | (MINUS(c, MULT(d, VAR(k))), b)
+                 => if onlyNum b andalso onlyNum c andalso onlyNum d (* (c - dk)/b = (c/b) - (d/b)k *)
+                    then simplify (MINUS(FRAC(c, b), MULT(FRAC(d, b), VAR(k))))
+                    else FRAC(a,b)
+               | (MINUS(MULT(d, VAR(k)), c), b)
+                 => if onlyNum b andalso onlyNum c (* (dk - c)/b = (d/b)k - c/b *)
+                    then simplify (MINUS(MULT(FRAC(d, b), VAR(k)), FRAC(c, b)))
+                    else FRAC(a,b)
+               | (PLUS(c, MULT(d, VAR(k))), b)
+                 => if onlyNum b andalso onlyNum c andalso onlyNum d (* (c+dk)/b = (c/b) + (d/b)k *)
+                    then simplify (PLUS(FRAC(c, b), MULT(FRAC(d, b), VAR(k))))
+                    else FRAC(a,b)
+               | _ => FRAC(a,b)
+    end
+  | simplify x = x;
 
 fun resolve a b (n:int) =
     let fun countU [] = 0
