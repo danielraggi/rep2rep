@@ -70,7 +70,7 @@ fun parseShading (Construction.Source((id, typ))) =
   | parseShading _ = raise ShadeError;
 
 local
-    fun parseSourceOrReference (id, typ) =
+    fun parseSource (id, typ) =
         let val (subType, _, _) = String.breakOn ":" typ;
             val subTypeLen = Real.fromInt (String.size subType);
         in if Char.isAlpha (String.sub(subType, 0))
@@ -87,8 +87,8 @@ local
                 (_, []) => raise NumError
               | (a, y as (_, value, length)::_) => (a, y, value, length);
 in
-fun parseNum (Construction.Source(tok)) = parseSourceOrReference tok
-  | parseNum (Construction.Reference(tok)) = parseSourceOrReference tok
+fun parseNum (Construction.Source(tok)) = parseSource tok
+  | parseNum (Construction.Reference(tok)) = parseSource tok (* WARNING - ASSUMES REF IS SOURCE *)
   | parseNum (Construction.TCPair({token=tok, constructor=con}, inputs)) =
     let val (id, typ) = tok;
         val (cname, ctyp) = con;
