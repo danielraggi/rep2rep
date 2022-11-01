@@ -1580,40 +1580,37 @@ fun stringToHTML [] = []
     end;
 
 fun drawArea x =
-    let fun parseArea (Construction.Source(x)) =
-                if String.isSubstring "empty" (#2 x) then (EMPTY,[(#1 x,"EMPTY",0.0)])
-                else (case String.breakOn ":" (#2 x) of
-                        (a,":",_) => (LABEL(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                        |_ => raise AreaError)
-            |parseArea (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "reverseTag" then
-                    (case (parseArea (hd(y))) of
-                        (LABEL(a),b) => (NLABEL(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
-                        |_ => raise AreaError)
-                else if (#1 (#constructor x)) = "cPoint" then
-                    let val (x1,z1) = parseNum (hd(y))
-                        val (x2,z2) = parseNum (List.last(y)) in
-                        (POINT(x1,x2),(#1 (#token x),"("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")",(#3 (hd(z1)))+(#3 (hd(z2))))::z1@z2)
-                    end
-                else if (#1 (#constructor x)) = "cRect" then
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.last(y)) in
-                        (RECT(x1,x2),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "overlayRect" then
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.nth(y,1))
-                        val (x3,y3) = parseArea (List.nth(y,2))
-                        val (x4,y4) = parseShading (List.last(y)) in
-                        (OVERLAY((#1 (#token x)),x1,x2,x3,x4),y1@y2@y3@y4)
-                    end
-                else if (#1 (#constructor x)) = "combine" then
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.last(y)) in
-                        (COMBAREA((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else raise AreaError
-            |parseArea (Construction.Reference(x)) = raise AreaError
+    let fun parseArea (Construction.Source((id, typ))) =
+            if String.isSubstring "empty" typ then (EMPTY, [(id, "EMPTY", 0.0)])
+            else (case String.breakOn ":" typ of
+                      (a, ":" ,_) => (LABEL(a), [(id, a, Real.fromInt (String.size a) + 0.5)])
+                    | _ => raise AreaError)
+          | parseArea (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+              | ("reverseTag", [tag]) =>
+                (case parseArea tag of
+                     (LABEL(a), (id', l, s)::_) => (NLABEL(a), [(id', "<tspan text-decoration=\"overline\">"^l^"</tspan>", s)])
+                    | _ => raise AreaError)
+              | ("cPoint", [c1, c2]) =>
+                let val (x1, z1) = parseNum c1;
+                    val (x2, z2) = parseNum c2;
+                in (POINT(x1,x2), (id, "("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")",(#3 (hd(z1)))+(#3 (hd(z2))))::z1@z2) end
+              | ("cRect", [p1, p2]) =>
+                let val (x1,y1) = parseArea p1;
+                    val (x2,y2) = parseArea p2;
+                in (RECT(x1,x2),(id, (#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@y2) end
+              | ("overlayRect", [a, r, t, s]) =>
+                let val (x1,y1) = parseArea a;
+                    val (x2,y2) = parseArea r;
+                    val (x3,y3) = parseArea t;
+                    val (x4,y4) = parseShading s;
+                in (OVERLAY(id, x1, x2, x3, x4), y1@y2@y3@y4) end
+              | ("combine", [a1, a2]) =>
+                let val (x1,y1) = parseArea a1;
+                    val (x2,y2) = parseArea a2;
+                in (COMBAREA(id, x1, x2), y1@y2) end
+              | _ => raise AreaError)
+          | parseArea (Construction.Reference(_)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[])
             |convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
             |convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
