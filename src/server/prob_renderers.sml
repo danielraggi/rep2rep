@@ -731,27 +731,23 @@ fun resolve a b (n:int) =
                                           else countU' res xs;
             in countU' 0 lst end;
         fun contains n (PLUS(a,b)) = contains n a orelse contains n b
-        fun replace x y (PLUS(a,b)) =   let val c = replace x y a
-                                            val d = replace x y b in
-                                            PLUS(c,d)
-                                        end
-            |replace x y (MINUS(a,b)) = let val c = replace x y a
-                                            val d = replace x y b in
-                                            MINUS(c,d)
-                                        end
-            |replace x y (MULT(a,b)) =  let val c = replace x y a
-                                            val d = replace x y b in
-                                            MULT(c,d)
-                                        end
-            |replace x y (FRAC(a,b)) =  let val c = replace x y a
-                                            val d = replace x y b in
-                                            FRAC(c,d)
-                                        end
-            |replace x y z = if y = z then simplify x else z
           | contains n (MINUS(a,b)) = contains n a orelse contains n b
           | contains n (MULT(a,b)) = contains n a orelse contains n b
           | contains n (FRAC(a,b)) = contains n a orelse contains n b
           | contains n x = n = x;
+        fun replace x y (PLUS(a,b)) = let val c = replace x y a;
+                                          val d = replace x y b;
+                                      in PLUS(c,d) end
+          | replace x y (MINUS(a,b)) = let val c = replace x y a;
+                                           val d = replace x y b;
+                                       in MINUS(c,d) end
+          | replace x y (MULT(a,b)) = let val c = replace x y a;
+                                          val d = replace x y b;
+                                      in MULT(c,d) end
+          | replace x y (FRAC(a,b)) = let val c = replace x y a;
+                                          val d = replace x y b;
+                                      in FRAC(c,d) end
+          | replace x y z = if y = z then simplify x else z;
         fun solveVar x y =
             case (simplify x, simplify y) of
             (VAR(n),y) => SOME (VAR(n),y)
