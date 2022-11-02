@@ -1879,34 +1879,34 @@ fun drawArea c =
         val (_, areas) = convertArea rects;
     in (List.map areaToHTML areas) @ (stringToHTML strings) end;
 
-fun drawTable x =
-    let fun parseTable (Construction.Source(x)) =
-                (case String.breakOn ":" (#2 x) of
-                    (a,":",_) => (NAME(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                    |_ => raise TableError)
-            |parseTable (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "buildOne" then
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = parseNum (List.last(y)) in
-                        (ONEWAY((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "buildTwo" then
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = parseTable (List.nth(y, 1))
-                        val (x3,y3) = parseNum (List.last(y)) in
-                        (TWOWAY((#1 (#token x)),x1,x2,x3),y1@y2@y3)
-                    end
-                else if (#1 (#constructor x)) = "combine" then
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = parseTable (List.last(y)) in
-                        (COMB((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "notName" then
-                    (case (parseTable (hd(y))) of
-                        (NAME(a),b) => (NNAME(a),[(#1 (hd(b)),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
-                        |_ => raise TableError)
-                else raise TableError
-            |parseTable _ = raise TableError
+fun drawTable c =
+    let fun parseTable (Construction.Source((id, typ))) =
+            (case String.breakOn ":" typ of
+                 (a,":",_) => (NAME(a),[(id, a, Real.fromInt (String.size a) + 0.5)])
+               | _ => raise TableError)
+          | parseTable (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                 ("buildOne", [name, numExp]) =>
+                 let val (x1,y1) = parseTable name;
+                     val (x2,y2) = parseNum numExp;
+                 in (ONEWAY(id, x1, x2), y1@y2) end
+               | ("buildTwo", [oneDim, twoDim, numExp]) =>
+                 let val (x1,y1) = parseTable oneDim;
+                     val (x2,y2) = parseTable twoDim;
+                     val (x3,y3) = parseNum numExp;
+                 in (TWOWAY(id, x1, x2, x3), y1@y2@y3) end
+               | ("combine", [table1, table2]) =>
+                 let val (x1,y1) = parseTable table1;
+                     val (x2,y2) = parseTable table2;
+                 in (COMB(id, x1, x2), y1@y2) end
+               | ("notName", [name]) =>
+                 let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                 in case parseTable name of
+                        (NAME a, (id, label, size)::_) => (NNAME(a), [(id, overline label, size)])
+                      | _ => raise TableError
+                 end
+               | _ => raise TableError)
+          | parseTable _ = raise TableError;
         fun convertTable (NAME(x)) = (([SEVENT(x)],[]),[])
             |convertTable (NNAME(x)) = (([NEVENT(x)],[]),[])
             |convertTable (ONEWAY(m,x,y)) =
@@ -1941,7 +1941,7 @@ fun drawTable x =
                     if List.length a = 1 then ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
                     else ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
                 end
-        fun tableToHTML (m,a,b) =
+        fun tableToHTML (id, a, b) =
             let fun toDocTable (x,y) =
                     if List.length x = 1 then  ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
                                                 "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">Total</th>\n"^
@@ -1989,14 +1989,11 @@ fun drawTable x =
                                 "</div>\n"
                 val (content,w) = toDocTable ((List.map eventToString a),(List.map numToString b))
                 in
-                (m, ((header^content^footer),w,100.0))
+                (id, ((header ^ content ^ footer), w, 100.0))
             end
-        val (a,b) = parseTable x
-        val (_,n) = convertTable a
-        val ns = List.map tableToHTML n
-        in
-        ns@(stringToHTML b)
-    end
+        val (tabs, strings) = parseTable c;
+        val (_, tables) = convertTable tabs;
+    in (List.map tableToHTML tables) @ (stringToHTML strings) end;
 
 fun drawTree x =
     let fun parseTree (Construction.Source(x)) =
