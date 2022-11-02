@@ -1730,28 +1730,84 @@ fun drawArea x =
                     |WHITE => "white"
                     |PATTERN => "url(#diagonalHatch)"
                 fun toDocArea (x,y,z,w) =
-                    if List.length x = 1 then   "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                                                "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (NUM(3)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^m^
-                                                "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",25)\">"^(numToString (List.nth(w,0)))^"</text>\n"
-                    else if List.length w = 4 then
-                        "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                        "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (NUM(3)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (NUM(3)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^
-                        "<rect width=\""^(calcLen (List.nth(y,6)) (List.nth(y,4)) (List.nth(y,4)) (NUM(3)))^"\" height=\""^(calcLen (List.nth(y,7)) (List.nth(y,5)) (List.nth(y,7)) (NUM(3)))^"\" transform=\"translate("^(toNum (List.nth(y,4)))^","^(toNum (List.nth(y,5)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,1))^";stroke-width:1;stroke:black\"/>\n"^m^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",25)\">"^(numToString (List.nth(w,0)))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcLab (List.nth(y,4)))^","^(calcMid (List.nth(w,2)) (NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcLab (List.nth(y,4)))^","^(calcMid (List.nth(w,2)) (NUM(38)))^")\">"^(numToString (List.nth(w,2)))^"</text>\n"
-                    else    "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (NUM(1)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,6)) (List.nth(y,4)) (List.nth(y,4)) (NUM(1)))^"\" height=\""^(calcLen (List.nth(y,7)) (List.nth(y,5)) (List.nth(y,7)) (NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,4)))^","^(toNum (List.nth(y,5)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,1))^";stroke-width:1;stroke:black\"/>\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,10)) (List.nth(y,8)) (List.nth(y,8)) (NUM(3)))^"\" height=\""^(calcLen (List.nth(y,11)) (List.nth(y,9)) (List.nth(y,11))  (NUM(2)))^"\" transform=\"translate("^(toNum (List.nth(y,8)))^","^(toNum (List.nth(y,9)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,2))^";stroke-width:1;stroke:black\" />\n"^m^
-                            "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (NUM(30)))^",25)\">"^(numToString (List.nth(w,0)))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(15,"^(calcMid (List.nth(w,2)) (NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(15,"^(calcMid (List.nth(w,2)) (NUM(38)))^")\">"^(numToString (List.nth(w,2)))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(245,"^(calcMid (List.nth(w,4)) (NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(245,"^(calcMid (List.nth(w,4)) (NUM(38)))^")\">"^(numToString (List.nth(w,4)))^"</text>\n"
+                    let fun rect (width, height) (trX, trY) fill =
+                            String.concat ["<rect ",
+                                           "width=\"", width, "\" ",
+                                           "height=\"", height, "\" ",
+                                           "transform=\"translate(", trX, ",", trY, ")\" ",
+                                           "style=\"fill:", fill, ";stroke-width:1;stroke:black\" />"];
+                        fun text (trX, trY) s =
+                            String.concat ["<text ",
+                                           "text-anchor=\"middle\" ",
+                                           "transform=\"translate(", trX, ",", trY, ")\">",
+                                           s,
+                                           "</text>"];
+                        val bg = rect ("200", "200") ("30", "30") "white";
+                    in case (x, y, z, w) of
+                           ([label1], y0::y1::y2::y3::_, fill::_, w0::_) =>
+                           let val width = calcLen y2 y0 y0 (NUM 3);
+                               val height = calcLen y3 y1 y3 (NUM 1);
+                               val translate = (toNum y0, toNum y1);
+                               val mid = calcMid w0 (NUM 30);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width, height) translate fill), "\n",
+                                   m,
+                                   (text (mid, "10") label1), "\n",
+                                   (text (mid, "25") (numToString w0)), "\n"
+                               ] end
+                         | (label1::label2::_,
+                            y0::y1::y2::y3::y4::y5::y6::y7::_,
+                            fill1::fill2::_,
+                            [w0, w1, w2, w3]) =>
+                           let val width1 = calcLen y2 y0 y0 (NUM 3);
+                               val height1 = calcLen y3 y1 y2 (NUM 3);
+                               val translate1 = (toNum y0, toNum y1);
+                               val width2 = calcLen y6 y4 y4 (NUM 3);
+                               val height2 = calcLen y7 y5 y7 (NUM 3);
+                               val translate2 = (toNum y4, toNum y5);
+                               val mid = calcMid w0 (NUM 30);
+                               val lab = calcLab y4;
+                               fun mid2 v = calcMid w2 (NUM v);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width1, height1) translate1 fill1), "\n",
+                                   (rect (width2, height2) translate2 fill2), "\n",
+                                   m,
+                                   (text (mid, "10") label1), "\n",
+                                   (text (mid, "25") (numToString w0)), "\n",
+                                   (text (lab, (mid2 22)) label2), "\n",
+                                   (text (lab, (mid2 38)) (numToString w2)), "\n"
+                               ] end
+                         | (label1::label2::_,
+                            y0::y1::y2::y3::y4::y5::y6::y7::y8::y9::y10::y11::_,
+                            fill1::fill2::fill3::_,
+                            w0::w1::w2::w3::w4::_) =>
+                           let val width1 = calcLen y2 y0 y0 (NUM 1);
+                               val height1 = calcLen y3 y1 y3 (NUM 1);
+                               val translate1 = (toNum y4, toNum y5);
+                               val width2 = calcLen y6 y4 y4 (NUM 1);
+                               val height2 = calcLen y7 y5 y7 (NUM 1);
+                               val translate2 = (toNum y4, toNum y5);
+                               val width3 = calcLen y10 y8 y8 (NUM 3);
+                               val height3 = calcLen y11 y9 y11 (NUM 2);
+                               val translate3 = (toNum y8, toNum y9);
+                               fun mid wi v = calcMid wi (NUM v);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width1, height1) translate1 fill1), "\n",
+                                   (rect (width2, height2) translate2 fill2), "\n",
+                                   (rect (width3, height3) translate3 fill3), "\n",
+                                   m,
+                                   (text (mid w0 30, "10") label1), "\n",
+                                   (text (mid w0 30, "25") (numToString w0)), "\n",
+                                   (text ("15", mid w2 22) label2), "\n",
+                                   (text ("15", mid w2 22) (numToString w2)), "\n",
+                                   (text ("245", mid w4 22) label2), "\n",
+                                   (text ("245", mid w4 38) (numToString w4)), "\n"
+                               ] end
+                         | _ => raise Match
+                    end;
                 val header = "<div>\n"^
                             "<svg width=\"300\" height=\"240\" background-color=\"white\" font-size=\"12px\">\n"^
                             "<pattern id=\"diagonalHatch\" patternUnits=\"userSpaceOnUse\" width=\"4\" height=\"4\">\n"^
@@ -1761,13 +1817,12 @@ fun drawArea x =
                             "</div>\n"
                 val content = toDocArea ((List.map eventToString a), b, (List.map shadeToString c), d)
                 in
-                (m,((header^content^footer),300.0,240.0))
-            end
-        val (a,b) = parseArea x
-        val (_,n) = convertArea a
-        val ns = List.map areaToHTML n in
-        ns@(stringToHTML b)
-    end
+                (m, ((header ^ content ^ footer), 300.0, 240.0))
+            end;
+        val (a,b) = parseArea x;
+        val (_,n) = convertArea a;
+        val ns = List.map areaToHTML n;
+    in ns@(stringToHTML b) end;
 
 fun drawTable x =
     let fun parseTable (Construction.Source(x)) =
