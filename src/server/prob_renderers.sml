@@ -1620,124 +1620,172 @@ fun drawArea c =
                | _ => raise AreaError)
           | parseArea (Construction.Reference(_)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[])
-            |convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
-            |convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
-            |convertArea (POINT(x,y)) = (([],[x,y],[],[]),[])
-            |convertArea (RECT(x,y)) =
-                let val ((_,y2,_,_),_) = convertArea x
-                    val ((_,y3,_,_),_) = convertArea y in
-                    (([],y2@y3,[],[]),[])
+          | convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
+          | convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
+          | convertArea (POINT(x,y)) = (([],[x,y],[],[]),[])
+          | convertArea (RECT(x,y)) =
+            let val ((_,y2,_,_),_) = convertArea x;
+                val ((_,y3,_,_),_) = convertArea y;
+            in (([], y2@y3, [], []), []) end
+          | convertArea (OVERLAY(m,x,y,z,w)) =
+                let fun flipShading x = case x of
+                                            BLUE => RED
+                                          | RED => BLUE
+                                          | _ => x;
+                    val ((x1,y1,z1,w1),n) = convertArea x;
+                    val ((_,y2,_,_),_) = convertArea y;
+                    val ((x3,_,_,_),_) = convertArea z;
+                in if w1 = []
+                   then case (hd(x3)) of
+                            SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(m,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
+                          | NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(m,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
+                   else case (hd(x1),hd(x3)) of
+                            (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                          | (SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                          | (NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                          | (NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
                 end
-            |convertArea (OVERLAY(m,x,y,z,w)) =
-                let fun flipShading x =
-                        case x of
-                        BLUE => RED
-                        |RED => BLUE
-                        |_ => x
-                    val ((x1,y1,z1,w1),n) = convertArea x
-                    val ((_,y2,_,_),_) = convertArea y
-                    val ((x3,_,_,_),_) = convertArea z in
-                    if w1 = [] then
-                        case (hd(x3)) of
-                        SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(m,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
-                        |NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(m,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
-                    else case (hd(x1),hd(x3)) of
-                        (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                        |(SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
-                        |(NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                        |(NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
-
-                end
-            |convertArea (COMBAREA(m,x,y)) =
-                let fun toRects ws = [NUM(0),NUM(0),(hd(ws)),NUM(1),NUM(0),NUM(0),(hd(ws)),(List.nth(ws,2)),(hd(ws)),NUM(0),NUM(1),(List.nth(ws,4))]
-                    fun mergeShading x y =
-                        if x = PATTERN then y
-                        else if y = PATTERN then x
-                        else if x = WHITE then y
-                        else x
-                    fun extractNum x y w =
-                        if List.length x = 1 then w@[U, U, U, U]
-                        else if List.length w = 6 then w
-                        else case (hd(x)) of
-                            SEVENT(a) => w@[U,U]
-                            |NEVENT(a) => List.take(w,2)@[U,U]@List.drop(w,2)
-                    fun areaMerge x2 y2 a x3 y3 b =
-                        let fun ff b =
-                                if List.nth(b,2) = U then
-                                let val xs = [VAR("z"),MINUS(NUM(1),VAR("z")),
-                                            MINUS(NUM(1),FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z"))), FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z")),
-                                            MINUS(NUM(1),FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))), FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))]
-                                    val xss = List.map simplify xs in
-                                    (xss, (toRects xss))
-                                end
-                                else if List.nth(b,4) = U then
-                                let val xs = [VAR("z"), MINUS(NUM(1),VAR("z")),
-                                            FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z")), MINUS(NUM(1),FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z"))),
-                                            FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))))]
-                                    val xss = List.map simplify xs in
-                                    (xss, (toRects xss))
-                                end
-                                else let val xs = [PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1))), PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))),
-                                                FRAC(MULT(List.nth(b,2), List.nth(b,0)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))), FRAC(MULT(List.nth(b,4), List.nth(b,1)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))),
-                                                FRAC(MULT(List.nth(b,3),List.nth(b,0)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1)))),  FRAC(MULT(List.nth(b,5),List.nth(b,1)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))))]
-                                        val xss = List.map simplify xs in
-                                    (xss, (toRects xss))
-                                end
-                            in
-                            if eventToString (hd(x2)) = eventToString (hd(x3)) then
-                                let fun merger a b y2 y3 c d e f =
-                                        case (a,b) of
-                                        ([],[]) => ((List.rev c), (List.rev d), e, f)
-                                        |(x::xxs::xs,y::yys::ys) => if x = U andalso y = U then merger xs ys y2 y3 c d e f
-                                                                else if x = U then merger xs ys y2 (List.drop(y3,4)) (xxs::x::c) (yys::y::d) (e@[U,U,U,U]) (f@(List.take(y3,4)))
-                                                                else if y = U then merger xs ys (List.drop(y2,4)) y3 (xxs::x::c) (yys::y::d) (e@(List.take(y2,4))) (f@[U,U,U,U])
-                                                                else merger xs ys (List.drop(y2,4)) (List.drop(y3,4)) (xxs::x::c) (yys::y::d) (e@(List.take(y2,4))) (f@(List.take(y3,4)))
-                                        |_ => raise AreaError
-                                    val (c,d,e,f) = merger a b y2 y3 [] [] [] [] in
-                                    if List.length x2 > List.length x3 then (x2, c, d, e, f)
-                                    else (x3, c, d, e, f)
-                                end
-                            else if List.length x2 = List.length x3 andalso List.length x2 = 1 then
-                                let val xss = [VAR("z"),MINUS(NUM(1),VAR("z")), VAR("x"), MINUS(NUM(1),VAR("x")), FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),MINUS(NUM(1),VAR("z"))))] in
-                                    (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss))
-                                end
-                            else if List.length x2 = List.length x3 andalso List.length y2 = 8 then
-                                let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
-                            else if List.length x2 = List.length x3 then
-                                let val (xss,yss) = ff b in (x2, a, xss, y2, yss) end
-                            else if List.length x3 > List.length x2 then
-                                let val (xss,yss) = ff b in ((List.rev x3), a, xss, (y2@[U,U,U,U,U,U,U,U]), yss) end
-                            else let val (xss,yss) = ff a in ((List.rev x2), xss, b, yss, (y3@[U,U,U,U,U,U,U,U])) end
-                        end
-                    val ((x2,y2,z2,w2),n1) = convertArea x
-                    val ((x3,y3,z3,w3),n2) = convertArea y
-                    val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3)
-                    val g = resolve (c@e) (d@f) (List.length c) in
-                    if List.length g = 12 then ((x, (List.drop(g,4)), [(mergeShading (hd(z2)) (hd(z3))),PATTERN], List.take(g,4)),(m, x, (List.drop(g,4)), [(mergeShading (hd(z2)) (hd(z3))),PATTERN], List.take(g,4))::n1@n2)
-                    else ((x, (toRects (List.take(g,6))), [WHITE,BLUE,RED], List.take(g,6)),(m, x, (toRects (List.take(g,6))), [WHITE,BLUE,RED], List.take(g,6))::n1@n2)
-                end
-        fun areaToHTML (m,a,b,c,d) =
-            let fun toNum x =
-                    if onlyNum x then numToString (PLUS(NUM(30),MULT(NUM(200),x)))
-                    else numToString (NUM(80))
-                fun calcLen x y k n =
-                    if onlyNum x andalso onlyNum y then numToString (MULT(NUM(200),MINUS(x,y)))
-                    else if numToString k = numToString (NUM(0)) then numToString (NUM(50))
-                    else numToString (MULT(n,NUM(50)))
-                fun calcMid x n =
-                    if onlyNum x then numToString (PLUS(n,MULT(NUM(100),x)))
-                    else numToString (PLUS(NUM(25),n))
-                fun calcLab n =
-                    if numToString n = numToString (NUM(0)) then numToString (NUM(15))
-                    else numToString (NUM(245))
-                fun shadeToString x =
-                    case x of
-                    BLUE => "#4d79ff"
-                    |RED => "#ff4d4d"
-                    |GREEN => "#39ac73"
-                    |WHITE => "white"
-                    |PATTERN => "url(#diagonalHatch)"
-                fun toDocArea (x,y,z,w) =
+            | convertArea (COMBAREA(m,x,y)) =
+              let fun toRects [w0, _, w2, _, w4, _] =
+                      let val z = NUM 0;
+                          val i = NUM 1;
+                      in [z, z, w0, i,
+                          z, z, w0, w2,
+                          w0, z, i, w4] end
+                    | toRects _ = raise AreaError;
+                  fun mergeShading PATTERN y = y
+                    | mergeShading x PATTERN = x
+                    | mergeShading WHITE y = y
+                    | mergeShading x _ = x
+                  fun extractNum [] y w = if List.length w = 6 then w else raise AreaError
+                    | extractNum (x::xs) y w =
+                      if xs = [] then w@[U, U, U, U]
+                      else if List.length w = 6 then w
+                      else case x of
+                               SEVENT(a) => w@[U,U]
+                             | NEVENT(a) => let val (pre, post) = List.split (w, 2);
+                                            in pre @ [U, U] @ post end;
+                  fun areaMerge x2 y2 a x3 y3 b =
+                      let fun ff b =
+                              if List.nth(b,2) = U
+                              then let val xs = [
+                                           VAR("z"),MINUS(NUM(1),VAR("z")),
+                                           MINUS(NUM(1),FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z"))),
+                                           FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z")),
+                                           MINUS(NUM(1),FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))),
+                                           FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))];
+                                       val xss = List.map simplify xs;
+                                   in (xss, (toRects xss)) end
+                              else if List.nth(b,4) = U
+                              then let val xs = [VAR("z"), MINUS(NUM(1),VAR("z")),
+                                                 FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z")),
+                                                 MINUS(NUM(1),FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z"))),
+                                                 FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))),
+                                                 MINUS(NUM(1),FRAC(MULT(List.nth(b,3),List.nth(b,0)),
+                                                                   MINUS(NUM(1),VAR("z"))))];
+                                       val xss = List.map simplify xs;
+                                   in (xss, (toRects xss)) end
+                              else let val xs = [
+                                           PLUS(MULT(List.nth(b,2),List.nth(b,0)),
+                                                MULT(List.nth(b,4),List.nth(b,1))),
+                                           PLUS(MULT(List.nth(b,3),List.nth(b,0)),
+                                                MULT(List.nth(b,5),List.nth(b,1))),
+                                           FRAC(MULT(List.nth(b,2), List.nth(b,0)),
+                                                PLUS(MULT(List.nth(b,2),List.nth(b,0)),
+                                                     MULT(List.nth(b,4),List.nth(b,1)))),
+                                           FRAC(MULT(List.nth(b,4), List.nth(b,1)),
+                                                PLUS(MULT(List.nth(b,2),List.nth(b,0)),
+                                                     MULT(List.nth(b,4),List.nth(b,1)))),
+                                           FRAC(MULT(List.nth(b,3),List.nth(b,0)),
+                                                PLUS(MULT(List.nth(b,3),List.nth(b,0)),
+                                                     MULT(List.nth(b,5),List.nth(b,1)))),
+                                           FRAC(MULT(List.nth(b,5),List.nth(b,1)),
+                                                PLUS(MULT(List.nth(b,3),List.nth(b,0)),
+                                                     MULT(List.nth(b,5),List.nth(b,1))))];
+                                       val xss = List.map simplify xs;
+                                   in (xss, (toRects xss)) end
+                      in if eventToString (hd(x2)) = eventToString (hd(x3)) then
+                             let fun merger [] [] _ _ c d e f = (List.rev c, List.rev d, e, f)
+                                   | merger (x::xxs::xs) (y::yys::ys) y2 y3 c d e f =
+                                     (case (x, y) of
+                                          (U, U) => merger xs ys y2 y3 c d e f
+                                        | (U, _) => let val (pre, post) = List.split (y3, 4);
+                                                    in merger xs ys
+                                                              y2 post
+                                                              (xxs::x::c) (yys::y::d)
+                                                              (e@[U,U,U,U]) (f@pre) end
+                                        | (_, U) => let val (pre, post) = List.split(y2, 4);
+                                                    in merger xs ys
+                                                              post y3
+                                                              (xxs::x::c) (yys::y::d)
+                                                              (e@pre) (f@[U,U,U,U]) end
+                                        | _ => let val (pre2, post2) = List.split(y2, 4);
+                                                   val (pre3, post3) = List.split(y3, 4);
+                                               in merger xs ys
+                                                         post2 post3
+                                                         (xxs::x::c) (yys::y::d)
+                                                         (e@pre2) (f@pre3) end)
+                                   | merger _ _ _ _ _ _ _ _ = raise AreaError;
+                                 val (c,d,e,f) = merger a b y2 y3 [] [] [] [];
+                             in if List.length x2 > List.length x3 then (x2, c, d, e, f)
+                                else (x3, c, d, e, f)
+                             end
+                         else if List.length x2 = List.length x3 andalso List.length x2 = 1
+                         then let val xss = [VAR("z"),MINUS(NUM(1),VAR("z")),
+                                             VAR("x"), MINUS(NUM(1),VAR("x")),
+                                             FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),
+                                                  MINUS(NUM(1),VAR("z"))),
+                                             MINUS(NUM(1),FRAC(MINUS(hd(b), MULT(VAR("z"),VAR("x"))),
+                                                               MINUS(NUM(1),VAR("z"))))];
+                              in (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss)) end
+                         else if List.length x2 = List.length x3 andalso List.length y2 = 8 then
+                             let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
+                         else if List.length x2 = List.length x3 then
+                             let val (xss,yss) = ff b in (x2, a, xss, y2, yss) end
+                         else if List.length x3 > List.length x2 then
+                             let val (xss,yss) = ff b in ((List.rev x3), a, xss, (y2@[U,U,U,U,U,U,U,U]), yss) end
+                         else let val (xss,yss) = ff a in ((List.rev x2), xss, b, yss, (y3@[U,U,U,U,U,U,U,U])) end
+                      end;
+                  val ((x2,y2,z2,w2),n1) = convertArea x;
+                  val ((x3,y3,z3,w3),n2) = convertArea y;
+                  val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3);
+                  val g = resolve (c@e) (d@f) (List.length c);
+              in if List.length g = 12
+                 then ((x, (List.drop(g,4)),
+                        [(mergeShading (hd(z2)) (hd(z3))),PATTERN],
+                        List.take(g,4)),
+                       (m, x, (List.drop(g,4)),
+                        [(mergeShading (hd(z2)) (hd(z3))),PATTERN],
+                        List.take(g,4))::n1@n2)
+                 else ((x, (toRects (List.take(g,6))),
+                        [WHITE,BLUE,RED],
+                        List.take(g,6)),
+                       (m, x, (toRects (List.take(g,6))),
+                        [WHITE,BLUE,RED],
+                        List.take(g,6))::n1@n2)
+              end;
+        fun areaToHTML (id, events, b, fills, d) =
+            let fun toNum x = if onlyNum x
+                              then numToString (PLUS(NUM(30),MULT(NUM(200),x)))
+                              else numToString (NUM(80));
+                fun calcLen x y k n = if onlyNum x andalso onlyNum y
+                                      then numToString (MULT(NUM(200),MINUS(x,y)))
+                                      else if numToString k = numToString (NUM(0))
+                                      then numToString (NUM(50))
+                                      else numToString (MULT(n,NUM(50)));
+                fun calcMid x n = if onlyNum x
+                                  then numToString (PLUS(n,MULT(NUM(100),x)))
+                                  else numToString (PLUS(NUM(25),n));
+                fun calcLab n = if numToString n = numToString (NUM(0))
+                                then numToString (NUM(15))
+                                else numToString (NUM(245));
+                fun shadeToString x = case x of
+                                          BLUE => "#4d79ff"
+                                        | RED => "#ff4d4d"
+                                        | GREEN => "#39ac73"
+                                        | WHITE => "white"
+                                        | PATTERN => "url(#diagonalHatch)";
+                fun toDocArea (events, y, fills, w) =
                     let fun rect (width, height) (trX, trY) fill =
                             String.concat ["<rect ",
                                            "width=\"", width, "\" ",
@@ -1751,8 +1799,8 @@ fun drawArea c =
                                            s,
                                            "</text>"];
                         val bg = rect ("200", "200") ("30", "30") "white";
-                    in case (x, y, z, w) of
-                           ([label1], y0::y1::y2::y3::_, fill::_, w0::_) =>
+                    in case (events, y, fills, w) of
+                           ([event1], y0::y1::y2::y3::_, fill::_, w0::_) =>
                            let val width = calcLen y2 y0 y0 (NUM 3);
                                val height = calcLen y3 y1 y3 (NUM 1);
                                val translate = (toNum y0, toNum y1);
@@ -1760,11 +1808,11 @@ fun drawArea c =
                            in String.concat [
                                    bg, "\n",
                                    (rect (width, height) translate fill), "\n",
-                                   m,
-                                   (text (mid, "10") label1), "\n",
+                                   id, (* We emit the token ID, not sure why... *)
+                                   (text (mid, "10") event1), "\n",
                                    (text (mid, "25") (numToString w0)), "\n"
                                ] end
-                         | (label1::label2::_,
+                         | ([event1, event2],
                             y0::y1::y2::y3::y4::y5::y6::y7::_,
                             fill1::fill2::_,
                             [w0, w1, w2, w3]) =>
@@ -1781,13 +1829,13 @@ fun drawArea c =
                                    bg, "\n",
                                    (rect (width1, height1) translate1 fill1), "\n",
                                    (rect (width2, height2) translate2 fill2), "\n",
-                                   m,
-                                   (text (mid, "10") label1), "\n",
+                                   id,
+                                   (text (mid, "10") event1), "\n",
                                    (text (mid, "25") (numToString w0)), "\n",
-                                   (text (lab, (mid2 22)) label2), "\n",
+                                   (text (lab, (mid2 22)) event2), "\n",
                                    (text (lab, (mid2 38)) (numToString w2)), "\n"
                                ] end
-                         | (label1::label2::_,
+                         | ([event1, event2],
                             y0::y1::y2::y3::y4::y5::y6::y7::y8::y9::y10::y11::_,
                             fill1::fill2::fill3::_,
                             w0::w1::w2::w3::w4::_) =>
@@ -1806,12 +1854,12 @@ fun drawArea c =
                                    (rect (width1, height1) translate1 fill1), "\n",
                                    (rect (width2, height2) translate2 fill2), "\n",
                                    (rect (width3, height3) translate3 fill3), "\n",
-                                   m,
-                                   (text (mid w0 30, "10") label1), "\n",
+                                   id,
+                                   (text (mid w0 30, "10") event1), "\n",
                                    (text (mid w0 30, "25") (numToString w0)), "\n",
-                                   (text ("15", mid w2 22) label2), "\n",
+                                   (text ("15", mid w2 22) event2), "\n",
                                    (text ("15", mid w2 22) (numToString w2)), "\n",
-                                   (text ("245", mid w4 22) label2), "\n",
+                                   (text ("245", mid w4 22) event2), "\n",
                                    (text ("245", mid w4 38) (numToString w4)), "\n"
                                ] end
                          | _ => raise Match
@@ -1823,9 +1871,9 @@ fun drawArea c =
                             "</pattern>\n"
                 val footer = "</svg>\n"^
                             "</div>\n"
-                val content = toDocArea ((List.map eventToString a), b, (List.map shadeToString c), d)
+                val content = toDocArea ((List.map eventToString events), b, (List.map shadeToString fills), d)
                 in
-                (m, ((header ^ content ^ footer), 300.0, 240.0))
+                (id, ((header ^ content ^ footer), 300.0, 240.0))
             end;
         val (rects, strings) = parseArea c;
         val (_, areas) = convertArea rects;
