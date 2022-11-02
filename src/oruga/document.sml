@@ -638,9 +638,9 @@ struct
             val _ = if List.all (Composition.wellFormedComposition targetConSpecData) comps
                     then ()
                     else print ("\nWARNING! some composition at the target is not well formed!")
-            val latexLeft = Latex.environment "minipage" "[t]{0.5\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
+            val latexLeft = Latex.environment "minipage" "[t]{0.68\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals res
-            val latexRight = Latex.environment "minipage" "[t]{0.45\\linewidth}" latexGoals
+            val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
             val latexProof = ""(*mkLatexProof tproof*)
             (*val CSize = List.sumMapInt Composition.size comps*)
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,(*Int.toString CSize,*)latexProof]))
