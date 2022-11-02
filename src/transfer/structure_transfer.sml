@@ -88,7 +88,7 @@ struct
       val usedTokens = FiniteSet.union
                           (State.tokensInUse st)
                           (Pattern.tokensOfConstruction updatedConsequent)
-      val ccMap = Pattern.funUnion [consequentMap, contextMap]
+      val ccMap = Pattern.funUnion CSpace.sameTokens [consequentMap, contextMap]
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs ccMap usedTokens antecedent
 
       val goals = State.goalsOf st
@@ -121,6 +121,40 @@ struct
                                                 (Composition.tokensOfCompositions patternComps)
       val tTSD = State.targetTypeSystemOf st
       val tT = #typeSystem tTSD
+
+      val ct = State.constructionOf st
+      val T = #typeSystem (State.sourceTypeSystemOf st)
+      val interTSD = (State.interTypeSystemOf st)
+      val sourceConSpecData = #sourceConSpecData st
+      val targetConSpecData = #targetConSpecData st
+      val interConSpecData = #interConSpecData st
+
+      fun preferentialFunUnion f g x = (case g x of NONE => f x | SOME y => SOME y)
+      fun partialFunComp1 f g x = (case g x of NONE => f x | SOME y => f y)
+      fun partialFunComp2 f g x = (case g x of NONE => f x
+                                             | SOME y => (case f y of NONE => SOME y
+                                                                            | SOME z => SOME z))
+      fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
+
+      fun referenced x =
+        FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
+        FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
+        FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
+
+      val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
+
+      (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
+      val (consequentMap,goalMap,typeVarMap,newgoal) =
+            (case Pattern.findEmbeddingMinimisingTypeUpTo interTSD givenTokens consequent goal of
+                (f,g,vf,SOME ng) => (f,g,vf,ng)
+              | _ => raise TransferSchemaNotApplicable)
+      val _ = if Pattern.wellFormed interConSpecData newgoal then () else raise TransferSchemaNotApplicable
+      val source = Pattern.applyTypeVarInstantiation typeVarMap source
+      val _ = if Pattern.wellFormed sourceConSpecData source then () else raise TransferSchemaNotApplicable
+      val target = Pattern.applyTypeVarInstantiation typeVarMap target
+      val _ = if Pattern.wellFormed targetConSpecData target then () else raise TransferSchemaNotApplicable
+      val antecedent = map (Pattern.applyTypeVarInstantiation typeVarMap) antecedent
+      val _ = if List.all (Pattern.wellFormed interConSpecData) antecedent then () else raise TransferSchemaNotApplicable
       val targetConstruct = Pattern.constructOf target
       val usedTokenNames = map CSpace.nameOfToken (State.tokensInUse st)
 
@@ -138,43 +172,22 @@ struct
                   then makeAttachmentToken tt
                   else raise TransferSchemaNotApplicable
                 )
-      fun targetConstructMap x =
-          if CSpace.sameTokens x targetConstruct
-          then SOME newTargetConstruct
-          else NONE
 
-      val ct = State.constructionOf st
-      val T = #typeSystem (State.sourceTypeSystemOf st)
-      val interT = #typeSystem (State.interTypeSystemOf st)
       val usedTokens = FiniteSet.insert newTargetConstruct (State.tokensInUse st)
-
-      fun preferentialFunUnion f g x = (case g x of NONE => f x | SOME y => SOME y)
-      fun partialFunComp1 f g x = (case g x of NONE => f x | SOME y => f y)
-      fun partialFunComp2 f g x = (case g x of NONE => f x
-                                             | SOME y => (case f y of NONE => SOME y
-                                                                            | SOME z => SOME z))
-      fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
-
-      fun referenced x =
-        FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
-        FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
-        FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
-
-      val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
-
-      (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
-      val (consequentMap,goalMap) =
-            (case Pattern.findEmbeddingMinimisingTypeUpTo interT givenTokens consequent goal of
-                (f,g,SOME _) => (f,g)
-              | _ => raise TransferSchemaNotApplicable)
+      fun targetConstructMap x =
+        if CSpace.sameTokens x targetConstruct
+        then SOME newTargetConstruct
+        else NONE
 
       val (sourceMap, matchingSubConstruction) =
             (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse T ct source consequentMap) of
                 SOME ((_,f,x),_) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
 
+      val _ = print (Construction.toString consequent ^ "    of ("^ name ^") matched   " ^Construction.toString goal ^ "\n")
+
       val updatedConsequent = Pattern.applyMorphism consequentMap consequent
-      val csMap = Pattern.funUnion [sourceMap, consequentMap]
+      val csMap = Pattern.funUnion CSpace.sameTokens [sourceMap, consequentMap]
       val usedTokensC = FiniteSet.union usedTokens (Pattern.tokensOfConstruction updatedConsequent)
 
       val (targetMap, updatedTarget) =
@@ -362,7 +375,6 @@ struct
       handle Nope => false
 
 
-(* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
 fun structureTransfer unistructured targetPattOption st =
   let val ignI = Heuristic.ignoreRelaxed 10 199
       val ignT = Heuristic.ignore 15 19 45 unistructured

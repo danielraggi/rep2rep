@@ -8,7 +8,7 @@ sig
   type typeSystemData = {name : string,
                          typeSystem : typeSystem,
                          principalTypes : principalType FiniteSet.set}
-  exception undefined
+  exception badType
 
   val typ_rpc : typ Rpc.Datatype.t;
   val principalType_rpc : principalType Rpc.Datatype.t
@@ -38,6 +38,8 @@ sig
   val transitiveClosure : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool);
   val closureOverFiniteSet : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool);
 
+  val isTypeVar : typ -> bool
+  val parentTypeOfSubtypeable : typ -> typ
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
 
@@ -66,7 +68,7 @@ struct
   type typeSystemData = {name : string,
                          typeSystem : typeSystem,
                          principalTypes : principalType FiniteSet.set}
-  exception undefined;
+  exception badType;
 
   val typ_rpc = Rpc.Datatype.alias "Type.typ" String.string_rpc;
   val principalType_rpc = Rpc.Datatype.convert
@@ -79,6 +81,7 @@ struct
   fun fromString x = x
   val any = "" (* emtpy string *)
   fun equal x y = (x = y)
+
 
   val emptySystem = {Ty = Set.empty, subType = (fn x => false)}
 
@@ -126,6 +129,11 @@ struct
 
   fun closureOverFiniteSet Ty = reflexiveClosure o (transitiveClosure Ty);
   fun nameOfType x = x
+
+
+  fun isTypeVar s = String.isPrefix "?" s
+  fun parentTypeOfSubtypeable s =
+    (case String.breakOn ":" s of (x,":",y) => y | _ => raise badType)
 
   (* assumes subType is an order for the principal types and extends it to
     the ones hanging from subtypeable *)
@@ -247,6 +255,12 @@ struct
              in supremum subType cstys
              end
     end
+(*
+  fun greatestCommonSubTypeL TSD [ty] = SOME ty
+    | greatestCommonSubTypeL TSD (ty::L) =
+        case greatestCommonSubTypeL TSD L of
+          NONE => NONE
+        | SOME ty' => greatestCommonSubType TSD ty ty'*)
 
   fun addLeastCommonSuperType (TP as {typeSystem,principalTypes}) ty ty' =
     let val {Ty,subType} = typeSystem
