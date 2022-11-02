@@ -1587,29 +1587,37 @@ fun drawArea c =
                     | _ => raise AreaError)
           | parseArea (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
             (case (cname, cons) of
-              | ("reverseTag", [tag]) =>
-                (case parseArea tag of
-                     (LABEL(a), (id', l, s)::_) => (NLABEL(a), [(id', "<tspan text-decoration=\"overline\">"^l^"</tspan>", s)])
-                    | _ => raise AreaError)
-              | ("cPoint", [c1, c2]) =>
-                let val (x1, z1) = parseNum c1;
-                    val (x2, z2) = parseNum c2;
-                in (POINT(x1,x2), (id, "("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")",(#3 (hd(z1)))+(#3 (hd(z2))))::z1@z2) end
-              | ("cRect", [p1, p2]) =>
-                let val (x1,y1) = parseArea p1;
-                    val (x2,y2) = parseArea p2;
-                in (RECT(x1,x2),(id, (#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@y2) end
-              | ("overlayRect", [a, r, t, s]) =>
-                let val (x1,y1) = parseArea a;
-                    val (x2,y2) = parseArea r;
-                    val (x3,y3) = parseArea t;
-                    val (x4,y4) = parseShading s;
-                in (OVERLAY(id, x1, x2, x3, x4), y1@y2@y3@y4) end
-              | ("combine", [a1, a2]) =>
-                let val (x1,y1) = parseArea a1;
-                    val (x2,y2) = parseArea a2;
-                in (COMBAREA(id, x1, x2), y1@y2) end
-              | _ => raise AreaError)
+                 ("reverseTag", [tag]) =>
+                 let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                 in case parseArea tag of
+                        (LABEL(a), (id', l, s)::_) => (NLABEL(a), [(id', overline l, s)])
+                      | _ => raise AreaError
+                 end
+               | ("cPoint", [c1, c2]) =>
+                 let val (x1, z1) = parseNum c1;
+                     val (x2, z2) = parseNum c2;
+                 in case (z1, z2) of
+                        ((_, l1, s1)::_, (_, l2, s2)::_) => (POINT(x1,x2), (id, "("^l1^","^l2^")", s1+s2)::z1@z2)
+                      | _ => raise AreaError
+                 end
+               | ("cRect", [p1, p2]) =>
+                 let val (x1,y1) = parseArea p1;
+                     val (x2,y2) = parseArea p2;
+                 in case (y1, y2) of
+                        ((_, l1, s1)::_, (_, l2, s2)::_) => (RECT(x1,x2), (id, l1^" - "^l2, s1+s2+0.5)::y1@y2)
+                      | _ => raise AreaError
+                 end
+               | ("overlayRect", [a, r, t, s]) =>
+                 let val (x1,y1) = parseArea a;
+                     val (x2,y2) = parseArea r;
+                     val (x3,y3) = parseArea t;
+                     val (x4,y4) = parseShading s;
+                 in (OVERLAY(id, x1, x2, x3, x4), y1@y2@y3@y4) end
+               | ("combine", [a1, a2]) =>
+                 let val (x1,y1) = parseArea a1;
+                     val (x2,y2) = parseArea a2;
+                 in (COMBAREA(id, x1, x2), y1@y2) end
+               | _ => raise AreaError)
           | parseArea (Construction.Reference(_)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[])
             |convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
