@@ -1907,40 +1907,67 @@ fun drawTable c =
                  end
                | _ => raise TableError)
           | parseTable _ = raise TableError;
-        fun convertTable (NAME(x)) = (([SEVENT(x)],[]),[])
-            |convertTable (NNAME(x)) = (([NEVENT(x)],[]),[])
-            |convertTable (ONEWAY(m,x,y)) =
-                let val ((x2,_),_) = convertTable x in
-                    case (hd(x2)) of
-                    SEVENT(a) => ((x2,[y,MINUS(NUM(1),y)]),[(m,x2,[y,MINUS(NUM(1),y)])])
-                    |NEVENT(a) => ((x2,[MINUS(NUM(1),y), y]),[(m,x2,[MINUS(NUM(1),y),y])])
-                end
-            |convertTable (TWOWAY(m,x,y,z)) =
-                let val ((x2,y2),n1) = convertTable x
-                    val ((x3,y3),n2) = convertTable y in
-                        case ((hd(x2)),(hd(x3))) of
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[z,MINUS((hd(y2)),z),MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))]),(m, x2@x3, y2@y3@[z, MINUS((hd(y2)),z), MINUS((hd(y3)),z), MINUS(PLUS(NUM(1),MINUS(z,(hd(y3)))),(hd(y2)))])::n1@n2)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[MINUS(List.nth(y2,0),z),z,MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)]), (m, x2@x3, y2@y3@[MINUS(List.nth(y2,0), z), z, MINUS(PLUS(NUM(1), MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), MINUS((List.nth(y3,1)),z)])::n1@n2)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[MINUS((List.nth(y3,0)),z),MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)]), (m, x2@x3, y2@y3@[MINUS((List.nth(y3,0)),z), MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, MINUS((List.nth(y2,1)),z)])::n1@n2)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z]), (m, x2@x3, y2@y3@[MINUS(PLUS(NUM(1),MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), MINUS((List.nth(y3,1)),z), MINUS((List.nth(y2,1)),z), z])::n1@n2)
-                end
-            |convertTable (COMB(m,x,y)) =
-                let fun tableMerge x2 y2 x3 y3 =
-                        let fun rotate y2 = [List.nth(y2,2),List.nth(y2,3),List.nth(y2,0),List.nth(y2,1),List.nth(y2,4),List.nth(y2,6),List.nth(y2,5),List.nth(y2,7)] in
-                            if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, y3)
-                            else if List.length x2 = List.length x3 andalso List.length x2 = 1 then ((x2@x3),(y2@[U,U,U,U,U,U]),([U,U]@y3@[U,U,U,U]))
-                            else if List.length x2 = List.length x3 then (x2, y2, rotate y3)
-                            else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, (y3@[U,U,U,U,U,U]))
-                            else if List.length x2 > List.length x3 then (x2, y2, ([U,U]@y3@[U,U,U,U]))
-                            else if eventToString (hd(x2)) = eventToString (hd(x3)) then (x3, (y2@[U,U,U,U,U,U]), y3)
-                            else (x3, ([U,U]@y2@[U,U,U,U]), y3)
-                        end
-                    val ((x2,y2),n1) = convertTable y
-                    val ((x3,y3),n2) = convertTable x
-                    val (a,b,c) = tableMerge x2 y2 x3 y3 in
-                    if List.length a = 1 then ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
-                    else ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
-                end
+        fun convertTable (NAME(x)) = (([SEVENT(x)],[]), [])
+          | convertTable (NNAME(x)) = (([NEVENT(x)],[]), [])
+          | convertTable (ONEWAY(id, x, y)) =
+            let val ((x2, _), _) = convertTable x;
+                val t = case x2 of
+                            SEVENT(a)::_ => [y,MINUS(NUM(1),y)]
+                          | NEVENT(a)::_ => [MINUS(NUM(1),y), y]
+                          | _ => raise TableError;
+            in ((x2, t), [(id, x2, t)]) end
+          | convertTable (TWOWAY(id, x, y, z)) =
+            let val ((x2, y2), n1) = convertTable x;
+                val ((x3, y3), n2) = convertTable y;
+                val x23 = x2 @ x3;
+                val t = case (x2, x3, y2, y3) of
+                            ((SEVENT a)::_, (SEVENT b)::_, y2_0::_, y3_0::_)
+                            => [z, MINUS(y2_0, z), MINUS(y3_0, z),
+                                MINUS(PLUS(NUM(1), MINUS(z, y3_0)), y2_0)]
+                          | ((SEVENT a)::_, (NEVENT b)::_, y2_0::_, _::y3_1::_)
+                            => [MINUS(y2_0, z), z, MINUS(PLUS(NUM(1), MINUS(z, y3_1)), y2_0),
+                                MINUS(y3_1, z)]
+                          | ((NEVENT a)::_, (SEVENT b)::_, _::y2_1::_, y3_0::_)
+                            => [MINUS(y3_0, z), MINUS(PLUS(NUM(1), MINUS(z, y3_0)), y2_1),
+                                z, MINUS(y2_1, z)]
+                          | ((NEVENT a)::_, (NEVENT b)::_, _::y2_1::_, _::y3_1::_)
+                            => [MINUS(PLUS(NUM(1), MINUS(z, y3_1)), y2_1),
+                                MINUS(y3_1, z), MINUS(y2_1, z), z]
+                          | _ => raise TableError;
+                val y23t = y2 @ y3 @ t;
+            in ((x23, y23t), (id, x23, y23t)::(n1 @ n2)) end
+          | convertTable (COMB(id, x, y)) =
+            let fun tableMerge [] _ _ _ = raise TableError
+                  | tableMerge _ _ [] _ = raise TableError
+                  | tableMerge (x2 as x2_0::_) y2 (x3 as x3_0::_) y3 =
+                    let
+                        (* Transpose:
+                                 c   d      =>       a   b
+                               ---------          ---------
+                            a |  e   f         c |   e   g
+                            b |  g   h         d |   f   h
+                         *)
+                        fun transpose [a, b, c, d, e, f, g, h] = [c, d, a, b, e, g, f, h]
+                          | transpose _ = raise TableError;
+                        val l2 = List.length x2;
+                        val l3 = List.length x3;
+                        val s2 = eventToString x2_0;
+                        val s3 = eventToString x3_0;
+                    in if l2 = l3 then (if s2 = s3 then (x2, y2, y3)
+                                        else if l2 = 1 then ((x2@x3),
+                                                             (y2@[U,U,U,U,U,U]),
+                                                             ([U,U]@y3@[U,U,U,U]))
+                                        else (x2, y2, transpose y3))
+                       else if l2 > l3 then (if s2 = s3 then (x2, y2, (y3@[U,U,U,U,U,U]))
+                                             else (x2, y2, ([U,U]@y3@[U,U,U,U])))
+                       else if s2 = s3 then (x3, (y2@[U,U,U,U,U,U]), y3)
+                       else (x3, ([U,U]@y2@[U,U,U,U]), y3)
+                    end;
+                val ((x2, y2), n1) = convertTable y;
+                val ((x3, y3), n2) = convertTable x;
+                val (a, b, c) = tableMerge x2 y2 x3 y3;
+                val t = resolve b c (List.length b);
+            in ((a, t), (id, a, t)::n1@n2) end;
         fun tableToHTML (id, events, probabilities) =
             let fun toDocTable (events, probabilities) =
                     let fun th s = "<th style=\"background-color:lightgrey; "
@@ -1966,9 +1993,12 @@ fun drawTable c =
                            ], 280.0)
                          | _ => raise TableError
                     end;
-                val header = "<div>\n"^
-                             "<table style=\"text-align:center; border-collapse:collapse; background-color:white; font-size:12px;\">\n"
-                val footer = "\n</table>\n</div>\n"
+                val header = "<div>\n"
+                             ^ "<table style=\"text-align:center; "
+                             ^ "border-collapse:collapse; "
+                             ^ "background-color:white; "
+                             ^ "font-size:12px;\">\n";
+                val footer = "\n</table>\n</div>\n";
                 val (content, width) = toDocTable ((List.map eventToString events),
                                                    (List.map numToString probabilities));
             in (id, ((header ^ content ^ footer), width, 100.0)) end;
