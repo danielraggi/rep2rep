@@ -1941,56 +1941,37 @@ fun drawTable c =
                     if List.length a = 1 then ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
                     else ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
                 end
-        fun tableToHTML (id, a, b) =
-            let fun toDocTable (x,y) =
-                    if List.length x = 1 then  ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">Total</th>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">"^(List.nth(x,0))^"</th>\n"^
-                                                "<td style=\"border: 1px solid;\">"^(List.nth(y,0))^"</td>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,0))^"</span></th>\n"^
-                                                "<td style=\"border: 1px solid\">"^(List.nth(y,1))^"</td>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">Total</th>\n"^
-                                                "<td style=\"border: 1px solid;\">1</td>\n",
-                                                140.0)
-                    else   ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">"^(List.nth(x,1))^"</th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,1))^"</span></th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">Total</th>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">"^(List.nth(x,0))^"</th>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,4))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,5))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,0))^"</td>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,0))^"</span></th>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,6))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,7))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,1))^"</td>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">Total</th>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,2))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">"^(List.nth(y,3))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">1</td>\n",
-                            280.0)
-                val header =    "<div>\n"^
-                                "<table style=\"text-align:center; border-collapse:collapse; background-color:white; font-size:12px;\">\n"^
-                                "<tr>\n"
-                val footer =    "</tr>\n"^
-                                "</table>\n"^
-                                "</div>\n"
-                val (content,w) = toDocTable ((List.map eventToString a),(List.map numToString b))
-                in
-                (id, ((header ^ content ^ footer), w, 100.0))
-            end
+        fun tableToHTML (id, events, probabilities) =
+            let fun toDocTable (events, probabilities) =
+                    let fun th s = "<th style=\"background-color:lightgrey; "
+                                   ^ "border:1px solid; height:25px; width:70px;\">"
+                                   ^ s ^ "</th>";
+                        fun td s = "<td style=\"border: 1px solid;\">" ^ s ^ "</td>";
+                        fun tr cells = "<tr>" ^ (String.concat cells) ^ "</tr>";
+                        fun overline x = "<span style=\"text-decoration:overline\">" ^ x ^ "</span>";
+                    in case (events, probabilities) of
+                           ([v], [p, p']) =>
+                           (String.concatWith "\n" [
+                                 tr [th "", th "Total"],
+                                 tr [th v, td p],
+                                 tr [th (overline v), td p'],
+                                 tr [th "Total", td "1"]
+                             ], 140.0)
+                         | ([v1, v2], [p1, p1', p2, p2', p12, p12', p1'2, p1'2']) =>
+                           (String.concatWith "\n" [
+                                 tr [th "", th v2, th (overline v2), th "Total"],
+                                 tr [th v1, td p12, td p12', td p1],
+                                 tr [th (overline v1), td p1'2, td p1'2', td p1'],
+                                 tr [th "Total", td p2, td p2', td "1"]
+                           ], 280.0)
+                         | _ => raise TableError
+                    end;
+                val header = "<div>\n"^
+                             "<table style=\"text-align:center; border-collapse:collapse; background-color:white; font-size:12px;\">\n"
+                val footer = "\n</table>\n</div>\n"
+                val (content, width) = toDocTable ((List.map eventToString events),
+                                                   (List.map numToString probabilities));
+            in (id, ((header ^ content ^ footer), width, 100.0)) end;
         val (tabs, strings) = parseTable c;
         val (_, tables) = convertTable tabs;
     in (List.map tableToHTML tables) @ (stringToHTML strings) end;
