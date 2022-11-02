@@ -1471,7 +1471,7 @@ fun resolve a b (n:int) =
                              val zs = List.map f xs;
                              val ws = List.map f c;
                          in tResolve zs ys (y::ws) (y::d) (e-1) end
-                       | (MINUS(MULT(l, VAR(n)), m), k) =
+                       | (MINUS(MULT(l, VAR(n)), m), k) =>
                          let val f = replace (FRAC(PLUS(k,m),l)) (VAR(n));
                              val zs = List.map f xs;
                              val ws = List.map f c;
@@ -1559,7 +1559,7 @@ fun resolve a b (n:int) =
     in filterNum x y (countU a) (countU b) end
 
 fun stringToHTML [] = []
-  | stringToHTML ((a, "EMPTY", _)::xs) =
+  | stringToHTML ((a, "EMPTY", _)::xs) = (* NOT A STRING: This is an EMPTY area Diagram! *)
     (a, ("<div>\n"^
          "<svg width=\"200\" height=\"200\">\n"^
          "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
@@ -1579,7 +1579,7 @@ fun stringToHTML [] = []
             len, 18.0))::stringToHTML xs
     end;
 
-fun drawArea x =
+fun drawArea c =
     let fun parseArea (Construction.Source((id, typ))) =
             if String.isSubstring "empty" typ then (EMPTY, [(id, "EMPTY", 0.0)])
             else (case String.breakOn ":" typ of
@@ -1819,10 +1819,9 @@ fun drawArea x =
                 in
                 (m, ((header ^ content ^ footer), 300.0, 240.0))
             end;
-        val (a,b) = parseArea x;
-        val (_,n) = convertArea a;
-        val ns = List.map areaToHTML n;
-    in ns@(stringToHTML b) end;
+        val (rects, strings) = parseArea c;
+        val (_, areas) = convertArea rects;
+    in (List.map areaToHTML areas) @ (stringToHTML strings) end;
 
 fun drawTable x =
     let fun parseTable (Construction.Source(x)) =
