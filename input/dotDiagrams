@@ -9,4 +9,4 @@ conSpec dotDiagramsG:dotDiagrams =
     remove : [arr,arr] -> arr,
     fillRectangle : [line,line] -> rectangle,
     intersect : [arr,arr] -> arr,
-    some : [numeral] -> arr
+    someLine : [numeral] -> line
