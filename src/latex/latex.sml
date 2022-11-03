@@ -50,7 +50,7 @@ struct
     | lines _ = raise Empty
 
 
-  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #","
+  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"." 
   fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
@@ -119,7 +119,7 @@ struct
     | quickWidthEstimate (Construction.TCPair ({token,constructor},cs)) =
         List.max Real.compare [sizeOfConstructor constructor,
                                0.9 * sizeOfToken token + sizeOfType token,
-                               List.sumMap quickWidthEstimate cs + nodeConstant]
+                               List.sumMap quickWidthEstimate cs]
 
   fun construction' coor parentName (i,n) (Construction.Source t) =
         (case parentName of

@@ -1,14 +1,14 @@
 typeSystem propDNF =
-    types _:var, _:literal, _:clause, _:dnf, _:nonvar, _:nonliteral, _:nonclause
+    types _:var, _:literal, _:clauseDNF, _:dnf, _:nonvar, _:nonliteralDNF, _:nonclauseDNF
     order var < literal,
           nonvar < literal,
-          literal < clause,
-          nonliteral < clause,
-          clause < dnf,
-          nonclause < dnf
+          literal < clauseDNF,
+          nonliteralDNF < clauseDNF,
+          clauseDNF < dnf,
+          nonclauseDNF < dnf
 
 conSpec propDNFG:propDNF =
   constructors
-    conj : [literal, clause] -> nonliteral,
-    disj : [clause, dnf] -> nonclause,
+    conj : [literal, clauseDNF] -> nonliteralDNF,
+    disj : [clauseDNF, dnf] -> nonclauseDNF,
     neg : [var] -> nonvar

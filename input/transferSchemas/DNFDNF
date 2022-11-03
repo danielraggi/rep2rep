@@ -5,7 +5,6 @@ comment disj:(propDNFG,propDNFG) =
     target t':nonclause <- disj[t1':clause,t2':dnf]
     antecedent ([t1:clause],[t1':clause]) :: entails, ([t2:dnf],[t2':dnf]) :: entails
     consequent ([t:nonclause],[t':nonclause]) :: entails
-    pull entails to [t2':dnf]
     strength 1.0
 
 comment conj:(propDNFG,propDNFG) =
@@ -13,7 +12,6 @@ comment conj:(propDNFG,propDNFG) =
     target t':nonliteral <- conj[t1':literal,t2':clause]
     antecedent ([t1:literal],[t1':literal]) :: entails, ([t2:clause],[t2':clause]) :: entails
     consequent ([t:nonliteral],[t':nonliteral]) :: entails
-    pull entails to [t2':clause]
     strength 1.0
 
 tSchema basicA1:(propDNFG,propDNFG) =
@@ -84,7 +82,6 @@ tSchema disjI1:(propDNFG,propDNFG) =
     target t':nonclause <- disj[t1':clause,t2':dnf]
     antecedent ([t:dnf],[t1':clause]) :: entails
     consequent ([t:dnf],[t':nonclause]) :: entails
-    pull entails to [t2':dnf]
     strength 0.2
 
 comment disjI2:(propDNFG,propDNFG) =
@@ -92,7 +89,6 @@ comment disjI2:(propDNFG,propDNFG) =
     target t':nonclause <- disj[t1':clause,t2':dnf]
     antecedent ([t:dnf],[t2':dnf]) :: entails
     consequent ([t:dnf],[t':nonclause]) :: entails
-    pull entails to [t1':clause]
     strength 0.2
 
 comment basicC1:(propDNFG,propDNFG) =

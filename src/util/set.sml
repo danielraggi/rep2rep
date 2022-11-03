@@ -8,6 +8,7 @@ sig
   val empty : ''a set;
   val make : (''a -> bool) -> ''a set;
   val insert : ''a -> ''a set -> ''a set;
+  val singleton : ''a -> ''a set;
   val ofList : ''a list -> ''a set;
   val ofFiniteSet : ''a FiniteSet.set -> ''a set;
 
@@ -25,6 +26,7 @@ struct
   val empty = fn _ => false;
   fun make x = x
   fun insert x S y = if y = x then true else S y
+  fun singleton y x = (y = x)
   fun ofList L = fn x => List.exists (fn y => x = y) L
   fun ofFiniteSet F = fn x => FiniteSet.exists (fn s => x = s) F
 

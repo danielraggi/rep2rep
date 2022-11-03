@@ -27,6 +27,7 @@ signature MLTON_RANDOM =
        *)
       val useed: unit -> word option
       val int : unit -> int
+      val oneIn : int -> unit -> bool;
    end
 
    (* Copyright (C) 1999-2005 Henry Cejtin, Matthew Fluet, Suresh
@@ -131,6 +132,7 @@ signature MLTON_RANDOM =
          end
 
   fun int () = Word.toIntX (rand ())
+  fun oneIn n () =  (if n > 1 then rand () < rand () andalso oneIn (n - 1) () else true)
 end
 
 fun testRand i = if i < 10 then
