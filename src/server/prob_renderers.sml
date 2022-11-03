@@ -1558,25 +1558,24 @@ fun resolve a b (n:int) =
         val (x,y) = tResolve a b [] [] n;
     in filterNum x y (countU a) (countU b) end
 
-fun stringToHTML [] = []
-  | stringToHTML ((a, "EMPTY", _)::xs) = (* NOT A STRING: This is an EMPTY area Diagram! *)
-    (a, ("<div>\n"^
+fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagram! *)
+    (id, ("<div>\n"^
          "<svg width=\"200\" height=\"200\">\n"^
          "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
          "</svg>\n"^
          "</div>",
-         200.0, 200.0))::stringToHTML xs
-  | stringToHTML ((a, b, c)::xs) =
-    let val mid = c*5.0;
-        val len = c*10.0;
+         200.0, 200.0))
+  | stringToHTML (id, text, width) =
+    let val mid = width * 5.0;
+        val len = width * 10.0;
     in
-        (a,("<div>\n"^
-            "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-            "<rect width=\""^(Real.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
-            "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^b^"</text>\n"^
-            "</svg>\n"^
-            "</div>",
-            len, 18.0))::stringToHTML xs
+        (id, ("<div>\n"^
+              "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
+              "<rect width=\""^(Real.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
+              "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^text^"</text>\n"^
+              "</svg>\n"^
+              "</div>",
+              len, 18.0))
     end;
 
 fun drawArea c =
@@ -1877,7 +1876,7 @@ fun drawArea c =
             end;
         val (rects, strings) = parseArea c;
         val (_, areas) = convertArea rects;
-    in (List.map areaToHTML areas) @ (stringToHTML strings) end;
+    in (List.map areaToHTML areas) @ (List.map stringToHTML strings) end;
 
 fun drawTable c =
     let fun parseTable (Construction.Source((id, typ))) =
@@ -1911,16 +1910,16 @@ fun drawTable c =
           | convertTable (NNAME(x)) = (([NEVENT(x)],[]), [])
           | convertTable (ONEWAY(id, x, y)) =
             let val ((x2, _), _) = convertTable x;
-                val t = case x2 of
+                val w = case x2 of
                             SEVENT(a)::_ => [y,MINUS(NUM(1),y)]
                           | NEVENT(a)::_ => [MINUS(NUM(1),y), y]
                           | _ => raise TableError;
-            in ((x2, t), [(id, x2, t)]) end
+            in ((x2, w), [(id, x2, w)]) end
           | convertTable (TWOWAY(id, x, y, z)) =
             let val ((x2, y2), n1) = convertTable x;
                 val ((x3, y3), n2) = convertTable y;
                 val x23 = x2 @ x3;
-                val t = case (x2, x3, y2, y3) of
+                val w = case (x2, x3, y2, y3) of
                             ((SEVENT a)::_, (SEVENT b)::_, y2_0::_, y3_0::_)
                             => [z, MINUS(y2_0, z), MINUS(y3_0, z),
                                 MINUS(PLUS(NUM(1), MINUS(z, y3_0)), y2_0)]
@@ -1934,9 +1933,9 @@ fun drawTable c =
                             => [MINUS(PLUS(NUM(1), MINUS(z, y3_1)), y2_1),
                                 MINUS(y3_1, z), MINUS(y2_1, z), z]
                           | _ => raise TableError;
-                val y23t = y2 @ y3 @ t;
-            in ((x23, y23t), (id, x23, y23t)::(n1 @ n2)) end
-          | convertTable (COMB(id, x, y)) =
+                val y23w = y2 @ y3 @ w;
+            in ((x23, y23w), (id, x23, y23w)::(n1 @ n2)) end
+          | convertTable (COMB(id, t1, t2)) =
             let fun tableMerge [] _ _ _ = raise TableError
                   | tableMerge _ _ [] _ = raise TableError
                   | tableMerge (x2 as x2_0::_) y2 (x3 as x3_0::_) y3 =
@@ -1963,8 +1962,8 @@ fun drawTable c =
                        else if s2 = s3 then (x3, (y2@[U,U,U,U,U,U]), y3)
                        else (x3, ([U,U]@y2@[U,U,U,U]), y3)
                     end;
-                val ((x2, y2), n1) = convertTable y;
-                val ((x3, y3), n2) = convertTable x;
+                val ((x2, y2), n1) = convertTable t2;
+                val ((x3, y3), n2) = convertTable t1;
                 val (a, b, c) = tableMerge x2 y2 x3 y3;
                 val t = resolve b c (List.length b);
             in ((a, t), (id, a, t)::n1@n2) end;
@@ -2004,7 +2003,7 @@ fun drawTable c =
             in (id, ((header ^ content ^ footer), width, 100.0)) end;
         val (tabs, strings) = parseTable c;
         val (_, tables) = convertTable tabs;
-    in (List.map tableToHTML tables) @ (stringToHTML strings) end;
+    in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
 fun drawTree x =
     let fun parseTree (Construction.Source(x)) =
@@ -2129,12 +2128,9 @@ fun drawTree x =
                 in
                 (m, ((header^content^footer),w,h))
             end
-        val (a,b) = parseTree x
-        val (_,n) = convertTree a
-        val ns = List.map treeToHTML n
-        in
-        ns@(stringToHTML b)
-    end
+        val (a,strings) = parseTree x
+        val (_,trees) = convertTree a
+    in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
 fun drawBayes x =
     let fun parseEvent (Construction.Source(x)) =
@@ -2181,7 +2177,7 @@ fun drawBayes x =
             |parseBayes _ = raise BayesError
         val a = parseBayes x
         in
-        stringToHTML a
+        List.map stringToHTML a
     end;
 
 end;
