@@ -16,9 +16,9 @@ conSpec interBayesArea:interBayesAreaT =
 
 tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     source t:?v:event
-    target t':tag <- tagOfEvent[t1':?v:event]
+    target t':?v:event
     antecedent
-    consequent :metaTrue <- match[t:?v:event,t':tag]
+    consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength 1
 
 tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =

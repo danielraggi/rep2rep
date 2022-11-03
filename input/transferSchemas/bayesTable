@@ -14,18 +14,11 @@ conSpec interBayesTable:interBayesTableT =
         match : [events,name] -> metaBool,
         encode : [probSys,table] -> metaBool
 
-tSchema eventA:(bayesG,contTableG,interBayesTable) =
-    source t:A:event
-    target t':A:name
+tSchema eventV:(bayesG,contTableG,interBayesTable) =
+    source t:?v:event
+    target t':?v:event
     antecedent
-    consequent :metaTrue <- match[t:A:event,t':A:name]
-    strength 1
-
-tSchema eventB:(bayesG,contTableG,interBayesTable) =
-    source t:B:event
-    target t':B:name
-    antecedent
-    consequent :metaTrue <- match[t:B:event,t':B:name]
+    consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength 1
 
 tSchema complEvent:(bayesG,contTableG,interBayesTable) =

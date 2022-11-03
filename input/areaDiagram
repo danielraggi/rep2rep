@@ -4,7 +4,7 @@ import shade
 typeSystem areaDiagram =
   imports arith, shade
   types _:tag, _:area, _:rect, _:point, empty, _:event
-  order empty < area
+  order empty < area, event < tag
 
 conSpec areaDiagramG:areaDiagram =
   imports arithG
@@ -13,5 +13,4 @@ conSpec areaDiagramG:areaDiagram =
     cPoint:[numExp, numExp] -> point,
     cRect: [point, point] -> rect,
     overlayRect: [area, rect, tag, shading] -> area,
-    combine: [area, area] -> area,
-    tagOfEvent : [event] -> tag
+    combine: [area, area] -> area

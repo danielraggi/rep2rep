@@ -1,9 +1,9 @@
-import num
+import arith
 
 typeSystem probTree =
-  imports num
-  types  _:label, _:tree
-  order
+  imports arith
+  types  _:label, _:tree, _:event
+  order event < label
 
 conSpec probTreeG:probTree =
   imports numG

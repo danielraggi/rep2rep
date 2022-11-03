@@ -14,18 +14,11 @@ conSpec interBayesTree:interBayesTreeT =
         match : [events,label] -> metaBool,
         encode : [probSys,tree] -> metaBool
 
-tSchema eventA:(bayesG,probTreeG,interBayesTree) =
-    source t:A:event
-    target t':A:label
+tSchema eventV:(bayesG,probTreeG,interBayesTree) =
+    source t:?v:event
+    target t':?v:event
     antecedent
-    consequent :metaTrue <- match[t:A:event,t':A:label]
-    strength 1
-
-tSchema eventB:(bayesG,probTreeG,interBayesTree) =
-    source t:B:event
-    target t':B:label
-    antecedent
-    consequent :metaTrue <- match[t:B:event,t':B:label]
+    consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength 1
 
 tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
