@@ -258,7 +258,7 @@ struct
               let fun getMap ss = (case String.breakOn " as " ss of
                                     (s1," as ",s2) => (String.stripSpaces s1,String.stripSpaces s2)
                                   | _ => raise ParseError ("no type mapping: expected syntax \"with t1 as t2\" in "^s))
-                  val mapPairs = Parser.splitLevelWithSepFunApply getMap (fn x => x = #",") (String.explode mapString)
+                  val mapPairs = Parser.splitLevelWithSepFunApply getMap (fn x => x = #";") (String.explode mapString)
                   val TS = findTypeSystemDataWithName dc (String.stripSpaces tsName)
               in foldl (uncurry renameTypeInTypeSystemData) TS mapPairs
               end
