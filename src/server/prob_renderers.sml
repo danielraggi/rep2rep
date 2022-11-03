@@ -1596,7 +1596,7 @@ fun drawArea c =
                  let val (x', xHTML) = parseNum x;
                      val (y', yHTML) = parseNum y;
                  in case (xHTML, yHTML) of
-                        ((_, s1, w1)::_, (_, s2, w2)::_) => (POINT(c1,c2),
+                        ((_, s1, w1)::_, (_, s2, w2)::_) => (POINT(x', y'),
                                                              (id, "("^s1^","^s2^")", w1+w2) :: xHTML @ yHTML)
                       | _ => raise AreaError
                  end
@@ -1628,23 +1628,70 @@ fun drawArea c =
             let val ((_,pts1,_,_),_) = convertArea p1;
                 val ((_,pts2,_,_),_) = convertArea p2;
             in (([], pts1 @ pts2, [], []), []) end
-          | convertArea (OVERLAY(id, x, y, z, w)) =
+          | convertArea (OVERLAY(id, area, rect, tag, shading)) =
                 let fun flipShading x = case x of
                                             BLUE => RED
                                           | RED => BLUE
                                           | _ => x;
-                    val ((x1,y1,z1,w1),n) = convertArea x;
-                    val ((_,y2,_,_),_) = convertArea y;
-                    val ((x3,_,_,_),_) = convertArea z;
+                    val ((v1, p1, s1, w1), html) = convertArea area;
+                    val (( _, p2,  _,  _),    _) = convertArea rect;
+                    val ((v3,  _,  _,  _),    _) = convertArea tag;
                 in if w1 = []
-                   then case (hd(x3)) of
-                            SEVENT(a) =>  ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(id,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
-                          | NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(id,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
-                   else case (hd(x1),hd(x3)) of
-                            (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(id,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                          | (SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(id,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
-                          | (NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(id,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                          | (NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(id,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                   then case (hd v3) of
+                            SEVENT _ => let val shading = [shading];
+                                            val probs = case p2 of
+                                                            (_::_::p::_) => [p, MINUS(NUM 1, p)]
+                                                          | _ => raise AreaError;
+                                        in ((    v3, p2, shading, probs),
+                                            (id, v3, p2, shading, probs) :: html)
+                                        end
+                          | NEVENT _ => let val (points, probs) =
+                                                case p2 of
+                                                    (_::_::p::_) => ([MINUS(NUM 1, p), NUM 0, NUM 1, NUM 1],
+                                                                     [MINUS(NUM 1, p), p])
+                                                  | _ => raise AreaError;
+                                          val shading = [flipShading shading];
+                                      in ((    v3, points, shading, probs),
+                                          (id, v3, points, shading, probs) :: html)
+                                      end
+                   else case (hd v1, hd v3) of
+                            (SEVENT _, SEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ p2;
+                                val shading = s1 @ [shading];
+                                val probs = case p2 of
+                                                (_::_::_::p::_) => w1 @ [p, MINUS(NUM 1, p)]
+                                              | _ => raise AreaError;
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (SEVENT _, NEVENT _) =>
+                            let val events = v1 @ v3;
+                                val (points, probs) =
+                                    case p2 of
+                                        (p::_::_::q::_) => (p1 @ [p, MINUS(NUM 1, q), q, NUM 1],
+                                                            w1 @ [MINUS(NUM 1, q), q])
+                                     | _ => raise AreaError;
+                                val shading = s1 @ [flipShading shading];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (NEVENT _, SEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ [List.nth(p1,0),List.nth(p2,1),List.nth(p1,2),List.nth(p2,3)];
+                                val shading = s1 @ [shading];
+                                val probs = w1 @ [List.nth(p2,3),MINUS(NUM(1),List.nth(p2,3))];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (NEVENT _, NEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ [List.nth(p1,0),MINUS(NUM(1),List.nth(p2,3)),List.nth(p1,2),NUM(1)];
+                                val shading = s1 @ [flipShading shading];
+                                val probs = w1 @ [MINUS(NUM(1),List.nth(p2,3)), List.nth(p2,3)];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
                 end
             | convertArea (COMBAREA(id, x, y)) =
               let fun toRects [w0, _, w2, _, w4, _] =
@@ -1753,14 +1800,14 @@ fun drawArea c =
                   val g = resolve (c@e) (d@f) (List.length c);
               in if List.length g = 12
                  then let val (pre, post) = List.split (g, 4);
-                          val shading = mergeShading (hd z2) (hdz3);
-                      in (    (x, post, [shading, PATTERN], pre),
-                              (id, x, post, [shading, PATTERN], pre) :: n1 @ n2)
+                          val shading = mergeShading (hd z2) (hd z3);
+                      in ((    x, post, [shading, PATTERN], pre),
+                          (id, x, post, [shading, PATTERN], pre) :: n1 @ n2)
                       end
                  else let val pre = List.take (g, 6);
                           val rects = toRects pre;
                           val shading = [WHITE, BLUE, RED];
-                      in (    (x, rects, shading, pre),
+                      in ((    x, rects, shading, pre),
                           (id, x, rects, shading, pre) :: n1 @ n2)
                       end
               end;
