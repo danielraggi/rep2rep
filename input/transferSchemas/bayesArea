@@ -1,40 +1,46 @@
 import bayes
 import areaDiagram
+import metaLogic
 import transferSchemas/numNum
 
-tSchema eventA:(bayesG,areaDiagramG) =
-    source t:A:event
-    target t':A:tag
+typeSystem interBayesAreaT =
+    imports bayes, areaDiagram, metaLogicT
+    types
+    order
+
+conSpec interBayesArea:interBayesAreaT =
+    imports areaDiagramG, bayesG, interNumNum
+    constructors
+        match : [events,tag] -> metaBool,
+        encode : [probSys,area] -> metaBool
+
+tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
+    source t:?v:event
+    target t':tag <- tagOfEvent[t1':?v:event]
     antecedent
-    consequent ([t:A:event],[t':A:tag]) :: match
+    consequent :metaTrue <- match[t:?v:event,t':tag]
     strength 1
 
-tSchema eventB:(bayesG,areaDiagramG) =
-    source t:B:event
-    target t':B:tag
-    antecedent
-    consequent ([t:B:event],[t':B:tag]) :: match
-    strength 1
-
-tSchema notEvent:(bayesG,areaDiagramG) =
+tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:event <- complement[t1:overline,t2:event]
     target t':tag <- reverseTag[t1':tag]
-    antecedent ([t2:event],[t1':tag]) :: match
-    consequent ([t:event],[t':tag]) :: match
+    antecedent :metaTrue <- match[t2:event,t1':tag]
+    consequent :metaTrue <- match[t:event,t':tag]
     strength 1
 
-tSchema constructEvent:(bayesG,areaDiagramG) =
+tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:events,t2:numExp]
     target t':area <- overlayRect[t1':empty,
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
                                                     t22':point <- cPoint[t221':numExp,t222':1:numeral]],
                                   t3':tag,
                                   t4':pattern]
-    antecedent ([t1:events],[t3':tag]) :: match, ([t2:numExp],[t221':numExp]) :: equal
-    consequent ([t:probEqn],[t':area]) :: encode
+    antecedent :metaTrue <- match[t1:events,t3':tag],
+               :metaTrue <- equal[t2:numExp,t221':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
     strength 1
 
-tSchema constructCond:(bayesG,areaDiagramG) =
+tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                              t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
@@ -46,11 +52,13 @@ tSchema constructCond:(bayesG,areaDiagramG) =
                                                     t22':point <- cPoint[t1221':x:var,t222':numExp]],
                                   t3':tag,
                                   t4':pattern]
-    antecedent ([t12:event],[t13':tag]) :: match, ([t11:event],[t3':tag]) :: match, ([t2:numExp],[t222':numExp]) :: equal
-    consequent ([t:probEqn],[t':area]) :: encode
+    antecedent :metaTrue <- match[t11:event,t3':tag],
+               :metaTrue <- match[t12:event,t13':tag],
+               :metaTrue <- equal[t2:numExp,t222':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
     strength 1
 
-tSchema constructInter:(bayesG,areaDiagramG) =
+tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
@@ -63,13 +71,16 @@ tSchema constructInter:(bayesG,areaDiagramG) =
                                                                          t222':numExp <- frac[t2221':numExp,t2222':div,t1221':y:var]]],
                                   t3':tag,
                                   t4':pattern]
-    antecedent ([t11:event],[t13':tag]) :: match, ([t13:event],[t3':tag]) :: match, ([t2:numExp],[t2221':numExp]) :: equal
-    consequent ([t:probEqn],[t':area]) :: encode
+    antecedent :metaTrue <- match[t11:event,t13':tag],
+               :metaTrue <- match[t13:event,t3':tag],
+               :metaTrue <- equal[t2:numExp,t2221':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':area]
     strength 1
 
-tSchema combineEqn:(bayesG,areaDiagramG) =
+tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]
     target t':area <- combine[t1':area,t2':area]
-    antecedent ([t1:probEqn],[t1':area]) :: encode, ([t2:probSys],[t2':area]) :: encode
-    consequent ([t:probSys],[t':area]) :: encode
+    antecedent :metaTrue <- encode[t1:probEqn,t1':area],
+               :metaTrue <- encode[t2:probSys,t2':area]
+    consequent :metaTrue <- encode[t:probSys,t':area]
     strength 1

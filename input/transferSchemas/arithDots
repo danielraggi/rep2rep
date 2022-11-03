@@ -79,51 +79,9 @@ comment multRectangle:(arithG,dotDiagramsG,interArithDots) =
     consequent :metaTrue <- count[t':arr,t:numExp]
     strength 2
 
-tSchema oneCirc:(arithG,dotDiagramsG,interArithDots) =
-    source t:1:numeral
-    target t':dot
+tSchema some:(arithG,dotDiagramsG,interArithDots) =
+    source t:?v:numeral
+    target t':line <- someLine[t1':?v:numeral]
     antecedent
-    consequent :metaTrue <- count[t':dot,t:1:numeral]
-    strength 2
-
-tSchema twoCircs:(arithG,dotDiagramsG,interArithDots) =
-    source t:2:numeral
-    target t':2:line
-    antecedent
-    consequent :metaTrue <- count[t':2:line,t:2:numeral]
-    strength 1
-
-tSchema threeCircs:(arithG,dotDiagramsG,interArithDots) =
-    source t:3:numeral
-    target t':3:line
-    antecedent
-    consequent :metaTrue <- count[t':3:line,t:3:numeral]
-    strength 1
-
-tSchema fourCircs:(arithG,dotDiagramsG,interArithDots) =
-    source t:4:numeral
-    target t':4:line
-    antecedent
-    consequent :metaTrue <- count[t':4:line,t:4:numeral]
-    strength 1
-
-comment twoVertical:(arithG,dotDiagramsG,interArithDots) =
-    source t:2:numeral
-    target t':\ooV:arr
-    antecedent
-    consequent :metaTrue <- count[t':\ooV:arr,t:2:numeral]
-    strength 1
-
-comment threeVertical:(arithG,dotDiagramsG,interArithDots) =
-    source t:3:numeral
-    target t':\oooV:arr
-    antecedent
-    consequent :metaTrue <- count[t':\oooV:arr,t:3:numeral]
-    strength 1
-
-comment fourVertical:(arithG,dotDiagramsG,interArithDots) =
-    source t:4:numeral
-    target t':\ooooV:arr
-    antecedent
-    consequent :metaTrue <- count[t':\ooooV:arr,t:4:numeral]
+    consequent :metaTrue <- count[t':line,t:?v:numeral]
     strength 1
