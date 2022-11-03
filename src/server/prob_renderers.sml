@@ -1555,7 +1555,7 @@ fun resolve a b (n:int) =
                                                 in tResolve zx zy wx wy (e-1) end)
             end
           | tResolve _ _ _ _ _ = raise NumError;
-        val (x,y) = tResolve a b [] [] n;
+        val (x, y) = tResolve a b [] [] n;
     in filterNum x y (countU a) (countU b) end
 
 fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagram! *)
@@ -1886,14 +1886,14 @@ fun drawTable c =
           | parseTable (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
             (case (cname, cons) of
                  ("buildOne", [name, numExp]) =>
-                 let val (x1,y1) = parseTable name;
-                     val (x2,y2) = parseNum numExp;
-                 in (ONEWAY(id, x1, x2), y1@y2) end
+                 let val (var, varHTML) = parseTable name;
+                     val (prob, probHTML) = parseNum numExp;
+                 in (ONEWAY(id, var, prob), varHTML @ probHTML) end
                | ("buildTwo", [oneDim, twoDim, numExp]) =>
-                 let val (x1,y1) = parseTable oneDim;
-                     val (x2,y2) = parseTable twoDim;
-                     val (x3,y3) = parseNum numExp;
-                 in (TWOWAY(id, x1, x2, x3), y1@y2@y3) end
+                 let val (t1, t1HTML) = parseTable oneDim;
+                     val (t2, t2HTML) = parseTable twoDim;
+                     val (conj, conjHTML) = parseNum numExp;
+                 in (TWOWAY(id, t1, t2, conj), t1HTML @ t2HTML @ conjHTML) end
                | ("combine", [table1, table2]) =>
                  let val (x1,y1) = parseTable table1;
                      val (x2,y2) = parseTable table2;
@@ -1901,44 +1901,44 @@ fun drawTable c =
                | ("notName", [name]) =>
                  let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
                  in case parseTable name of
-                        (NAME a, (id, label, size)::_) => (NNAME(a), [(id, overline label, size)])
+                        (NAME a, [(id, label, size)]) => (NNAME(a), [(id, overline label, size)])
                       | _ => raise TableError
                  end
                | _ => raise TableError)
           | parseTable _ = raise TableError;
         fun convertTable (NAME(x)) = (([SEVENT(x)],[]), [])
           | convertTable (NNAME(x)) = (([NEVENT(x)],[]), [])
-          | convertTable (ONEWAY(id, x, y)) =
-            let val ((x2, _), _) = convertTable x;
-                val w = case x2 of
-                            SEVENT(a)::_ => [y,MINUS(NUM(1),y)]
-                          | NEVENT(a)::_ => [MINUS(NUM(1),y), y]
+          | convertTable (ONEWAY(id, var, prob)) =
+            let val ((v, _), _) = convertTable var;
+                val probs = case v of
+                            [SEVENT(_)] => [prob, MINUS(NUM(1), prob)]
+                          | [NEVENT(_)] => [MINUS(NUM(1), prob), prob]
                           | _ => raise TableError;
-            in ((x2, w), [(id, x2, w)]) end
-          | convertTable (TWOWAY(id, x, y, z)) =
-            let val ((x2, y2), n1) = convertTable x;
-                val ((x3, y3), n2) = convertTable y;
-                val x23 = x2 @ x3;
-                val w = case (x2, x3, y2, y3) of
-                            ((SEVENT a)::_, (SEVENT b)::_, y2_0::_, y3_0::_)
-                            => [z, MINUS(y2_0, z), MINUS(y3_0, z),
-                                MINUS(PLUS(NUM(1), MINUS(z, y3_0)), y2_0)]
-                          | ((SEVENT a)::_, (NEVENT b)::_, y2_0::_, _::y3_1::_)
-                            => [MINUS(y2_0, z), z, MINUS(PLUS(NUM(1), MINUS(z, y3_1)), y2_0),
-                                MINUS(y3_1, z)]
-                          | ((NEVENT a)::_, (SEVENT b)::_, _::y2_1::_, y3_0::_)
-                            => [MINUS(y3_0, z), MINUS(PLUS(NUM(1), MINUS(z, y3_0)), y2_1),
-                                z, MINUS(y2_1, z)]
-                          | ((NEVENT a)::_, (NEVENT b)::_, _::y2_1::_, _::y3_1::_)
-                            => [MINUS(PLUS(NUM(1), MINUS(z, y3_1)), y2_1),
-                                MINUS(y3_1, z), MINUS(y2_1, z), z]
+            in ((v, probs), [(id, v, probs)]) end
+          | convertTable (TWOWAY(id, t1, t2, conj)) =
+            let val ((v1, probs1), tabs1) = convertTable t1;
+                val ((v2, probs2), tabs2) = convertTable t2;
+                val vs = v1 @ v2;
+                val conjs = case (v1, v2, probs1, probs2) of
+                            ([SEVENT _], [SEVENT _], [p1, _], [p2, _])
+                            => [conj, MINUS(p1, conj), MINUS(p2, conj),
+                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1)]
+                          | ([SEVENT _], [NEVENT _], [p1, _], [_, p2])
+                            => [MINUS(p1, conj), conj,
+                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj)]
+                          | ([NEVENT _], [SEVENT _], [_, p1], [p2, _])
+                            => [MINUS(p2, conj), MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1),
+                                conj, MINUS(p1, conj)]
+                          | ([NEVENT _], [NEVENT _], [_, p1], [_, p2])
+                            => [MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj),
+                                MINUS(p1, conj), conj]
                           | _ => raise TableError;
-                val y23w = y2 @ y3 @ w;
-            in ((x23, y23w), (id, x23, y23w)::(n1 @ n2)) end
+                val probs = probs1 @ probs2 @ conjs;
+            in ((vs, probs), (id, vs, probs)::(tabs1 @ tabs2)) end
           | convertTable (COMB(id, t1, t2)) =
             let fun tableMerge [] _ _ _ = raise TableError
                   | tableMerge _ _ [] _ = raise TableError
-                  | tableMerge (x2 as x2_0::_) y2 (x3 as x3_0::_) y3 =
+                  | tableMerge (v1 as var1::_) probs1 (v2 as var2::_) probs2 =
                     let
                         (* Transpose:
                                  c   d      =>       a   b
@@ -1948,25 +1948,25 @@ fun drawTable c =
                          *)
                         fun transpose [a, b, c, d, e, f, g, h] = [c, d, a, b, e, g, f, h]
                           | transpose _ = raise TableError;
-                        val l2 = List.length x2;
-                        val l3 = List.length x3;
-                        val s2 = eventToString x2_0;
-                        val s3 = eventToString x3_0;
-                    in if l2 = l3 then (if s2 = s3 then (x2, y2, y3)
-                                        else if l2 = 1 then ((x2@x3),
-                                                             (y2@[U,U,U,U,U,U]),
-                                                             ([U,U]@y3@[U,U,U,U]))
-                                        else (x2, y2, transpose y3))
-                       else if l2 > l3 then (if s2 = s3 then (x2, y2, (y3@[U,U,U,U,U,U]))
-                                             else (x2, y2, ([U,U]@y3@[U,U,U,U])))
-                       else if s2 = s3 then (x3, (y2@[U,U,U,U,U,U]), y3)
-                       else (x3, ([U,U]@y2@[U,U,U,U]), y3)
+                        val l1 = List.length v1;
+                        val l2 = List.length v2;
+                        val s1 = eventToString var1;
+                        val s2 = eventToString var2;
+                    in if l1 = l2 then (if s1 = s2 then (v1, probs1, probs2)
+                                        else if l1 = 1 then ((v1 @ v2),
+                                                             (probs1 @ [U,U,U,U,U,U]),
+                                                             ([U,U] @ probs2 @ [U,U,U,U]))
+                                        else (v1, probs1, transpose probs2))
+                       else if l1 > l2 then (if s1 = s2 then (v1, probs2, (probs2 @ [U,U,U,U,U,U]))
+                                             else (v1, probs1, ([U,U] @ probs2 @ [U,U,U,U])))
+                       else if s1 = s2 then (v2, (probs1 @ [U,U,U,U,U,U]), probs2)
+                       else (v2, ([U,U] @ probs1 @ [U,U,U,U]), probs2)
                     end;
-                val ((x2, y2), n1) = convertTable t2;
-                val ((x3, y3), n2) = convertTable t1;
-                val (a, b, c) = tableMerge x2 y2 x3 y3;
-                val t = resolve b c (List.length b);
-            in ((a, t), (id, a, t)::n1@n2) end;
+                val ((v1, probs1), tabs1) = convertTable t2;
+                val ((v2, probs2), tabs2) = convertTable t1;
+                val (vs, b, c) = tableMerge v1 probs1 v2 probs2;
+                val probs = resolve b c (List.length b);
+            in ((vs, probs), (id, vs, probs)::tabs1 @ tabs2) end;
         fun tableToHTML (id, events, probabilities) =
             let fun toDocTable (events, probabilities) =
                     let fun th s = "<th style=\"background-color:lightgrey; "
