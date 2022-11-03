@@ -6,7 +6,7 @@ typeSystem probTree =
   order event < label
 
 conSpec probTreeG:probTree =
-  imports numG
+  imports arithG
   constructors
     notLabel: [label] -> label,
     construct: [label, numExp] -> tree,
