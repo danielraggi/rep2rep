@@ -184,8 +184,6 @@ struct
                 SOME ((_,f,x),_) => (f, x)
               | _ => raise TransferSchemaNotApplicable)
 
-      val _ = print (Construction.toString consequent ^ "    of ("^ name ^") matched   " ^Construction.toString goal ^ "\n")
-
       val updatedConsequent = Pattern.applyMorphism consequentMap consequent
       val csMap = Pattern.funUnion CSpace.sameTokens [sourceMap, consequentMap]
       val usedTokensC = FiniteSet.union usedTokens (Pattern.tokensOfConstruction updatedConsequent)
