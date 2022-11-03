@@ -1,31 +1,31 @@
 import arith
 import metaLogic
 
-typeSystem interNumNumT =
+typeSystem interArithArithT =
     imports arith, metaLogicT
     types
     order
 
-conSpec interNumNum:interNumNumT =
+conSpec interArithArith:interArithArithT =
     imports arithG, metaLogic
     constructors
         equal : [numExp,numExp] -> metaBool
 
-tSchema equalNumeral:(arithG,arithG,interNumNum) =
+tSchema equalNumeral:(arithG,arithG,interArithArith) =
     source t:?v:numeral
     target t':?v:numeral
     antecedent
     consequent :metaTrue <-equal[t:?v:numeral,t':?v:numeral]
     strength 1
 
-tSchema equalVar:(arithG,arithG,interNumNum) =
+tSchema equalVar:(arithG,arithG,interArithArith) =
     source t:?x:var
     target t':?x:var
     antecedent
     consequent :metaTrue <-equal[t:?x:var,t':?x:var]
     strength 1
 
-tSchema equalPlus:(arithG,arithG,interNumNum) =
+tSchema equalPlus:(arithG,arithG,interArithArith) =
     source t:numExp <- infixOp[t1:numExp,t2:plus,t3:numExp]
     target t':numExp <- infixOp[t1':numExp,t2':plus,t3':numExp]
     antecedent :metaTrue <-equal[t1:numExp,t1':numExp],
@@ -33,7 +33,7 @@ tSchema equalPlus:(arithG,arithG,interNumNum) =
     consequent :metaTrue <-equal[t:numExp,t':numExp]
     strength 1
 
-tSchema equalMinus:(arithG,arithG,interNumNum) =
+tSchema equalMinus:(arithG,arithG,interArithArith) =
     source t:numExp <- infixOp[t1:numExp,t2:minus,t3:numExp]
     target t':numExp <- infixOp[t1':numExp,t2':minus,t3':numExp]
     antecedent :metaTrue <-equal[t1:numExp,t1':numExp],
@@ -41,7 +41,7 @@ tSchema equalMinus:(arithG,arithG,interNumNum) =
     consequent :metaTrue <-equal[t:numExp,t':numExp]
     strength 1
 
-tSchema equalDiv:(arithG,arithG,interNumNum) =
+tSchema equalDiv:(arithG,arithG,interArithArith) =
     source t:numExp <- infixOp[t1:numExp,t2:div,t3:numExp]
     target t':numExp <- infixOp[t1':numExp,t2':div,t3':numExp]
     antecedent :metaTrue <-equal[t1:numExp,t1':numExp],

@@ -1,7 +1,7 @@
 import bayes
 import areaDiagram
 import metaLogic
-import transferSchemas/numNum
+import transferSchemas/arithArith
 
 typeSystem interBayesAreaT =
     imports bayes, areaDiagram, metaLogicT
@@ -9,7 +9,7 @@ typeSystem interBayesAreaT =
     order
 
 conSpec interBayesArea:interBayesAreaT =
-    imports areaDiagramG, bayesG, interNumNum
+    imports areaDiagramG, bayesG, interArithArith
     constructors
         match : [events,tag] -> metaBool,
         encode : [probSys,area] -> metaBool

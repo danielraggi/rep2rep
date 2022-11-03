@@ -1,7 +1,7 @@
 import bayes
 import contTable
 import metaLogic
-import transferSchemas/numNum
+import transferSchemas/arithArith
 
 typeSystem interBayesTableT =
     imports bayes, contTable, metaLogicT
@@ -9,7 +9,7 @@ typeSystem interBayesTableT =
     order
 
 conSpec interBayesTable:interBayesTableT =
-    imports contTableG, bayesG, interNumNum
+    imports contTableG, bayesG, interArithArith
     constructors
         match : [events,name] -> metaBool,
         encode : [probSys,table] -> metaBool

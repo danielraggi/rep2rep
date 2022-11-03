@@ -1,7 +1,7 @@
 import bayes
 import probTree
 import metaLogic
-import transferSchemas/numNum
+import transferSchemas/arithArith
 
 typeSystem interBayesTreeT =
     imports bayes, probTree, metaLogicT
@@ -9,7 +9,7 @@ typeSystem interBayesTreeT =
     order
 
 conSpec interBayesTree:interBayesTreeT =
-    imports probTreeG, bayesG, interNumNum
+    imports probTreeG, bayesG, interArithArith
     constructors
         match : [events,label] -> metaBool,
         encode : [probSys,tree] -> metaBool
