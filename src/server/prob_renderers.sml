@@ -2054,33 +2054,6 @@ fun drawTable c =
     in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
 fun drawTree x =
-    let fun parseTree (Construction.Source(x)) =
-                (case String.breakOn ":" (#2 x) of
-                    (a,":",_) => (BRANCH(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                    |_ => raise TreeError)
-            |parseTree (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "construct" then
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseNum (List.last(y)) in
-                        (TREE((#1 (#token x)),x1,x2), y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "addBranch" then
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseTree (List.nth(y,1))
-                        val (x3,y3) = parseNum (List.last(y)) in
-                        (ADD((#1 (#token x)),x1,x2,x3),y1@y2@y3)
-                    end
-                else if (#1 (#constructor x)) = "resolve" then
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseTree (List.last(y)) in
-                        (RESOLVE((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "notLabel" then
-                    (case (parseTree (hd(y))) of
-                        (BRANCH(a),b) => (NBRANCH(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
-                        |_ => raise TreeError)
-                else raise TreeError
-            |parseTree (Construction.Reference(x)) = raise TreeError
         fun convertTree (BRANCH(x)) = (([SEVENT(x)],[]), [])
             |convertTree (NBRANCH(x)) = (([NEVENT(x)],[]), [])
             |convertTree (TREE(m,x,y)) =
@@ -2097,8 +2070,34 @@ fun drawTree x =
                         |(SEVENT(a),NEVENT(b)) => ((x2@x3, y2@[MINUS(NUM(1),z),z,U,U]),(m,x2@x3,y2@[MINUS(NUM(1),z),z,U,U])::n)
                         |(NEVENT(a),SEVENT(b)) => ((x2@x3, y2@[U,U,z,MINUS(NUM(1),z)]),(m,x2@x3,y2@[U,U,z,MINUS(NUM(1),z)])::n)
                         |(NEVENT(a),NEVENT(b)) => ((x2@x3, y2@[U,U,MINUS(NUM(1),z),z]),(m,x2@x3,y2@[U,U,MINUS(NUM(1),z),z])::n)
+    let fun parseTree (Construction.Source((id, typ))) =
+                (case String.breakOn ":" typ of
+                    (subtype, ":", _) => (BRANCH(subtype), [(id, subtype, Real.fromInt (String.size subtype) + 0.5)])
+                  | _ => raise TreeError)
+          | parseTree (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                ("construct", [label, value]) =>
+                let val (l, lHTML) = parseTree label;
+                    val (v, vHTML) = parseNum value;
+                in (TREE(id, l, v), lHTML @ vHTML) end
+              | ("addBranch", [tree, label, value]) =>
+                let val (t, tHTML) = parseTree tree;
+                    val (l, lHTML) = parseTree label;
+                    val (v, vHTML) = parseNum value;
+                in (ADD(id, t, l, v), tHTML @ lHTML @ vHTML) end
+              | ("resolve", [tree1, tree2]) =>
+                let val (t1, t1HTML) = parseTree tree1;
+                    val (t2, t2HTML) = parseTree tree2;
+                in (RESOLVE(id, t1, t2), t1HTML @ t2HTML) end
+              | ("notLabel", [label]) =>
+                let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                in case (parseTree label) of
+                       (BRANCH(l), (id', lab, size)::_) => (NBRANCH(l), [(id', overline lab, size)])
+                     | _ => raise TreeError
                 end
             |convertTree ((RESOLVE(m,x,y))) =
+              | _ =>  raise TreeError)
+          | parseTree (Construction.Reference(_)) = raise TreeError
                 let fun treeMerge x2 y2 x3 y3 =
                         let fun f b =
                                 if List.nth(b,2) = U then List.map simplify [VAR("z"),MINUS(NUM(1),VAR("z")),
