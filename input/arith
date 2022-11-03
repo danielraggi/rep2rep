@@ -23,7 +23,8 @@ conSpec arithG:arith =
     infixRel : [numExp,binRel,numExp] -> formula,
     frac : [numExp,div,numExp] -> numExp,
     implicitMult : [numExp,numExp] -> numExp,
-    addParentheses : [oB,numExp,cB] -> numExp
+    addParentheses : [oB,numExp,cB] -> numExp,
+    multiply : [numExp,numExp] -> numExp
 
 conSpec arithE:arith =
   constructors
