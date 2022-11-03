@@ -2166,52 +2166,76 @@ fun drawTree x =
                 val (vars, b, c) = treeMerge v1 p1 v2 p2;
                 val probs = resolve b c (List.length b);
             in ((vars, probs), (id, vars, probs) :: html1 @ html2) end;
-        fun treeToHTML (m,a,b) =
-            let fun addJoint y =
-                    if List.length y = 2 then []
-                    else if List.nth(y,2) = U andalso List.nth(y,4) = U then [U,U,U,U]
-                    else if List.nth(y,2) = U then [U,U,MULT(List.nth(y,4),List.nth(y,1)),MULT(List.nth(y,5),List.nth(y,1))]
-                    else if List.nth(y,4) = U then [MULT(List.nth(y,2),List.nth(y,0)),MULT(List.nth(y,3),List.nth(y,0)),U,U]
-                    else [MULT(List.nth(y,2),List.nth(y,0)),MULT(List.nth(y,3),List.nth(y,0)),MULT(List.nth(y,4),List.nth(y,1)),MULT(List.nth(y,5),List.nth(y,1))]
-                fun toDocTree (x,y) =
-                    if List.length x = 1 then  ("<svg height=\"90\" width=\"120\" style=\"background-color:white\" font-size=\"12px\">\n"^
-                                                "<text transform=\"translate(85,27)\">P("^(List.nth(x,0))^")</text>\n"^
-                                                "<text transform=\"translate(85,83)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>)</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate(40,35) rotate(-17)\">"^(List.nth(y,0))^"</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate(40,74) rotate(17)\">"^(List.nth(y,1))^"</text>\n"^
-                                                "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"25\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                                                "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"75\" style=\"stroke:black;stroke-width:1\"/>\n",
-                                                90.0, 120.0)
-                    else   ("<svg height=\"110\" width=\"350\" style=\"background-color:white\" font-size=\"12px\">\n"^
-                            "<text transform=\"translate(85,27)\">P("^(List.nth(x,0))^")</text>\n"^
-                            "<text transform=\"translate(85,83)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>)</text>\n"^
-                            "<text transform=\"translate(225,10)\">P("^(List.nth(x,0))^"&cap;"^(List.nth(x,1))^") "^(List.nth(y,6))^"</text>\n"^
-                            "<text transform=\"translate(225,38)\">P("^(List.nth(x,0))^"&cap;<tspan text-decoration=\"overline\">"^(List.nth(x,1))^"</tspan>) "^(List.nth(y,7))^"</text>\n"^
-                            "<text transform=\"translate(225,70)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>&cap;"^(List.nth(x,1))^") "^(List.nth(y,8))^"</text>\n"^
-                            "<text transform=\"translate(225,98)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>&cap;<tspan text-decoration=\"overline\">"^(List.nth(x,1))^"</tspan>) "^(List.nth(y,9))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(40,35) rotate(-17)\">"^(List.nth(y,0))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(40,74) rotate(17)\">"^(List.nth(y,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,11) rotate(-7)\">"^(List.nth(y,2))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,37) rotate(7)\">"^(List.nth(y,3))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,71) rotate(-7)\">"^(List.nth(y,4))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,97) rotate(7)\">"^(List.nth(y,5))^"</text>\n"^
-                            "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"25\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"75\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"20\" x2=\"220\" y2=\"7\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"20\" x2=\"220\" y2=\"33\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"80\" x2=\"220\" y2=\"67\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"80\" x2=\"220\" y2=\"93\" style=\"stroke:black;stroke-width:1\"/>\n",
-                             110.0, 350.0)
-                val b = b@(addJoint b)
-                val header = "<div>\n"
-                val footer = "</svg>\n"^
-                             "</div>"
+        fun treeToHTML (id, a, b) =
+            let fun addJoint (y0::y1::y2::y3::y4::y5::_) =
+                    (case (y2, y4) of
+                         (U, U) => [U, U, U, U]
+                       | (U, _) => [U, U, MULT(y4, y1), MULT(y5, y1)]
+                       | (_, U) => [MULT(y2, y0), MULT(y3, y0), U, U]
+                       | (_, _) => [MULT(y2, y0), MULT(y3, y0), MULT(y4, y1), MULT(y5, y1)])
+                  | addJoint _ = raise TreeError;
+                fun overline x = "<tspan text-decoration=\"overline\">" ^ x ^ "</tspan>";
+                fun svg (width, height) = String.concat [
+                        "<svg ", "height=\"", height, "\" width=\"", width, "\" ",
+                        "style=\"background-color:white\" font-size=\"12px\">\n"
+                    ];
+                fun text s (x, y) mid rotate = String.concat [
+                        "<text ",
+                        (if mid then "text-anchor=\"middle\" " else ""),
+                        "transform=\"translate(", x, ",", y, ")",
+                        (case rotate of
+                             NONE => ""
+                          | SOME rot => " rotate(" ^ rot ^ ")"),
+                        "\">",
+                        "P(", s, ")",
+                        "</text>\n"
+                    ];
+                fun line (x1, y1) (x2, y2) = String.concat [
+                        "<line ",
+                        "x1=\"", x1, "\" y1=\"", y1, "\" ",
+                        "x2=\"", x2, "\" y2=\"", y2, "\" ",
+                        "style=\"stroke:black;stroke-width:1\"/>\n"
+                    ];
+                fun toDocTree ([x], [p, p']) =
+                    (String.concat [
+                          svg ("90", "120"),
+                          text x ("85", "27") false NONE,
+                          text (overline x) ("85", "83") false NONE,
+                          text p ("40", "35") true NONE,
+                          text p' ("40", "74") true NONE,
+                          line ("0", "50") ("80", "25"),
+                          line ("0", "50") ("80", "75")
+                      ], 90.0, 120.0)
+                  | toDocTree ([x1, x2], [y0, y1, y2, y3, y4, y5, y6, y7, y8, y9]) =
+                    (String.concat [
+                          svg ("110", "350"),
+                          text x1 ("85", "27") false NONE,
+                          text (overline x1) ("85", "83") false NONE,
+                          text (x1 ^ "&cap;" ^ x2 ^ " = " ^ y6) ("225", "10") false NONE,
+                          text (x1 ^ "&cap;" ^ (overline x2) ^ " = " ^ y7) ("225", "38") false NONE,
+                          text ((overline x1) ^ "&cap;" ^ x2 ^ " = " ^ y8) ("225", "70") false NONE,
+                          text ((overline x1) ^ "&cap;" ^ (overline x2) ^ " = " ^ y9) ("225", "98") false NONE,
+                          text y0 ("40", "35") true (SOME "-17"),
+                          text y1 ("40", "74") true (SOME "17"),
+                          text y2 ("170", "11") true (SOME "-7"),
+                          text y3 ("170", "37") true (SOME "7"),
+                          text y4 ("170", "71") true (SOME "-7"),
+                          text y5 ("170", "97") true (SOME "7"),
+                          line ("0", "50") ("80", "25"),
+                          line ("0", "50") ("80", "75"),
+                          line ("120", "20") ("220", "7"),
+                          line ("120", "20") ("220", "33"),
+                          line ("120", "80") ("220", "67"),
+                          line ("120", "80") ("220", "93")
+                      ], 110.0, 350.0)
+                  | toDocTree _ = raise TreeError;
+                val b = b @ (addJoint b);
+                val header = "<div>\n";
+                val footer = "</svg>\n</div>";
                 val (content,h,w) = toDocTree ((List.map eventToString a),(List.map numToString b))
-                in
-                (m, ((header^content^footer),w,h))
-            end
-        val (a,strings) = parseTree x
-        val (_,trees) = convertTree a
+            in (id, ((header ^ content ^ footer), w, h)) end;
+        val (tr, strings) = parseTree x;
+        val (_, trees) = convertTree tr;
     in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
 fun drawBayes c =
