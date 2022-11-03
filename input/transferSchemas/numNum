@@ -41,9 +41,9 @@ tSchema equalMinus:(arithG,arithG,interNumNum) =
     consequent :metaTrue <-equal[t:numExp,t':numExp]
     strength 1
 
-tSchema equalFrac:(arithG,arithG,interNumNum) =
-    source t:numExp <- frac[t1:numExp,t2:div,t3:numExp]
-    target t':numExp <- frac[t1':numExp,t2':div,t3':numExp]
+tSchema equalDiv:(arithG,arithG,interNumNum) =
+    source t:numExp <- infixOp[t1:numExp,t2:div,t3:numExp]
+    target t':numExp <- infixOp[t1':numExp,t2':div,t3':numExp]
     antecedent :metaTrue <-equal[t1:numExp,t1':numExp],
                :metaTrue <-equal[t3:numExp,t3':numExp]
     consequent :metaTrue <-equal[t:numExp,t':numExp]

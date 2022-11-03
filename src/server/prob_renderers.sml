@@ -87,14 +87,8 @@ fun parseNum (Construction.Source(x)) =
                     Construction.Source(z) => (case (#2 z) of
                                                 "plus" => (PLUS(a,b),(#1 (#token x),(#2 (hd(y1)))^" + "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[(#1 z,"+",1.5)]@y2)
                                                 |"minus" => (MINUS(a,b),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[((#1 z,"-",1.5))]@y2)
+                                                |"div" => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"/",1.5)]@y2)
                                                 |_ => raise NumError)
-                    |_ => raise NumError
-            end
-        else if (#1 (#constructor x)) = "frac" then
-            let val (a,y1) = parseNum (List.nth (y,0))
-                val (b,y2) = parseNum (List.last(y)) in
-                case (List.nth (y,1)) of
-                    Construction.Source(z) => (FRAC(a,b),(#1 (#token x),(#2 (hd(y1)))^"/"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"/",1.5)]@y2)
                     |_ => raise NumError
             end
         else if (#1 (#constructor x)) = "multiply" then

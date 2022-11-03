@@ -258,8 +258,7 @@ typeSystem arith =
 conSpec arithG:arith =
     infixOp : [numExp,binOp,numExp] -> numExp,
     infixRel : [numExp,binRel,numExp] -> formula,
-    frac : [numExp,div,numExp] -> numExp,
-    implicitMult : [numExp,numExp] -> numExp,
+    multiply : [numExp,numExp] -> numExp,
     addParentheses : [oB,numExp,cB] -> numExp
 \end{alltt}
 	Each constructor is declared along with its signature. It should be self-evident how the above is interpreted as constructors with their signatures.
@@ -288,8 +287,8 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                    t13:4:numeral],
                     t2:equals,
                     t3:4oB4plus1cBdiv2:numExp
-                        <- frac[t31:4oB4plus1cB:numExp
-                                    <- implicitMult[t311:4:numeral,
+                        <- infixOp[t31:4oB4plus1cB:numExp
+                                    <- multiply[t311:4:numeral,
                                                     t312:oB3plus1cB:numExp
                                                         <- addParentheses[t3121:oB,
                                                                           t3122:4plus1:numExp

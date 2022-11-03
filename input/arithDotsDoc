@@ -11,17 +11,17 @@ construction 1plus2plus3equalsStuff:arithG =
                                     t13:3:numeral],
                      t2:equals,
                      t3:3oB3plus1cBdiv2:numExp
-                        <- frac[t31:3oB3plus1cB:numExp
-                                    <- implicitMult[t311:3:numeral,
-                                                    t312:oB3plus1cB:numExp
-                                                        <- addParentheses[t3121:oB,
-                                                                          t3122:3plus1:numExp
-                                                                                <- infixOp[t31221:3:numeral,
-                                                                                            t31222:plus,
-                                                                                            t31223:1:numeral],
-                                                                          t3123:cB]],
-                                t32:div,
-                                t33:2:numeral]]
+                        <- infixOp[t31:3oB3plus1cB:numExp
+                                    <- multiply[t311:3:numeral,
+                                                t312:oB3plus1cB:numExp
+                                                    <- addParentheses[t3121:oB,
+                                                                      t3122:3plus1:numExp
+                                                                            <- infixOp[t31221:3:numeral,
+                                                                                        t31222:plus,
+                                                                                        t31223:1:numeral],
+                                                                      t3123:cB]],
+                                    t32:div,
+                                    t33:2:numeral]]
 
 construction 1plus2plus3plus4equalsStuff:arithG =
     t:1+2+3+4=4(4+1)/2:formula
@@ -37,17 +37,17 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                     t13:4:numeral],
                      t2:equals,
                      t3:4(4+1)/2:numExp
-                        <- frac[t31:4(4+1):numExp
-                                    <- implicitMult[t311:4:numeral,
-                                                    t312:(4+1):numExp
-                                                        <- addParentheses[t3121:oB,
-                                                                          t3122:4+1:numExp
-                                                                                <- infixOp[t31221:4:numeral,
-                                                                                            t31222:plus,
-                                                                                            t31223:1:numeral],
-                                                                          t3123:cB]],
-                                t32:div,
-                                t33:2:numeral]]
+                        <- infixOp[t31:4(4+1):numExp
+                                    <- multiply[t311:4:numeral,
+                                                t312:(4+1):numExp
+                                                    <- addParentheses[t3121:oB,
+                                                                      t3122:4+1:numExp
+                                                                            <- infixOp[t31221:4:numeral,
+                                                                                        t31222:plus,
+                                                                                        t31223:1:numeral],
+                                                                      t3123:cB]],
+                                    t32:div,
+                                    t33:2:numeral]]
 
 construction 1plus2equals3:arithG =
     t:1plus2equals3:formula

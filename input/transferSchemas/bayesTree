@@ -53,7 +53,7 @@ tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
                              t2:numExp]
     target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':x:var],
                                 t2':label,
-                                t3':numExp <- frac[t31':numExp,t32':div,t12':x:var]]
+                                t3':numExp <- infixOp[t31':numExp,t32':div,t12':x:var]]
     antecedent :metaTrue <- match[t11:event,t11':label],
                :metaTrue <- match[t13:event,t2':label],
                :metaTrue <- equal[t2:numExp,t31':numExp]

@@ -68,7 +68,7 @@ tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
                                                           t14':white],
                                   t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
                                                     t22':point <- cPoint[t1221':y:var,
-                                                                         t222':numExp <- frac[t2221':numExp,t2222':div,t1221':y:var]]],
+                                                                         t222':numExp <- infixOp[t2221':numExp,t2222':div,t1221':y:var]]],
                                   t3':tag,
                                   t4':pattern]
     antecedent :metaTrue <- match[t11:event,t13':tag],
