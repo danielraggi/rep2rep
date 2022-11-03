@@ -2054,22 +2054,6 @@ fun drawTable c =
     in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
 fun drawTree x =
-        fun convertTree (BRANCH(x)) = (([SEVENT(x)],[]), [])
-            |convertTree (NBRANCH(x)) = (([NEVENT(x)],[]), [])
-            |convertTree (TREE(m,x,y)) =
-                let val ((x2,_),_) = convertTree x in
-                    case (hd(x2)) of
-                    NEVENT(a) => ((x2,[MINUS(NUM(1),y),y]),[(m,x2,[MINUS(NUM(1),y),y])])
-                    |SEVENT(a) => ((x2,[y,MINUS(NUM(1),y)]),[(m,x2,[y,MINUS(NUM(1),y)])])
-                end
-            |convertTree (ADD(m,x,y,z)) =
-                let val ((x2,y2),n) = convertTree x
-                    val ((x3,_),_) = convertTree y in
-                    case ((hd(x2)), (hd(x3))) of
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3, y2@[z,MINUS(NUM(1),z),U,U]),(m,x2@x3,y2@[z,MINUS(NUM(1),z),U,U])::n)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3, y2@[MINUS(NUM(1),z),z,U,U]),(m,x2@x3,y2@[MINUS(NUM(1),z),z,U,U])::n)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3, y2@[U,U,z,MINUS(NUM(1),z)]),(m,x2@x3,y2@[U,U,z,MINUS(NUM(1),z)])::n)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3, y2@[U,U,MINUS(NUM(1),z),z]),(m,x2@x3,y2@[U,U,MINUS(NUM(1),z),z])::n)
     let fun parseTree (Construction.Source((id, typ))) =
                 (case String.breakOn ":" typ of
                     (subtype, ":", _) => (BRANCH(subtype), [(id, subtype, Real.fromInt (String.size subtype) + 0.5)])
@@ -2095,42 +2079,93 @@ fun drawTree x =
                        (BRANCH(l), (id', lab, size)::_) => (NBRANCH(l), [(id', overline lab, size)])
                      | _ => raise TreeError
                 end
-            |convertTree ((RESOLVE(m,x,y))) =
               | _ =>  raise TreeError)
           | parseTree (Construction.Reference(_)) = raise TreeError
-                let fun treeMerge x2 y2 x3 y3 =
-                        let fun f b =
-                                if List.nth(b,2) = U then List.map simplify [VAR("z"),MINUS(NUM(1),VAR("z")),
-                                                                            MINUS(NUM(1),FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z"))), FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z")),
-                                                                            MINUS(NUM(1),FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))), FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))]
-                                else if List.nth(b,4) = U then List.map simplify [VAR("z"), MINUS(NUM(1),VAR("z")),
-                                                                                FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z")), MINUS(NUM(1),FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z"))),
-                                                                                FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))))]
-                                else List.map simplify
-                                    [PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1))), PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))),
-                                    FRAC(MULT(List.nth(b,2), List.nth(b,0)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))), FRAC(MULT(List.nth(b,4), List.nth(b,1)),PLUS(MULT(List.nth(b,2),List.nth(b,0)),MULT(List.nth(b,4),List.nth(b,1)))),
-                                    FRAC(MULT(List.nth(b,3),List.nth(b,0)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1)))),  FRAC(MULT(List.nth(b,5),List.nth(b,1)),PLUS(MULT(List.nth(b,3),List.nth(b,0)),MULT(List.nth(b,5),List.nth(b,1))))]
-                            fun countNum xs =
-                                case xs of
-                                [] => 0
-                                |(x::xs) => if (onlyNum x) then (countNum xs) + 1 else countNum xs
-                        in
-                            if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, y3)
-                            else if List.length x2 = 1 andalso List.length x2 = List.length x3 then ((x2@x3), (y2@[U,U,U,U]),  [VAR("z"), MINUS(NUM(1),VAR("z")), VAR("y"), MINUS(NUM(1),VAR("y")), FRAC(MINUS((hd(y3)),MULT(VAR("z"),VAR("y"))),MINUS(NUM(1),VAR("z"))), MINUS(NUM(1),FRAC(MINUS((hd(y3)),MULT(VAR("z"),VAR("y"))),MINUS(NUM(1),VAR("z"))))])
-                            else if List.length x2 = List.length x3 then
-                                if (countNum y2) > (countNum y3) then (x2, y2, (f y3)) else (x3, (f y2), y3)
-                            else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, (y3@[U,U,U,U]))
-                            else if List.length x2 > List.length x3 then (List.rev x2, f y2, y3@[U,U,U,U])
-                            else if eventToString (hd(x2)) = eventToString (hd(x3)) then (x3, (y2@[U,U,U,U]), y3)
-                            else (List.rev x3, y2@[U,U,U,U], f y3)
-                        end
-                    val ((x2,y2),n1) = convertTree y
-                    val ((x3,y3),n2) = convertTree x
-                    val (a,b,c) = treeMerge x2 y2 x3 y3
-                    in
-                    if List.length a = 1 then ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
-                    else ((a, resolve b c (List.length b)),(m, a, resolve b c (List.length b))::n1@n2)
-                end
+        fun convertTree (BRANCH(x)) = (([SEVENT(x)], []), [])
+          | convertTree (NBRANCH(x)) = (([NEVENT(x)], []), [])
+          | convertTree (TREE(id, label, prob)) =
+            let val ((vars, _), _) = convertTree label;
+                val prob' = MINUS(NUM 1, prob);
+            in case vars of
+                   [NEVENT _] => ((vars, [prob', prob]), [(id, vars, [prob', prob])])
+                 | [SEVENT _] => ((vars, [prob, prob']), [(id, vars, [prob, prob'])])
+                 | _ => raise TreeError
+            end
+          | convertTree (ADD(id, tree, label, prob)) =
+            let val ((v1, ps), tHTML) = convertTree tree;
+                val ((v2, _), _) = convertTree label;
+                val vars = v1 @ v2;
+                val prob' = MINUS(NUM 1, prob);
+            in case (v1, v2) of
+                   ([SEVENT _], [SEVENT _]) => let val ps = ps @ [prob, prob', U, U];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([SEVENT _], [NEVENT _]) => let val ps = ps @ [prob', prob, U, U];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([NEVENT _], [SEVENT _]) => let val ps = ps @ [U, U, prob, prob'];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([NEVENT _], [NEVENT _]) => let val ps = ps @ [U, U, prob', prob];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | _ => raise TreeError
+            end
+          | convertTree (RESOLVE(id, tree1, tree2)) =
+            let fun treeMerge x2 y2 x3 y3 =
+                    let fun f (b0::b1::b2::b3::b4::b5::_) =
+                            let val z = VAR "z";
+                                val z' = MINUS(NUM 1, z);
+                            in case (b2, b4) of
+                                   (U, _) => List.map simplify [
+                                                z, z', MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                FRAC(MULT(b4, b1), z),
+                                                MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                FRAC(MULT(b5, b1), z')]
+                                 | (_, U) => List.map simplify [
+                                                z, z', FRAC(MULT(b2, b0), z),
+                                                MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                FRAC(MULT(b3, b0), z'),
+                                                MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                 | (_, _) => List.map simplify [
+                                                PLUS(MULT(b2, b0), MULT(b4, b1)),
+                                                PLUS(MULT(b3, b0), MULT(b5, b1)),
+                                                FRAC(MULT(b2, b0), PLUS(MULT(b2, b0), MULT(b4, b1))),
+                                                FRAC(MULT(b4, b1), PLUS(MULT(b2, b0), MULT(b4, b1))),
+                                                FRAC(MULT(b3, b0), PLUS(MULT(b3, b0), MULT(b5, b1))),
+                                                FRAC(MULT(b5, b1), PLUS(MULT(b3, b0), MULT(b5, b1)))]
+                            end
+                          | f _ = raise TreeError;
+                        fun countNum xs =
+                            let fun f ans [] = ans
+                                  | f ans (x::xs) = if onlyNum x then f (ans + 1) xs else f ans xs;
+                            in f 0 xs end;
+                        val l1 = List.length x2;
+                        val l2 = List.length x3;
+                        val s1 = eventToString (hd x2);
+                        val s2 = eventToString (hd x3);
+                        val (z, z') = (VAR  "z", MINUS(NUM 1, VAR "z"));
+                        val (y, y') = (VAR  "y", MINUS(NUM 1, VAR "y"));
+                    in if l1 = l2
+                       then (if s1 = s2
+                             then (x2, y2, y3)
+                             else (if l1 = 1
+                                   then let val probs = [z, z', y, y',
+                                                         FRAC(MINUS(hd y3, MULT(z, y)), z'),
+                                                         MINUS(NUM 1, FRAC(MINUS(hd y3, MULT(z, y)), z'))];
+                                        in (x2 @ x3, y2 @ [U, U, U, U], probs) end
+                                   else (if (countNum y2) > (countNum y3)
+                                         then (x2, y2, f y3)
+                                         else (x3, f y2, y3))))
+                       else (if l1 > l2
+                             then (if s1 = s2
+                                   then (x2, y2, y3 @ [U, U, U, U])
+                                   else (List.rev x2, f y2, y3 @ [U, U, U, U]))
+                             else (if s1 = s2
+                                   then (x3, y2 @ [U, U, U, U], y3)
+                                   else (List.rev x3, y2 @ [U, U, U, U], f y3)))
+                    end;
+                val ((v1, p1), html1) = convertTree tree2;
+                val ((v2, p2), html2) = convertTree tree1;
+                val (vars, b, c) = treeMerge v1 p1 v2 p2;
+                val probs = resolve b c (List.length b);
+            in ((vars, probs), (id, vars, probs) :: html1 @ html2) end;
         fun treeToHTML (m,a,b) =
             let fun addJoint y =
                     if List.length y = 2 then []
