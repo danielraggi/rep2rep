@@ -802,16 +802,16 @@ fun resolve a b (n:int) =
               | (x, MINUS(VAR(n), c)) => SOME (VAR(n), PLUS(c, x))
               | _ => NONE;
         fun filterNum xs ys nx ny =
-            let fun filterNum' ans [] [] _ _ = List.rev ans
-                  | filterNum' ans (x::xs) (y::ys) nx ny =
-                    if onlyNum x then filterNum' (x::ans) xs ys nx ny
-                    else if onlyNum y then filterNum' (y::ans) xs ys nx ny
-                    else if x = U then filterNum' (y::ans) xs ys nx ny
-                    else if y = U then filterNum' (x::ans) xs ys nx ny
-                    else if nx > ny then filterNum' (y::ans) xs ys nx ny
-                    else filterNum' (x::ans) xs ys nx ny
-                  | filterNum' _ _ _ _ _ = raise NumError;
-            in filterNum' [] xs ys nx ny end;
+            let fun filterNum' ans [] [] = List.rev ans
+                  | filterNum' ans (x::xs) (y::ys) =
+                    if onlyNum x then filterNum' (x::ans) xs ys
+                    else if onlyNum y then filterNum' (y::ans) xs ys
+                    else if x = U then filterNum' (y::ans) xs ys
+                    else if y = U then filterNum' (x::ans) xs ys
+                    else if nx > ny then filterNum' (y::ans) xs ys
+                    else filterNum' (x::ans) xs ys
+                  | filterNum' _ _ _ = raise NumError;
+            in filterNum' [] xs ys end;
         fun tResolve a b c d 0 = (List.revAppend (c, a), List.revAppend (d, b))
           | tResolve [] [] c d _ = (List.rev c, List.rev d)
           | tResolve (a::aas) (b::bbs) c d e =
