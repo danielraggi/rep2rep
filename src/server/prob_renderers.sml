@@ -1592,41 +1592,43 @@ fun drawArea c =
                         (LABEL(a), (id', l, s)::_) => (NLABEL(a), [(id', overline l, s)])
                       | _ => raise AreaError
                  end
-               | ("cPoint", [c1, c2]) =>
-                 let val (x1, z1) = parseNum c1;
-                     val (x2, z2) = parseNum c2;
-                 in case (z1, z2) of
-                        ((_, l1, s1)::_, (_, l2, s2)::_) => (POINT(x1,x2), (id, "("^l1^","^l2^")", s1+s2)::z1@z2)
+               | ("cPoint", [x, y]) =>
+                 let val (x', xHTML) = parseNum x;
+                     val (y', yHTML) = parseNum y;
+                 in case (xHTML, yHTML) of
+                        ((_, s1, w1)::_, (_, s2, w2)::_) => (POINT(c1,c2),
+                                                             (id, "("^s1^","^s2^")", w1+w2) :: xHTML @ yHTML)
                       | _ => raise AreaError
                  end
-               | ("cRect", [p1, p2]) =>
-                 let val (x1,y1) = parseArea p1;
-                     val (x2,y2) = parseArea p2;
-                 in case (y1, y2) of
-                        ((_, l1, s1)::_, (_, l2, s2)::_) => (RECT(x1,x2), (id, l1^" - "^l2, s1+s2+0.5)::y1@y2)
+               | ("cRect", [pt1, pt2]) =>
+                 let val (p1, p1HTML) = parseArea pt1;
+                     val (p2, p2HTML) = parseArea pt2;
+                 in case (p1HTML, p2HTML) of
+                        ((_, s1, w1)::_, (_, s2, w2)::_) => (RECT(p1, p2),
+                                                             (id, s1^" - "^s2, w1+w2+0.5) :: p1HTML @ p2HTML)
                       | _ => raise AreaError
                  end
-               | ("overlayRect", [a, r, t, s]) =>
-                 let val (x1,y1) = parseArea a;
-                     val (x2,y2) = parseArea r;
-                     val (x3,y3) = parseArea t;
-                     val (x4,y4) = parseShading s;
-                 in (OVERLAY(id, x1, x2, x3, x4), y1@y2@y3@y4) end
-               | ("combine", [a1, a2]) =>
-                 let val (x1,y1) = parseArea a1;
-                     val (x2,y2) = parseArea a2;
-                 in (COMBAREA(id, x1, x2), y1@y2) end
+               | ("overlayRect", [area, rect, tag, shading]) =>
+                 let val (a, areaHTML) = parseArea area;
+                     val (r, rectHTML) = parseArea rect;
+                     val (t, tagHTML) = parseArea tag;
+                     val (s, shadingHTML) = parseShading shading;
+                 in (OVERLAY(id, a, r, t, s), areaHTML @ rectHTML @ tagHTML @ shadingHTML) end
+               | ("combine", [area1, area2]) =>
+                 let val (a1, a1HTML) = parseArea area1;
+                     val (a2, a2HTML) = parseArea area2;
+                 in (COMBAREA(id, a1, a2), a1HTML @ a2HTML) end
                | _ => raise AreaError)
           | parseArea (Construction.Reference(_)) = raise AreaError
-        fun convertArea EMPTY = (([],[],[],[]),[])
+        fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
           | convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
           | convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
           | convertArea (POINT(x,y)) = (([],[x,y],[],[]),[])
-          | convertArea (RECT(x,y)) =
-            let val ((_,y2,_,_),_) = convertArea x;
-                val ((_,y3,_,_),_) = convertArea y;
-            in (([], y2@y3, [], []), []) end
-          | convertArea (OVERLAY(m,x,y,z,w)) =
+          | convertArea (RECT(p1, p2)) =
+            let val ((_,pts1,_,_),_) = convertArea p1;
+                val ((_,pts2,_,_),_) = convertArea p2;
+            in (([], pts1 @ pts2, [], []), []) end
+          | convertArea (OVERLAY(id, x, y, z, w)) =
                 let fun flipShading x = case x of
                                             BLUE => RED
                                           | RED => BLUE
@@ -1636,15 +1638,15 @@ fun drawArea c =
                     val ((x3,_,_,_),_) = convertArea z;
                 in if w1 = []
                    then case (hd(x3)) of
-                            SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(m,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
-                          | NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(m,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
+                            SEVENT(a) =>  ((x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))]),(id,x3,y2,[w],[List.nth(y2,2),MINUS(NUM(1),List.nth(y2,2))])::n)
+                          | NEVENT(a) => ((x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)]),(id,x3,[MINUS(NUM(1),List.nth(y2,2)),NUM(0),NUM(1),NUM(1)],[(flipShading w)],[MINUS(NUM(1),List.nth(y2,2)),List.nth(y2,2)])::n)
                    else case (hd(x1),hd(x3)) of
-                            (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                          | (SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
-                          | (NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(m,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
-                          | (NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(m,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                            (SEVENT(a),SEVENT(b)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(id,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                          | (SEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(id,x1@x3,y1@[List.nth(y2,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
+                          | (NEVENT(a),SEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))]),(id,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),MINUS(NUM(1),List.nth(y2,3))])::n)
+                          | (NEVENT(a),NEVENT(b)) => ((x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)), List.nth(y2,3)]),(id,x1@x3,y1@[List.nth(y1,0),MINUS(NUM(1),List.nth(y2,3)),List.nth(y1,2),NUM(1)],z1@[(flipShading w)],w1@[MINUS(NUM(1),List.nth(y2,3)),List.nth(y2,3)])::n)
                 end
-            | convertArea (COMBAREA(m,x,y)) =
+            | convertArea (COMBAREA(id, x, y)) =
               let fun toRects [w0, _, w2, _, w4, _] =
                       let val z = NUM 0;
                           val i = NUM 1;
@@ -1750,18 +1752,17 @@ fun drawArea c =
                   val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3);
                   val g = resolve (c@e) (d@f) (List.length c);
               in if List.length g = 12
-                 then ((x, (List.drop(g,4)),
-                        [(mergeShading (hd(z2)) (hd(z3))),PATTERN],
-                        List.take(g,4)),
-                       (m, x, (List.drop(g,4)),
-                        [(mergeShading (hd(z2)) (hd(z3))),PATTERN],
-                        List.take(g,4))::n1@n2)
-                 else ((x, (toRects (List.take(g,6))),
-                        [WHITE,BLUE,RED],
-                        List.take(g,6)),
-                       (m, x, (toRects (List.take(g,6))),
-                        [WHITE,BLUE,RED],
-                        List.take(g,6))::n1@n2)
+                 then let val (pre, post) = List.split (g, 4);
+                          val shading = mergeShading (hd z2) (hdz3);
+                      in (    (x, post, [shading, PATTERN], pre),
+                              (id, x, post, [shading, PATTERN], pre) :: n1 @ n2)
+                      end
+                 else let val pre = List.take (g, 6);
+                          val rects = toRects pre;
+                          val shading = [WHITE, BLUE, RED];
+                      in (    (x, rects, shading, pre),
+                          (id, x, rects, shading, pre) :: n1 @ n2)
+                      end
               end;
         fun areaToHTML (id, events, b, fills, d) =
             let fun toNum x = if onlyNum x
