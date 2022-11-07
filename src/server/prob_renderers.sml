@@ -1738,39 +1738,39 @@ fun drawArea c =
                                                end
                               end
                             | ff _ = raise AreaError;
+                          fun merger [] [] _ _ c d e f = (List.rev c, List.rev d, e, f)
+                            | merger (x::xxs::xs) (y::yys::ys) y2 y3 c d e f =
+                              (case (x, y) of
+                                   (U, U) => merger xs ys y2 y3 c d e f
+                                 | (U, _) => let val (pre, post) = List.split (y3, 4);
+                                             in merger xs ys
+                                                       y2 post
+                                                       (xxs::x::c) (yys::y::d)
+                                                       (e@[U,U,U,U]) (f@pre) end
+                                 | (_, U) => let val (pre, post) = List.split(y2, 4);
+                                             in merger xs ys
+                                                       post y3
+                                                       (xxs::x::c) (yys::y::d)
+                                                       (e@pre) (f@[U,U,U,U]) end
+                                 | _ => let val (pre2, post2) = List.split(y2, 4);
+                                            val (pre3, post3) = List.split(y3, 4);
+                                        in merger xs ys
+                                                  post2 post3
+                                                  (xxs::x::c) (yys::y::d)
+                                                  (e@pre2) (f@pre3) end)
+                            | merger _ _ _ _ _ _ _ _ = raise AreaError;
                       in if eventToString (hd(x2)) = eventToString (hd(x3)) then
-                             let fun merger [] [] _ _ c d e f = (List.rev c, List.rev d, e, f)
-                                   | merger (x::xxs::xs) (y::yys::ys) y2 y3 c d e f =
-                                     (case (x, y) of
-                                          (U, U) => merger xs ys y2 y3 c d e f
-                                        | (U, _) => let val (pre, post) = List.split (y3, 4);
-                                                    in merger xs ys
-                                                              y2 post
-                                                              (xxs::x::c) (yys::y::d)
-                                                              (e@[U,U,U,U]) (f@pre) end
-                                        | (_, U) => let val (pre, post) = List.split(y2, 4);
-                                                    in merger xs ys
-                                                              post y3
-                                                              (xxs::x::c) (yys::y::d)
-                                                              (e@pre) (f@[U,U,U,U]) end
-                                        | _ => let val (pre2, post2) = List.split(y2, 4);
-                                                   val (pre3, post3) = List.split(y3, 4);
-                                               in merger xs ys
-                                                         post2 post3
-                                                         (xxs::x::c) (yys::y::d)
-                                                         (e@pre2) (f@pre3) end)
-                                   | merger _ _ _ _ _ _ _ _ = raise AreaError;
-                                 val (c,d,e,f) = merger a b y2 y3 [] [] [] [];
-                             in if List.length x2 > List.length x3 then (x2, c, d, e, f)
-                                else (x3, c, d, e, f)
-                             end
+                             let val (c, d, e, f) = merger a b y2 y3 [] [] [] [];
+                                 val x = if List.length x2 > List.length x3 then x2 else x3;
+                             in (x, c, d, e, f) end
                          else if List.length x2 = List.length x3 andalso List.length x2 = 1
-                         then let val xss = [VAR("z"),MINUS(NUM(1),VAR("z")),
-                                             VAR("x"), MINUS(NUM(1),VAR("x")),
-                                             FRAC(MINUS(hd(b),MULT(VAR("z"),VAR("x"))),
-                                                  MINUS(NUM(1),VAR("z"))),
-                                             MINUS(NUM(1),FRAC(MINUS(hd(b), MULT(VAR("z"),VAR("x"))),
-                                                               MINUS(NUM(1),VAR("z"))))];
+                         then let val z = VAR("z");
+                                  val z' = MINUS(NUM(1), z);
+                                  val x = VAR("x");
+                                  val x' = MINUS(NUM(1), x);
+                                  val xss = [z, z', x, x',
+                                             FRAC(MINUS(hd(b),MULT(z, x)), z'),
+                                             MINUS(NUM(1), FRAC(MINUS(hd(b), MULT(z, x)), z'))];
                               in (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss)) end
                          else if List.length x2 = List.length x3 andalso List.length y2 = 8 then
                              let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
@@ -2218,7 +2218,7 @@ fun drawTree x =
                 val b = b @ (addJoint b);
                 val header = "<div>\n";
                 val footer = "</svg>\n</div>";
-                val (content,h,w) = toDocTree ((List.map eventToString a),(List.map numToString b))
+                val (content, h, w) = toDocTree ((List.map eventToString a), (List.map numToString b))
             in (id, ((header ^ content ^ footer), w, h)) end;
         val (tr, strings) = parseTree x;
         val (_, trees) = convertTree tr;
