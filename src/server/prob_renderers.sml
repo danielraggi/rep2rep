@@ -93,42 +93,33 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
     let val (id, typ) = tok;
         val (cname, ctyp) = con;
         val parseWithValAndLength = parseWithValAndLength parseNum;
-    in case cname of
-           "infixOp" =>
-           (case inputs of
-                [a, Construction.Source((id', op_)), b] =>
-                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-                in case op_ of
-                       "plus" =>
-                       let val sum = (id, String.concat [leftVal, " + ", rightVal], leftLen + rightLen + 0.5);
-                           val plus = (id', "+", 1.5);
-                       in (PLUS(a', b'), sum::y1@(plus::y2)) end
-                     | "minus" =>
-                       let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
-                           val minus = (id', "-", 1.5);
-                       in (MINUS(a', b'), diff::y1@(minus::y2)) end
-                     | _ => raise NumError
-                end
-              | _ => raise NumError)
-         | "frac" =>
-           (case inputs of
-                [a, Construction.Source((id', "div")), b] =>
-                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-                    val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
-                    val divd = (id', "/", 1.5);
-                in (FRAC(a', b'), frac::y1@(divd::y2)) end
-              | _ => raise NumError)
-         | "multiply" =>
-           (case inputs of
-                [a, b] =>
-                let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-                    val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-                    val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
-                in (MULT(a', b'), prod::y1@y2) end
-              | _ => raise NumError)
-         | _ => raise NumError
+    in case (cname, inputs) of
+           ("infixOp", [a, Construction.Source((id', op_)), b]) =>
+           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+           in case op_ of
+                  "plus" =>
+                  let val sum = (id, String.concat [leftVal, " + ", rightVal], leftLen + rightLen + 0.5);
+                      val plus = (id', "+", 1.5);
+                  in (PLUS(a', b'), sum::y1@(plus::y2)) end
+                | "minus" =>
+                  let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
+                      val minus = (id', "-", 1.5);
+                  in (MINUS(a', b'), diff::y1@(minus::y2)) end
+                | _ => raise NumError
+           end
+         | ("frac", [a, Construction.Source((id', "div")), b]) =>
+           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+               val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
+               val divd = (id', "/", 1.5);
+           in (FRAC(a', b'), frac::y1@(divd::y2)) end
+         | ("multiply", [a, b]) =>
+           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+               val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
+           in (MULT(a', b'), prod::y1@y2) end
+         | (_, _) => raise NumError
     end
 end;
 
@@ -199,7 +190,7 @@ fun numToString x =
           | convertNum (NUM(x)) = R (Real.fromInt x)
         val str = case convertNum (simplify x) of
                       V x => x
-                    | R x => Real.toString (round x)
+                    | R x => Real.toString (round x);
         in if String.size str > 40 then " " else str end
 and simplify (PLUS(x,y)) =
     (* NOTE FROM AARON: This looks like it could be simplified by
@@ -211,8 +202,8 @@ and simplify (PLUS(x,y)) =
        form, which is probably a good thing! I also suggest collapsing
        NUM and DEC into a single NUM variant (containing a numerical string?).
      *)
-    let val a = simplify x
-        val b = simplify y
+    let val a = simplify x;
+        val b = simplify y;
     in case (a,b) of
            (NUM(0), b) => b (* 0 + b = b *)
          | (a, NUM(0)) => a (* a + 0 = a *)
