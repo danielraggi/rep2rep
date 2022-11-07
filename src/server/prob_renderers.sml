@@ -1714,44 +1714,30 @@ fun drawArea c =
                              | NEVENT(a) => let val (pre, post) = List.split (w, 2);
                                             in pre @ [U, U] @ post end;
                   fun areaMerge x2 y2 a x3 y3 b =
-                      let fun ff b =
-                              if List.nth(b,2) = U
-                              then let val xs = [
-                                           VAR("z"),MINUS(NUM(1),VAR("z")),
-                                           MINUS(NUM(1),FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z"))),
-                                           FRAC(MULT(List.nth(b,4), List.nth(b,1)), VAR("z")),
-                                           MINUS(NUM(1),FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))),
-                                           FRAC(MULT(List.nth(b,5),List.nth(b,1)), MINUS(NUM(1), VAR("z")))];
-                                       val xss = List.map simplify xs;
-                                   in (xss, (toRects xss)) end
-                              else if List.nth(b,4) = U
-                              then let val xs = [VAR("z"), MINUS(NUM(1),VAR("z")),
-                                                 FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z")),
-                                                 MINUS(NUM(1),FRAC(MULT(List.nth(b,2),List.nth(b,0)),VAR("z"))),
-                                                 FRAC(MULT(List.nth(b,3),List.nth(b,0)),MINUS(NUM(1),VAR("z"))),
-                                                 MINUS(NUM(1),FRAC(MULT(List.nth(b,3),List.nth(b,0)),
-                                                                   MINUS(NUM(1),VAR("z"))))];
-                                       val xss = List.map simplify xs;
-                                   in (xss, (toRects xss)) end
-                              else let val xs = [
-                                           PLUS(MULT(List.nth(b,2),List.nth(b,0)),
-                                                MULT(List.nth(b,4),List.nth(b,1))),
-                                           PLUS(MULT(List.nth(b,3),List.nth(b,0)),
-                                                MULT(List.nth(b,5),List.nth(b,1))),
-                                           FRAC(MULT(List.nth(b,2), List.nth(b,0)),
-                                                PLUS(MULT(List.nth(b,2),List.nth(b,0)),
-                                                     MULT(List.nth(b,4),List.nth(b,1)))),
-                                           FRAC(MULT(List.nth(b,4), List.nth(b,1)),
-                                                PLUS(MULT(List.nth(b,2),List.nth(b,0)),
-                                                     MULT(List.nth(b,4),List.nth(b,1)))),
-                                           FRAC(MULT(List.nth(b,3),List.nth(b,0)),
-                                                PLUS(MULT(List.nth(b,3),List.nth(b,0)),
-                                                     MULT(List.nth(b,5),List.nth(b,1)))),
-                                           FRAC(MULT(List.nth(b,5),List.nth(b,1)),
-                                                PLUS(MULT(List.nth(b,3),List.nth(b,0)),
-                                                     MULT(List.nth(b,5),List.nth(b,1))))];
-                                       val xss = List.map simplify xs;
-                                   in (xss, (toRects xss)) end
+                      let fun ff (b0::b1::b2::b3::b4::b5::_) =
+                              let val z = VAR("z");
+                                  val z' = MINUS(NUM(1), z);
+                                  fun mktree xs = let val xs' = List.map simplify xs;
+                                                  in (xs, (toRects xs)) end;
+                              in case (b2, b4) of
+                                     (U, _) => mktree [z, z',
+                                                       MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                       FRAC(MULT(b4, b1), z),
+                                                       MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                       FRAC(MULT(b5, b1), z')]
+                                   | (_, U) => mktree [z, z',
+                                                       FRAC(MULT(b2, b0), z),
+                                                       MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                       FRAC(MULT(b3, b0), z'),
+                                                       MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                   | (_, _) => let val y1 = PLUS(MULT(b2, b0), MULT(b4, b1));
+                                                   val y2 = PLUS(MULT(b3, b0), MULT(b5, b1));
+                                               in mktree [y1, y2,
+                                                          FRAC(MULT(b2, b0), y1), FRAC(MULT(b4, b1), y1),
+                                                          FRAC(MULT(b3, b0), y2), FRAC(MULT(b5, b1), y2)]
+                                               end
+                              end
+                            | ff _ = raise AreaError;
                       in if eventToString (hd(x2)) = eventToString (hd(x3)) then
                              let fun merger [] [] _ _ c d e f = (List.rev c, List.rev d, e, f)
                                    | merger (x::xxs::xs) (y::yys::ys) y2 y3 c d e f =
