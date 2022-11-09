@@ -2149,11 +2149,11 @@ fun drawTree x =
                        | (U, _) => [U, U, MULT(y4, y1), MULT(y5, y1)]
                        | (_, U) => [MULT(y2, y0), MULT(y3, y0), U, U]
                        | (_, _) => [MULT(y2, y0), MULT(y3, y0), MULT(y4, y1), MULT(y5, y1)])
+                  | addJoint [p, p'] = []
                   | addJoint _ = raise TreeError;
                 fun overline x = "<tspan text-decoration=\"overline\">" ^ x ^ "</tspan>";
-                fun svg (width, height) = String.concat [
-                        "<svg ", "height=\"", height, "\" width=\"", width, "\" ",
-                        "style=\"background-color:white\" font-size=\"12px\">\n"
+                fun svg (height, width) = String.concat [
+                        "<svg height=\"", height, "\" width=\"", width, "\" font-size=\"12px\">\n"
                     ];
                 fun text s (x, y) mid rotate = String.concat [
                         "<text ",
@@ -2177,8 +2177,8 @@ fun drawTree x =
                           svg ("90", "120"),
                           text x ("85", "27") false NONE,
                           text (overline x) ("85", "83") false NONE,
-                          text p ("40", "35") true NONE,
-                          text p' ("40", "74") true NONE,
+                          text p ("40", "35") true (SOME "-17"),
+                          text p' ("40", "74") true (SOME "17"),
                           line ("0", "50") ("80", "25"),
                           line ("0", "50") ("80", "75")
                       ], 90.0, 120.0)
@@ -2206,10 +2206,10 @@ fun drawTree x =
                       ], 110.0, 350.0)
                   | toDocTree _ = raise TreeError;
                 val b = b @ (addJoint b);
-                val header = "<div>\n";
+                val header = "<div style=\"padding:5px;\">\n";
                 val footer = "</svg>\n</div>";
                 val (content, h, w) = toDocTree ((List.map eventToString a), (List.map numToString b))
-            in (id, ((header ^ content ^ footer), w, h)) end;
+            in (id, ((header ^ content ^ footer), w + 10.0, h + 10.0)) end;
         val (tr, strings) = parseTree x;
         val (_, trees) = convertTree tr;
     in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
