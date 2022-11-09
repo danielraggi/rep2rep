@@ -1551,11 +1551,11 @@ fun resolve a b (n:int) =
 
 fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagram! *)
     (id, ("<div>\n"^
-         "<svg width=\"200\" height=\"200\">\n"^
-         "<rect width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
+         "<svg width=\"220\" height=\"220\">\n"^
+         "<rect x=\"10\" y=\"10\" width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
          "</svg>\n"^
          "</div>",
-         200.0, 200.0))
+         220.0, 220.0))
   | stringToHTML (id, text, width) =
     let val mid = width * 5.0;
         val len = width * 10.0;
