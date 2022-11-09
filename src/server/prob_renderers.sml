@@ -153,7 +153,7 @@ fun numToString x =
           | convertNum (MINUS(x,y)) =
             (case (convertNum x, convertNum y) of
                  (R a, R b) => R (a - b)
-               | (R a, V b) => if Real.== (a,0.0) andalso String.substring(b,0,1) = "~"
+               | (R a, V b) => if Real.== (a,0.0) andalso String.sub(b,0) = #"~"
                                then V (String.extract (b, 1, NONE))
                                else
                                    if Real.== (a, 0.0) then V ("~" ^ b)
@@ -1562,7 +1562,6 @@ fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagr
     in
         (id, ("<div>\n"^
               "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
-              "<rect width=\""^(Real.toString len)^"\" height=\"18\" fill=\"#d9d9d9\"/>\n"^
               "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^text^"</text>\n"^
               "</svg>\n"^
               "</div>",
