@@ -2016,7 +2016,7 @@ fun drawTable c =
                            ], 280.0)
                          | _ => raise TableError
                     end;
-                val header = "<div>\n"
+                val header = "<div style=\"padding: 10px;\">\n"
                              ^ "<table style=\"text-align:center; "
                              ^ "border-collapse:collapse; "
                              ^ "background-color:white; "
@@ -2024,7 +2024,7 @@ fun drawTable c =
                 val footer = "\n</table>\n</div>\n";
                 val (content, width) = toDocTable ((List.map eventToString events),
                                                    (List.map numToString probabilities));
-            in (id, ((header ^ content ^ footer), width, 100.0)) end;
+            in (id, ((header ^ content ^ footer), width + 20.0, 120.0)) end;
         val (tabs, strings) = parseTable c;
         val (_, tables) = convertTable tabs;
     in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
