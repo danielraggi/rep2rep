@@ -22,6 +22,7 @@ sig
     val flip : ('a * 'b) -> ('b * 'a);
     val curry: ('a * 'b -> 'c) -> 'a -> 'b -> 'c
     val uncurry: ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+    val timeFn: string -> (unit -> 'a) -> 'a;
 end;
 
 
@@ -70,6 +71,12 @@ fun flip (a, b) = (b, a);
 fun curry f a b = f (a, b);
 
 fun uncurry f (a, b) = f a b;
+
+fun timeFn name f =
+    let val t = Timer.startRealTimer ();
+        val result = f ();
+        val () = print ("Time for " ^ name ^ ": " ^ (Time.fmt 6 (Timer.checkRealTimer t)) ^ "s\n");
+    in result end;
 
 end;
 
@@ -158,7 +165,7 @@ fun split (xs, i) =
 
 fun inout lst =
     let fun loop ans _ [] = List.rev ans
-          | loop ans ys (x::xs) = loop ((x, (List.rev ys)@xs)::ans) (x::ys) xs;
+          | loop ans ys (x::xs) = loop ((x, List.revAppend (ys, xs))::ans) (x::ys) xs;
     in loop [] [] lst end;
 
 fun mergesort cmp [] = []
