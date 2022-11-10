@@ -96,22 +96,26 @@ struct
           end
     in FiniteSet.all f1 Ty
     end;
-  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
+  fun antisymmetric Ty R =
+      FiniteSet.all
+          (fn x => FiniteSet.all
+                       (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
+
   fun respectsAny Ty R = FiniteSet.all (fn x => R (x,any)) Ty
 
   fun wellDefined {typeSystem,principalTypes,...} =
-    let val PTys = FiniteSet.map #typ principalTypes
-        val {Ty,subType} = typeSystem
-        fun correctPrincipalType {typ,subTypeable} =
-          Set.elementOf typ Ty andalso
-          (not subTypeable orelse
-           (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
-            FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
-    in reflexive PTys subType andalso
-       transitive PTys subType andalso
-       antisymmetric PTys subType andalso
-       FiniteSet.all correctPrincipalType principalTypes
-    end
+      let val PTys = FiniteSet.map #typ principalTypes;
+          val {Ty,subType} = typeSystem;
+          fun correctPrincipalType {typ,subTypeable} =
+              Set.elementOf typ Ty andalso
+              (not subTypeable orelse
+               (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
+                FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
+      in timeFn "reflexive" (fn () => reflexive PTys subType) andalso
+         timeFn "transitive" (fn () => transitive PTys subType) andalso
+         timeFn "antisymmetric" (fn () => antisymmetric PTys subType) andalso
+         timeFn "correctPrincipalType" (fn () => FiniteSet.all correctPrincipalType principalTypes)
+      end
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
 

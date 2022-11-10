@@ -287,8 +287,8 @@ struct
                                 name = "__tmp"}
 
       val importsTSDs = getImports blocks
-      val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
-      val _ = if Type.wellDefined typeSystemData
+      val typeSystemData = timeFn "joinTSData" (fn () => joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw]))
+      val _ = if timeFn "wellDefined" (fn () => Type.wellDefined typeSystemData)
               then print ("...done\n")
               else print ("\n  WARNING: Type System " ^ name ^ " is not well defined (probably a cycle, unless the there's a bug in oruga!)\n")
 
