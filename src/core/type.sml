@@ -1,4 +1,5 @@
 import "util.set";
+import "util.dictionary";
 
 signature TYPE =
 sig
@@ -114,13 +115,30 @@ struct
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
 
-  fun transitiveClosure Ty R =
-    let fun R' (x,y) = R (x,y) orelse
-                      FiniteSet.exists (fn z => R (x,z) andalso R (z,y)) Ty
-    in if FiniteSet.all (fn x => FiniteSet.all (fn y => R (x,y) = R' (x,y)) Ty) Ty
-       then R
-       else transitiveClosure Ty R'
-    end
+  structure TyTySet = struct
+  structure D = Dictionary(struct type k = typ * typ;
+                                  fun compare ((t1, t2), (u1, u2)) =
+                                      if t1 = u1 then String.compare (t2, u2)
+                                      else String.compare (t1, u1);
+                                  fun fmt (t1, t2) = "(" ^ t1 ^", " ^ t2 ^ ")";
+                           end);
+
+  fun empty () = D.empty ();
+  fun has d k = Option.isSome (D.get d k);
+  fun add d k = D.insert d (k, ());
+  end;
+
+  fun transitiveClosure Ty R0 =
+      let val set = FiniteSet.listOf Ty;
+          val R = TyTySet.empty ();
+          fun sapp f = List.app f set;
+          fun extendR z x y =
+              if TyTySet.has R (x, y) then ()
+              else if (TyTySet.has R (x, z) andalso TyTySet.has R (z, y))
+              then TyTySet.add R (x, y)
+              else ();
+          val () = sapp (fn z => sapp (fn x => sapp (fn y => extendR z x y))) ;
+      in fn (x, y) => R0(x, y) orelse TyTySet.has R (x, y)  end;
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
