@@ -86,16 +86,13 @@ struct
   fun reflexive Ty R = FiniteSet.all (fn x => R (x,x)) Ty;
 
   fun transitive Ty R =
-    let fun f1 x =
-          let val Ty' = FiniteSet.minus Ty (FiniteSet.singleton x)
-              fun f2 y =
-                let fun f3 z = not (R (y,z)) orelse R (x,z)
-                in not (R (x,y)) orelse FiniteSet.all f3 (FiniteSet.minus Ty' (FiniteSet.singleton y))
-                end
-          in FiniteSet.all f2 Ty'
-          end
-    in FiniteSet.all f1 Ty
-    end;
+      let val set = FiniteSet.listOf Ty;
+          val pairs = List.filter R (List.product (set, set));
+          val transitivePairs = List.mapPartial
+                                        (fn ((x, y), (z, w)) => if y = z then SOME (x, w) else NONE)
+                                        (List.product (pairs, pairs));
+      in List.all R transitivePairs end;
+
   fun antisymmetric Ty R =
       FiniteSet.all
           (fn x => FiniteSet.all
