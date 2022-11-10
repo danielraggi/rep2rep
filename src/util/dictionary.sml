@@ -17,8 +17,6 @@ sig
     type k;
     type ('k, 'v) dict;
 
-    val dict_rpc: 'v Rpc.Datatype.t -> (k, 'v) dict Rpc.Datatype.t;
-
     exception KeyError;
 
     val empty : unit -> (k, 'v) dict;
@@ -28,7 +26,8 @@ sig
     val insert : (k, 'v) dict -> (k * 'v) ->  unit;
     val remove : (k, 'v) dict -> k -> unit;
 
-    val get : (k, 'v) dict -> k -> 'v;
+    val get : (k, 'v) dict -> k -> 'v option;
+    val getExn : (k, 'v) dict -> k -> 'v;
     val update : (k, 'v) dict -> k -> ('v -> 'v) -> 'v;
 
     val keys : (k, 'v) dict -> k list;
@@ -68,7 +67,6 @@ end;
 functor Dictionary(K :
                    sig
                        type k;
-                       val k_rpc: k Rpc.Datatype.t;
                        val compare : k * k -> order;
                        val fmt : k -> string;
                    end
@@ -79,26 +77,6 @@ datatype 'a tree = LEAF
                  | BRANCH of ('a * 'a tree * 'a tree);
 type k = K.k;
 type ('k, 'v) dict = ('k * 'v) tree ref;
-
-fun dict_rpc v_rpc =
-    let fun tree_rpc a_rpc =
-            Rpc.Datatype.either2 (unit_rpc,
-                                  Rpc.Datatype.tuple3 (a_rpc,
-                                                       Rpc.Datatype.recur (fn () => tree_rpc a_rpc),
-                                                       Rpc.Datatype.recur (fn () => tree_rpc a_rpc)));
-        fun tree_of_base (Rpc.Datatype.Either2.FST ()) = LEAF
-          | tree_of_base (Rpc.Datatype.Either2.SND (a, l, r)) = BRANCH (a, l, r);
-        fun base_of_tree LEAF = Rpc.Datatype.Either2.FST ()
-          | base_of_tree (BRANCH (a, l, r)) = Rpc.Datatype.Either2.SND (a, l, r);
-        fun dict_of_base base = ref (tree_of_base base);
-        fun base_of_dict dict = base_of_tree (!dict);
-    in Rpc.Datatype.convert (String.concat ["(", Rpc.Datatype.name K.k_rpc,
-                                            ",", Rpc.Datatype.name v_rpc,
-                                            ") Dictionary.dict"])
-                            tree_rpc
-                            dict_of_base
-                            base_of_dict
-    end;
 
 exception KeyError;
 
@@ -405,7 +383,7 @@ fun remove t k =
         val _ = t := (remove' (!t) k);
     in () end;
 
-fun get t k =
+fun getExn t k =
     let
         val t' = splayFor k (!t);
         val v = case (t') of
@@ -416,6 +394,8 @@ fun get t k =
     in
         v
     end;
+
+fun get t k = SOME(getExn t k) handle KeyError => NONE;
 
 fun update t k f =
     let
