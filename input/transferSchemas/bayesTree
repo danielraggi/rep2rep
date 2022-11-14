@@ -1,0 +1,69 @@
+import bayes
+import probTree
+import metaLogic
+import transferSchemas/arithArith
+
+typeSystem interBayesTreeT =
+    imports bayes, probTree, metaLogicT
+    types
+    order
+
+conSpec interBayesTree:interBayesTreeT =
+    imports probTreeG, bayesG, interArithArith
+    constructors
+        match : [events,label] -> metaBool,
+        encode : [probSys,tree] -> metaBool
+
+tSchema eventV:(bayesG,probTreeG,interBayesTree) =
+    source t:?v:event
+    target t':?v:event
+    antecedent
+    consequent :metaTrue <- match[t:?v:event,t':?v:event]
+    strength 1
+
+tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
+    source t:event <- complement[t1:overline,t2:event]
+    target t':label <- notLabel[t1':label]
+    antecedent :metaTrue <- match[t2:event,t1':label]
+    consequent :metaTrue <- match[t:event,t':label]
+    strength 1
+
+tSchema makeEvent:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:event,t2:numExp]
+    target t':tree <- construct[t1':label,t2':numExp]
+    antecedent :metaTrue <- match[t1:event,t1':label],
+               :metaTrue <- equal[t2:numExp,t2':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
+    strength 1
+
+tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
+                             t2:numExp]
+    target t':tree <- addBranch[t1':tree <-construct[t11':label,t12':y:var],
+                                t2':label,
+                                t3':numExp]
+    antecedent :metaTrue <- match[t12:event,t11':label],
+               :metaTrue <- match[t11:event,t2':label],
+               :metaTrue <- equal[t2:numExp,t3':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
+    strength 1
+
+tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
+                             t2:numExp]
+    target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':x:var],
+                                t2':label,
+                                t3':numExp <- infixOp[t31':numExp,t32':div,t12':x:var]]
+    antecedent :metaTrue <- match[t11:event,t11':label],
+               :metaTrue <- match[t13:event,t2':label],
+               :metaTrue <- equal[t2:numExp,t31':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
+    strength 1
+
+tSchema resolveTree:(bayesG,probTreeG,interBayesTree) =
+    source t:probSys <- addEqn[t1:probEqn,t2:probSys]
+    target t':tree <- resolve[t1':tree,t2':tree]
+    antecedent :metaTrue <- encode[t1:probEqn,t1':tree],
+               :metaTrue <- encode[t2:probSys,t2':tree]
+    consequent :metaTrue <- encode[t:probSys,t':tree]
+    strength 1

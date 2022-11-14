@@ -1,0 +1,16 @@
+import transferSchemas/bayesArea
+
+construction x:bayesG =
+    t:tt:probSys <- addEqn[t1:tt1:probEqn <- makeEqn[t11:A:event,
+                                                     t12:0.2:numeral],
+                           t2:tt2:probEqn <- makeEqn[t21:B|A:condEvent <- makeCond[t211:B:event,t212:A:event],
+                                                     t22:0.8:numeral]
+                           ]
+
+transfer
+    sourceConstruction x
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[t:tt:probSys,t':area]
+    output bayesArea
+    limit 20
