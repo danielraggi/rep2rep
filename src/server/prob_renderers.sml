@@ -9,6 +9,217 @@ end;
 
 structure ProbRender : PROBRENDER = struct
 
+structure NumExp : sig
+              exception NumExpErr of string;
+              datatype t = NUM of string
+                         | VAR of string
+                         | ADD of t * t
+                         | SUB of t * t
+                         | MUL of t * t
+                         | DIV of t * t;
+
+              type t_norm;
+
+              val fromInt : int -> t;
+              val fromReal : real -> t;
+
+              val toString : t -> string;
+
+              val normalise : t -> t_norm;
+              val simplify : t_norm -> t_norm;
+              val fromNormalised: t_norm -> t
+          end
+=
+struct
+
+exception NumExpErr of string;
+
+datatype t = NUM of string
+           | VAR of string
+           | ADD of t * t
+           | SUB of t * t
+           | MUL of t * t
+           | DIV of t * t;
+
+datatype sign = POS | NEG;
+
+datatype prim = PNUM of string * sign
+              | PVAR of string * sign;
+
+datatype term = PRIM of prim
+              | PMUL of prim * term;
+
+datatype expr = TERM of term
+              | TADD of term * expr;
+
+datatype t_norm = EXPR of expr
+                | FRAC of expr * expr;
+
+
+fun fromInt i = NUM (Int.toString i);
+
+
+fun fromReal r = NUM (Real.toString r);
+
+
+fun fromNormalised norm =
+    let fun fromP (PNUM (s, POS)) = NUM s
+          | fromP (PNUM (s, NEG)) = NUM ("-" ^ s)
+          | fromP (PVAR (v, POS)) = VAR v
+          | fromP (PVAR (v, NEG)) = VAR ("-" ^ v)
+        fun fromT (PRIM p) = fromP p
+          | fromT (PMUL (p, ps)) = MUL (fromP p, fromT ps);
+        fun fromE (TERM t) = fromT t
+          | fromE (TADD (t, ts)) = ADD (fromT t, fromE ts);
+        fun fromN (EXPR e) = fromE e
+          | fromN (FRAC (e, f)) = DIV (fromE e, fromE f);
+    in fromN norm end;
+
+
+fun toString (NUM s) = s
+  | toString (VAR v) = v
+  | toString (ADD (t, u)) = "(" ^ (toString t) ^ ")+(" ^ (toString u) ^ ")"
+  | toString (SUB (t, u)) = "(" ^ (toString t) ^ ")-(" ^ (toString u) ^ ")"
+  | toString (MUL (t, u)) = "(" ^ (toString t) ^ ")*(" ^ (toString u) ^ ")"
+  | toString (DIV (t, u)) = "(" ^ (toString t) ^ ")/(" ^ (toString u) ^ ")";
+
+
+fun normalise (NUM s) = EXPR (TERM (PRIM (PNUM (s, POS))))
+  | normalise (VAR v) = EXPR (TERM (PRIM (PVAR (v, POS))))
+  | normalise (ADD (t, u)) = addN (normalise t, normalise u)
+  | normalise (SUB (t, u)) = addN (normalise t, negN (normalise u))
+  | normalise (MUL (t, u)) = mulN (normalise t, normalise u)
+  | normalise (DIV (t, u)) = mulN (normalise t, recipN (normalise u))
+and addE (TERM a, b) = TADD (a, b)
+  | addE (TADD (a, b), c) = TADD(a, addE(b, c))
+and addN (EXPR a, EXPR b) = EXPR (addE (a, b))
+  | addN (EXPR a, FRAC (b, c)) = FRAC (addE (mulE (a, c), b), c)
+  | addN (FRAC (a, b), EXPR c) = FRAC (addE (a, mulE (b, c)), b)
+  | addN (FRAC (a, b), FRAC (c, d)) = FRAC (addE (mulE (a, d), mulE (b, c)), mulE (b, d))
+and mulT (PRIM a, b) = PMUL (a, b)
+  | mulT (PMUL (a, b), c) = PMUL (a, mulT (b, c))
+and mulE (TERM a, TERM b) = TERM (mulT (a, b))
+  | mulE (TERM a, TADD (b, c)) = TADD (mulT (a, b), mulE (TERM a, c))
+  | mulE (TADD (a, b), TERM c) = TADD (mulT (a, c), mulE (b, TERM c))
+  | mulE (TADD (a, b), TADD (c, d)) = TADD (mulT (a, c),
+                                            addE (mulE (TERM a, d),
+                                                  addE (mulE (b, TERM c),
+                                                        mulE (b, d))))
+and mulN (EXPR a, EXPR b) = EXPR (mulE (a, b))
+  | mulN (EXPR a, FRAC (b, c)) = FRAC (mulE (a, b), c)
+  | mulN (FRAC (a, b), EXPR (c)) = FRAC(mulE (a, c), b)
+  | mulN (FRAC (a, b), FRAC (c, d)) = FRAC(mulE (a, c), mulE (b, d))
+and negP (PNUM (a, POS)) = PNUM (a, NEG)
+  | negP (PNUM (a, NEG)) = PNUM (a, POS)
+  | negP (PVAR (a, POS)) = PVAR (a, NEG)
+  | negP (PVAR (a, NEG)) = PVAR (a, POS)
+and negT (PRIM p) = PRIM (negP p)
+  | negT (PMUL (p, ps)) = PMUL (negP p, negT ps)
+and negE (TERM t) = TERM (negT t)
+  | negE (TADD (t, ts)) = TADD (negT t, negE ts)
+and negN (EXPR t) = EXPR (negE t)
+  | negN (FRAC (t, u)) = FRAC (negE t, u)
+and recipN (EXPR t) = let val one = TERM (PRIM (PNUM ("1", POS))) in FRAC (one, t) end
+  | recipN (FRAC (t, u)) = FRAC (u, t);
+
+
+fun simplify t = simpN t
+and simpP (PNUM (s, sign)) =
+    let val s' = case Real.fromString s of
+                     NONE => s
+                   | SOME r => Real.toString (Real.roundDecimal r 6);
+    in if String.isSuffix ".0" s'
+       then PNUM (String.substring (s', 0, String.size s' - 2), sign)
+       else PNUM (s', sign)
+    end
+  | simpP p = p
+and simpT (PRIM p) = PRIM (simpP p)
+  | simpT (PMUL (p, ps)) =
+    let val p = simpP p;
+        val ps = simpT ps;
+    in case ps of
+           PRIM p' => if numeric (EXPR (TERM (PRIM p))) andalso numeric (EXPR (TERM (PRIM p')))
+                      then PRIM (primMul (p, p'))
+                      else PMUL (p, ps)
+         | PMUL (q, qs) => if numeric (EXPR (TERM (PRIM p))) andalso numeric (EXPR (TERM (PRIM q)))
+                           then simpT (PMUL (primMul (p, q), qs))
+                           else PMUL (p, ps)
+    end
+and simpE (TERM t) = TERM (simpT t)
+  | simpE (TADD (t, ts)) =
+    let val t = simpT t;
+        val ts = simpE ts;
+    in case ts of
+           TERM t' => if numeric (EXPR (TERM t)) andalso numeric (EXPR (TERM t'))
+                      then TERM (primAdd (t, t'))
+                      else TADD (t, ts)
+         | TADD (u, us) => if numeric (EXPR (TERM t)) andalso numeric (EXPR (TERM u))
+                           then simpE (TADD (primAdd (t, u), us))
+                           else TADD (t, ts)
+    end
+and simpN (EXPR t) = EXPR (simpE t)
+  | simpN (FRAC (u, v)) =
+    if u = v then EXPR (TERM (PRIM (PNUM ("1", POS))))
+    else FRAC (simpE u, simpE v)
+and numeric (EXPR (TERM (PRIM (PNUM (_, _))))) = true
+  | numeric _ = false
+and primAdd (PRIM (PNUM (v1, s1)), PRIM (PNUM (v2, s2))) =
+    let val v1 = case Real.fromString v1 of
+                     SOME r => r
+                   | NONE => raise (NumExpErr ("Value " ^ v1 ^ " is not a number to add."));
+        val v2 = case Real.fromString v2 of
+                     SOME r => r
+                   | NONE => raise (NumExpErr ("Value " ^ v2 ^ " is not a number to add."));
+    in simpT (case (s1, s2) of
+                  (POS, POS) => PRIM (PNUM (Real.toString(v1 + v2), POS))
+                | (POS, NEG) => let val v = v1 - v2;
+                                    val sign = if v >= 0.0 then POS else NEG;
+                                in PRIM (PNUM (Real.toString v, sign)) end
+                | (NEG, POS) => let val v = v2 - v1;
+                                    val sign = if v >= 0.0 then POS else NEG;
+                                in PRIM (PNUM (Real.toString v, sign)) end
+                | (NEG, NEG) => PRIM (PNUM (Real.toString(~v1 - v2), NEG)))
+    end
+  | primAdd _ = raise (NumExpErr "Attempting to add values where at least one is non-numeric!")
+and primMul (PNUM (v1, s1), PNUM (v2, s2)) =
+    let val v1 = case Real.fromString v1 of
+                     SOME r => r
+                   | NONE => raise (NumExpErr ("Value " ^ v1 ^ " is not a number to multiply."));
+        val v2 = case Real.fromString v2 of
+                     SOME r => r
+                   | NONE => raise (NumExpErr ("Value " ^ v2 ^ " is not a number to multiply."));
+        val v = Real.toString (v1 * v2);
+    in simpP (case (s1, s2) of
+                  (POS, POS) => PNUM (v, POS)
+                | (POS, NEG) => PNUM (v, NEG)
+                | (NEG, POS) => PNUM (v, NEG)
+                | (NEG, NEG) => PNUM (v, POS))
+    end
+  | primMul _ = raise (NumExpErr "Attempting to multiply values where at least one is non-numeric!");
+
+
+val test_expr = SUB (DIV (MUL (VAR "a", ADD (VAR "b", NUM "1")), VAR "d"), DIV (SUB (VAR "x", VAR "y"), MUL(NUM "2", NUM "7")));
+val () = print (toString test_expr ^ "\n");
+val normed = simplify (normalise test_expr);
+val () = print (toString (fromNormalised normed) ^ "\n");
+
+end;
+
+structure NumEqn : sig
+              datatype t = EQL of NumExp.t * NumExp.t;
+
+              val resolve : t list -> t list;
+          end
+=
+struct
+
+datatype t = EQL of NumExp.t * NumExp.t;
+
+fun resolve ts = ts;
+
+end;
+
+
 datatype numExp =
            U
          | NUM of int
