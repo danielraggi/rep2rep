@@ -456,10 +456,11 @@ sig
     include TEXT_IO;
 
     val lookaheadN : (instream *  int) -> string;
+    val inputLines: instream -> string list;
 
 end;
 
-structure TextIO :> TEXT_IO =
+structure TextIO : TEXT_IO =
 struct
 
 open TextIO;
@@ -472,5 +473,9 @@ fun lookaheadN (istr, count) =
     in
         lookahead
     end;
+
+fun inputLines istr =
+    let fun getln istr' = Option.map (fn l => (l, istr')) (inputLine  istr');
+    in List.unfold getln istr end;
 
 end;

@@ -11,6 +11,7 @@ typeSystem arith =
           plus < binOp,
           minus < binOp,
           times < binOp,
+          div < binOp,
           equals < binRel,
           leq < binRel,
           oB < par,
@@ -21,6 +22,11 @@ conSpec arithG:arith =
   constructors
     infixOp : [numExp,binOp,numExp] -> numExp,
     infixRel : [numExp,binRel,numExp] -> formula,
-    frac : [numExp,div,numExp] -> numExp,
-    implicitMult : [numExp,numExp] -> numExp,
-    addParentheses : [oB,numExp,cB] -> numExp
+    addParentheses : [oB,numExp,cB] -> numExp,
+    multiply : [numExp,numExp] -> numExp
+
+conSpec arithE:arith =
+  constructors
+    apply : [formula,binOp,numExp] -> formula,
+    rewrite : [formula,numExp,numExp] -> formula,
+    substitute : [formula,var,numExp] -> formula
