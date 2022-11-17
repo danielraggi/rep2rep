@@ -19,6 +19,8 @@ sig
 
     exception KeyError;
 
+    val toString: ('v -> string) -> (k, 'v) dict -> string;
+
     val empty : unit -> (k, 'v) dict;
     val fromPairList : (k * 'v) list -> (k, 'v) dict;
     val toPairList : (k, 'v) dict -> (k * 'v) list;
@@ -68,7 +70,7 @@ functor Dictionary(K :
                    sig
                        type k;
                        val compare : k * k -> order;
-                       val fmt : k -> string;
+                       val toString : k -> string;
                    end
                   ) :> DICTIONARY where type k = K.k =
 struct
@@ -475,5 +477,7 @@ fun isEmpty (ref LEAF) = true
 fun getFirst' LEAF = raise KeyError
   | getFirst' (BRANCH(x,_,_)) = x;
 fun getFirst t = (getFirst' (!t));
+
+fun toString f t = "{" ^ (String.concatWith ", " (List.map (fn (k, v) => (K.toString k) ^ ": " ^ (f v)) (toPairList t))) ^ "}"
 
 end;
