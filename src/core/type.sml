@@ -92,8 +92,10 @@ struct
       let val set = FiniteSet.listOf Ty;
           val pairs = List.filter R (List.product (set, set));
           val transitivePairs = List.mapPartial
-                                        (fn ((x, y), (z, w)) => if y = z then SOME (x, w) else NONE)
-                                        (List.product (pairs, pairs));
+                                    (fn ((x, y), (z, w)) => if y = z
+                                                            then SOME (x, w)
+                                                            else NONE)
+                                    (List.product (pairs, pairs));
       in List.all R transitivePairs end;
 
   fun antisymmetric Ty R =
@@ -124,24 +126,32 @@ struct
                                   fun compare ((t1, t2), (u1, u2)) =
                                       if t1 = u1 then String.compare (t2, u2)
                                       else String.compare (t1, u1);
-                                  fun fmt (t1, t2) = "(" ^ t1 ^", " ^ t2 ^ ")";
+                                  fun toString (t1, t2) = "(" ^ t1 ^", " ^ t2 ^ ")";
                            end);
 
   fun empty () = D.empty ();
   fun has d k = Option.isSome (D.get d k);
   fun add d k = D.insert d (k, ());
+  fun size d = D.size d;
+  fun toString f d = D.toString f d;
   end;
 
   fun transitiveClosure Ty R0 =
       let val set = FiniteSet.listOf Ty;
           val R = TyTySet.empty ();
-          fun sapp f = List.app f set;
-          fun extendR z x y =
+          fun setR (x, y) =
+              if R0 (x, y)
+              then TyTySet.add R (x, y)
+              else ();
+          fun extendR (z, x, y) =
               if TyTySet.has R (x, y) then ()
               else if (TyTySet.has R (x, z) andalso TyTySet.has R (z, y))
               then TyTySet.add R (x, y)
               else ();
-          val () = sapp (fn z => sapp (fn x => sapp (fn y => extendR z x y))) ;
+          val pairs = List.product (set, set);
+          val triples = List.map (fn ((x, y), z) => (x, y, z)) (List.product (pairs, set));
+          val () = List.app setR pairs
+          val () =  List.app extendR triples;
       in fn (x, y) => R0(x, y) orelse TyTySet.has R (x, y)  end;
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
