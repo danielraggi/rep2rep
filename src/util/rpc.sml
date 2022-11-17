@@ -516,7 +516,7 @@ fun serve {address = addr} endpoints =
             end handle RpcError => Http.Server.makeResponse
                                        Http.BAD_REQUEST
                                        ("text/plain", Datatype.empty);
-    in Http.Server.listen addr handler end;
+    in Http.Server.listen addr (fn r => timeFn "handling" (fn () => handler r)) end;
 
 end;
 
