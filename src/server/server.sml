@@ -75,12 +75,10 @@ fun mkGoal constr interSpace =
          | _ => NONE
     end;
 
-fun transfer constr srcSpaceName tgtSpaceName transferMap spaces knowledge =
+fun transfer constr srcSpaceName tgtSpaceName interSpaceName spaces knowledge =
     let val srcSpace = getSpace spaces srcSpaceName;
         val tgtSpace = getSpace spaces tgtSpaceName;
-        val intSpace = Option.mapPartial
-                           (getSpace spaces)
-                           (getInterSpaceName srcSpaceName tgtSpaceName transferMap);
+        val intSpace = getSpace spaces interSpaceName;
         val goal = Option.mapPartial (mkGoal constr) intSpace;
     in case (srcSpace, tgtSpace, intSpace, goal) of
            (SOME(s), SOME(t), SOME(i), SOME(g)) => Transfer.applyTransfer s t i knowledge constr g
@@ -104,8 +102,17 @@ val getTypeContext_sig = ("server.getTypeContext",
 val renderers_sig = ("server.renderers",
                      unit_rpc,
                      List.list_rpc(Rpc.Datatype.tuple2 (String.string_rpc, String.string_rpc)));
+val allowedTransfers_sig = ("server.allowedTransfers",
+                            unit_rpc,
+                            List.list_rpc (Rpc.Datatype.tuple3
+                                               (String.string_rpc,
+                                                String.string_rpc,
+                                                String.string_rpc)));
 val transfer_sig = ("server.transfer",
-                    Rpc.Datatype.tuple3 (Construction.construction_rpc, String.string_rpc, String.string_rpc),
+                    Rpc.Datatype.tuple4 (Construction.construction_rpc,
+                                         String.string_rpc,
+                                         String.string_rpc,
+                                         String.string_rpc),
                     List.list_rpc Construction.construction_rpc);
 
 fun make files transferMap =
@@ -121,8 +128,9 @@ fun make files transferMap =
         Rpc.provide renderers_sig (fn () => map (mapsnd Rpc.endpointName) Renderers.all),
         Rpc.provide getPrincipalTypes_sig (fn name => getPrincipalTypes typeSystems name),
         Rpc.provide getTypeContext_sig (fn (systemName, typ) => getTypeContext typeSystems systemName typ),
-        Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace) =>
-                                     transfer constr srcSpace tgtSpace transferMap spaces knowledge),
+        Rpc.provide allowedTransfers_sig (fn () => transferMap),
+        Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace, interSpace) =>
+                                     transfer constr srcSpace tgtSpace interSpace spaces knowledge),
         Construction.R.toString,
         Construction.R.typeCheck (getSpace spaces)
     ] @ map #2 Renderers.all end;
