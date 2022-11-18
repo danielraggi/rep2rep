@@ -326,7 +326,9 @@ struct
             else getConstructors L
 
       val newConstructors = FiniteSet.ofList (getConstructors blocks)
-      val importedConstructorSets = map #constructors (getImports blocks)
+      val importBlocks = getImports blocks
+      val importedConSpecNames = map #name importBlocks
+      val importedConstructorSets = map #constructors importBlocks
       val allConstructors = foldl (uncurry FiniteSet.union) FiniteSet.empty (newConstructors :: importedConstructorSets)
 
       (*val chars = List.concat (map String.explode tss)
@@ -343,11 +345,14 @@ struct
                         raise CSpace.ImpossibleOverload)
       val updatedTSD = #typeSystemData updatedConSpec
 
+      val _ = if List.exists (fn x => Knowledge.conSpecIsImportedBy (Knowledge.conSpecImportsOf (#knowledge dc)) name x) importedConSpecNames
+              then raise ParseError ("conSpec " ^ name ^ " appears in a cycle of imports")
+              else ()
       val _ = Logging.write "...done\n"
 
   in {typeSystemsData = updatedTSD :: List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc),
       conSpecsData = updatedConSpec :: #conSpecsData dc,
-      knowledge = #knowledge dc,
+      knowledge = Knowledge.addConSpecImports (#knowledge dc) (name,importedConSpecNames),
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc,
       strengths = #strengths dc}
@@ -656,15 +661,7 @@ struct
                              (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "WARNING : goal has no tokens in target construction space\n"; raise BadGoal)
-      val state = State.make {sourceConSpecData = sourceConSpecData,
-                              targetConSpecData = targetConSpecData,
-                              interConSpecData = interConSpecData,
-                              transferProof = TransferProof.ofPattern goal,
-                              construction = construction,
-                              originalGoal = goal,
-                              goals = [goal],
-                              compositions = map Composition.makePlaceholderComposition targetTokens,
-                              knowledge = KB}
+      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData KB construction goal
       val results = Transfer.masterTransfer iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val (listOfResults,_) = Seq.chop limit results;

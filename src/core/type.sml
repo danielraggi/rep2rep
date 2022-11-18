@@ -88,42 +88,78 @@ struct
   fun reflexive Ty R = FiniteSet.all (fn x => R (x,x)) Ty;
 
   fun transitive Ty R =
-    let fun f1 x =
-          let val Ty' = FiniteSet.minus Ty (FiniteSet.singleton x)
-              fun f2 y =
-                let fun f3 z = not (R (y,z)) orelse R (x,z)
-                in not (R (x,y)) orelse FiniteSet.all f3 (FiniteSet.minus Ty' (FiniteSet.singleton y))
-                end
-          in FiniteSet.all f2 Ty'
-          end
-    in FiniteSet.all f1 Ty
-    end;
-  fun antisymmetric Ty R = FiniteSet.all (fn x => FiniteSet.all (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
+      let val set = FiniteSet.listOf Ty;
+          val pairs = List.filter R (List.product (set, set));
+          val transitivePairs = List.mapPartial
+                                    (fn ((x, y), (z, w)) => if y = z
+                                                            then SOME (x, w)
+                                                            else NONE)
+                                    (List.product (pairs, pairs));
+      in List.all R transitivePairs end;
+
+  fun antisymmetric Ty R =
+      FiniteSet.all
+          (fn x => FiniteSet.all
+                       (fn y => x = y orelse not (R (x,y)) orelse not (R (y,x))) Ty) Ty;
+
   fun respectsAny Ty R = FiniteSet.all (fn x => R (x,any)) Ty
 
   fun wellDefined {typeSystem,principalTypes,...} =
-    let val PTys = FiniteSet.map #typ principalTypes
-        val {Ty,subType} = typeSystem
-        fun correctPrincipalType {typ,subTypeable} =
-          Set.elementOf typ Ty andalso
-          (not subTypeable orelse
-           (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
-            FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
-    in reflexive PTys subType andalso
-       transitive PTys subType andalso
-       antisymmetric PTys subType andalso
-       FiniteSet.all correctPrincipalType principalTypes
-    end
+      let val PTys = FiniteSet.map #typ principalTypes;
+          val {Ty,subType} = typeSystem;
+          fun correctPrincipalType {typ,subTypeable} =
+              Set.elementOf typ Ty andalso
+              (not subTypeable orelse
+               (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
+                FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
+      in reflexive PTys subType andalso
+         transitive PTys subType andalso
+         antisymmetric PTys subType andalso
+         FiniteSet.all correctPrincipalType principalTypes
+      end
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
 
-  fun transitiveClosure Ty R =
-    let fun R' (x,y) = R (x,y) orelse
-                      FiniteSet.exists (fn z => R (x,z) andalso R (z,y)) Ty
-    in if FiniteSet.all (fn x => FiniteSet.all (fn y => R (x,y) = R' (x,y)) Ty) Ty
-       then R
-       else transitiveClosure Ty R'
-    end
+  (* This looks way more complicated than before, because it is.
+     But that's mostly because working with matrices in SML is gross.
+     Underneath, it's a bog-standard Floyd-Warshall computation.
+   *)
+  fun transitiveClosure Ty R0 =
+      let val set = Vector.fromList (FiniteSet.listOf Ty);
+          fun T i = Vector.sub (set, i);
+          fun I t = (#1 o Option.valOf) (Vector.findi (fn (_, t') => t = t') set);
+          val n = Vector.length set;
+          val R = BoolArray2.tabulate Array2.RowMajor (n, n, R0 o (mappair T));
+          fun extendR (z, x, y) =
+              if BoolArray2.sub (R, x, y) then ()
+              else if BoolArray2.sub (R, x, z) andalso BoolArray2.sub (R, z, y)
+              then BoolArray2.update (R, x, y, true)
+              else ();
+          val idxs = List.upTo n;
+          val triples = List.map (fn ((x, y), z) => (x, y, z))
+                                 (List.product (List.product (idxs, idxs), idxs));
+          val () = List.app extendR triples;
+          fun Rn (x, y) = BoolArray2.sub (R, I x, I y) handle Option => false;
+      in Rn end;
+
+  val () =
+      let val tys = ["a", "b", "c"];
+          fun subType ("a",  "b") = true
+            | subType (x, "a") = x <> "b" andalso x <> "c"
+            | subType _ = false;
+          val subType = transitiveClosure tys subType;
+          fun test (a, b, expected) =
+              if subType (a, b) = expected
+              then NONE
+              else SOME (a ^ " <= " ^ b ^ " is " ^ (Bool.toString (not expected)) ^
+                         ", expected " ^ (Bool.toString expected));
+          val tests = [
+              ("a", "b", true),
+              ("a", "c", false),
+              ("b", "a", false),
+              ("c", "a", false)
+          ];
+      in List.app (fn s => print (s ^ "\n")) (List.mapPartial test tests) end;
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
