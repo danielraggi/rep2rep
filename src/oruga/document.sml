@@ -661,15 +661,7 @@ struct
                              (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "WARNING : goal has no tokens in target construction space\n"; raise BadGoal)
-      val state = State.make {sourceConSpecData = sourceConSpecData,
-                              targetConSpecData = targetConSpecData,
-                              interConSpecData = interConSpecData,
-                              transferProof = TransferProof.ofPattern goal,
-                              construction = construction,
-                              originalGoal = goal,
-                              goals = [goal],
-                              compositions = map Composition.makePlaceholderComposition targetTokens,
-                              knowledge = KB}
+      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData KB construction goal
       val results = Transfer.masterTransfer iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val (listOfResults,_) = Seq.chop limit results;

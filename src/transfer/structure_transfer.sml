@@ -21,6 +21,13 @@ sig
                             -> Pattern.pattern option
                             -> State.T -> State.T Seq.seq
 
+  val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
+                  CSpace.conSpecData -> (* Target Constructor Specification *)
+                  CSpace.conSpecData -> (* Inter-space Constructor Specification *)
+                  Knowledge.base -> (* Transfer and Inference schemas *)
+                  Construction.construction -> (* The construction to transform *)
+                  Construction.construction -> (* The goal to satisfy *)
+                  State.T
   val applyTransfer:
       CSpace.conSpecData -> (* Source Constructor Specification *)
       CSpace.conSpecData -> (* Target Constructor Specification *)
@@ -466,21 +473,24 @@ fun structureTransfer unistructured targetPattOption st =
               NONE => structureTransfer unistructured st
             | SOME targetPattern => targetedTransfer targetPattern st)*)
 
+  fun initState sCSD tCSD iCSD KB ct goal =
+    let val tTS = #typeSystem (#typeSystemData tCSD)
+        val targetTokens = FiniteSet.filter
+                               (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
+                               (Construction.leavesOfConstruction goal);
+    in State.make {sourceConSpecData = sCSD,
+                   targetConSpecData = tCSD,
+                   interConSpecData = iCSD,
+                   transferProof = TransferProof.ofPattern goal,
+                   construction = ct,
+                   originalGoal = goal,
+                   goals = [goal],
+                   compositions = map Composition.makePlaceholderComposition targetTokens,
+                   knowledge = Knowledge.filterForISpace (#name iCSD) KB}
+    end
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
-      let val tTS = #typeSystem (#typeSystemData tCSD)
-          val targetTokens = FiniteSet.filter
-                                 (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
-                                 (Construction.leavesOfConstruction goal);
-          val st = State.make {sourceConSpecData = sCSD,
-                               targetConSpecData = tCSD,
-                               interConSpecData = iCSD,
-                               transferProof = TransferProof.ofPattern goal,
-                               construction = ct,
-                               originalGoal = goal,
-                               goals = [goal],
-                               compositions = map Composition.makePlaceholderComposition targetTokens,
-                               knowledge = Knowledge.filterForISpace (#name iCSD) KB}
+      let val st = initState sCSD tCSD iCSD KB ct goal
           val stateSeq = structureTransfer false NONE st;
           fun getStructureGraph st =
               List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
