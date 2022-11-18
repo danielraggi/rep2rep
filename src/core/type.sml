@@ -1,5 +1,4 @@
 import "util.set";
-import "util.dictionary";
 
 signature TYPE =
 sig
