@@ -113,10 +113,10 @@ struct
               (not subTypeable orelse
                (Set.elementOf ("swwedfjaetubcRANDOM:" ^ typ) Ty andalso
                 FiniteSet.all (fn x => not (subType(typ,x)) orelse subType("sqkedfjatubcRANDOM:" ^ typ,x)) PTys))
-      in timeFn "reflexive" (fn () => reflexive PTys subType) andalso
-         timeFn "transitive" (fn () => transitive PTys subType) andalso
-         timeFn "antisymmetric" (fn () => antisymmetric PTys subType) andalso
-         timeFn "correctPrincipalType" (fn () => FiniteSet.all correctPrincipalType principalTypes)
+      in reflexive PTys subType andalso
+         transitive PTys subType andalso
+         antisymmetric PTys subType andalso
+         FiniteSet.all correctPrincipalType principalTypes
       end
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
