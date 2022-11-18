@@ -94,6 +94,7 @@ sig
 
     val intersperse : 'a -> 'a list -> 'a list;
 
+    val upTo : int -> int list;
     val enumerate : 'a list -> (int * 'a) list;
     val enumerateFrom : int -> 'a list -> (int * 'a) list;
 
@@ -202,6 +203,11 @@ fun enumerateFrom start list =
     end;
 
 fun enumerate xs = enumerateFrom 0 xs;
+
+fun upTo n =
+    let fun f 0 xs = xs
+          | f n xs = f (n-1) ((n-1)::xs);
+    in f n [] end;
 
 fun filterOption xs = mapPartial (fn x => x) xs;
 
