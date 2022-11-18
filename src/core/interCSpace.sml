@@ -16,6 +16,7 @@ sig
 
 
   val tSchema_rpc : tSchema Rpc.Datatype.t;
+  val tSchemaData_rpc: tSchemaData Rpc.Datatype.t;
 
   val wellFormedTransferSchema : interConSpec -> tSchema -> bool;
   val nameOf : tSchemaData -> string;
@@ -34,10 +35,10 @@ struct
                    antecedent : Pattern.construction list,
                    consequent : Pattern.construction};
   type tSchemaData = {name : string,
-                       sourceConSpecN : string,
-                       targetConSpecN : string,
-                       interConSpecN : string,
-                       tSchema : tSchema}
+                      sourceConSpecN : string,
+                      targetConSpecN : string,
+                      interConSpecN : string,
+                      tSchema : tSchema}
 
   val tSchema_rpc = Rpc.Datatype.convert
                      "TransferSchema.tSchema"
@@ -54,6 +55,25 @@ struct
                           target = t,
                           antecedent = rs,
                           consequent = r} => (s, t, rs, r));
+
+  val tSchemaData_rpc = Rpc.Datatype.convert
+                            "TransferSchema.tSchemaData"
+                            (Rpc.Datatype.tuple5
+                                 (String.string_rpc,
+                                  String.string_rpc,
+                                  String.string_rpc,
+                                  String.string_rpc,
+                                  tSchema_rpc))
+                            (fn (n, s, t, i, x) => {name = n,
+                                                    sourceConSpecN = s,
+                                                    targetConSpecN = t,
+                                                    interConSpecN = i,
+                                                    tSchema = x})
+                            (fn {name = n,
+                                 sourceConSpecN = s,
+                                 targetConSpecN = t,
+                                 interConSpecN = i,
+                                 tSchema = x} => (n, s, t, i, x));
 
   exception badForm
   fun wellFormedTransferSchema iCS {source,target,antecedent,consequent} =

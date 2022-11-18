@@ -106,7 +106,9 @@ struct
       val instantiatedISchema = {antecedent = updatedAntecedent,
                                  consequent = updatedConsequent,
                                  context = matchingSubConstruction}
-      val instantiatedISchemaData = {name = name, contextConSpecN = contextConSpecN, idConSpecN = idConSpecN,
+      val instantiatedISchemaData = {name = name,
+                                     contextConSpecN = contextConSpecN,
+                                     idConSpecN = idConSpecN,
                                      iSchema = instantiatedISchema}
       val transferProof = State.transferProofOf st
       val updatedTransferProof = TransferProof.attachISchemaAt instantiatedISchemaData goal transferProof
