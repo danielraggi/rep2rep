@@ -149,7 +149,8 @@ struct
                                  (List.product (List.product (idxs, idxs), idxs));
           val () = List.app extendR triples;
           fun attach (x, y) = Vector.exists
-                                  (fn z => BoolArray2.sub (R, I z, I y) andalso R0 (x, z))
+                                  (fn z => (y = z orelse BoolArray2.sub (R, I z, I y))
+                                           andalso R0 (x, z))
                                   set;
           fun Rn (x, y) = BoolArray2.sub (R, I x, I y)
                           handle Option => attach (x, y) handle Option => R0 (x, y);
