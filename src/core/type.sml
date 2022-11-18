@@ -121,16 +121,8 @@ struct
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
 
   (* This looks way more complicated than before, because it is.
-     However, it's best thought of as two steps:
-       1. Compute the transitive closure of the types in Ty
-          using Floyd-Warshall algorithm.
-       2. Build the lookup function with three cases:
-            (i) Both types are in Ty, so check computed matrix.
-           (ii) The first type is not in Ty while the second is,
-                so we find where the missing type hooks into Ty,
-                then use the matrix to check if the hook-point
-                is a subtype of the type in Ty.
-          (iii) The second type is not in Ty, so just check R0.
+     But that's mostly because working with matrices in SML is gross.
+     Underneath, it's a bog-standard Floyd-Warshall computation.
    *)
   fun transitiveClosure Ty R0 =
       let val set = Vector.fromList (FiniteSet.listOf Ty);
@@ -151,8 +143,7 @@ struct
                                   (fn z => (y = z orelse BoolArray2.sub (R, I z, I y))
                                            andalso R0 (x, z))
                                   set;
-          fun Rn (x, y) = BoolArray2.sub (R, I x, I y)
-                          handle Option => false;
+          fun Rn (x, y) = BoolArray2.sub (R, I x, I y) handle Option => false;
       in Rn end;
 
   val () =
