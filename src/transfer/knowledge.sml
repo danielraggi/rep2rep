@@ -3,23 +3,27 @@ import "core.composition";
 
 signature KNOWLEDGE =
 sig
-  type iSchema = {name : string,
-                  context : Pattern.construction,
+  type iSchema = {context : Pattern.construction,
                   antecedent : Pattern.construction list,
                   consequent : Pattern.construction}
+  type iSchemaData = {name : string,
+                      contextConSpecN : string,
+                      idConSpecN : string,
+                      iSchema : iSchema}
   type base
 
   (* TransferSchema knowledge *)
-  val inferenceSchemasOf : base -> iSchema Seq.seq;
-  val transferSchemasOf : base -> InterCSpace.tSchema Seq.seq;
+  val inferenceSchemasOf : base -> iSchemaData Seq.seq;
+  val transferSchemasOf : base -> InterCSpace.tSchemaData Seq.seq;
   val strengthOf : base -> string -> real option
 
   (* Building a knowledge base *)
-  val addInferenceSchema : base -> iSchema -> real -> (iSchema * iSchema -> order) -> base;
-  val addTransferSchema : base -> InterCSpace.tSchema -> real -> (InterCSpace.tSchema * InterCSpace.tSchema -> order) -> base;
+  val addInferenceSchema : base -> iSchemaData -> real -> (iSchemaData * iSchemaData -> order) -> base;
+  val addTransferSchema : base -> InterCSpace.tSchemaData -> real -> (InterCSpace.tSchemaData * InterCSpace.tSchemaData -> order) -> base;
+  val filterForISpace : string -> base -> base;
 
-  val findInferenceSchemaWithName : base -> string -> iSchema option;
-  val findTransferSchemaWithName : base -> string -> InterCSpace.tSchema option;
+  val findInferenceSchemaWithName : base -> string -> iSchemaData option;
+  val findTransferSchemaWithName : base -> string -> InterCSpace.tSchemaData option;
 
   val join : base -> base -> base;
   val empty : base;
@@ -27,12 +31,15 @@ end;
 
 structure Knowledge : KNOWLEDGE =
 struct
-  type iSchema = {name : string,
-                  context : Pattern.pattern,
+  type iSchema = {context : Pattern.pattern,
                   antecedent : Pattern.pattern list,
                   consequent : Pattern.pattern}
-  type base = {transferSchemas : InterCSpace.tSchema Seq.seq,
-               inferenceSchemas : iSchema Seq.seq,
+  type iSchemaData = {name : string,
+                      contextConSpecN : string,
+                      idConSpecN : string,
+                      iSchema : iSchema}
+  type base = {transferSchemas : InterCSpace.tSchemaData Seq.seq,
+               inferenceSchemas : iSchemaData Seq.seq,
                strength : string -> real option};
 
   (* TransferSchema knowledge *)
@@ -49,6 +56,12 @@ struct
     {inferenceSchemas = #inferenceSchemas KB,
      transferSchemas = Seq.insert tsch (#transferSchemas KB) f,
      strength = (fn cn => if #name tsch = cn then SOME s else (#strength KB) cn)}
+
+  fun filterForISpace name KB =
+    {inferenceSchemas = Seq.filter (fn x => #idConSpecN x = name) (#inferenceSchemas KB),
+     transferSchemas = Seq.filter (fn x => #interConSpecN x = name) (#transferSchemas KB),
+     strength = #strength KB}
+
 
   fun findInferenceSchemaWithName KB name =
     Seq.findFirst (fn x => #name x = name) (#inferenceSchemas KB)

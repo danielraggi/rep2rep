@@ -17,7 +17,7 @@ sig
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData
   val findConstructionWithName : documentContent -> string -> constructionData
-  val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchema
+  val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
 
 end;
 
@@ -135,9 +135,7 @@ struct
        {typeSystemsData : Type.typeSystemData list,
         conSpecsData : CSpace.conSpecData list,
         knowledge : Knowledge.base,
-        constructionsData : {name : string,
-                             conSpecN : string,
-                             construction : Construction.construction} list,
+        constructionsData : constructionData list,
         transferRequests : (string list) list,
         strengths : string -> real option}
 
@@ -402,17 +400,20 @@ struct
       val _ = if Construction.wellFormed idConSpec consequent
               then Logging.write "\n  consequent pattern is well formed\n"
               else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
-      val isch = {name = name,
-                  context = context,
+      val isch = {context = context,
                   antecedent = antecedent,
                   consequent = consequent}
+      val ischData = {name = name,
+                      contextConSpecN = contextConSpecN,
+                      idConSpecN = idConSpecN,
+                      iSchema = isch}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
       fun ff (c,c') = Real.compare (valOf (strengthsUpd (#name c')), valOf (strengthsUpd (#name c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addInferenceSchema (#knowledge dc) isch strengthVal ff,
+      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal ff,
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
@@ -475,18 +476,22 @@ struct
       val _ = if Construction.wellFormed interConSpec consequent
               then Logging.write "\n  consequent pattern is well formed\n"
               else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
-      val tsch = {name = name,
-                  source = source,
+      val tsch = {source = source,
                   target = target,
                   antecedent = antecedent,
                   consequent = consequent}
+      val tschData = {name = name,
+                      sourceConSpecN = sourceConSpecN,
+                      targetConSpecN = targetConSpecN,
+                      interConSpecN = interConSpecN,
+                      tSchema = tsch}
       val strengthVal = getStrength blocks
       fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
       fun ff (c,c') = Real.compare (valOf (strengthsUpd (InterCSpace.nameOf c')), valOf (strengthsUpd (InterCSpace.nameOf c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addTransferSchema (#knowledge dc) tsch strengthVal ff,
+      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal ff,
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc,
       strengths = strengthsUpd}
