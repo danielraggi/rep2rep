@@ -155,6 +155,30 @@ struct
                           handle Option => attach (x, y) handle Option => R0 (x, y);
       in Rn end;
 
+  val () =
+      let val tys = ["a", "b", "c"];
+          fun subType ("a",  "b") = true
+            | subType (x, "a") = x <> "b" andalso x <> "c"
+            | subType _ = false;
+          val subType = transitiveClosure tys subType;
+          fun test (a, b, expected) =
+              if subType (a, b) = expected
+              then NONE
+              else SOME (a ^ " <= " ^ b ^ " is " ^ (Bool.toString (not expected)) ^
+                         ", expected " ^ (Bool.toString expected));
+          val tests = [
+              ("a", "b", true),
+              ("a", "c", false),
+              ("b", "a", false),
+              ("c", "a", false),
+              ("x", "a", true),
+              ("x", "b", true),
+              ("x", "c", false),
+              ("x", "z", false),
+              ("a", "z", false)
+          ];
+      in List.app (fn s => print (s ^ "\n")) (List.mapPartial test tests) end;
+
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
   fun closureOverFiniteSet Ty = reflexiveClosure o (transitiveClosure Ty);
