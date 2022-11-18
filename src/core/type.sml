@@ -152,7 +152,7 @@ struct
                                            andalso R0 (x, z))
                                   set;
           fun Rn (x, y) = BoolArray2.sub (R, I x, I y)
-                          handle Option => attach (x, y) handle Option => R0 (x, y);
+                          handle Option => false;
       in Rn end;
 
   val () =
@@ -170,12 +170,7 @@ struct
               ("a", "b", true),
               ("a", "c", false),
               ("b", "a", false),
-              ("c", "a", false),
-              ("x", "a", true),
-              ("x", "b", true),
-              ("x", "c", false),
-              ("x", "z", false),
-              ("a", "z", false)
+              ("c", "a", false)
           ];
       in List.app (fn s => print (s ^ "\n")) (List.mapPartial test tests) end;
 
