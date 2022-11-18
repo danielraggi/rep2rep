@@ -121,42 +121,39 @@ struct
 
   fun reflexiveClosure R = fn (x,y) => equal x y orelse R (x,y)
 
-  structure TyTySet = struct
-  structure D = Dictionary(struct type k = typ * typ;
-                                  fun compare ((t1, t2), (u1, u2)) =
-                                      if t1 = u1 then String.compare (t2, u2)
-                                      else String.compare (t1, u1);
-                                  fun toString (t1, t2) = "(" ^ t1 ^", " ^ t2 ^ ")";
-                           end);
-
-  fun empty () = D.empty ();
-  fun has d k = D.has d k;
-  fun add d k = D.insert d (k, ());
-  fun size d = D.size d;
-  fun toString f d = D.toString f d;
-  fun toList d = D.keys d;
-  end;
-
+  (* This looks way more complicated than before, because it is.
+     However, it's best thought of as two steps:
+       1. Compute the transitive closure of the types in Ty
+          using Floyd-Warshall algorithm.
+       2. Build the lookup function with three cases:
+            (i) Both types are in Ty, so check computed matrix.
+           (ii) The first type is not in Ty while the second is,
+                so we find where the missing type hooks into Ty,
+                then use the matrix to check if the hook-point
+                is a subtype of the type in Ty.
+          (iii) The second type is not in Ty, so just check R0.
+   *)
   fun transitiveClosure Ty R0 =
-      let val set = FiniteSet.listOf Ty;
-          val R = TyTySet.empty ();
-          fun setR (x, y) =
-              if R0 (x, y)
-              then TyTySet.add R (x, y)
-              else ();
+      let val set = Vector.fromList (FiniteSet.listOf Ty);
+          fun T i = Vector.sub (set, i);
+          fun I t = (#1 o Option.valOf) (Vector.findi (fn (_, t') => t = t') set);
+          val n = Vector.length set;
+          val R = BoolArray2.tabulate Array2.RowMajor (n, n, R0 o (mappair T));
           fun extendR (z, x, y) =
-              if TyTySet.has R (x, y) then ()
-              else if (TyTySet.has R (x, z) andalso TyTySet.has R (z, y))
-              then TyTySet.add R (x, y)
+              if BoolArray2.sub (R, x, y) then ()
+              else if BoolArray2.sub (R, x, z) andalso BoolArray2.sub (R, z, y)
+              then BoolArray2.update (R, x, y, true)
               else ();
-          val pairs = List.product (set, set);
-          val triples = List.map (fn ((x, y), z) => (x, y, z)) (List.product (pairs, set));
-          val () = List.app setR pairs;
+          val idxs = List.upTo n;
+          val triples = List.map (fn ((x, y), z) => (x, y, z))
+                                 (List.product (List.product (idxs, idxs), idxs));
           val () = List.app extendR triples;
-          (* HACK: re-balance the underlying tree. *)
-          val R = (TyTySet.D.fromPairList o TyTySet.D.toPairList) R;
-          val () = print ((TyTySet.toString (fn _ => ".") R) ^ "\n");
-      in fn (x, y) => R0 (x, y) orelse TyTySet.has R (x, y) end;
+          fun attach (x, y) = Vector.exists
+                                  (fn z => BoolArray2.sub (R, I z, I y) andalso R0 (x, z))
+                                  set;
+          fun Rn (x, y) = BoolArray2.sub (R, I x, I y)
+                          handle Option => attach (x, y) handle Option => R0 (x, y);
+      in Rn end;
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 
