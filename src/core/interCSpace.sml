@@ -4,19 +4,23 @@ import "core.relation";
 signature INTERCSPACE =
 sig
   type interConSpec = {source : CSpace.conSpecData, target : CSpace.conSpecData, inter : CSpace.conSpecData}
-  type tSchema = {name : string,
-                  source : Pattern.construction,
+  type tSchema = {source : Pattern.construction,
                   target : Pattern.construction,
                   antecedent : Pattern.construction list,
                   consequent : Pattern.construction};
+  type tSchemaData = {name : string,
+                      sourceConSpecN : string,
+                      targetConSpecN : string,
+                      interConSpecN : string,
+                      tSchema : tSchema}
+
 
   val tSchema_rpc : tSchema Rpc.Datatype.t;
 
   val wellFormedTransferSchema : interConSpec -> tSchema -> bool;
-  val nameOf : tSchema -> string;
+  val nameOf : tSchemaData -> string;
 
-  val declareTransferSchema : {name : string,
-                               source : Pattern.construction,
+  val declareTransferSchema : {source : Pattern.construction,
                                target : Pattern.construction,
                                antecedent : Pattern.construction list,
                                consequent : Pattern.construction} -> tSchema;
@@ -25,33 +29,34 @@ end;
 structure InterCSpace : INTERCSPACE =
 struct
   type interConSpec = {source : CSpace.conSpecData, target : CSpace.conSpecData, inter : CSpace.conSpecData}
-  type tSchema = {name : string,
-                   source : Pattern.construction,
+  type tSchema = {source : Pattern.construction,
                    target : Pattern.construction,
                    antecedent : Pattern.construction list,
                    consequent : Pattern.construction};
+  type tSchemaData = {name : string,
+                       sourceConSpecN : string,
+                       targetConSpecN : string,
+                       interConSpecN : string,
+                       tSchema : tSchema}
 
   val tSchema_rpc = Rpc.Datatype.convert
-                     "TransferSchemma.tSchema"
-                     (Rpc.Datatype.tuple5
-                          (String.string_rpc,
-                           Pattern.construction_rpc,
+                     "TransferSchema.tSchema"
+                     (Rpc.Datatype.tuple4
+                          (Pattern.construction_rpc,
                            Pattern.construction_rpc,
                            List.list_rpc Pattern.construction_rpc,
                            Pattern.construction_rpc))
-                     (fn (n, s, t, rs, r) => {name = n,
-                                              source = s,
+                     (fn (s, t, rs, r) => {source = s,
                                               target = t,
                                               antecedent = rs,
                                               consequent = r})
-                     (fn {name = n,
-                          source = s,
+                     (fn {source = s,
                           target = t,
                           antecedent = rs,
-                          consequent = r} => (n, s, t, rs, r));
+                          consequent = r} => (s, t, rs, r));
 
   exception badForm
-  fun wellFormedTransferSchema iCS {name,source,target,antecedent,consequent} =
+  fun wellFormedTransferSchema iCS {source,target,antecedent,consequent} =
     Pattern.wellFormed (#source iCS) source andalso Pattern.wellFormed (#target iCS) target andalso
     Pattern.wellFormed (#inter iCS) consequent andalso List.all (Pattern.wellFormed (#inter iCS)) antecedent
 
