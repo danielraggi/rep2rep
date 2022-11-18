@@ -130,10 +130,11 @@ struct
                            end);
 
   fun empty () = D.empty ();
-  fun has d k = Option.isSome (D.get d k);
+  fun has d k = D.has d k;
   fun add d k = D.insert d (k, ());
   fun size d = D.size d;
   fun toString f d = D.toString f d;
+  fun toList d = D.keys d;
   end;
 
   fun transitiveClosure Ty R0 =
@@ -150,9 +151,12 @@ struct
               else ();
           val pairs = List.product (set, set);
           val triples = List.map (fn ((x, y), z) => (x, y, z)) (List.product (pairs, set));
-          val () = List.app setR pairs
-          val () =  List.app extendR triples;
-      in fn (x, y) => R0(x, y) orelse TyTySet.has R (x, y)  end;
+          val () = List.app setR pairs;
+          val () = List.app extendR triples;
+          (* HACK: re-balance the underlying tree. *)
+          val R = (TyTySet.D.fromPairList o TyTySet.D.toPairList) R;
+          val () = print ((TyTySet.toString (fn _ => ".") R) ^ "\n");
+      in fn (x, y) => R0 (x, y) orelse TyTySet.has R (x, y) end;
 
   fun respectAnyClosure R = (fn (x,y) => (equal y any orelse R (x,y)))
 

@@ -31,6 +31,7 @@ sig
     val get : (k, 'v) dict -> k -> 'v option;
     val getExn : (k, 'v) dict -> k -> 'v;
     val update : (k, 'v) dict -> k -> ('v -> 'v) -> 'v;
+    val has : (k, 'v) dict -> k -> bool;
 
     val keys : (k, 'v) dict -> k list;
     val values : (k, 'v) dict -> 'v list;
@@ -95,56 +96,29 @@ fun splayFor k LEAF = raise KeyError
             | BRANCH(lv, ll, lr) =>
               case K.compare(k, keyFor(lv)) of
                   (* single-zig *)
-                  EQUAL => BRANCH(lv,
-                                  ll,
-                                  BRANCH(v,
-                                         lr,
-                                         r))
+                  EQUAL => BRANCH(lv, ll, BRANCH(v, lr, r))
                 (* potential zig-zig *)
                 | LESS => (
                     case ll of
-                        LEAF => BRANCH(lv,
-                                       LEAF,
-                                       BRANCH(v,
-                                              lr,
-                                              r))
+                        LEAF => BRANCH(lv, LEAF, BRANCH(v, lr, r))
                       | llt =>
                         case (splayFor k llt) of
-                            LEAF => BRANCH(lv,
-                                           LEAF,
-                                           BRANCH(v,
-                                                  lr,
-                                                  r))
-                          | BRANCH(llv, lll, llr) => BRANCH(llv,
-                                                            lll,
-                                                            BRANCH(lv,
-                                                                   llr,
-                                                                   BRANCH(v,
-                                                                          lr,
-                                                                          r)))
+                            LEAF => BRANCH(lv, LEAF, BRANCH(v, lr, r))
+                          | BRANCH(llv, lll, llr) => BRANCH(llv, lll,
+                                                            BRANCH(lv, llr,
+                                                                   BRANCH(v, lr, r)))
                 )
                 (* potential zig-zag *)
                 | GREATER => (
                     case lr of
-                        LEAF => BRANCH(lv,
-                                       ll,
-                                       BRANCH(v,
-                                              LEAF,
-                                              r))
+                        LEAF => BRANCH(lv, ll, BRANCH(v, LEAF, r))
                       | lrt =>
                         case (splayFor k lrt) of
-                            LEAF => BRANCH(lv,
-                                           ll,
-                                           BRANCH(v,
-                                                  LEAF,
-                                                  r))
+                            LEAF => BRANCH(lv, ll,
+                                           BRANCH(v, LEAF, r))
                          | BRANCH(lrv, lrl, lrr) => BRANCH(lrv,
-                                                           BRANCH(lv,
-                                                                  ll,
-                                                                  lrl),
-                                                           BRANCH(v,
-                                                                  lrr,
-                                                                  r))
+                                                           BRANCH(lv, ll, lrl),
+                                                           BRANCH(v, lrr, r))
                 )
       )
       (* potential zag-* *)
@@ -154,71 +128,39 @@ fun splayFor k LEAF = raise KeyError
             | BRANCH(rv, rl, rr) =>
               case K.compare(k, keyFor(rv)) of
                   (* single zag *)
-                  EQUAL => BRANCH(rv,
-                                  BRANCH(v,
-                                         l,
-                                         rl),
-                                  rr)
+                  EQUAL => BRANCH(rv, BRANCH(v, l, rl), rr)
                 (* potential zag-zag *)
                 | GREATER => (
                     case rr of
-                        LEAF => BRANCH(rv,
-                                       BRANCH(v,
-                                              l,
-                                              rl),
-                                       rr)
+                        LEAF => BRANCH(rv, BRANCH(v, l, rl), rr)
                       | rrt =>
                         case (splayFor k rrt) of
-                            LEAF => BRANCH(rv,
-                                           BRANCH(v,
-                                                  l,rl),
-                                           rr)
+                            LEAF => BRANCH(rv, BRANCH(v, l,rl), rr)
                           | BRANCH(rrv, rrl, rrr) => BRANCH(rrv,
                                                             BRANCH(rv,
-                                                                   BRANCH(v,
-                                                                          l,
-                                                                          rl),
+                                                                   BRANCH(v, l, rl),
                                                                    rrl),
                                                             rrr)
                 )
                 (* potential zag-zig *)
                 | LESS => (
                     case rl of
-                        LEAF => BRANCH(rv,
-                                       BRANCH(v,
-                                              l,
-                                              rl),
-                                      rr)
+                        LEAF => BRANCH(rv, BRANCH(v, l, rl), rr)
                       | rlt =>
                         case (splayFor k rlt) of
-                            LEAF => BRANCH(rv,
-                                           BRANCH(v,
-                                                  l,
-                                                  rl),
-                                           rr)
+                            LEAF => BRANCH(rv, BRANCH(v, l, rl), rr)
                          | BRANCH(rlv, rll, rlr) => BRANCH(rlv,
-                                                           BRANCH(v,
-                                                                  l,
-                                                                  rll),
-                                                           BRANCH(rv,
-                                                                  rlr,
-                                                                  rr))
-                )
-      )
+                                                           BRANCH(v, l, rll),
+                                                           BRANCH(rv, rlr, rr))))
 
 val empty = fn () => (ref LEAF);
 
 fun insert' LEAF (x,y) = BRANCH ((x,y), LEAF, LEAF)
   | insert' (BRANCH ((k,v), l, r)) (x, y) =
-    if K.compare(x, k) = EQUAL then BRANCH((x,y), l, r)
-    else
-        let
-            val cmp = K.compare (x, k)
-            val l' =  if cmp = GREATER then l else (insert' l (x, y));
-            val r' = if cmp = GREATER then insert' r (x, y) else r;
-        in
-            BRANCH ((k, v), l', r')
-        end;
+    case K.compare (x, k) of
+        EQUAL => BRANCH((x,y), l, r)
+      | GREATER => BRANCH ((k, v), l, insert' r (x, y))
+      | LESS => BRANCH ((k, v), insert' l (x, y), r);
 fun insert d (x,y) =
     let
         val d' = !d;
@@ -339,9 +281,10 @@ fun intersectionWith' _ LEAF _ = LEAF
         fun intsct [] _ = []
           | intsct _ [] = []
           | intsct ((x,v)::xs) ((y,v')::ys) =
-            if K.compare(x,y) = EQUAL then (x, f(x,v,v'))::(intsct xs ys)
-            else if K.compare(x,y) = LESS then (intsct xs ((y,v')::ys))
-            else (intsct ((x,v)::xs) ys);
+            case K.compare (x, y) of
+                EQUAL => (x, f(x,v,v'))::(intsct xs ys)
+              | LESS => (intsct xs ((y,v')::ys))
+              | GREATER => (intsct ((x,v)::xs) ys);
     in
         ! (fromSortedPairList (intsct tl tl'))
     end;
@@ -377,9 +320,10 @@ fun joinDisjoint LEAF t = t
     end
 and remove' LEAF _ = LEAF
   | remove' (BRANCH ((k,v), l, r)) x =
-    if K.compare(x, k) = EQUAL then joinDisjoint l r
-    else if K.compare(x, k) = GREATER then BRANCH((k,v), l, (remove' r x))
-    else BRANCH((k,v), (remove' l x), r);
+    case K.compare (x, k) of
+        EQUAL => joinDisjoint l r
+      | GREATER => BRANCH((k,v), l, (remove' r x))
+      | LESS => BRANCH ((k,v), (remove' l x), r);
 fun remove t k =
     let
         val _ = t := (remove' (!t) k);
@@ -398,6 +342,16 @@ fun getExn t k =
     end;
 
 fun get t k = SOME(getExn t k) handle KeyError => NONE;
+
+fun has t needle =
+(* We could "splayFor", but that can be expensive. Let's leave that for the get. *)
+    let fun f LEAF = false
+          | f (BRANCH ((k, _), l, r) )=
+            case K.compare (needle, k) of
+                EQUAL => true
+              | LESS => f l
+              | GREATER => f r;
+    in f (!t) end;
 
 fun update t k f =
     let
