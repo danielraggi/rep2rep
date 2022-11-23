@@ -7,16 +7,16 @@ signature RENDERERS = sig
 end;
 
 structure Renderers : RENDERERS = struct
-(* Renderers take a construction, and produces a list of (id, (html, width, height)) tuples.
+(* Renderers take a structure graph, and produces a list of (id, (html, width, height)) tuples.
    The ids are taken from the tokens in the construction. The width and height are the size
    of the rendering if it were to be inserted into a webpage.
  *)
-type renderer = Construction.construction -> (string * (string * real * real)) list;
+type renderer = Construction.construction list -> (string * (string * real * real)) list;
 
 fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
     Rpc.provide
         ("server.renderer." ^ cspace,
-         Construction.construction_rpc,
+         List.list_rpc(Construction.construction_rpc),
          List.list_rpc(Rpc.Datatype.tuple2(String.string_rpc,
                                            Rpc.Datatype.tuple3(String.string_rpc,
                                                                Real.real_rpc,
@@ -30,9 +30,9 @@ fun mkEndpoint (cspace:string) (renderer:renderer) : Rpc.endpoint =
         ("arithG", mkEndpoint "arithG" my_arithg_renderer)
    where my_arithg_renderer is your renderer for the construction space.
  *)
-val all = [("contTableG",    mkEndpoint "contTableG" ProbRender.drawTable),
-           ("probTreeG",     mkEndpoint "probTreeG" ProbRender.drawTree),
-           ("areaDiagramG",  mkEndpoint "areaDiagramG" ProbRender.drawArea),
-           ("bayesG",        mkEndpoint "bayesG" ProbRender.drawBayes)];
+val all = [("contTableG",    mkEndpoint "contTableG" (List.flatmap ProbRender.drawTable)),
+           ("probTreeG",     mkEndpoint "probTreeG" (List.flatmap ProbRender.drawTree)),
+           ("areaDiagramG",  mkEndpoint "areaDiagramG" (List.flatmap ProbRender.drawArea)),
+           ("bayesG",        mkEndpoint "bayesG" (List.flatmap ProbRender.drawBayes))];
 
 end;
