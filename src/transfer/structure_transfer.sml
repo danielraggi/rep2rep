@@ -35,7 +35,7 @@ sig
       Knowledge.base -> (* Transfer and Inference schemas *)
       Construction.construction -> (* The construction to transform *)
       Construction.construction -> (* The goal to satisfy *)
-      Construction.construction list (* Your new transformed structure graph :-) *)
+      (Construction.construction list, Diagnostic.t list) Result.t (* Your new transformed structure graph :-) *)
 end;
 
 structure Transfer : TRANSFER =
@@ -496,8 +496,34 @@ fun structureTransfer unistructured targetPattOption st =
           val stateSeq = structureTransfer false NONE st;
           fun getStructureGraph st =
               List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
+          fun makeDiagnostic goal =
+              let val str = Construction.toString goal;
+                  val toks = FiniteSet.listOf
+                                 (Construction.tokensOfConstruction goal);
+                  fun hexDigit c =
+                      Char.contains "0123456789ABCDEFabcdef" c;
+                  fun couldBeId2 [c] = hexDigit c
+                    | couldBeId2 (c::cs) =
+                      if hexDigit c then couldBeId2 cs else false
+                    | couldBeId2 [] = false;
+                  fun couldBeId [] = false
+                    | couldBeId [c] = hexDigit c
+                    | couldBeId (c::cs) =
+                      if c = #"-" then couldBeId2 cs
+                      else if hexDigit c then couldBeId2 cs
+                      else false;
+                  fun asId s =
+                      if couldBeId (String.explode s) then SOME s else NONE;
+                  val ids = List.mapPartial (asId o CSpace.nameOfToken) toks;
+              in Diagnostic.create
+                     Diagnostic.ERROR
+                     ("Transfer failed due to open goal: " ^ str)
+                     ids
+              end;
           val firstState = Seq.hd stateSeq;
-          val _ = print("UNCLOSED GOALS: " ^ Int.toString(List.length(State.goalsOf firstState)) ^ "\n");
-          val structureGraph = getStructureGraph firstState;
-      in structureGraph end
+          val goals = State.goalsOf firstState;
+      in case goals of
+             [] => Result.ok (getStructureGraph firstState)
+           | _ => Result.error (List.map makeDiagnostic goals)
+      end
 end;

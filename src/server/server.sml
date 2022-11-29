@@ -80,12 +80,13 @@ fun transfer constr srcSpaceName tgtSpaceName interSpaceName spaces knowledge =
         val tgtSpace = getSpace spaces tgtSpaceName;
         val intSpace = getSpace spaces interSpaceName;
         val goal = Option.mapPartial (mkGoal constr) intSpace;
+        fun err s = Result.error [Diagnostic.create Diagnostic.ERROR s []];
     in case (srcSpace, tgtSpace, intSpace, goal) of
            (SOME(s), SOME(t), SOME(i), SOME(g)) => Transfer.applyTransfer s t i knowledge constr g
-         | (NONE, _, _, _) => (print "ERROR no srcSpace\n"; [])
-         | (_, NONE, _, _) => (print "ERROR no tgtSpace\n"; [])
-         | (_, _, NONE, _) => (print "ERROR no intSpace\n"; [])
-         | (_, _, _, NONE) => (print "ERROR no goal\n"; [])
+         | (NONE, _, _, _) => err "No srcSpace!"
+         | (_, NONE, _, _) => err "No tgtSpace!"
+         | (_, _, NONE, _) => err "No intSpace!"
+         | (_, _, _, NONE) => err "No goal!"
     end;
 
 val spaces_sig = ("server.spaces", unit_rpc, List.list_rpc(CSpace.conSpecData_rpc));
@@ -113,7 +114,8 @@ val transfer_sig = ("server.transfer",
                                          String.string_rpc,
                                          String.string_rpc,
                                          String.string_rpc),
-                    List.list_rpc Construction.construction_rpc);
+                    Result.t_rpc (List.list_rpc Construction.construction_rpc,
+                                  List.list_rpc Diagnostic.t_rpc));
 
 fun make files transferMap =
     let
