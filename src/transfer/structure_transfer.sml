@@ -495,25 +495,18 @@ fun structureTransfer unistructured targetPattOption st =
       let val st = initState sCSD tCSD iCSD KB ct goal
           val stateSeq = structureTransfer false NONE st;
           fun getStructureGraph st =
-              List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
+              List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
           fun makeDiagnostic goal =
               let val str = Construction.toString goal;
                   val toks = FiniteSet.listOf
                                  (Construction.tokensOfConstruction goal);
-                  fun hexDigit c =
-                      Char.contains "0123456789ABCDEFabcdef" c;
-                  fun couldBeId2 [c] = hexDigit c
-                    | couldBeId2 (c::cs) =
-                      if hexDigit c then couldBeId2 cs else false
-                    | couldBeId2 [] = false;
+                  fun hexDigit c = Char.contains "0123456789ABCDEFabcdef" c;
                   fun couldBeId [] = false
                     | couldBeId [c] = hexDigit c
-                    | couldBeId (c::cs) =
-                      if c = #"-" then couldBeId2 cs
-                      else if hexDigit c then couldBeId2 cs
-                      else false;
-                  fun asId s =
-                      if couldBeId (String.explode s) then SOME s else NONE;
+                    | couldBeId (c::cs) = if c = #"-" orelse hexDigit c
+                                          then List.all hexDigit cs
+                                          else false;
+                  fun asId s = if couldBeId (String.explode s) then SOME s else NONE;
                   val ids = List.mapPartial (asId o CSpace.nameOfToken) toks;
               in Diagnostic.create
                      Diagnostic.ERROR
