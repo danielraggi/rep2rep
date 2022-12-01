@@ -54,6 +54,9 @@ exception TreeError;
 
 exception BayesError;
 
+val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
+val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
+
 fun eventToString (SEVENT(x)) = x
   | eventToString (NEVENT(x)) = x
 
@@ -1570,7 +1573,7 @@ fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagr
 
 fun drawArea c =
     let fun parseArea (Construction.Source((id, typ))) =
-            if String.isSubstring "empty" typ then (EMPTY, [(id, "EMPTY", 0.0)])
+            if typ = "empty" then (EMPTY, [(id, "EMPTY", 0.0)])
             else (case String.breakOn ":" typ of
                       (a, ":" ,_) => (LABEL(a), [(id, a, Real.fromInt (String.size a) + 0.5)])
                     | _ => raise AreaError)
@@ -2175,8 +2178,8 @@ fun drawTree x =
                 fun toDocTree ([x], [p, p']) =
                     (String.concat [
                           svg ("90", "120"),
-                          text ("P(" ^ x ^ ")") ("85", "27") false NONE,
-                          text ("P(" ^ (overline x) ^ ")") ("85", "83") false NONE,
+                          text ("Pr(" ^ x ^ ")") ("85", "27") false NONE,
+                          text ("Pr(" ^ (overline x) ^ ")") ("85", "83") false NONE,
                           text p ("40", "35") true (SOME "-17"),
                           text p' ("40", "74") true (SOME "17"),
                           line ("0", "50") ("80", "25"),
@@ -2185,12 +2188,12 @@ fun drawTree x =
                   | toDocTree ([x1, x2], [y0, y1, y2, y3, y4, y5, y6, y7, y8, y9]) =
                     (String.concat [
                           svg ("110", "350"),
-                          text ("P(" ^ x1 ^ ")") ("85", "27") false NONE,
-                          text ("P(" ^ (overline x1) ^ ")") ("85", "83") false NONE,
-                          text ("P(" ^ x1 ^ "&cap;" ^ x2 ^ ") " ^ y6) ("225", "10") false NONE,
-                          text ("P(" ^ x1 ^ "&cap;" ^ (overline x2) ^ ") " ^ y7) ("225", "38") false NONE,
-                          text ("P(" ^ (overline x1) ^ "&cap;" ^ x2 ^ ") " ^ y8) ("225", "70") false NONE,
-                          text ("P(" ^ (overline x1) ^ "&cap;" ^ (overline x2) ^ ") " ^ y9) ("225", "98") false NONE,
+                          text ("Pr(" ^ x1 ^ ")") ("85", "27") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ ")") ("85", "83") false NONE,
+                          text ("Pr(" ^ x1 ^ inter ^ x2 ^ ") " ^ y6) ("225", "10") false NONE,
+                          text ("Pr(" ^ x1 ^ inter ^ (overline x2) ^ ") " ^ y7) ("225", "38") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ inter ^ x2 ^ ") " ^ y8) ("225", "70") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ inter ^ (overline x2) ^ ") " ^ y9) ("225", "98") false NONE,
                           text y0 ("40", "35") true (SOME "-17"),
                           text y1 ("40", "74") true (SOME "17"),
                           text y2 ("170", "11") true (SOME "-7"),
@@ -2215,8 +2218,8 @@ fun drawTree x =
     in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
 fun drawBayes c =
-    let fun parseOp (Construction.Source((id, "inter"))) = [(id, "&cap;", 1.5)]
-          | parseOp (Construction.Source((id, "union"))) = [(id, "&cup;", 1.5)]
+    let fun parseOp (Construction.Source((id, "inter"))) = [(id, inter, 1.5)]
+          | parseOp (Construction.Source((id, "union"))) = [(id, union, 1.5)]
           | parseOp _ = raise BayesError;
         fun parseEvent (Construction.Source((id, typ))) =
             (case String.breakOn ":" typ of
@@ -2238,7 +2241,7 @@ fun drawBayes c =
                  let val html1 = parseEvent event1;
                      val html2 = parseEvent event2;
                  in case (html1, html2) of
-                        ((_, e1, w1)::_, (_, e2, w2)::_) => (id, e1 ^ "|" ^ e2, w1+w2) :: html1 @ html2
+                        ((_, e1, w1)::_, (_, e2, w2)::_) => (id, e1 ^ "|" ^ e2, w1+w2+0.1) :: html1 @ html2
                       | _ => raise BayesError
                  end
                | ("infix", [event1, setop, event2]) =>
@@ -2270,7 +2273,7 @@ fun drawBayes c =
                  in case (html1, html2) of
                         ((_, eq1, w1)::_, (_, eq2, w2)::_) =>
                         let val eqns = eq1 ^ ", " ^ eq2;
-                            val width = w1 + w2 - 1.0;
+                            val width = w1 + w2;
                         in (id, eqns, width) :: html1 @ html2 end
                       | _ => raise BayesError
                  end
