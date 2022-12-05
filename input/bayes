@@ -4,14 +4,14 @@ typeSystem bayes =
   imports arith
   types _:event, _:condEvent, _:events,
         _:probEqn, _:probSys,
-        overline, inter, union, bin
+        inter, union, bin
   order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
 
 conSpec bayesG:bayes =
   imports arithG
   constructors
     makeEqn : [events,numExp] -> probEqn,
-    complement : [overline,event] -> event,
+    complement : [event] -> event,
     infix : [event,bin,event] -> event,
     makeCond : [event,event] -> condEvent,
     addEqn : [probEqn,probSys] -> probSys
