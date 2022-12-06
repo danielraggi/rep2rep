@@ -22,9 +22,9 @@ tSchema eventV:(bayesG,contTableG,interBayesTable) =
     strength 1
 
 tSchema complEvent:(bayesG,contTableG,interBayesTable) =
-    source t:event <- complement[t1:overline,t2:event]
+    source t:event <- complement[t1:event]
     target t':name <- notName[t1':name]
-    antecedent :metaTrue <- match[t2:event,t1':name]
+    antecedent :metaTrue <- match[t1:event,t1':name]
     consequent :metaTrue <- match[t:event,t':name]
     strength 1
 
