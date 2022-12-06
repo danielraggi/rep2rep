@@ -120,12 +120,16 @@ struct
     in Construction.fixReferences (c (String.stripSpaces s))
     end;
 
-  val parseConstruction_rpc = fn findCSpec =>
-                                 Rpc.provide ("oruga.document.parseConstruction",
-                                              Rpc.Datatype.tuple2(String.string_rpc, String.string_rpc),
-                                              Construction.construction_rpc)
-                                             (fn (cspecName, s) => let val cspec = Option.valOf (findCSpec cspecName);
-                                                                   in parseConstruction cspec s end)
+  val parseConstruction_rpc =
+   fn findCSpec =>
+      Rpc.provide ("oruga.document.parseConstruction",
+                   Rpc.Datatype.tuple2(String.string_rpc, String.string_rpc),
+                   Option.option_rpc(Construction.construction_rpc))
+                  (fn (cspecName, s) =>
+                      Option.mapPartial
+                          (fn cspec => SOME (parseConstruction cspec s)
+                                       handle ParseError => NONE)
+                          (findCSpec cspecName) );
 
   fun contentForKeywords _ [] = []
   | contentForKeywords ks (w::ws) =
