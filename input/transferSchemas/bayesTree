@@ -22,9 +22,9 @@ tSchema eventV:(bayesG,probTreeG,interBayesTree) =
     strength 1
 
 tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
-    source t:event <- complement[t1:overline,t2:event]
+    source t:event <- complement[t1:event]
     target t':label <- notLabel[t1':label]
-    antecedent :metaTrue <- match[t2:event,t1':label]
+    antecedent :metaTrue <- match[t1:event,t1':label]
     consequent :metaTrue <- match[t:event,t':label]
     strength 1
 
