@@ -2233,14 +2233,11 @@ fun drawBayes c =
                | _ => raise NumError)
           | parseEvent (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
             (case (cname, cons) of
-                 ("complement", [bar, event]) =>
+                 ("complement", [event]) =>
                  let val html = parseEvent event;
                      fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>"
-                 in case bar of
-                        Construction.Source((barId, "overline")) =>
-                        (case html of
-                             ((_, evt, width)::_) => (id, overline evt, width)::(barId, "-", 1.5)::html
-                           | _ => raise BayesError)
+                 in case html of
+                        ((_, evt, width)::_) => (id, overline evt, width + 0.1)::html
                       | _ => raise BayesError
                  end
                | ("makeCond", [event1, event2]) =>

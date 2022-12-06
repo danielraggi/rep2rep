@@ -22,9 +22,9 @@ tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     strength 1
 
 tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
-    source t:event <- complement[t1:overline,t2:event]
+    source t:event <- complement[t1:event]
     target t':tag <- reverseTag[t1':tag]
-    antecedent :metaTrue <- match[t2:event,t1':tag]
+    antecedent :metaTrue <- match[t1:event,t1':tag]
     consequent :metaTrue <- match[t:event,t':tag]
     strength 1
 
