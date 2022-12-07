@@ -118,18 +118,79 @@ struct
     in Construction.fixReferences (c (String.stripSpaces s))
     end;
 
-  fun contentForKeywords _ [] = []
-  | contentForKeywords ks (w::ws) =
-    let fun getKeywordMatch (k::K) = if k = w then SOME k else getKeywordMatch K
-          | getKeywordMatch [] = NONE
-    in (case getKeywordMatch ks of
-          SOME k => (case contentForKeywords ks ws of
-                        (NONE,x) :: L => (SOME k,x) :: L
-                      | L => (SOME k, []) :: L)
-        | NONE => (case contentForKeywords ks ws of
-                      (NONE,x) :: L => (NONE, w :: x) :: L
-                    | L => (NONE,[w]) :: L))
+  fun ignoreUntil _ [] = []
+    | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
+
+  fun tokenise s =
+    let fun commentChar x = (x = #"#")
+        fun lineBreak x = (x = #"\n")
+        fun separator x = (x = #"\n" orelse x = #" ")
+        fun standAlone x = (x = #"(" orelse x = #")" orelse
+                            x = #"[" orelse x = #"]" orelse
+                            x = #"{" orelse x = #"}" orelse
+                            x = #"\"" orelse x = #",")
+        fun t [] = (true,[])
+          | t (x::xs) =
+            if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
+            else if separator x then (true, #2(t xs))
+            else if standAlone x then (true, str x :: #2(t xs))
+            else (case t xs of
+                    (true,L) => (false, str x :: L)
+                  | (false,r::rs) => (false, str x ^ r :: rs)
+                  | _ => raise ParseError "Completely unexpected error. Inform a developer!")
+        val (_,ts) = t (String.explode s)
+    in ts end;
+
+  fun removeOuterBrackets wL =
+    let fun removeOuterJunk (L,L') =
+            (case (L,L') of
+                ("("::xL,")"::xL') => removeOuterJunk (xL,xL')
+              | ("{"::xL,"}"::xL') => removeOuterJunk (xL,xL')
+              | ("["::xL,"]"::xL') => removeOuterJunk (xL,xL')
+              | _ => (L,L'))
+        fun splitInHalf (H,(x::L)) = if length L < length H
+                                     then (H,x::L)
+                                     else splitInHalf ((x::H),L)
+          | splitInHalf (H,[]) = (H,[])
+        val (wL1,wL2) = splitInHalf ([],wL)
+        val (wL1',wL2') = removeOuterJunk (rev wL1, rev wL2)
+    in wL1' @ rev wL2'
     end
+
+  fun gatherMaterialByKeywords ks wL =
+      let fun cfw (bL,q) [] = ((bL,q),[])
+            | cfw (bL,q) (w::ws) =
+              let val newbL =
+                    if q then bL
+                    else (case (bL,w) of
+                              ("("::bL',")") => bL'
+                            | ("["::bL',"]") => bL'
+                            | ("{"::bL',"}") => bL'
+                            | (_,"(")        => w::bL
+                            | (_,"[")        => w::bL
+                            | (_,"{")        => w::bL
+                            | (_,")")        => raise ParseError ("no matching bracket for ) near " ^ (hd ws))
+                            | (_,"]")        => raise ParseError ("no matching bracket for ] near " ^ (hd ws))
+                            | (_,"}")        => raise ParseError ("no matching bracket for } near " ^ (hd ws))
+                            | (_,_)          => bL)
+                  val newq = (q andalso not (w = "\"")) orelse (not q andalso w = "\"")
+                  val (X,cfwr) = cfw (newbL,newq) ws
+                  val C = if (newbL,newq) = ([],false) andalso List.exists (fn x => x = w) ks
+                          then (case cfwr of
+                                  (NONE,x) :: L => (SOME w,x) :: L
+                                | L             => (SOME w, []) :: L)
+                          else (case cfwr of
+                                  (NONE,x) :: L => (NONE, w :: x) :: L
+                                | L             => (NONE,[w]) :: L)
+              in (X,C)
+              end
+          val ((bL,q),result) = cfw ([],false) (removeOuterBrackets wL)
+          val _ = if bL = [] then ()
+                  else raise ParseError ("no closing bracket for " ^ hd bL)
+          val _ = if not q then ()
+                  else raise ParseError ("uneven quotation marks")
+      in result
+      end
 
   type documentContent =
        {typeSystemsData : Type.typeSystemData list,
@@ -235,20 +296,21 @@ struct
     in {name = name,typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes}
     end
 
-  fun addTypeSystem (name, tss) dc =
-  let val _ = print ("\nAdding type system " ^ name ^ "...");
+  fun addTypeSystem (N, tss) dc =
+  let val name = case N of [x] => x | _ => raise ParseError ("invalid name for type system : " ^ String.concat N)
+      val _ = print ("\nAdding type system " ^ name ^ "...");
       val _ = (findTypeSystemDataWithName dc name;Logging.write ("\nWARNING: type systems have same name. Overwriting!\n"))
                 handle ParseError => ()
-      val blocks = contentForKeywords typeKeywords tss
+      val blocks = gatherMaterialByKeywords typeKeywords tss
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
             if x = SOME typesKW
-            then map parseTyp (String.tokens (fn k => k = #",") (String.concat c))
+            then map parseTyp (String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c)))
             else getTyps L
       fun getOrder [] = []
         | getOrder ((x,c)::L) =
             if x = SOME subTypeKW
-            then map inequality (String.tokens (fn k => k = #",") (String.concat c))
+            then map inequality (String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c)))
             else getOrder L
       fun parseImport s =
         (case String.breakOn " with " s of
@@ -264,7 +326,7 @@ struct
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME typeImportsKW
-            then map parseImport (String.tokens (fn k => k = #",") (Parser.deTokenise " " c))
+            then map parseImport (String.tokens (fn k => k = #",") (Parser.deTokenise " " (removeOuterBrackets c)))
             else getImports L
 
       fun processTys ((Ty,prtyp)::L) =
@@ -308,21 +370,25 @@ struct
     | _ => raise ParseError ("badly specified constructor: " ^ s)
 
 
-  fun addConSpec (r, tss) dc =
-  let val (name,x,typeSystemN) = String.breakOn ":" r
+  fun addConSpec (R, tss) dc =
+  let val r = case R of [x] => x | _ => raise ParseError ("invalid name or type system for constructor specification : " ^ String.concat R)
+      val (name,x,typeSystemN) = String.breakOn ":" r
       (*val _ = if x = ":" then () else raise ParseError "no type system specified for conSpec"*)
       val _ = Logging.write ("\nAdding constructors for constructor specification " ^ name ^ " of type system " ^ typeSystemN ^ "...\n")
 
-      val blocks = contentForKeywords conSpecKeywords tss
+      val blocks = gatherMaterialByKeywords conSpecKeywords tss
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME conSpecImportsKW
-            then map (findConSpecWithName dc) (String.tokens (fn k => k = #",") (String.concat c))
+            then map (findConSpecWithName dc) (String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c)))
             else getImports L
       fun getConstructors [] = []
         | getConstructors ((x,c)::L) =
             if x = SOME constructorsKW
-            then map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") (List.concat (map String.explode c)))
+            then let val cChars = String.explode (String.concat (removeOuterBrackets c))
+                     val cL = Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") cChars
+                 in map parseConstructor cL
+                 end
             else getConstructors L
 
       val newConstructors = FiniteSet.ofList (getConstructors blocks)
@@ -358,11 +424,12 @@ struct
       strengths = #strengths dc}
   end
 
-  fun addInferenceSchema (nn,cs) dc =
-  let val (name,x,cspecNs) = String.breakOn ":" nn
-      val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+  fun addInferenceSchema (N,cs) dc =
+  let val nn = String.concat N
+      val (name,x,cspecNs) = String.breakOn ":" nn
+      val _ = if x = ":" then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (contextConSpecN,y,idConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
-      val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+      val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val contextConSpec = findConSpecWithName dc contextConSpecN
       val contextTySys = #typeSystem (#typeSystemData contextConSpec)
       val idConSpec = findConSpecWithName dc idConSpecN
@@ -372,19 +439,20 @@ struct
                               raise ParseError ("no " ^ k ^ " in iSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (String.concat ps)
+            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (String.concat (removeOuterBrackets ps))
             else getPattern k L
       fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in iSchema " ^ String.concat cs))
         | getAntecedent ((x,trss) :: L) =
             if x = SOME antecedentKW
-            then if trss = [] then [] else Parser.splitLevelApply (parseConstruction idConSpec) (List.maps explode trss)
+            then if trss = [] then []
+                 else Parser.splitLevelApply (parseConstruction idConSpec) (List.maps explode (removeOuterBrackets trss))
             else getAntecedent L
       fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
                                 raise ParseError ("no construct rel in iSchema " ^ String.concat cs))
         | getConsequent ((x,crs) :: L) =
             if x = SOME consequentKW
-            then parseConstruction idConSpec (String.concat crs)
+            then parseConstruction idConSpec (String.concat (removeOuterBrackets crs))
             else getConsequent L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in iSchema " ^ String.concat cs))
@@ -392,7 +460,7 @@ struct
             if x = SOME strengthKW
             then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in iSchema " ^ String.concat cs);raise Option)
             else getStrength L
-      val blocks = contentForKeywords iSchemaKeywords cs
+      val blocks = gatherMaterialByKeywords iSchemaKeywords cs
       val context = getPattern contextKW blocks
       val antecedent = getAntecedent blocks
       val consequent = getConsequent blocks
@@ -424,13 +492,14 @@ struct
       strengths = strengthsUpd}
   end
 
-  fun addTransferSchema (nn,cs) dc =
-  let val (name,x,cspecNs) = String.breakOn ":" nn
-      val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+  fun addTransferSchema (N,cs) dc =
+  let val nn = String.concat N
+      val (name,x,cspecNs) = String.breakOn ":" nn
+      val _ = if x = ":" then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (sourceConSpecN,y,targetInterConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
-      val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+      val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (targetConSpecN,y,interConSpecN) = String.breakOn "," (String.removeParentheses targetInterConSpecN)
-      val _ = if y = "," then () else raise ParseError ("construction " ^ nn ^ " needs source, target and inter cspecs")
+      val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val sourceConSpec = findConSpecWithName dc sourceConSpecN
       val sourceTySys = #typeSystem (#typeSystemData sourceConSpec)
       val targetConSpec = findConSpecWithName dc targetConSpecN
@@ -442,19 +511,20 @@ struct
                               raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = sourceKW then sourceConSpec else targetConSpec) (String.concat ps)
+            then parseConstruction (if k = sourceKW then sourceConSpec else targetConSpec) (String.concat (removeOuterBrackets ps))
             else getPattern k L
       fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in tSchema " ^ String.concat cs))
         | getAntecedent ((x,trss) :: L) =
             if x = SOME antecedentKW
-            then if trss = [] then [] else Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode trss)
+            then if trss = [] then []
+                 else Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode (removeOuterBrackets trss))
             else getAntecedent L
       fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
                                 raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
         | getConsequent ((x,crs) :: L) =
             if x = SOME consequentKW
-            then parseConstruction interConSpec (String.concat crs)
+            then parseConstruction interConSpec (String.concat (removeOuterBrackets crs))
             else getConsequent L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in tSchema " ^ String.concat cs))
@@ -464,7 +534,7 @@ struct
                   handle Option => (Logging.write ("strength is not a real number in tSchema " ^ String.concat cs);
                                     raise Option)
             else getStrength L
-      val blocks = contentForKeywords tSchemaKeywords cs
+      val blocks = gatherMaterialByKeywords tSchemaKeywords cs
       val source = getPattern sourceKW blocks
       val target = getPattern targetKW blocks
       val antecedent = getAntecedent blocks
@@ -502,10 +572,12 @@ struct
       strengths = strengthsUpd}
   end
 
-  fun addConstruction (nn, cts) dc =
-  let val (name,x,cspecN) = String.breakOn ":" nn
+  fun addConstruction (N, bs) dc =
+  let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for construction " ^ String.concat N)
+      val (name,x,cspecN) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
       val cspec = findConSpecWithName dc cspecN
+      val cts = String.concat (removeOuterBrackets bs)
       val ct = parseConstruction cspec cts
 
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
@@ -538,12 +610,12 @@ struct
   fun parseTransferRequests DC ws =
   let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
         | stringifyC [] = ""
-      val C = contentForKeywords transferKeywords ws
+      val C = gatherMaterialByKeywords transferKeywords ws
 
       fun getConstruction [] = raise ParseError "no construction to transfer"
         | getConstruction ((x,c)::L) =
             if x = SOME sourceConstructionKW
-            then findConstructionWithName DC (String.concat c)
+            then findConstructionWithName DC (String.concat (removeOuterBrackets c))
             else getConstruction L
       val constructionRecord = getConstruction C
       val construction = #construction constructionRecord
@@ -554,12 +626,12 @@ struct
       fun getTargetConSpec [] = sourceConSpecData
         | getTargetConSpec ((x,c)::L) =
             if x = SOME targetConSpecKW
-            then findConSpecWithName DC (String.concat c)
+            then findConSpecWithName DC (String.concat (removeOuterBrackets c))
             else getTargetConSpec L
       fun getInterConSpec [] = raise ParseError "no inter-space specified"
         | getInterConSpec ((x,c)::L) =
             if x = SOME interConSpecKW
-            then findConSpecWithName DC (String.concat c)
+            then findConSpecWithName DC (String.concat (removeOuterBrackets c))
             else getInterConSpec L
             (*)
       fun getTargetTySys [] = sourceTypeSystem
@@ -576,12 +648,12 @@ struct
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
             if x = SOME goalKW
-            then parseConstruction interConSpecData (String.concat c)
+            then parseConstruction interConSpecData (String.concat (removeOuterBrackets c))
             else getGoal L
       fun getOutput [] = raise ParseError "no output file name for transfer"
         | getOutput ((x,c)::L) =
             if x = SOME outputKW
-            then "output/latex/"^(String.concat c)^".tex"
+            then "output/latex/"^(String.concat (removeOuterBrackets c))^".tex"
             else getOutput L
       fun getLimit [] = raise ParseError "no limit for transfer output file"
         | getLimit ((x,c)::L) =
@@ -591,7 +663,7 @@ struct
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
-            then (let val mtct = parseConstruction targetConSpecData (String.concat c)
+            then (let val mtct = parseConstruction targetConSpecData (String.concat (removeOuterBrackets c))
                       val _ = if Construction.wellFormed targetConSpecData mtct
                               then Logging.write "\n  pattern for matching is well formed"
                               else Logging.write "\n  WARNING: pattern for matching is not well formed"
@@ -711,12 +783,14 @@ struct
            strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
   | joinDocumentContents [] = emptyDocContent
 
+
+
   fun read filename =
   let val file = TextIO.openIn ("input/"^filename)
       val s = TextIO.inputAll file
       val _ = TextIO.closeIn file
-      val words = String.tokens (fn x => x = #"\n" orelse x = #" ") s
-      val blocks = contentForKeywords bigKeywords words
+      val words = tokenise s
+      val blocks = gatherMaterialByKeywords bigKeywords words
 
       val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
       val importedContents = map (read o String.concat o #2) importFilenames
@@ -727,11 +801,11 @@ struct
           let val dc = distribute L
               val (n,eq,ws) = breakListOn "=" c
               (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
-          in if x = SOME typeSystemKW then addTypeSystem (hd n,ws) dc else
-             if x = SOME conSpecKW then addConSpec (hd n, ws) dc else
-             if x = SOME iSchemaKW then addInferenceSchema (hd n,ws) dc else
-             if x = SOME tSchemaKW then addTransferSchema (hd n,ws) dc else
-             if x = SOME constructionKW then addConstruction (hd n,String.concat ws) dc else
+          in if x = SOME typeSystemKW then addTypeSystem (n,ws) dc else
+             if x = SOME conSpecKW then addConSpec (n, ws) dc else
+             if x = SOME iSchemaKW then addInferenceSchema (n,ws) dc else
+             if x = SOME tSchemaKW then addTransferSchema (n,ws) dc else
+             if x = SOME constructionKW then addConstruction (n,ws) dc else
              if x = SOME transferKW then addTransferRequests c dc else
              if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"
           end handle Bind => raise ParseError "expected name = content, found multiple words before ="
