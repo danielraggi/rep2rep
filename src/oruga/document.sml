@@ -130,7 +130,7 @@ struct
                           (fn cspec => SOME (parseConstruction cspec s)
                                        handle ParseError => NONE)
                           (findCSpec cspecName) );
-                          
+
   fun ignoreUntil _ [] = []
     | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
 
@@ -799,10 +799,19 @@ struct
 
 
   fun read filename =
-  let val file = TextIO.openIn ("input/"^filename)
-      val s = TextIO.inputAll file
-      val _ = TextIO.closeIn file
-      val words = tokenise s
+  let val file_str =
+          let
+            val file = TextIO.openIn ("input/"^filename);
+            val contents = TextIO.inputAll file;
+          in
+            TextIO.closeIn file;
+            contents
+          end
+      handle IO.Io _ =>
+        (print("File NOT found: input/" ^ filename ^ "\n");
+        OS.Process.exit(OS.Process.failure));
+
+      val words = tokenise file_str
       val blocks = gatherMaterialByKeywords bigKeywords words
 
       val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
