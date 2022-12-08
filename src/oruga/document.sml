@@ -19,6 +19,8 @@ sig
   val findConstructionWithName : documentContent -> string -> constructionData
   val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
 
+  val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint
+
 end;
 
 structure Document : DOCUMENT =
@@ -118,6 +120,17 @@ struct
     in Construction.fixReferences (c (String.stripSpaces s))
     end;
 
+  val parseConstruction_rpc =
+   fn findCSpec =>
+      Rpc.provide ("oruga.document.parseConstruction",
+                   Rpc.Datatype.tuple2(String.string_rpc, String.string_rpc),
+                   Option.option_rpc(Construction.construction_rpc))
+                  (fn (cspecName, s) =>
+                      Option.mapPartial
+                          (fn cspec => SOME (parseConstruction cspec s)
+                                       handle ParseError => NONE)
+                          (findCSpec cspecName) );
+                          
   fun ignoreUntil _ [] = []
     | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
 
