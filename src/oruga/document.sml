@@ -141,7 +141,7 @@ struct
         fun standAlone x = (x = #"(" orelse x = #")" orelse
                             x = #"[" orelse x = #"]" orelse
                             x = #"{" orelse x = #"}" orelse
-                            x = #"\"" orelse x = #",")
+                            x = #"\"" orelse x = #"," orelse x = #"=")
         fun t [] = (true,[])
           | t (x::xs) =
             if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
