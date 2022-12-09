@@ -161,12 +161,8 @@ struct
               | ("{"::xL,"}"::xL') => removeOuterJunk (xL,xL')
               | ("["::xL,"]"::xL') => removeOuterJunk (xL,xL')
               | _ => (L,L'))
-        fun splitInHalf (H,(x::L)) = if length L < length H
-                                     then (H,x::L)
-                                     else splitInHalf ((x::H),L)
-          | splitInHalf (H,[]) = (H,[])
-        val (wL1,wL2) = splitInHalf ([],wL)
-        val (wL1',wL2') = removeOuterJunk (rev wL1, rev wL2)
+        val (wL1,wL2) = List.split (wL, (List.length wL) div 2)
+        val (wL1',wL2') = removeOuterJunk (wL1, rev wL2)
     in wL1' @ rev wL2'
     end
 
