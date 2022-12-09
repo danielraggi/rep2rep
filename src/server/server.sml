@@ -132,7 +132,8 @@ fun make files transferMap =
         Rpc.provide transfer_sig (fn (constr, srcSpace, tgtSpace, interSpace) =>
                                      transfer constr srcSpace tgtSpace interSpace spaces knowledge),
         Construction.R.toString,
-        Construction.R.typeCheck (getSpace spaces)
+        Construction.R.typeCheck (getSpace spaces),
+        Document.parseConstruction_rpc (getSpace spaces)
     ] @ map #2 Renderers.all end;
 
 end;
