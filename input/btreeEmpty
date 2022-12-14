@@ -1,0 +1,154 @@
+import metaLogic
+
+typeSystem btreeT =
+    types  oB, cB, _:object, empty, _:btree
+    order oB < btree, cB < btree, object < btree, empty < btree
+
+conSpec btree:btreeT =
+    constructors
+        branch : [btree, btree] -> btree
+
+typeSystem nat4T =
+    types 0, 1, 2, 3, 4, nat
+    order 0 < nat, 1 < nat, 2 < nat, 3 < nat, 4 < nat
+
+typeSystem interBTreeBTreeT =
+    imports btreeT, nat4T, metaLogicT
+
+conSpec interBTreeBTree:interBTreeBTreeT =
+    constructors
+        L : [nat,btree,btree] -> metaBool
+
+tSchema oBL0:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:oB, t2:btree]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:0,t2:btree,t1':btree],
+               :metaTrue <- L[x:1,t2:btree,t2':btree]
+    consequent :metaTrue <- L[x:0,t:btree,t':btree]
+    strength 1
+
+tSchema oBL1:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:oB, t2:btree]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:1,t2:btree,t1':btree],
+               :metaTrue <- L[x:2,t2:btree,t2':btree]
+    consequent :metaTrue <- L[x:1,t:btree,t':btree]
+    strength 1
+
+tSchema oBL2:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:oB, t2:btree]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:2,t2:btree,t1':btree],
+               :metaTrue <- L[x:3,t2:btree,t2':btree]
+    consequent :metaTrue <- L[x:2,t:btree,t':btree]
+    strength 1
+
+tSchema cBL0':(btree,btree,interBTreeBTree) =
+    source t:cB
+    target t':empty
+    antecedent
+    consequent :metaTrue <- L[x:0,t:cB,t':empty]
+    strength 1
+
+tSchema cBL1':(btree,btree,interBTreeBTree) =
+    source t:cB
+    target t':empty
+    antecedent
+    consequent :metaTrue <- L[x:1,t:cB,t':empty]
+    strength 1
+
+tSchema cBL0:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:cB, t2:btree]
+    target t':empty
+    antecedent
+    consequent :metaTrue <- L[x:0,t:btree,t':empty]
+    strength 1
+
+tSchema cBL1:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:cB, t2:btree]
+    target t':btree
+    antecedent :metaTrue <- L[x:0,t2:btree,t':btree]
+    consequent :metaTrue <- L[x:1,t:btree,t':btree]
+    strength 1
+
+tSchema cBL2:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:cB, t2:btree]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:btree,t':btree]
+    consequent :metaTrue <- L[x:2,t:btree,t':btree]
+    strength 2
+
+tSchema nBL0:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:object, t2:btree]
+    target t':btree <- branch[t1':object, t2':btree]
+    antecedent :metaTrue <- L[x:0,t1:object,t1':object],
+               :metaTrue <- L[x:0,t2:btree,t2':btree]
+    consequent :metaTrue <- L[x:0,t:btree,t':btree]
+    strength 1
+
+tSchema nBL1:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:object, t2:btree]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:btree,t':btree]
+    consequent :metaTrue <- L[x:1,t:btree,t':btree]
+    strength 1
+
+tSchema nBL2:(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:object, t2:btree]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:btree,t':btree]
+    consequent :metaTrue <- L[x:2,t:btree,t':btree]
+    strength 1
+
+tSchema leafL0:(btree,btree,interBTreeBTree) =
+    source t:?x:object
+    target t':?x:object
+    antecedent
+    consequent :metaTrue <- L[x:0,t:?x:object,t':?x:object]
+    strength 1
+
+
+construction list1:btree =
+    t:a(bc)d:btree
+        <- branch[t1:a:object,
+                  t2:(bc)d:btree
+                        <- branch[t21:oB,
+                                  t22:bccBd:btree
+                                        <- branch[t221:b:object,
+                                                  t222:ccBd:btree
+                                                        <- branch[t2221:c:object,
+                                                                  t2222:cBd:btree
+                                                                        <- branch[t22221:cB,
+                                                                                  t22222:d:object
+                                                                                 ]
+                                                                 ]
+                                                 ]
+                                 ]
+                 ]
+
+
+ construction list2:btree =
+     t:a(bc)d:btree
+         <- branch[t1:oB,
+                   t2:(bc)d:btree
+                         <- branch[t21:oB,
+                                   t22:bccBd:btree
+                                         <- branch[t221:b:object,
+                                                   t222:ccBd:btree
+                                                         <- branch[t2221:c:object,
+                                                                   t2222:cBd:btree
+                                                                         <- branch[t22221:cB,
+                                                                                   t22222:cB
+                                                                                  ]
+                                                                  ]
+                                                  ]
+                                  ]
+                  ]
+
+transfer
+    sourceConstruction list2
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- L[z:0,t:a(bc)d:btree,t':btree]
+    output btreeTest
+    limit 20
