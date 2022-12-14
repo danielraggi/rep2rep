@@ -35,14 +35,21 @@ struct
           List.toString token y ^ ")" ^
         "\\in " ^ mathsf (Relation.nameOf R)
 
+  fun firstN 0 _ = []
+    | firstN n [] = []
+    | firstN n (x::xs) = x :: firstN (n-1) xs
   fun realToString z =
-    let val zs = Real.toString z
-    in case String.explode zs of (#"~"::n) => ("-" ^ String.implode n) | _ => zs
+    let val zs = Real.fmt (StringCvt.FIX (SOME 2)) z
+    in case (String.explode zs) of
+          (#"~"::n) => ("-" ^ String.implode n)
+        | n => zs
     end
 
   fun intToString z =
     let val zs = Int.toString z
-    in case String.explode zs of (#"~"::n) => ("-" ^ String.implode n) | _ => zs
+    in case (String.explode zs) of
+          (#"~"::n) => ("-" ^ String.implode (firstN 6 n))
+        | n => String.implode (firstN 6 n)
     end
 
   fun lines [h] = h
@@ -50,7 +57,7 @@ struct
     | lines _ = raise Empty
 
 
-  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"." 
+  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
   fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
   fun nodeNameOfConfigurator u t =
     let val nu = CSpace.nameOfConfigurator u
@@ -163,7 +170,7 @@ struct
   fun mkDocument content =
     let val opening = "\\documentclass[a3paper,10pt]{article}\n "^
                       "\\usepackage[margin=2cm]{geometry}\n "^
-                      "\\input{commands.sty}\n"^
+                      "\\input{commands}\n"^
                       "\\tikzset{align at top/.style={baseline=(current bounding box.north)}}\n\n"^
                       "\\begin{document}"
         val closing = "\\end{document}"
