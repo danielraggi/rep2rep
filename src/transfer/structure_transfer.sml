@@ -156,24 +156,23 @@ struct
       fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
 
       fun referenced x =
-        FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
-        FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
-        FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
+        (FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
+         FiniteSet.elementOf x (Construction.tokensOfConstruction target)) andalso
+         not (Type.isTypeVar (CSpace.typeOfToken x))
 
       val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
 
-      (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
       val (consequentMap,goalMap,typeVarMap,newgoal) =
             (case Pattern.findEmbeddingMinimisingTypeUpTo interTSD givenTokens consequent goal of
                 (f,g,vf,SOME ng) => (f,g,vf,ng)
               | _ => raise TransferSchemaNotApplicable)
-      val _ = if Pattern.wellFormed interConSpecData newgoal then () else raise TransferSchemaNotApplicable
+      (*val _ = if Pattern.wellFormed interConSpecData newgoal then () else raise TransferSchemaNotApplicable*)
       val source = Pattern.applyTypeVarInstantiation typeVarMap source
-      val _ = if Pattern.wellFormed sourceConSpecData source then () else raise TransferSchemaNotApplicable
+      (*val _ = if Pattern.wellFormed sourceConSpecData source then () else raise TransferSchemaNotApplicable*)
       val target = Pattern.applyTypeVarInstantiation typeVarMap target
-      val _ = if Pattern.wellFormed targetConSpecData target then () else raise TransferSchemaNotApplicable
+      (*val _ = if Pattern.wellFormed targetConSpecData target then () else raise TransferSchemaNotApplicable*)
       val antecedent = map (Pattern.applyTypeVarInstantiation typeVarMap) antecedent
-      val _ = if List.all (Pattern.wellFormed interConSpecData) antecedent then () else raise TransferSchemaNotApplicable
+      (*val _ = if List.all (Pattern.wellFormed interConSpecData) antecedent then () else raise TransferSchemaNotApplicable*)
       val targetConstruct = Pattern.constructOf target
       val usedTokenNames = map CSpace.nameOfToken (State.tokensInUse st)
 
@@ -478,7 +477,8 @@ fun structureTransfer unistructured targetPattOption st =
   fun initState sCSD tCSD iCSD KB ct goal =
     let val tTS = #typeSystem (#typeSystemData tCSD)
         val targetTokens = FiniteSet.filter
-                               (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
+                               (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS) andalso
+                                        not (FiniteSet.elementOf x (Construction.tokensOfConstruction ct)))
                                (Construction.leavesOfConstruction goal);
     in State.make {sourceConSpecData = sCSD,
                    targetConSpecData = tCSD,
