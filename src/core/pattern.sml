@@ -51,6 +51,11 @@ sig
                                                                -> pattern
                                                                -> (CSpace.token -> CSpace.token option)
                                                                -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction) Seq.seq;
+  val findAlterableSubConstructionWithCompatibleInverse : Type.typeSystemData
+                                                              -> pattern
+                                                              -> pattern
+                                                              -> (CSpace.token -> CSpace.token option)
+                                                              -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction) Seq.seq;
   val findUnificationOfSubConstructionConditionally : Type.typeSystemData
                                                        -> (pattern -> pattern -> bool)
                                                        -> pattern
@@ -249,6 +254,33 @@ struct
   in (f, f', vf, SOME g)
   end handle IllDefined => (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE)
 
+  fun findAlteration TSD ct ct' =
+  let val T = #typeSystem TSD
+      fun tMaps t t' =
+        let val ty = CSpace.typeOfToken t
+            val ty' = CSpace.typeOfToken t'
+            val nt = case Type.greatestCommonSubType TSD ty ty' of
+                        SOME x => CSpace.makeToken (CSpace.nameOfToken t') x
+                      | NONE => raise IllDefined
+        in (fn x => if CSpace.sameTokens x t then SOME nt else NONE,
+            fn x => if CSpace.sameTokens x t' then SOME nt else NONE)
+        end
+      fun fm (Source t) (Source t') = tMaps t t'
+        | fm (Reference t) (Reference t') = tMaps t t'
+        | fm (TCPair ({token = t, constructor = c},cs))
+             (TCPair ({token = t', constructor = c'},cs')) =
+              if CSpace.sameConstructors c c' then
+                  let val (tMap, tMap') = tMaps t t'
+                      val (CHMaps,CHMaps') = unzip (List.funZip fm cs cs')
+                  in (funUnion CSpace.sameTokens (tMap :: CHMaps),
+                      funUnion CSpace.sameTokens (tMap' :: CHMaps'))
+                  end
+              else raise IllDefined
+        | fm _ _ = raise IllDefined
+      val (f,f') = fm ct ct'
+      val g = applyMorphism f ct
+  in (f, f', SOME g)
+  end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)
 (*)
   (* if there exists an embedding ct -> ct' up to a set of tokens tks of ct,
      findEmbeddingMinimisingTypeUpTo yields maps f1, f2 and pattern g where:
@@ -318,6 +350,7 @@ struct
   (* *)
   fun findEmbedding T ct ct' = findEmbeddingUpTo T FiniteSet.empty ct ct'
 
+
   (* returns the maps between ct' and a generator of ct that matches ct' (if it exists) *)
   fun findEmbeddingOfGenerator T contextCT ct ct' =
   let fun mpg (Source t) (Source t') =
@@ -350,6 +383,36 @@ struct
             then mpg (largestSubConstructionWithConstruct contextCT t) xct'
             else (fn _ => NONE,fn _ => NONE)
         | mpg _ _ = (fn _ => NONE,fn _ => NONE)
+      val (f1,f2) = mpg ct ct'
+      val gt = applyMorphism f2 ct'
+  in (f1, f2, SOME gt)
+  end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)
+
+  fun findAlterationOfGenerator TSD contextCT ct ct' =
+  let val T = #typeSystem TSD
+      fun tMaps t t' =
+        let val ty = CSpace.typeOfToken t
+            val ty' = CSpace.typeOfToken t'
+            val nt = case Type.greatestCommonSubType TSD ty ty' of
+                        SOME x => CSpace.makeToken (CSpace.nameOfToken t') x
+                      | NONE => raise IllDefined
+        in (fn x => if CSpace.sameTokens x t then SOME nt else NONE,
+            fn x => if CSpace.sameTokens x t' then SOME nt else NONE)
+        end
+      fun mpg (Source t) (Source t') = tMaps t t'
+        | mpg (Reference t) (Reference t') = tMaps t t'
+        | mpg (TCPair ({token = t, constructor = c},cs))
+              (TCPair ({token = t', constructor = c'},cs')) =
+              if CSpace.sameConstructors c c' then
+                  let val (tMap, tMap') = tMaps t t'
+                      val (CHMaps,CHMaps') = unzip (List.funZip mpg cs cs')
+                  in (funUnion CSpace.sameTokens (tMap :: CHMaps),
+                      funUnion CSpace.sameTokens (tMap' :: CHMaps'))
+                  end
+              else raise IllDefined
+        | mpg (TCPair ({token = t, ...},_)) (Source t') = tMaps t t'
+        | mpg (Reference t) xct' = mpg (largestSubConstructionWithConstruct contextCT t) xct'
+        | mpg _ _ = raise IllDefined
       val (f1,f2) = mpg ct ct'
       val gt = applyMorphism f2 ct'
   in (f1, f2, SOME gt)
@@ -451,6 +514,20 @@ struct
                 NONE => NONE
               | SOME (sct,seqL) =>
                 (case findEmbeddingOfGenerator T ctx sct pt of
+                    (f1,f2,SOME x) => (applyMorphism (funUnion CSpace.sameTokens [f,f2]) pt;
+                                       SOME ((f1,f2,x), fescci ctx seqL))
+                  | _ => Seq.pull (fescci ctx seqL))
+                 handle IllDefined => Seq.pull (fescci ctx seqL))
+        )
+    in fescci ct (subConstructionsRaw ct)
+    end
+  fun findAlterableSubConstructionWithCompatibleInverse TSD ct pt f =
+    let fun fescci ctx seq =
+        Seq.make (fn () =>
+            (case Seq.pull seq of
+                NONE => NONE
+              | SOME (sct,seqL) =>
+                (case findAlterationOfGenerator TSD ctx sct pt of
                     (f1,f2,SOME x) => (applyMorphism (funUnion CSpace.sameTokens [f,f2]) pt;
                                        SOME ((f1,f2,x), fescci ctx seqL))
                   | _ => Seq.pull (fescci ctx seqL))

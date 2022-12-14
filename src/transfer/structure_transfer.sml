@@ -156,9 +156,9 @@ struct
       fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
 
       fun referenced x =
-        (FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
-         FiniteSet.elementOf x (Construction.tokensOfConstruction target)) andalso
-         not (Type.isTypeVar (CSpace.typeOfToken x))
+          not (Type.isTypeVar (CSpace.typeOfToken x)) andalso
+          (FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
+           FiniteSet.elementOf x (Construction.tokensOfConstruction target))
 
       val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
 
@@ -206,11 +206,20 @@ struct
       val csMap = Pattern.funUnion CSpace.sameTokens [sourceMap, consequentMap]
       val usedTokensC = FiniteSet.union usedTokens (Pattern.tokensOfConstruction updatedConsequent)
 
-      val (targetMap, updatedTarget) =
-        let val (f,_) = applyMorphismRefreshingNONEs csMap usedTokensC [target]
-            val tmap = preferentialFunUnion f targetConstructMap
-        in (tmap, Pattern.applyMorphism tmap target)
-        end
+      fun getTargetEmbedding [] = NONE
+        | getTargetEmbedding (tct::L) =
+          (case Seq.pull (Pattern.findAlterableSubConstructionWithCompatibleInverse tTSD tct target csMap) of
+              SOME ((_,f,x),_) => SOME (f, x)
+            | _ => getTargetEmbedding L)
+      val targetConstructions = List.maps Composition.resultingConstructions patternComps
+      val (targetEmbedsInComposition,targetMap, updatedTarget) =
+        (case getTargetEmbedding targetConstructions of
+            SOME (f,x) => (true,f,x)
+          | NONE =>
+              let val (f,_) = applyMorphismRefreshingNONEs csMap usedTokensC [target]
+                  val tmap = preferentialFunUnion f targetConstructMap
+              in (false,tmap, Pattern.applyMorphism tmap target)
+              end)
 
       fun compositionMap x = if FiniteSet.elementOf x targetTokens then SOME newTargetConstruct else NONE
 
@@ -219,7 +228,8 @@ struct
 
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs cstMap usedTokensCT antecedent
     in
-      (preferentialFunUnion goalMap compositionMap,
+      (targetEmbedsInComposition,
+       preferentialFunUnion goalMap compositionMap,
        InterCSpace.declareTransferSchema {source = matchingSubConstruction,
                                           target = updatedTarget,
                                           antecedent = updatedAntecedent,
@@ -291,11 +301,11 @@ struct
 
   fun applyTransferSchemaForGoal st tschData goal =
     let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} = tschData
-        val (stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
+        val (targetEmbedsInComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
 
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism stateRenaming) patternComps
-        val updatedPatternComps =
+        val updatedPatternComps = if targetEmbedsInComposition then renamedPatternComps else
             Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
 
         val goals = State.goalsOf st
