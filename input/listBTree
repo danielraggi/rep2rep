@@ -37,6 +37,8 @@ conSpec interBTreeBTree:interBTreeBTreeT =
     constructors
         L : [nat,btree,btree] -> metaBool
 
+
+
 tSchema oBL0:(list,btree,interListBTree) =
     source t:list <- insert[t1:oB, t2:list]
     target t':btree <- branch[t1':btree, t2':btree]
@@ -69,12 +71,6 @@ tSchema oBL3:(list,btree,interListBTree) =
     consequent :metaTrue <- L[x:3,t:list,t':btree]
     strength 1
 
-tSchema empty:(list,btree,interListBTree) =
-    source t:empty
-    target t':dummy:leaf
-    antecedent
-    consequent :metaTrue <- L[x:0,t:empty, t':dummy:leaf]
-    strength 1
 
 tSchema cBL0:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list <- insert[t21:cB, t22:list]]
@@ -103,6 +99,7 @@ tSchema cBL2:(list,btree,interListBTree) =
     antecedent :metaTrue <- L[x:1,t2:list,t':btree]
     consequent :metaTrue <- L[x:2,t:list,t':btree]
     strength 2
+
 
 tSchema nBL0:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
@@ -139,6 +136,16 @@ tSchema leafL0:(list,btree,interListBTree) =
     antecedent
     consequent :metaTrue <- IL[t:?x:nbItem,t':?x:nbItem]
     strength 2
+
+
+tSchema empty:(list,btree,interListBTree) =
+    source t:empty
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- L[x:0,t:empty, t':dummy:leaf]
+    strength 1
+
+
 
 construction list1:list =
     t:a(bc)d:list
@@ -178,7 +185,7 @@ construction list1:list =
                   ]
 
 transfer
-    sourceConstruction list2
+    sourceConstruction list1
     targetConSpec btree
     interConSpec interListBTree
     goal :metaTrue <- L[z:0,t:a(bc)d:list,t':btree]
