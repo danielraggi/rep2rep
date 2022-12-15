@@ -4,7 +4,6 @@ signature LATEX =
 sig
   val typ : Type.typ -> string;
   val token : CSpace.token -> string;
-  val relationship : Relation.relationship -> string;
   val sectionTitle : bool -> string -> string;
   val construction : real * real -> Construction.construction -> string;
   val mkDocument : string -> string;
@@ -30,10 +29,6 @@ struct
         val ty = typ (CSpace.typeOfToken t)
     in tok ^ " : " ^ ty
     end
-  fun relationship (x,y,R) =
-    "(" ^ List.toString token x ^ "," ^
-          List.toString token y ^ ")" ^
-        "\\in " ^ mathsf (Relation.nameOf R)
 
   fun firstN 0 _ = []
     | firstN n [] = []
