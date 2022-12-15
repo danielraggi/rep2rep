@@ -1,5 +1,4 @@
 import "core.pattern";
-import "core.relation";
 
 signature INTERCSPACE =
 sig
