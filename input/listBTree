@@ -1,0 +1,186 @@
+import metaLogic
+
+typeSystem listT =
+    types  oB, cB, B, _:nbItem, item, empty, _:list
+    order oB < B, cB < B, B < item, nbItem < item, empty < list
+
+conSpec list:listT =
+    constructors
+        insert : [item, list] -> list
+
+typeSystem btreeT =
+    types _:leaf, _:btree, _:nbItem
+    order nbItem < leaf, leaf < btree
+
+conSpec btree:btreeT =
+    constructors
+        branch : [btree, btree] -> btree
+
+typeSystem nat4T =
+    types 0, 1, 2, 3, 4, nat
+    order 0 < nat, 1 < nat, 2 < nat, 3 < nat, 4 < nat
+
+typeSystem interListBTreeT =
+    imports listT, btreeT, nat4T, metaLogicT
+
+conSpec interListBTree:interListBTreeT =
+    constructors
+        IL : [item,btree] -> metaBool,
+        L : [nat,list,btree] -> metaBool,
+        null : [list,btree] -> metaBool,
+        last : [list,btree] -> metaBool
+
+typeSystem interBTreeBTreeT =
+    imports btreeT, nat4T, metaLogicT
+
+conSpec interBTreeBTree:interBTreeBTreeT =
+    constructors
+        L : [nat,btree,btree] -> metaBool
+
+tSchema oBL0:(list,btree,interListBTree) =
+    source t:list <- insert[t1:oB, t2:list]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:0,t2:list,t1':btree],
+               :metaTrue <- L[x:1,t2:list,t2':btree]
+    consequent :metaTrue <- L[x:0,t:list,t':btree]
+    strength 1
+
+tSchema oBL1:(list,btree,interListBTree) =
+    source t:list <- insert[t1:oB, t2:list]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:1,t2:list,t1':btree],
+               :metaTrue <- L[x:2,t2:list,t2':btree]
+    consequent :metaTrue <- L[x:1,t:list,t':btree]
+    strength 1
+
+tSchema oBL2:(list,btree,interListBTree) =
+    source t:list <- insert[t1:oB, t2:list]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:2,t2:list,t1':btree],
+               :metaTrue <- L[x:3,t2:list,t2':btree]
+    consequent :metaTrue <- L[x:2,t:list,t':btree]
+    strength 1
+
+tSchema oBL3:(list,btree,interListBTree) =
+    source t:list <- insert[t1:oB, t2:list]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:3,t2:list,t1':btree],
+               :metaTrue <- L[x:4,t2:list,t2':btree]
+    consequent :metaTrue <- L[x:3,t:list,t':btree]
+    strength 1
+
+tSchema empty:(list,btree,interListBTree) =
+    source t:empty
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- L[x:0,t:empty, t':dummy:leaf]
+    strength 1
+
+tSchema cBL0:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list <- insert[t21:cB, t22:list]]
+    target t':leaf
+    antecedent :metaTrue <- IL[t1:nbItem,t':leaf]
+    consequent :metaTrue <- L[x:0,t:list,t':leaf]
+    strength 2
+
+tSchema cBL0':(list,btree,interListBTree) =
+    source t:list <- insert[t1:cB, t2:list]
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- L[x:0,t:list,t':dummy:leaf]
+    strength 0
+
+tSchema cBL1:(list,btree,interListBTree) =
+    source t:list <- insert[t1:cB, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:0,t2:list,t':btree]
+    consequent :metaTrue <- L[x:1,t:list,t':btree]
+    strength 1
+
+tSchema cBL2:(list,btree,interListBTree) =
+    source t:list <- insert[t1:cB, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:list,t':btree]
+    consequent :metaTrue <- L[x:2,t:list,t':btree]
+    strength 2
+
+tSchema nBL0:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list]
+    target t':btree <- branch[t1':leaf, t2':btree]
+    antecedent :metaTrue <- IL[t1:nbItem,t1':leaf],
+               :metaTrue <- L[x:0,t2:list,t2':btree]
+    consequent :metaTrue <- L[x:0,t:list,t':btree]
+    strength 1
+
+tSchema nBL1:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:list,t':btree]
+    consequent :metaTrue <- L[x:1,t:list,t':btree]
+    strength 1
+
+tSchema nBL2:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:list,t':btree]
+    consequent :metaTrue <- L[x:2,t:list,t':btree]
+    strength 1
+
+tSchema singleton:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:empty]
+    target t':leaf
+    antecedent :metaTrue <- IL[t1:nbItem,t':leaf]
+    consequent :metaTrue <- L[x:0,t:list,t':leaf]
+    strength 2
+
+tSchema leafL0:(list,btree,interListBTree) =
+    source t:?x:nbItem
+    target t':?x:nbItem
+    antecedent
+    consequent :metaTrue <- IL[t:?x:nbItem,t':?x:nbItem]
+    strength 2
+
+construction list1:list =
+    t:a(bc)d:list
+        <- insert[t1:a:nbItem,
+                  t2:(bc)d:list
+                        <- insert[t21:oB,
+                                  t22:bccBd:list
+                                        <- insert[t221:b:nbItem,
+                                                  t222:ccBd:list
+                                                        <- insert[t2221:c:nbItem,
+                                                                  t2222:cBd:list
+                                                                        <- insert[t22221:cB,
+                                                                                  t22222:list <- insert[t222221:d:nbItem,t222222:empty]
+                                                                                 ]
+                                                                 ]
+                                                 ]
+                                 ]
+                 ]
+
+
+ construction list2:list =
+     t:a(bc)d:list
+         <- insert[t1:oB,
+                   t2:(bc)d:list
+                         <- insert[t21:oB,
+                                   t22:bccBd:list
+                                         <- insert[t221:b:nbItem,
+                                                   t222:ccBd:list
+                                                         <- insert[t2221:c:nbItem,
+                                                                   t2222:cBd:list
+                                                                         <- insert[t22221:cB,
+                                                                                   t22222:list <- insert[t222221:cB,t222222:empty]
+                                                                                  ]
+                                                                  ]
+                                                  ]
+                                  ]
+                  ]
+
+transfer
+    sourceConstruction list2
+    targetConSpec btree
+    interConSpec interListBTree
+    goal :metaTrue <- L[z:0,t:a(bc)d:list,t':btree]
+    output btreeTest
+    limit 20

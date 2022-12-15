@@ -212,7 +212,7 @@ struct
               SOME ((_,f,x),_) => SOME (f, x)
             | _ => getTargetEmbedding L)
       val targetConstructions = List.maps Composition.resultingConstructions patternComps
-      val (targetEmbedsInComposition,targetMap, updatedTarget) =
+      val (targetReifiesInComposition,targetMap, updatedTarget) =
         (case getTargetEmbedding targetConstructions of
             SOME (f,x) => (true,f,x)
           | NONE =>
@@ -228,7 +228,7 @@ struct
 
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs cstMap usedTokensCT antecedent
     in
-      (targetEmbedsInComposition,
+      (targetReifiesInComposition,
        preferentialFunUnion goalMap compositionMap,
        InterCSpace.declareTransferSchema {source = matchingSubConstruction,
                                           target = updatedTarget,
@@ -301,11 +301,11 @@ struct
 
   fun applyTransferSchemaForGoal st tschData goal =
     let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} = tschData
-        val (targetEmbedsInComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
+        val (targetReifiesInComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
 
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism stateRenaming) patternComps
-        val updatedPatternComps = if targetEmbedsInComposition then renamedPatternComps else
+        val updatedPatternComps = if targetReifiesInComposition then renamedPatternComps else
             Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
 
         val goals = State.goalsOf st
@@ -408,7 +408,7 @@ struct
 
 fun structureTransfer unistructured targetPattOption st =
   let val ignI = Heuristic.ignoreRelaxed 10 199
-      val ignT = Heuristic.ignore 15 199 45 unistructured
+      val ignT = Heuristic.ignore 15 499 45 unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
                       SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
