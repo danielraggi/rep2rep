@@ -92,8 +92,6 @@ struct
                 | _ => raise ParseError ("bad constructor sig: " ^ s)
   fun parseConstructor s = case String.breakOn ":" (String.stripSpaces s) of
                         (cs,_,ctys) => CSpace.makeConstructor (cs, parseCTyp ctys)
-  fun parseConfigurator s = case String.breakOn ":" (String.stripSpaces s) of
-                         (us,_,ccs) => CSpace.makeConfigurator (us, parseConstructor ccs)
 
 
    fun findConstructorInConSpec s cspec =
@@ -716,7 +714,7 @@ struct
         end
       fun mkLatexProof tproof =
         let val ct = TransferProof.toConstruction tproof;
-        in Latex.construction (0.0,0.0) ct
+        in (*Latex.construction (0.0,0.0) ct*) Latex.environment "alltt" "" (Construction.toString ct)
         end
       fun mkLatexConstructions comps =
         List.maps (fn x => map (Latex.construction (0.0,0.0)) (Composition.resultingConstructions x)) comps
@@ -732,7 +730,7 @@ struct
             val latexLeft = Latex.environment "minipage" "[t]{0.68\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals res
             val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
-            val latexProof = ""(*mkLatexProof tproof*)
+            val latexProof = mkLatexProof tproof
             (*val CSize = List.sumMapInt Composition.size comps*)
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,(*Int.toString CSize,*)latexProof]))
         end

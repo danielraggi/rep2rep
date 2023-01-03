@@ -54,14 +54,6 @@ struct
 
   fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
   fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
-  fun nodeNameOfConfigurator u t =
-    let val nu = CSpace.nameOfConfigurator u
-        val c = CSpace.constructorOfConfigurator u
-        val nc = CSpace.nameOfConstructor c
-        val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
-        val tn' = String.implode (List.filter nodeNameCharFilter (String.explode tn))
-    in String.addParentheses (nu ^ "_" ^ nc ^ "_" ^ tn')
-    end
 
   fun nodeNameOfConstructor c t =
     let val nc = CSpace.nameOfConstructor c
@@ -71,14 +63,6 @@ struct
     end
 
   fun coordinates (x,y) = String.addParentheses (realToString x ^ "," ^ realToString y)
-
-  fun configuratorNode coor u t =
-    let val nu = CSpace.nameOfConfigurator u
-        val c = CSpace.constructorOfConfigurator u
-        val nc = "$\\mathit{"^CSpace.nameOfConstructor c^"}$"
-        val nodeString = ""
-    in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConfigurator u t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
-    end
 
   fun constructorNode coor c t =
     let val nc = "$\\mathit{"^CSpace.nameOfConstructor c^"}$"

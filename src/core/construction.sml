@@ -18,7 +18,7 @@ sig
 
   val same : construction -> construction -> bool;
   val isTrivial : construction -> bool;
-  (*val similar : construction -> construction -> bool;*)
+
   val isGenerator : construction -> construction -> bool;
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
@@ -26,16 +26,10 @@ sig
   val wellFormed : CSpace.conSpecData -> construction -> bool;
   val typeCheck : CSpace.conSpecData -> construction -> (unit, Diagnostic.t list) Result.t;
   val size : construction -> int;
-  (*val almostWellFormed : construction -> bool;*)
-(*
-  val CTS : construction -> walk list;
-  val inducedConstruction : construction -> walk -> construction;
-  val foundationSequence : construction -> CSpace.token list;*)
+
   val leavesOfConstruction : construction -> CSpace.token list;
   val tokensOfConstruction : construction -> CSpace.token FiniteSet.set;
-  (*)
-  val split : construction -> construction -> construction list;
-  val unsplit : (construction * construction list) -> construction;*)
+
   val fixReferences : construction -> construction;
   val largestSubConstructionWithConstruct : construction -> CSpace.token -> construction
   val attachAtSource : construction -> construction -> construction;
@@ -139,63 +133,9 @@ struct
   fun leavesOfConstruction (Source t) = [t]
     | leavesOfConstruction (Reference t) = []
     | leavesOfConstruction (TCPair ({token, ...}, cs)) = List.concat (map leavesOfConstruction cs)
-(*
-  fun CTS (Source t) = [[Token t]]
-    | CTS (Loop t) = [[Token t]]
-    | CTS (TCPair ({token, constructor}, cs)) =
-        if null cs then [[Token token, Constructor constructor]]
-        else
-          let fun addToAll S = List.map (fn s => [Token token, Constructor constructor] @ s) S
-          in List.maps (addToAll o CTS) cs
-          end
 
-  fun CTS_lossless (Source t) = [[Source t]]
-    | CTS_lossless (Loop t) = [[Loop t]]
-    | CTS_lossless (TCPair ({token, constructor}, cs)) =
-        if null cs then [[(TCPair ({token = token, constructor = constructor}, []))]]
-        else
-          let fun addToAll S = List.map (fn s => TCPair ({token = token, constructor = constructor}, cs) :: s) S
-          in List.maps (addToAll o CTS_lossless) cs
-          end
+  exception MalformedConstructionTerm of string;
 
-  exception EmptyInputSequence
-  fun pseudoCTS (Source t) = [[Source t]]
-    | pseudoCTS (Loop t) = [[Loop t]]
-    | pseudoCTS (TCPair (tc,cs)) =
-        let fun addToFirst (s::S) = (TCPair (tc,cs) :: s) :: S | addToFirst [] = raise EmptyInputSequence (*[[(TCPair (tc,cs))]]*)
-        in List.maps (addToFirst o pseudoCTS) cs
-        end
-
-  (* coherent checks that, if a token appears in two parts of term, there are no
-  inconsistencies on which arrows target them, etc. This is very costly because it
-  needs to compare every pair of subterms. *)
-  fun coherent c =
-    let
-      fun strongCoh (Source t) (Source t') = CSpace.sameTokens t t'
-        | strongCoh (Loop t) (Loop t') = CSpace.sameTokens t t'
-        | strongCoh (TCPair ({token = t, constructor = c}, q)) (TCPair ({token = t', constructor = c'}, q')) =
-            CSpace.sameTokens t t' andalso CSpace.sameConstructors c c' andalso List.allZip strongCoh q q'
-        | strongCoh (TCPair ({token = t, ...}, _)) (Loop t') = CSpace.sameTokens t t'
-        | strongCoh (Loop t') (TCPair ({token = t, ...}, _)) = CSpace.sameTokens t t'
-        | strongCoh _ _ = false
-      fun weakCoh (c as TCPair ({token = t, ...}, _)) (c' as TCPair ({token = t', ...}, _)) =
-            not (CSpace.sameTokens t t') orelse strongCoh c c'
-            (*else List.all (weakCoh c) q' andalso List.all (weakCoh c') q*)
-        (* the following 4 cases just make sure that there's no source somewhere that appears as a non-source somewhere else*)
-        | weakCoh (TCPair ({token = t, ...}, _)) (Source t') = not (CSpace.sameTokens t t')
-        | weakCoh (Source t') (TCPair ({token = t, ...}, _)) = not (CSpace.sameTokens t t')
-        | weakCoh (Loop t) (Source t') = not (CSpace.sameTokens t t')
-        | weakCoh (Source t') (Loop t) = not (CSpace.sameTokens t t')
-        | weakCoh _ _ = true
-      fun compareFromCTS ((x::C)::(h::t)) =
-            List.all (weakCoh x) h andalso compareFromCTS (C::(h::t)) andalso compareFromCTS ((x::C)::t)
-        | compareFromCTS ([]::(h::t)) = compareFromCTS (h::t)
-        | compareFromCTS (_::[]) = true
-        | compareFromCTS [] = true
-    in compareFromCTS (pseudoCTS c) handle EmptyInputSequence => false
-    end*)
-
-    exception MalformedConstructionTerm of string;
   fun specialises T [] [] = true
     | specialises T (ty::tys) (ty'::tys') = if (#subType T) (ty, ty') then specialises T tys tys' else false
     | specialises _ _ _ = false
@@ -323,45 +263,6 @@ struct
     | size (TCPair (_,cs)) = 1 + List.foldl (fn (x,y) => size x + y) 0 cs
 
   exception BadConstruction
-(*)
-  (* the datatype construction itself is not a perfect representation of constructions.
-     The following function makes sure that they are well formed, by checking that Loops
-     are actually loops, that non-Loops are not forming loops, that induced constructions
-     are actually induced constructions and that the inputs and outputs
-     match the signature of the constructors.*)
-  fun wellFormed T c =
-    let fun correctLoopsAndTypes wk (Source t) = not (List.exists (fn x => #token x = t) wk)
-          | correctLoopsAndTypes wk (Loop t) = List.exists (fn x => #token x = t) wk
-          | correctLoopsAndTypes wk (TCPair (tc, cs)) =
-            let val typesOfInducedConstructs = map (CSpace.typeOfToken o constructOf) cs
-                val (typesOfConstructor,ty) = CSpace.csig (#constructor tc)
-                val typeOfConstruct = CSpace.typeOfToken (#token tc)
-            in (#subType T) (typeOfConstruct, ty)
-                andalso specialises T (typesOfInducedConstructs) typesOfConstructor
-                andalso List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))) wk
-                andalso List.all (correctLoopsAndTypes (tc :: wk)) cs
-            end
-    in correctLoopsAndTypes [] c andalso coherent c
-    end;*)
-
-(*)
-  (* this function simply ensures that induced constructions in a split are almost
-    well formed, in the sense that there may be potential references to loops where
-    the loop is not within the induced construction, but otherwise it's fine. *)
-  fun almostWellFormed c =
-    let fun correctLoops wk (Source t) = not (List.exists (fn x => #token x = t) wk)
-          | correctLoops _ (Loop _) = true
-          | correctLoops wk (TCPair (tc, cs)) =
-              List.all (fn x => not (CSpace.sameTokens (#token x) (#token tc))
-                        andalso not (CSpace.sameConstructors (#constructor x) (#constructor tc))) wk
-              andalso List.all (correctLoops (tc :: wk)) cs
-    in correctLoops [] c andalso coherent c
-    end;*)
-(*)
-  fun tokenOfVertex (Token t) = t
-    | tokenOfVertex _ = raise Match;
-
-  fun foundationSequence c = map (tokenOfVertex o hd o rev) (CTS c);*)
 
   fun removeDuplicates eq [] = []
     | removeDuplicates eq (h::t) = h :: removeDuplicates eq (List.filter (fn x => not(eq x h)) t)
@@ -447,34 +348,6 @@ struct
     | childrenOf (Reference t) = []
     | childrenOf (TCPair (tc,cts)) = cts
 
-(*)
-  exception badTrail
-  fun inducedConstruction (Source t) [Token t'] =
-        if CSpace.sameTokens t t'
-        then Source t
-        else raise badTrail
-    | inducedConstruction (Loop t) [Token t'] =
-        if CSpace.sameTokens t t'
-        then Source t
-        else raise badTrail
-    | inducedConstruction (TCPair ({token = token, constructor = constructor}, cs)) (Token token'::Constructor constructor'::wk) =
-        if CSpace.sameTokens token token' andalso CSpace.sameConstructors constructor constructor'
-        then let fun ic (c::C) = (inducedConstruction c wk handle badTrail => ic C)
-                   | ic [] = raise badTrail
-             in if null wk then TCPair ({token = token, constructor = constructor}, cs) else ic cs
-             end
-        else raise badTrail
-    | inducedConstruction (TCPair ({token = token, constructor = constructor}, cs)) [Token t'] =
-        if CSpace.sameTokens token t'
-        then TCPair ({token = token, constructor = constructor}, cs)
-        else raise badTrail
-    | inducedConstruction _ _ = raise badTrail
-
-  exception NotASplit
-  fun split c c' = map (inducedConstruction c) (CTS c')
-*)
-
-
   fun isReference (Reference _) = true
     | isReference _ = false
 
@@ -556,18 +429,6 @@ struct
     | subConstructionsRaw (Reference t) = Seq.cons (Reference t) Seq.empty
     | subConstructionsRaw (TCPair (tc,cs)) =
         Seq.cons (TCPair (tc,cs)) (Seq.maps subConstructionsRaw (Seq.of_list cs))
-
-(*)
-  exception NotSubConstruction;
-  fun minusSubConstruction ct ct' = minusGenerator ct ct'
-    handle NotGenerator =>
-      (case ct of TCPair (tc,cts) =>
-        let fun minusSC' (x::L) = (minusSubConstruction x ct' handle NotSubConstruction => [x]) @ minusSC' L
-              | minusSC' [] = []
-        in TCPair (tc, minusSC')
-        end ))
-*)
-
 
 
   structure R = struct

@@ -26,9 +26,7 @@ typeSystem interListBTreeT =
 conSpec interListBTree:interListBTreeT =
     constructors
         IL : [item,btree] -> metaBool,
-        L : [nat,list,btree] -> metaBool,
-        null : [list,btree] -> metaBool,
-        last : [list,btree] -> metaBool
+        L : [nat,list,btree] -> metaBool
 
 typeSystem interBTreeBTreeT =
     imports btreeT, nat4T, metaLogicT
@@ -167,13 +165,13 @@ construction list1:list =
 
 
  construction list2:list =
-     t:a(bc)d:list
+     t:((bc)):list
          <- insert[t1:oB,
-                   t2:(bc)d:list
+                   t2:(bc)cB:list
                          <- insert[t21:oB,
-                                   t22:bccBd:list
+                                   t22:bccBcB:list
                                          <- insert[t221:b:nbItem,
-                                                   t222:ccBd:list
+                                                   t222:ccBcB:list
                                                          <- insert[t2221:c:nbItem,
                                                                    t2222:cBd:list
                                                                          <- insert[t22221:cB,
@@ -189,5 +187,13 @@ transfer
     targetConSpec btree
     interConSpec interListBTree
     goal :metaTrue <- L[z:0,t:a(bc)d:list,t':btree]
-    output btreeTest
+    output btreeTest1
+    limit 20
+
+transfer
+    sourceConstruction list2
+    targetConSpec btree
+    interConSpec interListBTree
+    goal :metaTrue <- L[z:0,t:((bc)):list,t':btree]
+    output btreeTest2
     limit 20

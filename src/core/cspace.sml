@@ -8,29 +8,21 @@ signature CSPACE =
 sig
   type ctyp = Type.typ list * Type.typ
   type constructor
-  (*datatype atom = Token of string | Variable of string;*)
-  type token(* = string * Type.typ;*)
-  type configurator
+  type token
   type conSpecData = {name : string, typeSystemData : Type.typeSystemData, constructors : constructor FiniteSet.set}
 
   val ctyp_rpc : ctyp Rpc.Datatype.t;
   val constructor_rpc : constructor Rpc.Datatype.t;
   val token_rpc : token Rpc.Datatype.t;
-  val configurator_rpc : configurator Rpc.Datatype.t;
   val conSpecData_rpc : conSpecData Rpc.Datatype.t;
 
   val makeCTyp : Type.typ list * Type.typ -> ctyp
   val makeConstructor : string * ctyp -> constructor
-  val makeConfigurator : string * constructor -> configurator
   val makeToken : string -> Type.typ -> token
 
   val csig : constructor -> ctyp
-  val nameOfConfigurator : configurator -> string;
   val nameOfConstructor : constructor -> string;
-  val constructorOfConfigurator : configurator -> constructor;
-  val typesOfConfigurator : configurator -> ctyp
   val sameConstructors : constructor -> constructor -> bool
-  val sameConfigurators : configurator -> configurator -> bool
   val sameTokens : token -> token -> bool
   val tokensHaveSameType : token -> token -> bool
   val nameOfToken : token -> string
@@ -38,7 +30,6 @@ sig
   val findConstructorWithName : string -> conSpecData -> constructor option
   val stringOfToken : token -> string
   val stringOfConstructor : constructor -> string
-  val stringOfConfigurator : configurator -> string
 
   val wellDefinedConSpec : conSpecData -> (bool * bool)
   exception ImpossibleOverload
@@ -51,7 +42,6 @@ struct
   type constructor = string * ctyp
   (*datatype atom = Token of string | Variable of string;*)
   type token = string * Type.typ
-  type configurator = string * constructor
   type conSpecData = {name : string, typeSystemData : Type.typeSystemData, constructors : constructor FiniteSet.set}
 
   val ctyp_rpc = Rpc.Datatype.alias
@@ -68,10 +58,6 @@ struct
                       "CSpace.token"
                       (Rpc.Datatype.tuple2 (String.string_rpc, Type.typ_rpc));
 
-  val configurator_rpc = Rpc.Datatype.alias
-                             "CSpace.configurator"
-                             (Rpc.Datatype.tuple2
-                                  (String.string_rpc, constructor_rpc));
 
   exception ConversionError
   val conSpecData_rpc = Rpc.Datatype.convert
@@ -88,18 +74,13 @@ struct
 
   fun makeCTyp x = x
   fun makeConstructor x = x
-  fun makeConfigurator x = x
   fun makeToken s ty = (s,ty)
 
   fun csig (s,ctyp) = ctyp
-  fun nameOfConfigurator (u,_) = u
   fun nameOfConstructor (cn,_) = cn
-  fun constructorOfConfigurator (_,c) = c
-  fun typesOfConfigurator (u,c) = csig c
 
   fun sameConstructors (n,(tyL,ty)) (n',(tyL',ty')) =
     (n = n' andalso Type.equal ty ty' andalso List.allZip Type.equal tyL tyL');
-  fun sameConfigurators (u,c) (u',c') = (u = u' andalso sameConstructors c c');
   fun sameTokens (t,ty) (t',ty') = (t = t' andalso Type.equal ty ty');
   fun nameOfToken (t,_) = t;
   fun typeOfToken (_,ty) = ty;
@@ -109,7 +90,6 @@ struct
     List.find (fn c => nameOfConstructor c = s) (#constructors cspec)
   fun stringOfToken (t,ty) = t ^ ":" ^ (Type.nameOfType ty)
   fun stringOfConstructor (c,(tys,ty)) = c ^ " : " ^ (String.stringOfList Type.nameOfType tys) ^ " -> " ^ ty
-  fun stringOfConfigurator (u,cc) = u ^ ":" ^ stringOfConstructor cc
 
 
   fun wellDefinedConSpec {name,typeSystemData,constructors} =
