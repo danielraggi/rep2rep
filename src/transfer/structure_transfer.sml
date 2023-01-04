@@ -9,7 +9,7 @@ sig
   val applyTransferSchema : State.T -> InterCSpace.tSchemaData -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
 
-  val structureTransfer : bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
+  val structureTransfer : int option -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
 (*)
   val iterativeStructureTransfer : bool -> Pattern.pattern option
                                         -> State.T -> State.T Seq.seq*)
@@ -17,9 +17,11 @@ sig
   val targetedTransfer : Pattern.pattern
                             -> State.T -> State.T Seq.seq*)
 
-  val masterTransfer : bool -> bool
-                            -> Pattern.pattern option
-                            -> State.T -> State.T Seq.seq
+  val masterTransfer : int option -> bool
+                                  -> bool
+                                  -> Pattern.pattern option
+                                  -> State.T
+                                  -> State.T Seq.seq
 
   val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
                   CSpace.conSpecData -> (* Target Constructor Specification *)
@@ -386,7 +388,7 @@ struct
   fun structureTransferTac h ign forget state =
       (*Search.breadthFirstSortAndIgnore transferElseInfer h ign forget state*)
       (*Search.breadthFirstSortIgnoreForget transferElseInfer h ign forget state*)
-      (*Search.depthFirstSortAndIgnore transferElseInfer h ign forget state*)
+      (*Search.depthFirstSortAndIgnore transferElseInfer h ign state*)
       (*Search.depthFirstSortIgnoreForget transferElseInfer h ign forget state*)
       (*Search.bestFirstSortAndIgnore transferElseInfer h ign forget state*)
       Search.bestFirstSortIgnoreForget transferElseInfer h ign forget state
@@ -406,9 +408,11 @@ struct
       handle Nope => false
 
 
-fun structureTransfer unistructured targetPattOption st =
-  let val ignI = Heuristic.ignoreRelaxed 10 199
-      val ignT = Heuristic.ignore 15 499 45 unistructured
+fun structureTransfer searchLimit unistructured targetPattOption st =
+  let val maxNumGoals = 15
+      val maxNumResults = case searchLimit of SOME x => x | NONE => 500
+      val maxCompSize = 45
+      val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
                       SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
@@ -475,8 +479,8 @@ fun structureTransfer unistructured targetPattOption st =
     in targetedTransferTac Heuristic.transferProofMultStrengths ign Heuristic.forgetStrict targetPattern st
     end*)
 
-  fun masterTransfer iterative unistructured targetPattOption st =
-    structureTransfer unistructured targetPattOption st
+  fun masterTransfer searchLimit iterative unistructured targetPattOption st =
+    structureTransfer searchLimit unistructured targetPattOption st
   (*  if iterative
     then iterativeStructureTransfer unistructured targetPattOption st
     else*) (*
@@ -503,7 +507,7 @@ fun structureTransfer unistructured targetPattOption st =
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
       let val st = initState sCSD tCSD iCSD KB ct goal
-          val stateSeq = structureTransfer false NONE st;
+          val stateSeq = structureTransfer NONE false NONE st;
           fun getStructureGraph st =
               List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);
           val firstState = Seq.hd stateSeq;

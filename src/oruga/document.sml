@@ -68,13 +68,14 @@ struct
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
+  val searchLimitKW = "searchLimit"
   val iterativeKW = "iterative"
   val unistructuredKW = "unistructured"
   val matchTargetKW = "matchTarget"
   val sourceConSpecKW = "sourceConSpec"
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,
+  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW]
 
@@ -667,6 +668,11 @@ struct
             if x = SOME limitKW
             then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
             else getLimit L
+      fun getSearchLimit [] = NONE
+        | getSearchLimit ((x,c)::L) =
+            if x = SOME searchLimitKW
+            then Int.fromString (String.concat c)
+            else getSearchLimit L
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
@@ -692,6 +698,7 @@ struct
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
+      val searchLimit = getSearchLimit C
       val iterative = getIterative C
       val KB = knowledgeOf DC
       val unistructured = getUnistructured C
@@ -741,7 +748,7 @@ struct
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "WARNING : goal has no tokens in target construction space\n"; raise BadGoal)
       val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData KB construction goal
-      val results = Transfer.masterTransfer iterative unistructured targetPattern state;
+      val results = Transfer.masterTransfer searchLimit iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val (listOfResults,_) = Seq.chop limit results;
       val endTime = Time.now();
