@@ -1,16 +1,16 @@
 import "core.pattern";
 
-signature FLAT_PARSER =
+signature LIFT =
 sig
-  val constructionOfString : string -> Construction.construction
+  val string : string -> Construction.construction
 end
 
-structure FlatParser : FLAT_PARSER =
+structure Lift : LIFT =
 struct
 
 (* assumes alignment with input/listBTree oruga document.
   It converts an ML string into a construction *)
-fun constructionOfString s =
+fun string s =
     let val emptyTyp = Type.fromString "empty"
         val itemTyp = Type.fromString "item"
         val listTyp = Type.fromString "list"
@@ -25,5 +25,7 @@ fun constructionOfString s =
             end
     in cl "" (String.explode s)
     end;
+
+
 
 end
