@@ -1,4 +1,4 @@
-import transferSchemas/bayesTable-inter
+import transferSchemas/bayesTable
 
 construction x:bayesG =
     t:tt:probSys <- addEqn[t1:tt1:probEqn <- makeEqn[t11:A:event,

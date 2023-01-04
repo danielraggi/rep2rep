@@ -46,12 +46,12 @@ struct
 
   fun sameSimilarTSchemas c c' = #name c = #name c' andalso
                           Pattern.same (#source c) (#source c') andalso
-                          Pattern.similar (#target c) (#target c')
+                          #3 (Pattern.similar (#target c) (#target c'))
 
-  fun similar (Closed (r,c,L)) (Closed (r',c',L')) = Pattern.similar r r' andalso
+  fun similar (Closed (r,c,L)) (Closed (r',c',L')) = #3 (Pattern.similar r r') andalso
                                                      sameSimilarTSchemas c c' andalso
                                                      List.allZip similar L L'
-    | similar (Open r) (Open r') = Pattern.similar r r'
+    | similar (Open r) (Open r') = #3 (Pattern.similar r r')
     | similar _ _ = false
 
   fun attachTSchema tApp (Closed (r,npp,L)) = Closed (r,npp, map (attachTSchema tApp) L)
@@ -74,7 +74,7 @@ struct
 
   fun dump s g (Closed (r,npp,L)) = Closed (r,npp, map (dump s g) L)
     | dump s r' (Open r) =
-      if Pattern.similar r' r
+      if #3 (Pattern.similar r' r)
       then Closed (r',
                    {name = s,
                     source = Pattern.Source (CSpace.makeToken "" ""),

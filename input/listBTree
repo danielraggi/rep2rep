@@ -98,6 +98,20 @@ tSchema cBL2:(list,btree,interListBTree) =
     consequent :metaTrue <- L[x:2,t:list,t':btree]
     strength 2
 
+tSchema cBL3:(list,btree,interListBTree) =
+    source t:list <- insert[t1:cB, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:list,t':btree]
+    consequent :metaTrue <- L[x:3,t:list,t':btree]
+    strength 2
+
+tSchema cBL4:(list,btree,interListBTree) =
+    source t:list <- insert[t1:cB, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:3,t2:list,t':btree]
+    consequent :metaTrue <- L[x:4,t:list,t':btree]
+    strength 2
+
 
 tSchema nBL0:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
@@ -119,6 +133,20 @@ tSchema nBL2:(list,btree,interListBTree) =
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:list,t':btree]
     consequent :metaTrue <- L[x:2,t:list,t':btree]
+    strength 1
+
+tSchema nBL3:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:3,t2:list,t':btree]
+    consequent :metaTrue <- L[x:3,t:list,t':btree]
+    strength 1
+
+tSchema nBL4:(list,btree,interListBTree) =
+    source t:list <- insert[t1:nbItem, t2:list]
+    target t':btree
+    antecedent :metaTrue <- L[x:4,t2:list,t':btree]
+    consequent :metaTrue <- L[x:4,t:list,t':btree]
     strength 1
 
 tSchema singleton:(list,btree,interListBTree) =
@@ -188,7 +216,8 @@ transfer
     interConSpec interListBTree
     goal :metaTrue <- L[z:0,t:a(bc)d:list,t':btree]
     output btreeTest1
-    limit 20
+    searchLimit 50
+    limit 10
 
 transfer
     sourceConstruction list2
@@ -196,4 +225,5 @@ transfer
     interConSpec interListBTree
     goal :metaTrue <- L[z:0,t:((bc)):list,t':btree]
     output btreeTest2
-    limit 20
+    searchLimit 50
+    limit 10

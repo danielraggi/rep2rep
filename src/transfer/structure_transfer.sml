@@ -110,7 +110,9 @@ struct
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs ccMap usedTokens antecedent
 
       val goals = State.goalsOf st
-      val updatedGoals = updatedAntecedent @ List.filter (fn x => not (Pattern.same goal x)) goals
+      val updatedGoals = List.merge Pattern.compare
+                                    updatedAntecedent
+                                    (List.filter (fn x => not (Pattern.same goal x)) goals)
 
       val instantiatedISchema = {antecedent = updatedAntecedent,
                                  consequent = updatedConsequent,
@@ -311,7 +313,9 @@ struct
             Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
 
         val goals = State.goalsOf st
-        val updatedGoals = #antecedent instantiatedTSchema @ map (Pattern.applyPartialMorphism stateRenaming) (List.filter (fn x => not (Pattern.same goal x)) goals)
+        val updatedGoals = List.merge Pattern.compare
+                                      (#antecedent instantiatedTSchema)
+                                      (map (Pattern.applyPartialMorphism stateRenaming) (List.filter (fn x => not (Pattern.same goal x)) goals))
 
         val instantiatedTSchemaData = {name = name,
                                         sourceConSpecN = sourceConSpecN,
@@ -386,12 +390,12 @@ struct
   val transferElseInfer =  Seq.ORELSE (singleStepTransfer,singleStepInference)
 
   fun structureTransferTac h ign forget state =
-      (*Search.breadthFirstSortAndIgnore transferElseInfer h ign forget state*)
-      (*Search.breadthFirstSortIgnoreForget transferElseInfer h ign forget state*)
-      (*Search.depthFirstSortAndIgnore transferElseInfer h ign state*)
-      (*Search.depthFirstSortIgnoreForget transferElseInfer h ign forget state*)
-      (*Search.bestFirstSortAndIgnore transferElseInfer h ign forget state*)
-      Search.bestFirstSortIgnoreForget transferElseInfer h ign forget state
+      (*Search.breadthFirstIgnore transferElseInfer ign state*)
+      (*Search.breadthFirstIgnoreForget transferElseInfer ign forget state*)
+      (*Search.depthFirstIgnore transferElseInfer ign state*)
+      (*Search.depthFirstIgnoreForget transferElseInfer ign forget state*)
+      (*Search.bestFirstIgnore transferElseInfer h ign state*)
+      Search.bestFirstIgnoreForget transferElseInfer h ign forget state
 
 
   exception Nope
@@ -409,9 +413,9 @@ struct
 
 
 fun structureTransfer searchLimit unistructured targetPattOption st =
-  let val maxNumGoals = 15
+  let val maxNumGoals = case searchLimit of SOME x => Int.max(x div 4, 20) | NONE => 20
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
-      val maxCompSize = 45
+      val maxCompSize = 60
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of

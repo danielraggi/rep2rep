@@ -90,6 +90,8 @@ sig
     val removeRepetition : ('a -> 'a -> bool) -> 'a list -> 'a list;
     val inout : 'a list -> ('a * 'a list) list;
 
+    val compare : ('a * 'a -> order) -> ('a list * 'a list) -> order;
+    val merge : ('a * 'a -> order) -> 'a list -> 'a list -> 'a list;
     val mergesort : ('a * 'a -> order) -> 'a list -> 'a list;
 
     val intersperse : 'a -> 'a list -> 'a list;
@@ -169,22 +171,31 @@ fun inout lst =
           | loop ans ys (x::xs) = loop ((x, List.revAppend (ys, xs))::ans) (x::ys) xs;
     in loop [] [] lst end;
 
+fun compare _ ([], []) = EQUAL
+  | compare _ ([], _) = LESS
+  | compare _ (_, []) = GREATER
+  | compare f (x::xs, x'::xs') =
+    (case f (x,x') of
+        EQUAL => compare f (xs,xs')
+      | X => X)
+
+fun merge cmp [] xs = xs
+  | merge cmp xs [] = xs
+  | merge cmp (x::xs) (y::ys) =
+    if cmp(x, y) = GREATER then
+        y::(merge cmp (x::xs) ys)
+    else
+        x::(merge cmp xs (y::ys));
+
 fun mergesort cmp [] = []
   | mergesort cmp [x] = [x]
   | mergesort cmp items =
-    let fun merge [] xs = xs
-          | merge xs [] = xs
-          | merge (x::xs) (y::ys) =
-            if cmp(x, y) = GREATER then
-                y::(merge (x::xs) ys)
-            else
-                x::(merge xs (y::ys));
-
-        val (left, right) = split (items, Int.div (length items, 2));
+    let val (left, right) = split (items, Int.div (length items, 2));
         val (sortedLeft, sortedRight) = (mergesort cmp left, mergesort cmp right);
-        val result = merge sortedLeft sortedRight;
+        val result = merge cmp sortedLeft sortedRight;
     in result
     end;
+
 
 fun intersperse s [] = []
   | intersperse s (y::ys) =

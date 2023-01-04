@@ -757,9 +757,11 @@ struct
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       (*fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)*)
       val score = Heuristic.scoreMain (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
+      val ngoals = length (#goals (hd listOfResults)) handle Empty => (~1)
       (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
       val _ = print (Construction.toString  (hd tproofConstruction))*)
-      val _ = print ("  transfer score: " ^ Real.toString score)
+      val _ = print ("  number of open goals (top result): " ^ Int.toString ngoals ^ "\n")
+      val _ = print ("  transfer score (top result): " ^ Real.toString score)
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
