@@ -19,7 +19,8 @@ fun string s =
         fun cl n [] = Construction.Source (CSpace.makeToken ("t" ^ n) emptyTyp)
           | cl n (x::xs) =
             let val thisTok = CSpace.makeToken ("t" ^ n) (String.implode (x::xs) ^ ":list")
-                val itemT = Construction.Source (CSpace.makeToken ("t" ^ n ^ "0") (str x ^ ":item"))
+                val itemTy = case x of #"(" => "oB" | #")" => "cB" | _ => str x ^ ":nbItem"
+                val itemT = Construction.Source (CSpace.makeToken ("t" ^ n ^ "0") itemTy)
                 val listT = cl (n ^ "1") xs
             in Construction.TCPair ({token = thisTok, constructor = insertCons}, [itemT,listT])
             end

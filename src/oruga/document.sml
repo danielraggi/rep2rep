@@ -1,4 +1,5 @@
 import "oruga.parser";
+import "oruga.lift";
 import "latex.latex";
 
 signature DOCUMENT =
@@ -585,8 +586,9 @@ struct
       val (name,x,cspecN) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
       val cspec = findConSpecWithName dc cspecN
-      val cts = String.concat (removeOuterBrackets bs)
-      val ct = parseConstruction cspec cts
+      val ct = case removeOuterBrackets bs of
+                  "liftString" :: ctL => Lift.string (String.concat ctL)
+                | ctL => parseConstruction cspec (String.concat ctL)
 
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
@@ -625,6 +627,7 @@ struct
             if x = SOME sourceConstructionKW
             then findConstructionWithName DC (String.concat (removeOuterBrackets c))
             else getConstruction L
+
       val constructionRecord = getConstruction C
       val construction = #construction constructionRecord
       val sourceConSpecN = #conSpecN constructionRecord
