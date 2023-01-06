@@ -170,10 +170,20 @@ tSchema empty:(list,btree,interListBTree) =
     strength 1
 
 
+construction list0:list = liftString Pr(x) = 0.21
 construction list1:list = liftString a(((b)c)d)
-construction list2:list = liftString ((bc))
+construction list2:list = liftString ()((ab))
 construction list3:list = liftString a(bc(def))g
 construction list4:list = liftString a(bc())d
+
+transfer
+    sourceConstruction list0
+    targetConSpec btree
+    interConSpec interListBTree
+    goal :metaTrue <- L[z:0,t:Pr(x)=1:list,t':btree]
+    output btreeTest0
+    searchLimit 50
+    limit 10
 
 transfer
     sourceConstruction list1
@@ -188,7 +198,7 @@ transfer
     sourceConstruction list2
     targetConSpec btree
     interConSpec interListBTree
-    goal :metaTrue <- L[z:0,t:((bc)):list,t':btree]
+    goal :metaTrue <- L[z:0,t:()((ab)):list,t':btree]
     output btreeTest2
     searchLimit 50
     limit 10
