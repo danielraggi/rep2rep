@@ -728,7 +728,7 @@ struct
                                                                       ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
                                                                       ^ goalsS ^ "\\\\"
                                                                       ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
-                                                                      ^ Real.toString IS)
+                                                                      ^ Latex.realToString IS)
         in alignedGoals
         end
       fun mkLatexProof tproof =

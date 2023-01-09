@@ -2,6 +2,7 @@ import "transfer.knowledge";
 
 signature LATEX =
 sig
+  val realToString : Real.real -> string;
   val typ : Type.typ -> string;
   val token : CSpace.token -> string;
   val sectionTitle : bool -> string -> string;
@@ -33,6 +34,7 @@ struct
   fun firstN 0 _ = []
     | firstN n [] = []
     | firstN n (x::xs) = x :: firstN (n-1) xs
+
   fun realToString z =
     let val zs = Real.fmt (StringCvt.FIX (SOME 2)) z
     in case (String.explode zs) of
