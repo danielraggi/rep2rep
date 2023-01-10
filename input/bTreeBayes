@@ -78,6 +78,20 @@ tSchema evt0:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- EVT[t:btree,t':event]
     strength 2
 
+tSchema binAND:(btree,bayesPlus,interBTreeBayes) =
+    source t:&:nbItem
+    target t':inter
+    antecedent
+    consequent :metaTrue <- BIN[t:&:nbItem,t':inter]
+    strength 1
+
+tSchema binOR:(btree,bayesPlus,interBTreeBayes) =
+    source t:U:nbItem
+    target t':union
+    antecedent
+    consequent :metaTrue <- BIN[t:U:nbItem,t':union]
+    strength 1
+
 tSchema evt1:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
                              t2:btree <- branch[t21:btree,
@@ -285,11 +299,15 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
         strength 1
 
 
+construction list0:list = liftString Pr(a) = 0.21
+construction list1:list = liftString Pr(a U b) = 0.21
+construction list1:list = liftString Pr((a U b) & c) = 0.21
+
 transfer
-    sourceConstruction list0
+    sourceConstruction list1
     targetConSpec btree
     interConSpec interListBTree
-    goal :metaTrue <- L[z:0,t:Pr(a)=0.21:list,t':btree]
+    goal :metaTrue <- L[z:0,t:Pr((a U b) & c) = 0.21:list,t':btree]
     searchLimit 50
     output sss
     limit 10
@@ -303,3 +321,4 @@ transfer
     searchLimit 50
     output sss1
     limit 10
+    save sss1

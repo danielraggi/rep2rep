@@ -17,13 +17,14 @@ end;
 structure Latex : LATEX =
 struct
 
-  fun latexifyUnderscore s =
+  fun latexifyForbidden s =
   let fun lus [] = []
-        | lus (c::C) = if c = #"_" then #"\\" :: #"_" :: lus C else c :: lus C
+        | lus (c::C) = if c = #"_" orelse c = #"&" then #"\\" :: c :: lus C
+                       else c :: lus C
   in String.implode (lus (String.explode s))
   end
 
-  fun mathsf s = "\\mathsf{" ^ latexifyUnderscore s ^ "}"
+  fun mathsf s = "\\mathsf{" ^ latexifyForbidden s ^ "}"
   fun typ ty = mathsf (Type.nameOfType ty)
   fun token t =
     let val tok = CSpace.nameOfToken t
@@ -54,7 +55,7 @@ struct
     | lines _ = raise Empty
 
 
-  fun nodeNameCharFilter x = x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
+  fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
   fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
 
   fun nodeNameOfConstructor c t =
@@ -74,7 +75,7 @@ struct
 
 
   fun tokenNode isSource coor t =
-    let val typn = "$\\mathsf{"^latexifyUnderscore(Type.nameOfType (CSpace.typeOfToken t))^"}$"
+    let val typn = "$\\mathsf{"^latexifyForbidden(Type.nameOfType (CSpace.typeOfToken t))^"}$"
         val tokn = "$"^CSpace.nameOfToken t^"$"
         val att = if isSource then "termS" else "term"
     in "\\node["^att^" = " ^ String.addBraces typn ^ "] " ^ nodeNameOfToken t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces tokn ^ ";"

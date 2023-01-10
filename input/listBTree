@@ -43,28 +43,28 @@ tSchema oBL0:(list,btree,interListBTree) =
     antecedent :metaTrue <- L[x:0,t2:list,t1':btree],
                :metaTrue <- L[x:1,t2:list,t2':btree]
     consequent :metaTrue <- L[x:0,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema oBL1:(list,btree,interListBTree) =
     source t:list <- insert[t1:oB, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:list,t':btree]
     consequent :metaTrue <- L[x:1,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema oBL2:(list,btree,interListBTree) =
     source t:list <- insert[t1:oB, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:3,t2:list,t':btree]
     consequent :metaTrue <- L[x:2,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema oBL3:(list,btree,interListBTree) =
     source t:list <- insert[t1:oB, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:4,t2:list,t':btree]
     consequent :metaTrue <- L[x:3,t:list,t':btree]
-    strength 1
+    strength 2
 
 
 comment cBL0':(list,btree,interListBTree) =
@@ -86,7 +86,7 @@ tSchema cBL1:(list,btree,interListBTree) =
     target t':btree
     antecedent :metaTrue <- L[x:0,t2:list,t':btree]
     consequent :metaTrue <- L[x:1,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema cBL2:(list,btree,interListBTree) =
     source t:list <- insert[t1:cB, t2:list]
@@ -116,35 +116,35 @@ tSchema nBL0:(list,btree,interListBTree) =
     antecedent :metaTrue <- IL[t1:nbItem,t1':leaf],
                :metaTrue <- L[x:0,t2:list,t2':btree]
     consequent :metaTrue <- L[x:0,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema nBL1:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:1,t2:list,t':btree]
     consequent :metaTrue <- L[x:1,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema nBL2:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:list,t':btree]
     consequent :metaTrue <- L[x:2,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema nBL3:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:3,t2:list,t':btree]
     consequent :metaTrue <- L[x:3,t:list,t':btree]
-    strength 1
+    strength 2
 
 tSchema nBL4:(list,btree,interListBTree) =
     source t:list <- insert[t1:nbItem, t2:list]
     target t':btree
     antecedent :metaTrue <- L[x:4,t2:list,t':btree]
     consequent :metaTrue <- L[x:4,t:list,t':btree]
-    strength 1
+    strength 2
 
 
 comment singleton:(list,btree,interListBTree) =
@@ -218,5 +218,5 @@ transfer
     interConSpec interListBTree
     goal :metaTrue <- L[z:0,t:a(bc())d:list,t':btree]
     output btreeTest4
-    searchLimit 50
+    searchLimit 500
     limit 10

@@ -72,12 +72,13 @@ struct
 
   val pattern_rpc = Rpc.Datatype.alias "Pattern.pattern" construction_rpc;
 
+  fun typeMatches T ty ty' =
+    #subType T (ty,ty') orelse (Type.isTypeVar ty andalso
+                                #subType T (ty', (Type.parentOfDanglyType ty)))
+    handle Type.badType => false
+
   fun tokenMatches T t t' =
-    let val ty = CSpace.typeOfToken t
-        val ty' = CSpace.typeOfToken t'
-    in #subType T (ty,ty') orelse
-        (Type.isTypeVar ty andalso Type.equal (Type.parentTypeOfSubtypeable ty) (Type.parentTypeOfSubtypeable ty'))
-    end handle Type.badType => false
+    typeMatches T (CSpace.typeOfToken t) (CSpace.typeOfToken t')
 
   (*TODO: in some future version, unifiable should check whether there's a common super-type,
           but this is hard to know in general because the set of types might be infinite *)
@@ -206,7 +207,7 @@ struct
         | (NONE, SOME rty) => SOME rty
         | (SOME fty, SOME rty) => (case Type.greatestCommonSubType TSD fty rty of
                                       NONE => raise IllDefined
-                                    | SOME sty => (print (Type.nameOfType fty ^ "," ^ Type.nameOfType rty ^ " ==> " ^ Type.nameOfType sty ^ "\n");SOME sty)))
+                                    | SOME sty => SOME sty))
 
   (* if there exists an embedding ct -> ct' up to a set of tokens tks of ct,
      findEmbeddingMinimisingTypeUpTo yields maps f1, f2 and pattern g where:
@@ -222,7 +223,7 @@ struct
       fun tMaps t t' =
         let val ty = CSpace.typeOfToken t
             val ty' = CSpace.typeOfToken t'
-            val varInst = if Type.isTypeVar ty then (print (Type.nameOfType ty ^ " ==> " ^ Type.nameOfType ty' ^ "\n"); ty') else ty
+            val varInst = if Type.isTypeVar ty then ty' else ty
             val nt = CSpace.makeToken (CSpace.nameOfToken t') varInst
         in if tokenMatches T t t' then
              (fn x => if CSpace.sameTokens x t then SOME nt else NONE,
@@ -248,7 +249,15 @@ struct
             else raise IllDefined
         | fm _ _ = raise IllDefined
       val (f,f',vf) = fm ct ct'
-      val _ = map (vf o CSpace.typeOfToken) (tokensOfConstruction ct)
+      fun checkValidTypeVarInst [] = ()
+        | checkValidTypeVarInst (tk::tks) =
+          let val typ = CSpace.typeOfToken tk
+          in (case (vf typ) of NONE => checkValidTypeVarInst tks
+                             | SOME xtyp => if Type.equal (Type.parentOfDanglyType typ) (Type.parentOfDanglyType xtyp)
+                                            then checkValidTypeVarInst tks
+                                            else raise IllDefined)
+          end handle Type.badType => raise IllDefined
+      val _ = checkValidTypeVarInst (tokensOfConstruction ct)
       val g = applyMorphism f ct
   in (f, f', vf, SOME g)
   end handle IllDefined => (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE)
@@ -525,9 +534,6 @@ struct
       val (f1,f2) = mpg ct ct'
       val gt = applyMorphism f2 ct'
       val gt' = applyMorphism f1 ct
-      val _ = print "\nLet's see: \n"
-      val _ = print (toString ct ^ "\n")
-      val _ = print (toString gt ^ "\n")
   in (f1, f2, SOME gt)
   end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)
 
