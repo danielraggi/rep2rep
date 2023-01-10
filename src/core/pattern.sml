@@ -206,7 +206,7 @@ struct
         | (NONE, SOME rty) => SOME rty
         | (SOME fty, SOME rty) => (case Type.greatestCommonSubType TSD fty rty of
                                       NONE => raise IllDefined
-                                    | SOME sty => SOME sty))
+                                    | SOME sty => (print (Type.nameOfType fty ^ "," ^ Type.nameOfType rty ^ " ==> " ^ Type.nameOfType sty ^ "\n");SOME sty)))
 
   (* if there exists an embedding ct -> ct' up to a set of tokens tks of ct,
      findEmbeddingMinimisingTypeUpTo yields maps f1, f2 and pattern g where:
@@ -222,7 +222,7 @@ struct
       fun tMaps t t' =
         let val ty = CSpace.typeOfToken t
             val ty' = CSpace.typeOfToken t'
-            val varInst = if Type.isTypeVar ty then ty' else ty
+            val varInst = if Type.isTypeVar ty then (print (Type.nameOfType ty ^ " ==> " ^ Type.nameOfType ty' ^ "\n"); ty') else ty
             val nt = CSpace.makeToken (CSpace.nameOfToken t') varInst
         in if tokenMatches T t t' then
              (fn x => if CSpace.sameTokens x t then SOME nt else NONE,

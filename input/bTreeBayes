@@ -31,6 +31,8 @@ conSpec real10:real10T =
         makeReal : [nat10,nat10] -> real10
 
 typeSystem bayesPlusT = imports bayes, real10T
+    types _:nbItem
+    order nbItem < event
 
 conSpec bayesPlus:bayesPlusT = imports bayesG, real10
 
@@ -41,7 +43,7 @@ typeSystem interBTreeBayesT =
 conSpec interBTreeBayes:interBTreeBayesT =
     imports btree, bayesPlus, metaLogic
     constructors
-        EQ : [btree,probEqn] -> metaBool,
+        EQN : [btree,probEqn] -> metaBool,
         SYS : [btree,probSys] -> metaBool,
         EVT : [btree,events] -> metaBool,
         BIN : [btree,bin] -> metaBool,
@@ -49,7 +51,7 @@ conSpec interBTreeBayes:interBTreeBayesT =
         NAT : [btree,nat10] -> metaBool
 
 
-tSchema eq:(btree,bayesPlus,interBTreeBayes) =
+tSchema eqn:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:P:nbItem,
                              t2:btree <- branch[t21:r:nbItem,
                                                 t22:btree <- branch[t221:btree,
@@ -58,8 +60,23 @@ tSchema eq:(btree,bayesPlus,interBTreeBayes) =
     target t':probEqn <- makeEqn[t1':events, t2':numExp]
     antecedent :metaTrue <- EVT[t221:btree,t1':events],
                :metaTrue <- REAL[t2222:btree,t2':numExp]
-    consequent :metaTrue <- EQ[t:btree,t':probEqn]
+    consequent :metaTrue <- EQN[t:btree,t':probEqn]
     strength 1
+
+tSchema evtX:(btree,bayesPlus,interBTreeBayes) =
+    source t:?v:nbItem
+    target t':?v:nbItem
+    antecedent
+    consequent :metaTrue <- EVT[t:?v:nbItem,t':?v:nbItem]
+    strength 2
+
+tSchema evt0:(btree,bayesPlus,interBTreeBayes) =
+    source t:btree <- branch[t1:btree,
+                             t2:dummy:leaf]
+    target t':event
+    antecedent :metaTrue <- EVT[t1:btree,t':event]
+    consequent :metaTrue <- EVT[t:btree,t':event]
+    strength 2
 
 tSchema evt1:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
@@ -187,12 +204,92 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- NAT[t:btree,t':nat10]
     strength 1
 
+    tSchema natural0':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:0:nbItem,
+                                 t2:dummy:leaf]
+        target t':0
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':0]
+        strength 1
+
+    tSchema natural1':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:1:nbItem,
+                                 t2:dummy:leaf]
+        target t':1
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':1]
+        strength 1
+
+    tSchema natural2':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:2:nbItem,
+                                 t2:dummy:leaf]
+        target t':2
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':2]
+        strength 1
+
+    tSchema natural3':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:3:nbItem,
+                                 t2:dummy:leaf]
+        target t':3
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':3]
+        strength 1
+
+    tSchema natural4':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:4:nbItem,
+                                 t2:dummy:leaf]
+        target t':4
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':4]
+        strength 1
+
+    tSchema natural5':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:5:nbItem,
+                                 t2:dummy:leaf]
+        target t':5
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':5]
+        strength 1
+
+    tSchema natural6':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:6:nbItem,
+                                 t2:dummy:leaf]
+        target t':6
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':6]
+        strength 1
+
+    tSchema natural7':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:7:nbItem,
+                                 t2:dummy:leaf]
+        target t':7
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':7]
+        strength 1
+
+    tSchema natural8':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:8:nbItem,
+                                 t2:dummy:leaf]
+        target t':8
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':8]
+        strength 1
+
+    tSchema natural9':(btree,bayesPlus,interBTreeBayes) =
+        source t:btree <- branch[t1:9:nbItem,
+                                 t2:dummy:leaf]
+        target t':9
+        antecedent
+        consequent :metaTrue <- NAT[t:btree,t':9]
+        strength 1
+
 
 transfer
     sourceConstruction list0
     targetConSpec btree
     interConSpec interListBTree
-    goal :metaTrue <- L[z:0,t:Pr(x)=0.21:list,t':btree]
+    goal :metaTrue <- L[z:0,t:Pr(a)=0.21:list,t':btree]
     searchLimit 50
     output sss
     limit 10
@@ -202,7 +299,7 @@ transfer
     sourceConstruction sss
     targetConSpec bayesPlus
     interConSpec interBTreeBayes
-    goal :metaTrue <- EQ[v_{0}:btree,t':probEqn]
+    goal :metaTrue <- EQN[v_{0}:btree,t':probEqn]
     searchLimit 50
     output sss1
     limit 10

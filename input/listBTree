@@ -170,7 +170,7 @@ tSchema empty:(list,btree,interListBTree) =
     strength 1
 
 
-construction list0:list = liftString Pr(x) = 0.21
+construction list0:list = liftString Pr(a) = 0.21
 construction list1:list = liftString a(((b)c)d)
 construction list2:list = liftString ()((ab))
 construction list3:list = liftString a(bc(def))g
