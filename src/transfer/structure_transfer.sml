@@ -26,6 +26,7 @@ sig
   val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
                   CSpace.conSpecData -> (* Target Constructor Specification *)
                   CSpace.conSpecData -> (* Inter-space Constructor Specification *)
+                  bool -> (* use inverse transfer schemas *)
                   Knowledge.base -> (* Transfer and Inference schemas *)
                   Construction.construction -> (* The construction to transform *)
                   Construction.construction -> (* The goal to satisfy *)
@@ -147,7 +148,7 @@ struct
 
       val ct = State.constructionOf st
       val T = #typeSystem (State.sourceTypeSystemOf st)
-      val interTSD = (State.interTypeSystemOf st)
+      val interTSD = State.interTypeSystemOf st
       val sourceConSpecData = #sourceConSpecData st
       val targetConSpecData = #targetConSpecData st
       val interConSpecData = #interConSpecData st
@@ -492,7 +493,7 @@ fun structureTransfer searchLimit unistructured targetPattOption st =
               NONE => structureTransfer unistructured st
             | SOME targetPattern => targetedTransfer targetPattern st)*)
 
-  fun initState sCSD tCSD iCSD KB ct goal =
+  fun initState sCSD tCSD iCSD inverse KB ct goal =
     let val tTS = #typeSystem (#typeSystemData tCSD)
         val targetTokens = FiniteSet.filter
                                (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS) andalso
@@ -506,11 +507,11 @@ fun structureTransfer searchLimit unistructured targetPattOption st =
                    originalGoal = goal,
                    goals = [goal],
                    compositions = map Composition.makePlaceholderComposition targetTokens,
-                   knowledge = Knowledge.filterForISpace (#name iCSD) KB}
+                   knowledge = Knowledge.filterForISpace (#name iCSD) inverse KB}
     end
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
-      let val st = initState sCSD tCSD iCSD KB ct goal
+      let val st = initState sCSD tCSD iCSD false KB ct goal
           val stateSeq = structureTransfer NONE false NONE st;
           fun getStructureGraph st =
               List.flatmap (Composition.resultingConstructions) (State.patternCompsOf st);

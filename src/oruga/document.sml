@@ -72,6 +72,7 @@ struct
   val searchLimitKW = "searchLimit"
   val iterativeKW = "iterative"
   val unistructuredKW = "unistructured"
+  val inverseKW = "inverse"
   val matchTargetKW = "matchTarget"
   val sourceConSpecKW = "sourceConSpec"
   val targetConSpecKW = "targetConSpec"
@@ -79,7 +80,7 @@ struct
   val saveKW = "save"
   val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
-                          sourceConSpecKW,interConSpecKW,saveKW]
+                          sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
 
   fun breakListOn s [] = ([],"",[])
@@ -656,6 +657,7 @@ struct
       val targetTypeSystem = getTargetTySys C*)
       val targetConSpecData = getTargetConSpec C
       val targetTypeSystem = #typeSystem (#typeSystemData targetConSpecData)
+
       val interConSpecData = getInterConSpec C
       val interTypeSystem = #typeSystem (#typeSystemData interConSpecData)
 
@@ -696,6 +698,11 @@ struct
                       NONE => true
                     | _ => raise ParseError "iterative and matchTarget are incompatible")
             else getIterative L
+      fun getInverse [] = false
+        | getInverse ((x,_)::L) =
+            if x = SOME inverseKW
+            then true
+            else getInverse L
       fun getUnistructured [] = false
         | getUnistructured ((x,_)::L) =
             if x = SOME unistructuredKW
@@ -712,6 +719,7 @@ struct
       val searchLimit = getSearchLimit C
       val iterative = getIterative C
       val KB = knowledgeOf DC
+      val inverse = getInverse C
       val unistructured = getUnistructured C
       val targetPattern = getMatchTarget C
       val save = getSave C
@@ -759,7 +767,7 @@ struct
                              (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
-      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData KB construction goal
+      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
       val results = Transfer.masterTransfer searchLimit iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
