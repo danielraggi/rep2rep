@@ -98,9 +98,6 @@ struct
                      "Construction.walk"
                      (List.list_rpc vertex_rpc);
 
-  fun isTrivial (Source _) = true
-    | isTrivial _ = false
-
   fun toString (Source t) = CSpace.stringOfToken t
     | toString (Reference t) = CSpace.stringOfToken t
     | toString (TCPair ({token,constructor}, cs)) =
@@ -425,8 +422,8 @@ struct
 
   fun minus ct ct' = minusTCPairs ct (collectTCPairs ct')
 
-  fun subConstructionsRaw (Source t) = Seq.cons (Source t) Seq.empty
-    | subConstructionsRaw (Reference t) = Seq.cons (Reference t) Seq.empty
+  fun subConstructionsRaw (Source t) = Seq.single (Source t)
+    | subConstructionsRaw (Reference t) = Seq.single (Reference t)
     | subConstructionsRaw (TCPair (tc,cs)) =
         Seq.cons (TCPair (tc,cs)) (Seq.maps subConstructionsRaw (Seq.of_list cs))
 
