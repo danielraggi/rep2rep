@@ -43,127 +43,120 @@ tSchema oBL0:(string,btree,interStringBTree) =
     antecedent :metaTrue <- L[x:0,t2:string,t1':btree],
                :metaTrue <- L[x:1,t2:string,t2':btree]
     consequent :metaTrue <- L[x:0,t:string,t':btree]
-    strength 2
+    strength 1
 
 tSchema oBL1:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:string,t':btree]
     consequent :metaTrue <- L[x:1,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL2:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:3,t2:string,t':btree]
     consequent :metaTrue <- L[x:2,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL3:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:4,t2:string,t':btree]
     consequent :metaTrue <- L[x:3,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL4:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:5,t2:string,t':btree]
     consequent :metaTrue <- L[x:4,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL5:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:6,t2:string,t':btree]
     consequent :metaTrue <- L[x:5,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL6:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:7,t2:string,t':btree]
     consequent :metaTrue <- L[x:6,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema oBL7:(string,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:8,t2:string,t':btree]
     consequent :metaTrue <- L[x:7,t:string,t':btree]
-    strength 2
+    strength 0
 
-
-comment cBL0':(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string <- cons[t21:cB, t22:string]]
-    target t':leaf
-    antecedent :metaTrue <- IL[t1:nonBChar,t':leaf]
-    consequent :metaTrue <- L[x:0,t:string,t':leaf]
-    strength 2
 
 tSchema cBL0:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':dummy:leaf
     antecedent
     consequent :metaTrue <- L[x:0,t:string,t':dummy:leaf]
-    strength 2
+    strength 1
 
 tSchema cBL1:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:0,t2:string,t':btree]
     consequent :metaTrue <- L[x:1,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL2:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:1,t2:string,t':btree]
     consequent :metaTrue <- L[x:2,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL3:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:string,t':btree]
     consequent :metaTrue <- L[x:3,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL4:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:3,t2:string,t':btree]
     consequent :metaTrue <- L[x:4,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL5:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:4,t2:string,t':btree]
     consequent :metaTrue <- L[x:5,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL6:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:5,t2:string,t':btree]
     consequent :metaTrue <- L[x:6,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL7:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:6,t2:string,t':btree]
     consequent :metaTrue <- L[x:7,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema cBL8:(string,btree,interStringBTree) =
     source t:string <- cons[t1:cB, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:7,t2:string,t':btree]
     consequent :metaTrue <- L[x:8,t:string,t':btree]
-    strength 2
+    strength 0
 
 
 tSchema nBL0:(string,btree,interStringBTree) =
@@ -172,63 +165,63 @@ tSchema nBL0:(string,btree,interStringBTree) =
     antecedent :metaTrue <- IL[t1:nonBChar,t1':leaf],
                :metaTrue <- L[x:0,t2:string,t2':btree]
     consequent :metaTrue <- L[x:0,t:string,t':btree]
-    strength 2
+    strength 1
 
 tSchema nBL1:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:1,t2:string,t':btree]
     consequent :metaTrue <- L[x:1,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL2:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:2,t2:string,t':btree]
     consequent :metaTrue <- L[x:2,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL3:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:3,t2:string,t':btree]
     consequent :metaTrue <- L[x:3,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL4:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:4,t2:string,t':btree]
     consequent :metaTrue <- L[x:4,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL5:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:5,t2:string,t':btree]
     consequent :metaTrue <- L[x:5,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL6:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:6,t2:string,t':btree]
     consequent :metaTrue <- L[x:6,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL7:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:7,t2:string,t':btree]
     consequent :metaTrue <- L[x:7,t:string,t':btree]
-    strength 2
+    strength 0
 
 tSchema nBL8:(string,btree,interStringBTree) =
     source t:string <- cons[t1:nonBChar, t2:string]
     target t':btree
     antecedent :metaTrue <- L[x:8,t2:string,t':btree]
     consequent :metaTrue <- L[x:8,t:string,t':btree]
-    strength 2
+    strength 0
 
 
 comment singleton:(string,btree,interStringBTree) =
@@ -243,7 +236,7 @@ tSchema leafL0:(string,btree,interStringBTree) =
     target t':?x:nonBChar
     antecedent
     consequent :metaTrue <- IL[t:?x:nonBChar,t':?x:nonBChar]
-    strength 2
+    strength 1
 
 
 tSchema empty:(string,btree,interStringBTree) =
@@ -254,53 +247,7 @@ tSchema empty:(string,btree,interStringBTree) =
     strength 1
 
 
-construction string0:string = liftString Pr(a) = 0.21
 construction string1:string = liftString a(((b)c)d)
 construction string2:string = liftString ()((ab))
 construction string3:string = liftString a(bc(def))g
 construction string4:string = liftString a(bc())d
-
-transfer
-    sourceConstruction string0
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:Pr(x)=1:string,t':btree]
-    output btreeTest0
-    searchLimit 50
-    limit 10
-
-transfer
-    sourceConstruction string1
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:a(((b)c)d):string,t':btree]
-    output btreeTest1
-    searchLimit 50
-    limit 10
-
-transfer
-    sourceConstruction string2
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:()((ab)):string,t':btree]
-    output btreeTest2
-    searchLimit 50
-    limit 10
-
-transfer
-    sourceConstruction string3
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:a(bc(def))g:string,t':btree]
-    output btreeTest3
-    searchLimit 50
-    limit 10
-
-transfer
-    sourceConstruction string4
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:a(bc())d:string,t':btree]
-    output btreeTest4
-    searchLimit 500
-    limit 10

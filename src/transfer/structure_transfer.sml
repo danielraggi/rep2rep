@@ -219,7 +219,10 @@ struct
       val targetConstructions = List.maps Composition.resultingConstructions patternComps
       val (targetReifiesInComposition,targetMap, updatedTarget) =
         (case getTargetEmbedding targetConstructions of
-            SOME (f,x) => (true,f,x)
+            SOME (f,_) =>
+              let val tmap = preferentialFunUnion f targetConstructMap
+              in (true,tmap,Pattern.applyMorphism tmap target)
+              end
           | NONE =>
               let val (f,_) = applyMorphismRefreshingNONEs csMap usedTokensC [target]
                   val tmap = preferentialFunUnion f targetConstructMap
@@ -351,13 +354,9 @@ struct
   fun applyTransferSchema st tschData =
     let val newSt = idempotencyOnGoals st
         val ct = State.constructionOf st
-      (*)  fun tac1 g = (Seq.single (applyTransferSchemaAsInferenceSchemaForGoal newSt tschData g)) handle TransferSchemaNotApplicable => Seq.empty
-        fun tac2 g = (Seq.single (applyTransferSchemaForGoal newSt tschData g)) handle TransferSchemaNotApplicable => Seq.empty*)
-        fun tac3 g = (*)(applyTransferSchemaAsInferenceSchemaForGoal newSt tschData g)
-                      handle TransferSchemaNotApplicable =>*) applyTransferSchemaForGoal newSt tschData g
         fun ac [] = Seq.empty
-          | ac (g::gs) = Seq.cons (tac3 g) (ac gs) handle TransferSchemaNotApplicable => ac gs
-        (*)  | ac (g::gs) = (Seq.append (Seq.append (tac1 g) (tac2 g)) (ac gs))*)
+          | ac (g::gs) = Seq.cons (applyTransferSchemaForGoal newSt tschData g) (ac gs)
+                          handle TransferSchemaNotApplicable => ac gs
     in ac (State.goalsOf newSt)
     end
 
