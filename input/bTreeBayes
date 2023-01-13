@@ -76,7 +76,7 @@ tSchema evt0:(btree,bayesPlus,interBTreeBayes) =
     target t':event
     antecedent :metaTrue <- EVT[t1:btree,t':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 2
+    strength -1
 
 tSchema binAND:(btree,bayesPlus,interBTreeBayes) =
     source t:&:nonBChar
@@ -301,14 +301,14 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
 
 construction string0:string = liftString Pr(a) = 0.21
 construction string1:string = liftString Pr(a U b) = 0.21
-construction string2:string = liftString Pr(((a U b) & c) | - d) = 0.21
+construction string2:string = liftString Pr(((a U b) & c) | -d) = 0.21
 
 transfer
     sourceConstruction string2
     targetConSpec btree
     interConSpec interStringBTree
-    goal :metaTrue <- L[z:0,t:Pr(((a U b) & c) | - d) = 0.21:string,t':btree]
-    searchLimit 100
+    goal :metaTrue <- L[z:0,t:Pr(((a U b) & c) | -d) = 0.21:string,t':btree]
+    searchLimit 500
     output sss
     limit 10
     save sss
@@ -322,3 +322,26 @@ transfer
     output sss1
     limit 10
     save sss1
+
+transfer
+    sourceConstruction sss1
+    targetConSpec btree
+    interConSpec interBTreeBayes
+    goal :metaTrue <- EQN[v_{0}:btree,v_{37}:probEqn]
+    searchLimit 100
+    output sss2
+    limit 10
+    save sss2
+    inverse
+
+transfer
+    sourceConstruction sss2
+    targetConSpec string
+    interConSpec interStringBTree
+    goal :metaTrue <- L[z:0,v_{1}:string,v_{1}:btree]
+    searchLimit 1000
+    output sss3
+    limit 10
+    unistructured
+    save sss3
+    inverse
