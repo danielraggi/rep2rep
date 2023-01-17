@@ -96,12 +96,26 @@ struct
                    parentName,
                    ";"]
 
-  val normalScale = 0.15
-  val scriptScale = normalScale * 0.8
+
+  val normalScale = 0.17
+  val scriptScale = normalScale * 0.75
   val nodeConstant = 1.0 * normalScale
-  fun sizeOfToken t = normalScale * real (String.size (CSpace.nameOfToken t))
-  fun sizeOfType t = scriptScale * real (String.size (Type.nameOfType (CSpace.typeOfToken t)))
-  fun sizeOfConstructor c = scriptScale * real (String.size (CSpace.nameOfConstructor c)) + nodeConstant
+
+  fun displaySize (#"_"::S') = 0.8 * displaySize S'
+    | displaySize (#"{"::S') = displaySize S'
+    | displaySize (#"}"::S') = 1.25 * displaySize S'
+    | displaySize (#":"::S') = 2.0 + displaySize S'
+    | displaySize (#"+"::S') = 3.0 + displaySize S'
+    | displaySize (#"-"::S') = 3.0 + displaySize S'
+    | displaySize (#"="::S') = 3.0 + displaySize S'
+    | displaySize (_::S') = 1.0 + displaySize S'
+    | displaySize [] = 0.0
+
+  fun displaySizeOfString s = displaySize (String.explode s)
+
+  fun sizeOfType t = scriptScale * (displaySizeOfString (Type.nameOfType (CSpace.typeOfToken t)))
+  fun sizeOfToken t = normalScale * (displaySizeOfString (CSpace.nameOfToken t)) + nodeConstant
+  fun sizeOfConstructor c = scriptScale * (displaySizeOfString (CSpace.nameOfConstructor c)) + nodeConstant
 
   fun quickWidthEstimate (Construction.Source t) =
         Real.max(sizeOfToken t, sizeOfType t)
@@ -125,7 +139,7 @@ struct
     | rowWidthEstimates (Construction.Reference _) = [0.0]
     | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
       let val widthMatrix = map rowWidthEstimates cs
-      in sizeOfConstructor constructor :: sizeOfToken token + sizeOfType token :: getWidthPerRow widthMatrix
+      in sizeOfConstructor constructor :: sizeOfToken token + sizeOfType token - nodeConstant :: getWidthPerRow widthMatrix
       end
 
   fun stringOfMatrix ((x11::X1)::M) = realToString x11 ^ " " ^ stringOfMatrix (X1::M)
@@ -133,17 +147,19 @@ struct
     | stringOfMatrix [] = ""
 
   fun mkIntervals M =
-    let fun intervalNeeded (x1::L1) (x2::L2) = Real.max (x1+x2,intervalNeeded L1 L2) + 0.2
-        (*)  | intervalNeeded (x1::L1) [] = Real.max(x1,intervalNeeded L1 [])
-          | intervalNeeded [] (x2::L2) = Real.max(x2,intervalNeeded [] L2)
-          | intervalNeeded [] [] = 0.0*)
-          | intervalNeeded _ _ = 0.2
-        fun intervalsPerRow _ [] = []
-          | intervalsPerRow _ [_] = []
-          | intervalsPerRow p (L1::(L2::LL)) =
-            (case p + (intervalNeeded L1 L2) of
-              p' => p' :: intervalsPerRow p' (L2::LL))
-    in 0.0 :: intervalsPerRow 0.0 M
+    let val redC = ~0.25
+        fun intervalNeeded (x1::L1) (x2::L2) LL = Real.max (x1+x2,intervalNeeded L1 L2 LL)
+          | intervalNeeded (x1::L1) [] (L3::LL) = intervalNeeded (x1::L1) L3 LL
+          | intervalNeeded (x1::L1) [] [] = x1
+          | intervalNeeded [] (x2::L2) (L3::LL) = 0.0
+          | intervalNeeded [] (x2::L2) [] = 0.0
+          | intervalNeeded [] [] _ = 0.0
+        fun positionsPerRow _ [] = []
+          | positionsPerRow _ [_] = []
+          | positionsPerRow p (L1::(L2::LL)) =
+            (case p + (intervalNeeded L1 L2 LL) of
+              p' => p' :: positionsPerRow p' (L2::LL))
+    in 0.0 :: positionsPerRow redC M
     end
 
   fun construction' coor parentName (i,n) (Construction.Source t) =
