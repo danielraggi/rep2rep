@@ -308,7 +308,7 @@ transfer
     targetConSpec btree
     interConSpec interStringBTree
     goal :metaTrue <- L[z:0,t:Pr(((a U b) & c) | -d) = 0.21:string,t':btree]
-    searchLimit 500
+    searchLimit 200
     output sss
     limit 10
     save sss
@@ -339,7 +339,7 @@ transfer
     targetConSpec string
     interConSpec interStringBTree
     goal :metaTrue <- L[z:0,v_{1}:string,v_{1}:btree]
-    searchLimit 1000
+    searchLimit 500
     output sss3
     limit 10
     unistructured

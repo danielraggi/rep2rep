@@ -110,6 +110,33 @@ struct
                                0.9 * sizeOfToken token + sizeOfType token,
                                List.sumMap quickWidthEstimate cs]
 
+  fun pullFirstRow ((x11::X1)::M) = (case pullFirstRow M of (fr,m) => (x11::fr,X1::m))
+    | pullFirstRow ([]::M) = pullFirstRow M
+    | pullFirstRow [] = ([],[])
+
+  fun getWidthPerRow M =
+    (case pullFirstRow M of (fr,m) => (List.sum fr) :: getWidthPerRow m)
+
+  fun rowWidthEstimates (Construction.Source t) =
+        [Real.max(sizeOfToken t, sizeOfType t)]
+    | rowWidthEstimates (Construction.Reference _) = [0.0]
+    | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
+      let val topWidth = List.max Real.compare
+                                  [sizeOfConstructor constructor, 0.9 * sizeOfToken token + sizeOfType token]
+          val widthMatrix = map rowWidthEstimates cs
+      in topWidth :: getWidthPerRow widthMatrix
+      end
+
+  fun intervalsPerRow _ [] = []
+    | intervalsPerRow _ [h] = []
+    | intervalsPerRow p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: intervalsPerRow p' (h2::t))
+  fun mkIntervals M =
+    case pullFirstRow
+    (case pullFirstRow M of
+        (fr,m) => intervalsPerRow 0.0 fr :: mkIntervals m)
+    of (fr,m) => List.max (Real.compare) fr :: mkIntervals m
+
+
   fun construction' coor parentName (i,n) (Construction.Source t) =
         (case parentName of
           NONE => lines [tokenNode true coor t]
@@ -126,9 +153,6 @@ struct
             val constructorNodeName = nodeNameOfConstructor constructor token
             val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
             val widthEstimates = map (fn x => quickWidthEstimate x) cs
-            fun mkIntervals _ [] = []
-              | mkIntervals _ [h] = []
-              | mkIntervals p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: mkIntervals p' (h2::t))
             val intervals = 0.0 :: mkIntervals 0.0 widthEstimates
             val cssize = List.last intervals
             val nchildren = length cs

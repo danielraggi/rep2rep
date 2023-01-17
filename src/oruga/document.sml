@@ -759,7 +759,7 @@ struct
             val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
             val latexProof = mkLatexProof tproof
             (*val CSize = List.sumMapInt Composition.size comps*)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,(*Int.toString CSize,*)latexProof]))
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*Int.toString CSize,*)]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();

@@ -319,10 +319,10 @@ struct
     | similarityMap _ _ = raise IllDefined
 
   fun typCompare (ty,ty') = String.compare (Type.nameOfType ty, Type.nameOfType ty')
-  fun tokenCompare (t,t') = typCompare(CSpace.typeOfToken t, CSpace.typeOfToken t')
-  (*(case typCompare(CSpace.typeOfToken t, CSpace.typeOfToken t') of
+  fun tokenCompare (t,t') = (*typCompare(CSpace.typeOfToken t, CSpace.typeOfToken t')*)
+  (case typCompare(CSpace.typeOfToken t, CSpace.typeOfToken t') of
         EQUAL => String.compare(CSpace.nameOfToken t, CSpace.nameOfToken t')
-      | X => X)*)
+      | X => X)
   fun constructorCompare (c,c') =
       String.compare (CSpace.nameOfConstructor c, CSpace.nameOfConstructor c')
   fun compare (Source t, Source t') = tokenCompare (t,t')

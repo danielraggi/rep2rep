@@ -213,7 +213,7 @@ struct
 
       fun getTargetEmbedding [] = NONE
         | getTargetEmbedding (tct::L) =
-          (case Seq.pull (Pattern.findAlterableSubConstructionWithCompatibleInverse tTSD tct target csMap) of
+          (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse tT tct target csMap) of
               SOME ((_,f,x),_) => SOME (f, x)
             | _ => getTargetEmbedding L)
       val targetConstructions = List.maps Composition.resultingConstructions patternComps
@@ -415,7 +415,7 @@ struct
 fun structureTransfer searchLimit unistructured targetPattOption st =
   let val maxNumGoals = case searchLimit of SOME x => Int.max(x div 4, 20) | NONE => 20
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
-      val maxCompSize = 100
+      val maxCompSize = 80
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
