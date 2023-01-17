@@ -96,12 +96,13 @@ struct
                    parentName,
                    ";"]
 
-  val normalScale = 0.11
-  val scriptScale = normalScale * 0.75
+  val normalScale = 0.15
+  val scriptScale = normalScale * 0.8
   val nodeConstant = 1.0 * normalScale
-  fun sizeOfToken t = normalScale * real (String.size (CSpace.nameOfToken t)) + nodeConstant
+  fun sizeOfToken t = normalScale * real (String.size (CSpace.nameOfToken t))
   fun sizeOfType t = scriptScale * real (String.size (Type.nameOfType (CSpace.typeOfToken t)))
   fun sizeOfConstructor c = scriptScale * real (String.size (CSpace.nameOfConstructor c)) + nodeConstant
+
   fun quickWidthEstimate (Construction.Source t) =
         Real.max(sizeOfToken t, sizeOfType t)
     | quickWidthEstimate (Construction.Reference _) = 0.0
@@ -115,27 +116,35 @@ struct
     | pullFirstRow [] = ([],[])
 
   fun getWidthPerRow M =
-    (case pullFirstRow M of (fr,m) => (List.sum fr) :: getWidthPerRow m)
+    if null M then [] else
+      (case pullFirstRow M of
+         (fr,m) => (List.sum fr) :: getWidthPerRow m)
 
   fun rowWidthEstimates (Construction.Source t) =
         [Real.max(sizeOfToken t, sizeOfType t)]
     | rowWidthEstimates (Construction.Reference _) = [0.0]
     | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
-      let val topWidth = List.max Real.compare
-                                  [sizeOfConstructor constructor, 0.9 * sizeOfToken token + sizeOfType token]
-          val widthMatrix = map rowWidthEstimates cs
-      in topWidth :: getWidthPerRow widthMatrix
+      let val widthMatrix = map rowWidthEstimates cs
+      in sizeOfConstructor constructor :: sizeOfToken token + sizeOfType token :: getWidthPerRow widthMatrix
       end
 
-  fun intervalsPerRow _ [] = []
-    | intervalsPerRow _ [h] = []
-    | intervalsPerRow p (h1::(h2::t)) = (case p + (h1 + h2) of p' => p' :: intervalsPerRow p' (h2::t))
-  fun mkIntervals M =
-    case pullFirstRow
-    (case pullFirstRow M of
-        (fr,m) => intervalsPerRow 0.0 fr :: mkIntervals m)
-    of (fr,m) => List.max (Real.compare) fr :: mkIntervals m
+  fun stringOfMatrix ((x11::X1)::M) = realToString x11 ^ " " ^ stringOfMatrix (X1::M)
+    | stringOfMatrix ([]::M) = "\n" ^ stringOfMatrix M
+    | stringOfMatrix [] = ""
 
+  fun mkIntervals M =
+    let fun intervalNeeded (x1::L1) (x2::L2) = Real.max (x1+x2,intervalNeeded L1 L2) + 0.2
+        (*)  | intervalNeeded (x1::L1) [] = Real.max(x1,intervalNeeded L1 [])
+          | intervalNeeded [] (x2::L2) = Real.max(x2,intervalNeeded [] L2)
+          | intervalNeeded [] [] = 0.0*)
+          | intervalNeeded _ _ = 0.2
+        fun intervalsPerRow _ [] = []
+          | intervalsPerRow _ [_] = []
+          | intervalsPerRow p (L1::(L2::LL)) =
+            (case p + (intervalNeeded L1 L2) of
+              p' => p' :: intervalsPerRow p' (L2::LL))
+    in 0.0 :: intervalsPerRow 0.0 M
+    end
 
   fun construction' coor parentName (i,n) (Construction.Source t) =
         (case parentName of
@@ -152,8 +161,8 @@ struct
             val cn = constructorNode (x,y-1.0) constructor token
             val constructorNodeName = nodeNameOfConstructor constructor token
             val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
-            val widthEstimates = map (fn x => quickWidthEstimate x) cs
-            val intervals = 0.0 :: mkIntervals 0.0 widthEstimates
+            val widthEstimates = map rowWidthEstimates cs
+            val intervals = mkIntervals widthEstimates
             val cssize = List.last intervals
             val nchildren = length cs
             fun calcX j = ~cssize/2.0 + List.nth(intervals,j)
