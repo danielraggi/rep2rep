@@ -98,7 +98,7 @@ struct
 
 
   val normalScale = 0.16
-  val scriptScale = normalScale * 0.8
+  val scriptScale = normalScale * 0.7
   val nodeConstant = 1.0 * normalScale
 
   fun displaySize (#"_"::S') = 0.8 * displaySize S'
