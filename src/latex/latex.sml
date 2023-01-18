@@ -97,7 +97,7 @@ struct
                    ";"]
 
 
-  val normalScale = 0.16
+  val normalScale = 0.14
   val scriptScale = normalScale * 0.8
   val nodeConstant = 1.0 * normalScale
 
