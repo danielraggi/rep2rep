@@ -97,8 +97,8 @@ struct
                    ";"]
 
 
-  val normalScale = 0.17
-  val scriptScale = normalScale * 0.75
+  val normalScale = 0.14
+  val scriptScale = normalScale * 0.8
   val nodeConstant = 1.0 * normalScale
 
   fun displaySize (#"_"::S') = 0.8 * displaySize S'
@@ -136,10 +136,12 @@ struct
 
   fun rowWidthEstimates (Construction.Source t) =
         [Real.max(sizeOfToken t, sizeOfType t)]
-    | rowWidthEstimates (Construction.Reference _) = [0.0]
+    | rowWidthEstimates (Construction.Reference _) = []
     | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
       let val widthMatrix = map rowWidthEstimates cs
-      in sizeOfConstructor constructor :: sizeOfToken token + sizeOfType token - nodeConstant :: getWidthPerRow widthMatrix
+          val halfTokenSize = sizeOfToken token / 2.0
+          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + nodeConstant
+      in sizeOfConstructor constructor :: tNodeSize :: getWidthPerRow widthMatrix
       end
 
   fun stringOfMatrix ((x11::X1)::M) = realToString x11 ^ " " ^ stringOfMatrix (X1::M)
@@ -147,7 +149,7 @@ struct
     | stringOfMatrix [] = ""
 
   fun mkIntervals M =
-    let val redC = ~0.25
+    let val redC = ~1.0*nodeConstant
         fun intervalNeeded (x1::L1) (x2::L2) LL = Real.max (x1+x2,intervalNeeded L1 L2 LL)
           | intervalNeeded (x1::L1) [] (L3::LL) = intervalNeeded (x1::L1) L3 LL
           | intervalNeeded (x1::L1) [] [] = x1
@@ -157,7 +159,7 @@ struct
         fun positionsPerRow _ [] = []
           | positionsPerRow _ [_] = []
           | positionsPerRow p (L1::(L2::LL)) =
-            (case p + (intervalNeeded L1 L2 LL) of
+            (case p + (intervalNeeded L1 L2 LL) + redC of
               p' => p' :: positionsPerRow p' (L2::LL))
     in 0.0 :: positionsPerRow redC M
     end
