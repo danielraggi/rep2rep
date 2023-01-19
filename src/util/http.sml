@@ -240,8 +240,7 @@ fun send_http sock vec =
     end;
 
 fun recvVecNB (sock, chunk_size) =
-    let val () = print ("RECV_NB\n");
-        val ready = Socket.select {
+    let val ready = Socket.select {
                 rds = [Socket.sockDesc sock],
                 wrs = [],
                 exs = [],

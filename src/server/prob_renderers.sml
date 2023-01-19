@@ -1,13 +1,19 @@
 import "core.construction";
 
 signature PROBRENDER = sig
-    val drawArea: Construction.construction -> (string * (string*real*real)) list;
-    val drawTable: Construction.construction -> (string * (string*real*real)) list;
-    val drawTree: Construction.construction -> (string * (string*real*real)) list;
-    val drawBayes: Construction.construction -> (string * (string*real*real)) list;
+    type renderer = Construction.construction list
+                    -> ((string * (string * real * real)) list, Diagnostic.t list) Result.t;
+
+    val drawArea: renderer;
+    val drawTable: renderer;
+    val drawTree: renderer;
+    val drawBayes: renderer;
 end;
 
 structure ProbRender : PROBRENDER = struct
+
+type renderer = Construction.construction list
+                -> ((string * (string * real * real)) list, Diagnostic.t list) Result.t;
 
 datatype numExp =
            U
@@ -2277,5 +2283,18 @@ fun drawBayes c =
                | _ => parseEvent c)
           | parseBayes c = parseEvent c;
     in List.map stringToHTML (parseBayes c) end;
+
+fun wrap renderer c = Result.ok (List.flatmap renderer c)
+                      handle e => Result.error [
+                                     Diagnostic.create
+                                         Diagnostic.ERROR
+                                         ("Failed to render structure graph: "
+                                          ^ (exnMessage e) ^ ".")
+                                         []];
+
+val drawArea = wrap drawArea;
+val drawTable = wrap drawTable;
+val drawTree = wrap drawTree;
+val drawBayes = wrap drawBayes;
 
 end;
