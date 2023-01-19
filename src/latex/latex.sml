@@ -97,8 +97,8 @@ struct
                    ";"]
 
 
-  val normalScale = 0.16
-  val scriptScale = normalScale * 0.7
+  val normalScale = 0.17
+  val scriptScale = normalScale * 0.6
   val nodeConstant = 1.0 * normalScale
 
   fun displaySize (#"_"::S') = 0.8 * displaySize S'
@@ -140,8 +140,8 @@ struct
     | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
       let val widthMatrix = map rowWidthEstimates cs
           val halfTokenSize = sizeOfToken token / 2.0
-          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + nodeConstant
-      in sizeOfConstructor constructor :: tNodeSize :: getWidthPerRow widthMatrix
+          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + 3.0*nodeConstant
+      in tNodeSize :: sizeOfConstructor constructor :: getWidthPerRow widthMatrix
       end
 
   fun stringOfMatrix ((x11::X1)::M) = realToString x11 ^ " " ^ stringOfMatrix (X1::M)
@@ -150,11 +150,11 @@ struct
 
   fun mkIntervals M =
     let val redC = ~1.0*nodeConstant
-        fun intervalNeeded (x1::L1) (x2::L2) LL = Real.max (x1+x2,intervalNeeded L1 L2 LL)
+        fun intervalNeeded [x1] (x2::L2) [] = x1 + 4.0*nodeConstant
+          | intervalNeeded (x1::L1) (x2::L2) LL = Real.max (x1+x2,intervalNeeded L1 L2 (#2 (pullFirstRow LL)))
           | intervalNeeded (x1::L1) [] (L3::LL) = intervalNeeded (x1::L1) L3 LL
-          | intervalNeeded (x1::L1) [] [] = x1
-          | intervalNeeded [] (x2::L2) (L3::LL) = 0.0
-          | intervalNeeded [] (x2::L2) [] = 0.0
+          | intervalNeeded (x1::L1) [] [] = 0.0
+          | intervalNeeded [] (x2::L2) _ = 0.0
           | intervalNeeded [] [] _ = 0.0
         fun positionsPerRow _ [] = []
           | positionsPerRow _ [_] = []
@@ -164,28 +164,28 @@ struct
     in 0.0 :: positionsPerRow redC M
     end
 
-  fun construction' coor parentName (i,n) (Construction.Source t) =
+  fun construction' coor parentName (i,n) (ct as Construction.Source t) =
         (case parentName of
           NONE => lines [tokenNode true coor t]
         | SOME pn => lines [tokenNode true coor t, arrowLabelled (nodeNameOfToken t) pn i])
-    | construction' _ parentName (i,n) (Construction.Reference t) =
+    | construction' _ parentName (i,n) (ct as Construction.Reference t) =
         (case parentName of
           NONE => "% BAD CONSTRUCTION"
         | SOME pn => if real i <= real n / real 2
                      then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,180)]
                      else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,0)])
-    | construction' (x,y) parentName (i,n) (Construction.TCPair ({constructor,token},cs)) =
+    | construction' (x,y) parentName (i,n) (ct as Construction.TCPair ({constructor,token},cs)) =
         let val tn = tokenNode false (x,y) token
-            val cn = constructorNode (x,y-1.0) constructor token
+            val cn = constructorNode (x,y-0.9) constructor token
             val constructorNodeName = nodeNameOfConstructor constructor token
             val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
             val widthEstimates = map rowWidthEstimates cs
             val intervals = mkIntervals widthEstimates
-            val cssize = List.last intervals
+            val cssize = List.last intervals - List.hd intervals
             val nchildren = length cs
             fun calcX j = ~cssize/2.0 + List.nth(intervals,j)
             fun crec _ [] = []
-              | crec j (ct::cts) = construction' (x + (calcX j), y-2.0) (SOME constructorNodeName) (j+1,nchildren) ct :: crec (j+1) cts
+              | crec j (ct::cts) = construction' (x + (calcX j), y-1.8) (SOME constructorNodeName) (j+1,nchildren) ct :: crec (j+1) cts
         in (case parentName of
               NONE => lines ([tn,cn,cn2tn] @ (crec 0 cs))
             | SOME pn =>
