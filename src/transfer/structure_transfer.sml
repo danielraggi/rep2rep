@@ -5,8 +5,8 @@ import "util.logging";
 signature TRANSFER =
 sig
   type goal = Pattern.pattern
-  val applyTransferSchemaForGoal : State.T -> InterCSpace.tSchema -> goal -> State.T
-  val applyTransferSchema : State.T -> InterCSpace.tSchema -> State.T Seq.seq
+  val applyTransferSchemaForGoal : State.T -> InterCSpace.tSchemaData -> goal -> State.T
+  val applyTransferSchema : State.T -> InterCSpace.tSchemaData -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
 
   val structureTransfer : bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
@@ -21,6 +21,21 @@ sig
                             -> Pattern.pattern option
                             -> State.T -> State.T Seq.seq
 
+  val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
+                  CSpace.conSpecData -> (* Target Constructor Specification *)
+                  CSpace.conSpecData -> (* Inter-space Constructor Specification *)
+                  Knowledge.base -> (* Transfer and Inference schemas *)
+                  Construction.construction -> (* The construction to transform *)
+                  Construction.construction -> (* The goal to satisfy *)
+                  State.T
+  val applyTransfer:
+      CSpace.conSpecData -> (* Source Constructor Specification *)
+      CSpace.conSpecData -> (* Target Constructor Specification *)
+      CSpace.conSpecData -> (* Inter-space Constructor Specification *)
+      Knowledge.base -> (* Transfer and Inference schemas *)
+      Construction.construction -> (* The construction to transform *)
+      Construction.construction -> (* The goal to satisfy *)
+      (Construction.construction list, Diagnostic.t list) Result.t (* Your new transformed structure graph :-) *)
 end;
 
 structure Transfer : TRANSFER =
@@ -68,8 +83,9 @@ struct
 
 
   exception InferenceSchemaNotApplicable
-  fun applyInferenceSchemaForGoal st T idT ct isch goal =
-  let val {antecedent,consequent,context,name} = isch
+  fun applyInferenceSchemaForGoal st T idT ct ischData goal =
+  let val {name,contextConSpecN,idConSpecN,iSchema} = ischData
+      val {antecedent,consequent,context} = iSchema
       fun referenced x =
         FiniteSet.elementOf x (Construction.tokensOfConstruction context) orelse
         FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
@@ -88,7 +104,7 @@ struct
       val usedTokens = FiniteSet.union
                           (State.tokensInUse st)
                           (Pattern.tokensOfConstruction updatedConsequent)
-      val ccMap = Pattern.funUnion [consequentMap, contextMap]
+      val ccMap = Pattern.funUnion CSpace.sameTokens [consequentMap, contextMap]
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs ccMap usedTokens antecedent
 
       val goals = State.goalsOf st
@@ -96,10 +112,13 @@ struct
 
       val instantiatedISchema = {antecedent = updatedAntecedent,
                                  consequent = updatedConsequent,
-                                 context = matchingSubConstruction,
-                                 name = name}
+                                 context = matchingSubConstruction}
+      val instantiatedISchemaData = {name = name,
+                                     contextConSpecN = contextConSpecN,
+                                     idConSpecN = idConSpecN,
+                                     iSchema = instantiatedISchema}
       val transferProof = State.transferProofOf st
-      val updatedTransferProof = TransferProof.attachISchemaAt instantiatedISchema goal transferProof
+      val updatedTransferProof = TransferProof.attachISchemaAt instantiatedISchemaData goal transferProof
 
       val updatedState = State.updateTransferProof updatedTransferProof (State.updateGoals updatedGoals st)
   in updatedState
@@ -114,13 +133,47 @@ struct
      vertices in the composition.  *)
   fun instantiateTransferSchema st tsch goal =
     let
-      val {antecedent,consequent,source,target,name} = tsch
+      val {antecedent,consequent,source,target} = tsch
 
       val patternComps = State.patternCompsOf st
       val targetTokens = FiniteSet.intersection (Pattern.tokensOfConstruction goal)
                                                 (Composition.tokensOfCompositions patternComps)
       val tTSD = State.targetTypeSystemOf st
       val tT = #typeSystem tTSD
+
+      val ct = State.constructionOf st
+      val T = #typeSystem (State.sourceTypeSystemOf st)
+      val interTSD = (State.interTypeSystemOf st)
+      val sourceConSpecData = #sourceConSpecData st
+      val targetConSpecData = #targetConSpecData st
+      val interConSpecData = #interConSpecData st
+
+      fun preferentialFunUnion f g x = (case g x of NONE => f x | SOME y => SOME y)
+      fun partialFunComp1 f g x = (case g x of NONE => f x | SOME y => f y)
+      fun partialFunComp2 f g x = (case g x of NONE => f x
+                                             | SOME y => (case f y of NONE => SOME y
+                                                                            | SOME z => SOME z))
+      fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
+
+      fun referenced x =
+        FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
+        FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
+        FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
+
+      val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
+
+      (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
+      val (consequentMap,goalMap,typeVarMap,newgoal) =
+            (case Pattern.findEmbeddingMinimisingTypeUpTo interTSD givenTokens consequent goal of
+                (f,g,vf,SOME ng) => (f,g,vf,ng)
+              | _ => raise TransferSchemaNotApplicable)
+      val _ = if Pattern.wellFormed interConSpecData newgoal then () else raise TransferSchemaNotApplicable
+      val source = Pattern.applyTypeVarInstantiation typeVarMap source
+      val _ = if Pattern.wellFormed sourceConSpecData source then () else raise TransferSchemaNotApplicable
+      val target = Pattern.applyTypeVarInstantiation typeVarMap target
+      val _ = if Pattern.wellFormed targetConSpecData target then () else raise TransferSchemaNotApplicable
+      val antecedent = map (Pattern.applyTypeVarInstantiation typeVarMap) antecedent
+      val _ = if List.all (Pattern.wellFormed interConSpecData) antecedent then () else raise TransferSchemaNotApplicable
       val targetConstruct = Pattern.constructOf target
       val usedTokenNames = map CSpace.nameOfToken (State.tokensInUse st)
 
@@ -138,35 +191,12 @@ struct
                   then makeAttachmentToken tt
                   else raise TransferSchemaNotApplicable
                 )
-      fun targetConstructMap x =
-          if CSpace.sameTokens x targetConstruct
-          then SOME newTargetConstruct
-          else NONE
 
-      val ct = State.constructionOf st
-      val T = #typeSystem (State.sourceTypeSystemOf st)
-      val interT = #typeSystem (State.interTypeSystemOf st)
       val usedTokens = FiniteSet.insert newTargetConstruct (State.tokensInUse st)
-
-      fun preferentialFunUnion f g x = (case g x of NONE => f x | SOME y => SOME y)
-      fun partialFunComp1 f g x = (case g x of NONE => f x | SOME y => f y)
-      fun partialFunComp2 f g x = (case g x of NONE => f x
-                                             | SOME y => (case f y of NONE => SOME y
-                                                                            | SOME z => SOME z))
-      fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
-
-      fun referenced x =
-        FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
-        FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
-        FiniteSet.exists (fn y => FiniteSet.elementOf x (Construction.tokensOfConstruction y)) antecedent
-
-      val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
-
-      (* val partiallyMappedConsequent = Pattern.applyPartialMorphism targetConstructMap consequent*)
-      val (consequentMap,goalMap) =
-            (case Pattern.findEmbeddingMinimisingTypeUpTo interT givenTokens consequent goal of
-                (f,g,SOME _) => (f,g)
-              | _ => raise TransferSchemaNotApplicable)
+      fun targetConstructMap x =
+        if CSpace.sameTokens x targetConstruct
+        then SOME newTargetConstruct
+        else NONE
 
       val (sourceMap, matchingSubConstruction) =
             (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse T ct source consequentMap) of
@@ -174,7 +204,7 @@ struct
               | _ => raise TransferSchemaNotApplicable)
 
       val updatedConsequent = Pattern.applyMorphism consequentMap consequent
-      val csMap = Pattern.funUnion [sourceMap, consequentMap]
+      val csMap = Pattern.funUnion CSpace.sameTokens [sourceMap, consequentMap]
       val usedTokensC = FiniteSet.union usedTokens (Pattern.tokensOfConstruction updatedConsequent)
 
       val (targetMap, updatedTarget) =
@@ -191,8 +221,7 @@ struct
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs cstMap usedTokensCT antecedent
     in
       (preferentialFunUnion goalMap compositionMap,
-       InterCSpace.declareTransferSchema {name = name,
-                                          source = matchingSubConstruction,
+       InterCSpace.declareTransferSchema {source = matchingSubConstruction,
                                           target = updatedTarget,
                                           antecedent = updatedAntecedent,
                                           consequent = updatedConsequent})
@@ -261,8 +290,9 @@ struct
     end handle Pattern.IllDefined => raise TransferSchemaNotApplicable
 *)
 
-  fun applyTransferSchemaForGoal st tsch goal =
-    let val (stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tsch goal
+  fun applyTransferSchemaForGoal st tschData goal =
+    let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} = tschData
+        val (stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
 
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism stateRenaming) patternComps
@@ -272,8 +302,13 @@ struct
         val goals = State.goalsOf st
         val updatedGoals = #antecedent instantiatedTSchema @ map (Pattern.applyPartialMorphism stateRenaming) (List.filter (fn x => not (Pattern.same goal x)) goals)
 
+        val instantiatedTSchemaData = {name = name,
+                                        sourceConSpecN = sourceConSpecN,
+                                        targetConSpecN = targetConSpecN,
+                                        interConSpecN = interConSpecN,
+                                        tSchema = instantiatedTSchema}
         val transferProof = State.transferProofOf st
-        val updatedTransferProof = TransferProof.attachTSchemaAt instantiatedTSchema goal transferProof
+        val updatedTransferProof = TransferProof.attachTSchemaAt instantiatedTSchemaData goal transferProof
 
         val updatedState = State.applyPartialMorphismToProof stateRenaming
                               (State.updateTransferProof updatedTransferProof
@@ -297,20 +332,20 @@ struct
     in State.updateTransferProof (updateTransferProof dump) stateWithUpdatedGoals
     end
 
-  fun applyTransferSchema st tsch =
+  fun applyTransferSchema st tschData =
     let val newSt = idempotencyOnGoals st
         val ct = State.constructionOf st
-      (*)  fun tac1 g = (Seq.single (applyTransferSchemaAsInferenceSchemaForGoal newSt tsch g)) handle TransferSchemaNotApplicable => Seq.empty
-        fun tac2 g = (Seq.single (applyTransferSchemaForGoal newSt tsch g)) handle TransferSchemaNotApplicable => Seq.empty*)
-        fun tac3 g = (*)(applyTransferSchemaAsInferenceSchemaForGoal newSt tsch g)
-                      handle TransferSchemaNotApplicable =>*) applyTransferSchemaForGoal newSt tsch g
+      (*)  fun tac1 g = (Seq.single (applyTransferSchemaAsInferenceSchemaForGoal newSt tschData g)) handle TransferSchemaNotApplicable => Seq.empty
+        fun tac2 g = (Seq.single (applyTransferSchemaForGoal newSt tschData g)) handle TransferSchemaNotApplicable => Seq.empty*)
+        fun tac3 g = (*)(applyTransferSchemaAsInferenceSchemaForGoal newSt tschData g)
+                      handle TransferSchemaNotApplicable =>*) applyTransferSchemaForGoal newSt tschData g
         fun ac [] = Seq.empty
           | ac (g::gs) = Seq.cons (tac3 g) (ac gs) handle TransferSchemaNotApplicable => ac gs
         (*)  | ac (g::gs) = (Seq.append (Seq.append (tac1 g) (tac2 g)) (ac gs))*)
     in ac (State.goalsOf newSt)
     end
 
-  fun applyInferenceSchema st isch =
+  fun applyInferenceSchema st ischData =
     let val newSt = idempotencyOnGoals st
         val ct = State.constructionOf newSt
         val T = #typeSystem (State.targetTypeSystemOf newSt)
@@ -318,7 +353,7 @@ struct
         val pcts = List.maps Composition.resultingConstructions (State.patternCompsOf newSt)
         fun appToTargetConstructions [] _ = Seq.empty
           | appToTargetConstructions (h::L) g =
-              (Seq.single (applyInferenceSchemaForGoal newSt T idT h isch g))
+              (Seq.single (applyInferenceSchemaForGoal newSt T idT h ischData g))
                 handle InferenceSchemaNotApplicable => appToTargetConstructions L g
         fun ac [] = Seq.empty
           | ac (g::gs) =
@@ -362,10 +397,9 @@ struct
       handle Nope => false
 
 
-(* every element of goals should be of the form ([vi1,...,vin],[vj1,...,vjm],R)*)
 fun structureTransfer unistructured targetPattOption st =
   let val ignI = Heuristic.ignoreRelaxed 10 199
-      val ignT = Heuristic.ignore 15 19 45 unistructured
+      val ignT = Heuristic.ignore 15 199 45 unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
                       SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
@@ -374,10 +408,7 @@ fun structureTransfer unistructured targetPattOption st =
                       SOME tpt => not (matchesTarget targetTypeSystem tpt x) orelse Heuristic.forgetRelaxed (x,L)
                     | NONE => Heuristic.forgetRelaxed (x,L)
       val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT
-      val tac' = Search.depthFirstSortIgnoreForget singleStepInference Heuristic.transferProofMain ignI Heuristic.forgetRelaxed
-      val rawResults = tac st
-      (*val rawResults = Seq.THEN (tac,tac') st*)
-  in rawResults (*Seq.sort (Seq.take 100 rawResults) Heuristic.transferProofMultStrengths*)
+  in tac st
   end
 
   fun v2t t =
@@ -444,4 +475,48 @@ fun structureTransfer unistructured targetPattOption st =
               NONE => structureTransfer unistructured st
             | SOME targetPattern => targetedTransfer targetPattern st)*)
 
+  fun initState sCSD tCSD iCSD KB ct goal =
+    let val tTS = #typeSystem (#typeSystemData tCSD)
+        val targetTokens = FiniteSet.filter
+                               (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty tTS))
+                               (Construction.leavesOfConstruction goal);
+    in State.make {sourceConSpecData = sCSD,
+                   targetConSpecData = tCSD,
+                   interConSpecData = iCSD,
+                   transferProof = TransferProof.ofPattern goal,
+                   construction = ct,
+                   originalGoal = goal,
+                   goals = [goal],
+                   compositions = map Composition.makePlaceholderComposition targetTokens,
+                   knowledge = Knowledge.filterForISpace (#name iCSD) KB}
+    end
+
+  fun applyTransfer sCSD tCSD iCSD KB ct goal =
+      let val st = initState sCSD tCSD iCSD KB ct goal
+          val stateSeq = structureTransfer false NONE st;
+          fun getStructureGraph st =
+              List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
+          fun makeDiagnostic goal =
+              let val str = Construction.toString goal;
+                  val toks = FiniteSet.listOf
+                                 (Construction.tokensOfConstruction goal);
+                  fun hexDigit c = Char.contains "0123456789ABCDEFabcdef" c;
+                  fun couldBeId [] = false
+                    | couldBeId [c] = hexDigit c
+                    | couldBeId (c::cs) = if c = #"-" orelse hexDigit c
+                                          then List.all hexDigit cs
+                                          else false;
+                  fun asId s = if couldBeId (String.explode s) then SOME s else NONE;
+                  val ids = List.mapPartial (asId o CSpace.nameOfToken) toks;
+              in Diagnostic.create
+                     Diagnostic.ERROR
+                     ("Transfer failed due to open goal: " ^ str)
+                     ids
+              end;
+          val firstState = Seq.hd stateSeq;
+          val goals = State.goalsOf firstState;
+      in case goals of
+             [] => Result.ok (getStructureGraph firstState)
+           | _ => Result.error (List.map makeDiagnostic goals)
+      end
 end;

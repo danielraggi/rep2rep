@@ -22,6 +22,7 @@ sig
     val flip : ('a * 'b) -> ('b * 'a);
     val curry: ('a * 'b -> 'c) -> 'a -> 'b -> 'c
     val uncurry: ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+    val timeFn: string -> (unit -> 'a) -> 'a;
 end;
 
 
@@ -71,6 +72,12 @@ fun curry f a b = f (a, b);
 
 fun uncurry f (a, b) = f a b;
 
+fun timeFn name f =
+    let val t = Timer.startRealTimer ();
+        val result = f ();
+        val () = print ("Time for " ^ name ^ ": " ^ (Time.fmt 6 (Timer.checkRealTimer t)) ^ "s\n");
+    in result end;
+
 end;
 
 open Rep2RepLib
@@ -87,6 +94,7 @@ sig
 
     val intersperse : 'a -> 'a list -> 'a list;
 
+    val upTo : int -> int list;
     val enumerate : 'a list -> (int * 'a) list;
     val enumerateFrom : int -> 'a list -> (int * 'a) list;
 
@@ -158,7 +166,7 @@ fun split (xs, i) =
 
 fun inout lst =
     let fun loop ans _ [] = List.rev ans
-          | loop ans ys (x::xs) = loop ((x, (List.rev ys)@xs)::ans) (x::ys) xs;
+          | loop ans ys (x::xs) = loop ((x, List.revAppend (ys, xs))::ans) (x::ys) xs;
     in loop [] [] lst end;
 
 fun mergesort cmp [] = []
@@ -195,6 +203,11 @@ fun enumerateFrom start list =
     end;
 
 fun enumerate xs = enumerateFrom 0 xs;
+
+fun upTo n =
+    let fun f 0 xs = xs
+          | f n xs = f (n-1) ((n-1)::xs);
+    in f n [] end;
 
 fun filterOption xs = mapPartial (fn x => x) xs;
 
@@ -449,10 +462,11 @@ sig
     include TEXT_IO;
 
     val lookaheadN : (instream *  int) -> string;
+    val inputLines: instream -> string list;
 
 end;
 
-structure TextIO :> TEXT_IO =
+structure TextIO : TEXT_IO =
 struct
 
 open TextIO;
@@ -465,5 +479,32 @@ fun lookaheadN (istr, count) =
     in
         lookahead
     end;
+
+fun inputLines istr =
+    let fun getln istr' = Option.map (fn l => (l, istr')) (inputLine  istr');
+    in List.unfold getln istr end;
+
+end;
+
+
+
+signature REAL =
+sig
+    include REAL;
+
+    val roundDecimal: real -> int -> real;
+end;
+
+structure Real : REAL =
+struct
+
+open Real;
+
+fun roundDecimal n p =
+    let fun e res 0 = res
+          | e res p = e (res * 10.0) ((Int.-)(p, 1));
+        fun up x = x * (e 1.0 p);
+        fun down x = x / (e 1.0 p);
+    in (down o realRound o up) n end;
 
 end;

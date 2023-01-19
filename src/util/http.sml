@@ -240,8 +240,7 @@ fun send_http sock vec =
     end;
 
 fun recvVecNB (sock, chunk_size) =
-    let val () = print ("RECV_NB\n");
-        val ready = Socket.select {
+    let val ready = Socket.select {
                 rds = [Socket.sockDesc sock],
                 wrs = [],
                 exs = [],
@@ -360,6 +359,7 @@ fun listen addr callback =
                    ^ "\n");
         fun forever f = (f() handle e => (); forever f);
         val sock = INetSock.TCP.socket ();
+        val () = Socket.Ctl.setREUSEADDR (sock, true);
         val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 512);
         fun cleanup () =

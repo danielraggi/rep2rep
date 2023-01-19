@@ -10,9 +10,9 @@ import "server.server";
 *)
 Logging.enable ();
 
-fun runServer addr files =
+fun runServer addr transferMap files =
     let val rpc_service = Rpc.create addr;
-        val endpoints = Server.make files;
+        val endpoints = Server.make files transferMap;
         val _ = print "Starting RPC server...\n";
     in Rpc.serve rpc_service endpoints end;
 
@@ -31,7 +31,7 @@ fun filesMatchingPrefix dir prefix =
     handle OS.SysErr (a, b) => (raise OS.SysErr (a, b));
 
 exception BadArguments
-datatype args = ServerMode of ((string * int) * string list)
+datatype args = ServerMode of ((string * int) * string list * (string * string * string) list)
               | DocumentMode of string
 fun parseArgs () =
   let val args = CommandLine.arguments ();
@@ -39,7 +39,11 @@ fun parseArgs () =
           (case args of
                ("--server-address"::address::"--server-port"::port::files)
                => (case Int.fromString port of
-                       SOME port => ServerMode ((address, port), files)
+                       SOME port =>
+                       (case files of
+                            ("--transfer-map"::mapfile::files) =>
+                            ServerMode ((address, port), files, Server.readTransferMap mapfile)
+                          | _ => ServerMode((address, port), files, []))
                      | NONE => raise BadArguments)
              | [documentName] => DocumentMode documentName
              | _ => raise BadArguments)
@@ -54,6 +58,6 @@ fun main () =
                                ^ version ^ "\n");*)
   in case parseArgs () of
          DocumentMode documentName => (Document.read documentName; ())
-       | ServerMode (addr, files) => (Logging.write (List.toString (fn s => s) files);
-                                      runServer addr files)
+       | ServerMode (addr, files, transferMap) => (Logging.write (List.toString (fn s => s) files);
+                                      runServer addr transferMap files)
   end
