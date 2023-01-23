@@ -1,5 +1,4 @@
 import "core.pattern";
-import "core.relation";
 
 signature INTERCSPACE =
 sig
@@ -25,6 +24,9 @@ sig
                                target : Pattern.construction,
                                antecedent : Pattern.construction list,
                                consequent : Pattern.construction} -> tSchema;
+
+  val inverse : tSchema -> tSchema;
+  val inverseData : tSchemaData -> tSchemaData;
 end;
 
 structure InterCSpace : INTERCSPACE =
@@ -48,9 +50,9 @@ struct
                            List.list_rpc Pattern.construction_rpc,
                            Pattern.construction_rpc))
                      (fn (s, t, rs, r) => {source = s,
-                                              target = t,
-                                              antecedent = rs,
-                                              consequent = r})
+                                            target = t,
+                                            antecedent = rs,
+                                            consequent = r})
                      (fn {source = s,
                           target = t,
                           antecedent = rs,
@@ -83,5 +85,11 @@ struct
   fun nameOf {name,...} = name;
 
   fun declareTransferSchema x = x;
+
+  fun inverse {source,target,antecedent,consequent} =
+    {source = target, target = source, antecedent = antecedent, consequent = consequent}
+  fun inverseData {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} =
+    {name = name, sourceConSpecN = targetConSpecN, targetConSpecN = sourceConSpecN, interConSpecN = interConSpecN, tSchema = inverse tSchema}
+
 
 end;

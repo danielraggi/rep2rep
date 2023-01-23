@@ -193,8 +193,10 @@ sig
   val DETERM: ('a -> 'b seq) -> 'a -> 'b seq
   (*added by draggi*)
   val insert : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
+  val insertNoEQUAL : 'a -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val sort : 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertMany : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
+  val insertManyNoEQUAL : 'a seq -> 'a seq -> ('a * 'a -> order) -> 'a seq
   val insertNoRepetition : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
   val insertNoRepetitionLimited : 'a -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> int -> 'a seq
   val insertManyNoRepetition : 'a seq -> 'a seq -> ('a * 'a -> order) -> ('a * 'a -> bool) -> 'a seq
@@ -453,6 +455,14 @@ fun insert x xq f =
       NONE => SOME (x,empty)
     | SOME (x',q) => if f(x,x') = GREATER then SOME (x',insert x q f) else SOME (x,xq));
 
+fun insertNoEQUAL x xq f =
+  make (fn () =>
+    case pull xq of
+      NONE => SOME (x,empty)
+    | SOME (x',q) => (case f(x,x') of GREATER => SOME (x',insert x q f)
+                                    | LESS => SOME (x,xq)
+                                    | EQUAL => SOME (x',q)));
+
 fun sort xq f =
   case pull xq of
     NONE => empty
@@ -486,6 +496,11 @@ fun insertMany xq yq f =
   (case pull xq of
     NONE => yq
   | SOME (x,q) => insert x (insertMany q yq f) f);
+
+fun insertManyNoEQUAL xq yq f =
+  (case pull xq of
+    NONE => yq
+  | SOME (x,q) => insertNoEQUAL x (insertManyNoEQUAL q yq f) f);
 
 fun insertManyNoRepetition xq yq f eq =
   (case pull xq of

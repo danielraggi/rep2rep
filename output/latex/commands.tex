@@ -41,55 +41,12 @@
 
 %%% Caligraphic fonts packages
 \usepackage[scr=boondox]{mathalfa}
-%\usepackage[mathscr]{euscript}
-%\usepackage{mathrsfs}
-%\usepackage[scr=boondoxo]{mathalfa}
-%\usepackage[scr]{rsfso}
 
-%\usepackage{mnotes}
-%\newcommenter{\anote}{Aaron}{green!30}
-%\newcommenter{\dnote}{Daniel}{blue!20}
-%\newcommenter{\mnote}{Mateja}{orange!20}
-%\newcommenter{\gnote}{Gem}{purple!20}
-%\newcommenter{\gnotex}{Gem*}{purple!20}
-%\newcommenter{\remark}{Remark}{white}
-
-%%%% commands for printing %%%
-
-%\newcommenter{\anote}{Aaron}{white}
-%\newcommenter{\dnote}{Daniel}{white}
-%\newcommenter{\mnote}{Mateja}{white}
-%\newcommenter{\gnote}{Gem}{white}
-%\newcommenter{\gnotex}{Gem*}{white}
-%\newcommenter{\remark}{Remark}{white}
-
-%%% commands omitted %%%
-
-%\newcommand{\anote}[1]{}
-%\newcommand{\dnote}[1]{}
-%\newcommand{\mnote}[1]{}
-%\newcommand{\gnote}[1]{}
-%\newcommand{\gnotex}[1]{}
-%\newcommand{\remark}[1]{}
-
+\usepackage{alltt}
 
 \newcommand{\gcu}[1]{\textcolor[rgb]{1.00,0.00,0.00}{#1}} %update
 \newcommand{\gcn}[1]{\textcolor[rgb]{0.50,0.00,1.00}{#1}}  %query is this necessary
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% UNCOMMENT if you want to switch off (remove)  notes/comments
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\renewcommand{\anote}[1]{}
-%\renewcommand{\dnote}[1]{}
-%\renewcommand{\mnote}[1]{}
-%\renewcommand{\gnote}[1]{}
-%\renewcommand{\gnotex}[1]{}
-
-%\newcommand{\anote}[1]{}
-%\newcommand{\dnote}[1]{\textcolor[rgb]{0.54,0.17,0.89}{#1}}
-%\newcommand{\mnote}[1]{}
-%\newcommand{\gnote}[1]{\textcolor[rgb]{0.00,0.07,1.00}{#1}}
-%\newcommand{\gnotex}[1]{}
 
 %\theoremstyle{definition}
 %\newtheorem{definition}{Definition}
@@ -492,7 +449,7 @@
 		(vn) edge (u)
 		(u) edge (v)
 		;
-		
+
 		\node[term = $t'$, right = 6cm of v] (v2) {$v'$};
 		\node[above left = -0.2cm and 1cm of v2] {$#2$};
 		\node[omitted, below = of v2] (u2) {} ;
@@ -504,7 +461,7 @@
 		(v2n) edge (u2)
 		(u2) edge (v2)
 		;
-		
+
 		%\node at (3.5,7) {$(t,t') \in R$};
 		%\node at (3.5,0) {$(t_1,\ldots,t_n,t_1'\ldots,t_m') \in \mathcal{R}$};
 		\end{tikzpicture}

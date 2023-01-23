@@ -1,0 +1,253 @@
+import metaLogic
+
+typeSystem stringT =
+    types  oB, cB, B, _:nonBChar, char, empty, _:string
+    order oB < B, cB < B, B < char, nonBChar < char, empty < string
+
+conSpec string:stringT =
+    constructors
+        cons : [char, string] -> string
+
+typeSystem btreeT =
+    types _:leaf, _:btree, _:nonBChar
+    order nonBChar < leaf, leaf < btree
+
+conSpec btree:btreeT =
+    constructors
+        branch : [btree, btree] -> btree
+
+typeSystem nat8T =
+    types 0, 1, 2, 3, 4, 5, 6, 7, 8, nat
+    order 0 < nat, 1 < nat, 2 < nat, 3 < nat, 4 < nat, 5 < nat, 6 < nat, 7 < nat, 8 < nat
+
+typeSystem interStringBTreeT =
+    imports stringT, btreeT, nat8T, metaLogicT
+
+conSpec interStringBTree:interStringBTreeT =
+    constructors
+        IL : [char,btree] -> metaBool,
+        L : [nat,string,btree] -> metaBool
+
+typeSystem interBTreeBTreeT =
+    imports btreeT, nat8T, metaLogicT
+
+conSpec interBTreeBTree:interBTreeBTreeT =
+    constructors
+        L : [nat,btree,btree] -> metaBool
+
+
+
+tSchema oBL0:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree <- branch[t1':btree, t2':btree]
+    antecedent :metaTrue <- L[x:0,t2:string,t1':btree],
+               :metaTrue <- L[x:1,t2:string,t2':btree]
+    consequent :metaTrue <- L[x:0,t:string,t':btree]
+    strength 1
+
+tSchema oBL1:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:string,t':btree]
+    consequent :metaTrue <- L[x:1,t:string,t':btree]
+    strength 0
+
+tSchema oBL2:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:3,t2:string,t':btree]
+    consequent :metaTrue <- L[x:2,t:string,t':btree]
+    strength 0
+
+tSchema oBL3:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:4,t2:string,t':btree]
+    consequent :metaTrue <- L[x:3,t:string,t':btree]
+    strength 0
+
+tSchema oBL4:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:5,t2:string,t':btree]
+    consequent :metaTrue <- L[x:4,t:string,t':btree]
+    strength 0
+
+tSchema oBL5:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:6,t2:string,t':btree]
+    consequent :metaTrue <- L[x:5,t:string,t':btree]
+    strength 0
+
+tSchema oBL6:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:7,t2:string,t':btree]
+    consequent :metaTrue <- L[x:6,t:string,t':btree]
+    strength 0
+
+tSchema oBL7:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:oB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:8,t2:string,t':btree]
+    consequent :metaTrue <- L[x:7,t:string,t':btree]
+    strength 0
+
+
+tSchema cBL0:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- L[x:0,t:string,t':dummy:leaf]
+    strength 1
+
+tSchema cBL1:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:0,t2:string,t':btree]
+    consequent :metaTrue <- L[x:1,t:string,t':btree]
+    strength 0
+
+tSchema cBL2:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:string,t':btree]
+    consequent :metaTrue <- L[x:2,t:string,t':btree]
+    strength 0
+
+tSchema cBL3:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:string,t':btree]
+    consequent :metaTrue <- L[x:3,t:string,t':btree]
+    strength 0
+
+tSchema cBL4:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:3,t2:string,t':btree]
+    consequent :metaTrue <- L[x:4,t:string,t':btree]
+    strength 0
+
+tSchema cBL5:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:4,t2:string,t':btree]
+    consequent :metaTrue <- L[x:5,t:string,t':btree]
+    strength 0
+
+tSchema cBL6:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:5,t2:string,t':btree]
+    consequent :metaTrue <- L[x:6,t:string,t':btree]
+    strength 0
+
+tSchema cBL7:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:6,t2:string,t':btree]
+    consequent :metaTrue <- L[x:7,t:string,t':btree]
+    strength 0
+
+tSchema cBL8:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:cB, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:7,t2:string,t':btree]
+    consequent :metaTrue <- L[x:8,t:string,t':btree]
+    strength 0
+
+
+tSchema nBL0:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree <- branch[t1':leaf, t2':btree]
+    antecedent :metaTrue <- IL[t1:nonBChar,t1':leaf],
+               :metaTrue <- L[x:0,t2:string,t2':btree]
+    consequent :metaTrue <- L[x:0,t:string,t':btree]
+    strength 1
+
+tSchema nBL1:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:1,t2:string,t':btree]
+    consequent :metaTrue <- L[x:1,t:string,t':btree]
+    strength 0
+
+tSchema nBL2:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:2,t2:string,t':btree]
+    consequent :metaTrue <- L[x:2,t:string,t':btree]
+    strength 0
+
+tSchema nBL3:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:3,t2:string,t':btree]
+    consequent :metaTrue <- L[x:3,t:string,t':btree]
+    strength 0
+
+tSchema nBL4:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:4,t2:string,t':btree]
+    consequent :metaTrue <- L[x:4,t:string,t':btree]
+    strength 0
+
+tSchema nBL5:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:5,t2:string,t':btree]
+    consequent :metaTrue <- L[x:5,t:string,t':btree]
+    strength 0
+
+tSchema nBL6:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:6,t2:string,t':btree]
+    consequent :metaTrue <- L[x:6,t:string,t':btree]
+    strength 0
+
+tSchema nBL7:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:7,t2:string,t':btree]
+    consequent :metaTrue <- L[x:7,t:string,t':btree]
+    strength 0
+
+tSchema nBL8:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:string]
+    target t':btree
+    antecedent :metaTrue <- L[x:8,t2:string,t':btree]
+    consequent :metaTrue <- L[x:8,t:string,t':btree]
+    strength 0
+
+
+comment singleton:(string,btree,interStringBTree) =
+    source t:string <- cons[t1:nonBChar, t2:empty]
+    target t':leaf
+    antecedent :metaTrue <- IL[t1:nonBChar,t':leaf]
+    consequent :metaTrue <- L[x:0,t:string,t':leaf]
+    strength 2
+
+tSchema leafL0:(string,btree,interStringBTree) =
+    source t:?x:nonBChar
+    target t':?x:nonBChar
+    antecedent
+    consequent :metaTrue <- IL[t:?x:nonBChar,t':?x:nonBChar]
+    strength 1
+
+
+tSchema empty:(string,btree,interStringBTree) =
+    source t:empty
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- L[x:0,t:empty,t':dummy:leaf]
+    strength 1
+
+
+construction string1:string = liftString a(((b)c)d)
+construction string2:string = liftString ()((ab))
+construction string3:string = liftString a(bc(def))g
+construction string4:string = liftString a(bc())d

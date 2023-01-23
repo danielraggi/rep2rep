@@ -29,17 +29,24 @@ fun similarGoalsAndComps (st,st') =
       val gs' = State.goalsOf st'
       val C = State.patternCompsOf st
       val C' = State.patternCompsOf st'
-  in List.isPermutationOf (uncurry Pattern.similar) gs gs' andalso
+  in List.isPermutationOf (#3 o (uncurry Pattern.similar)) gs gs' andalso
     List.isPermutationOf (uncurry Composition.pseudoSimilar) C C'
   end
 
 fun similarTransferProofs (st,st') = TransferProof.similar (State.transferProofOf st) (State.transferProofOf st')
 
+fun similarStates (st,st') =
+  let val gs = State.goalsOf st
+      val gs' = State.goalsOf st'
+      val C = List.maps Composition.resultingConstructions (State.patternCompsOf st)
+      val C' = List.maps Composition.resultingConstructions (State.patternCompsOf st')
+  in Pattern.similarGraphs (gs @ C) (gs' @ C')
+  end
+
 fun ignore ngoals nresults csize unistructured (st,L) =
   List.length (State.goalsOf st) > ngoals orelse
   length L > nresults orelse
   List.sumMapInt Composition.size (State.patternCompsOf st) > csize orelse
-  List.exists (fn x => similarTransferProofs (x,st)) L orelse
   (unistructured andalso
     (length (State.patternCompsOf st) > 1 orelse
       not (Composition.unistructurable (#typeSystem (State.targetTypeSystemOf st)) (hd (State.patternCompsOf st)))))
@@ -51,10 +58,10 @@ fun ignoreRelaxed ngoals nresults (st,L) =
 
 fun forgetStrict (st,L) =
   List.length (State.goalsOf st) > 0 orelse
-  List.exists (fn x => similarGoalsAndComps (x,st)) L
+  List.exists (fn x => similarStates (x,st)) L
 
 fun forgetRelaxed (st,L) =
-  List.exists (fn x => similarGoalsAndComps (x,st)) L
+  List.exists (fn x => similarStates (x,st)) L
 
 
 fun largerComposition (st,st') =
@@ -144,8 +151,10 @@ fun transferProofMain (st,st') =
     val gsn' = length (State.goalsOf st')
     val strength = Knowledge.strengthOf (State.knowledgeOf st)
   in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-   then Real.compare (scoreMain strength st',scoreMain strength st)
-   else Int.compare (gsn,gsn')
+     then (case Real.compare (scoreMain strength st',scoreMain strength st) of
+              EQUAL => if similarStates (st,st') then EQUAL else LESS
+            | X => X)
+     else Int.compare (gsn,gsn')
   end
 
 end
