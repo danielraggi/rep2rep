@@ -50,7 +50,9 @@ conSpec interBTreeBayes:interBTreeBayesT =
         EQN : [btree,probEqn] -> metaBool,
         SYS : [btree,probSys] -> metaBool,
         PROB : [btree,probSys] -> metaBool,
-        EVT : [btree,events] -> metaBool,
+        EVTS : [btree,events] -> metaBool,
+        EVT : [btree,event] -> metaBool,
+        COND : [btree,condEvent] -> metaBool,
         BIN : [btree,bin] -> metaBool,
         EQREAL : [btree,numExp] -> metaBool,
         REAL : [btree,numExp] -> metaBool,
@@ -59,11 +61,25 @@ conSpec interBTreeBayes:interBTreeBayesT =
         SAME : [nonBChar,nonBChar] -> metaBool
 
 tSchema prob:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,t2:btree <- branch[t21:btree,t22:btree <- branch[t221:=:nonBChar,t222:-:nonBChar]]]
+    source t:btree <- branch[t1:btree,t2:btree <- branch[t21:btree,t22:btree <- branch[t221:=:nonBChar,t222:?:nonBChar]]]
     target t':problem <- makeProblem[t1':probSys,t2':events]
     antecedent :metaTrue <- SYS[t1:btree,t1':probSys],
-               :metaTrue <- EVT[t21:btree,t2':events]
+               :metaTrue <- EVTS[t21:btree,t2':events]
     consequent :metaTrue <- PROB[t:btree,t':problem]
+    strength 1
+
+tSchema evts1:(btree,bayesPlus,interBTreeBayes) =
+    source t:btree
+    target t':condEvent
+    antecedent :metaTrue <- COND[t:btree,t':condEvent]
+    consequent :metaTrue <- EVTS[t:btree,t':condEvent]
+    strength 2
+
+tSchema evts1:(btree,bayesPlus,interBTreeBayes) =
+    source t:btree
+    target t':event
+    antecedent :metaTrue <- EVT[t:btree,t':event]
+    consequent :metaTrue <- EVTS[t:btree,t':event]
     strength 1
 
 tSchema sysEqn:(btree,bayesPlus,interBTreeBayes) =
@@ -97,20 +113,12 @@ tSchema dummsEqreal:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- EQREAL[t:btree,t':numExp]
     strength 1
 
-tSchema dummsEvent:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,
-                             t2:dummy:leaf]
-    target t':events
-    antecedent :metaTrue <- EVT[t1:btree,t':events]
-    consequent :metaTrue <- EVT[t:btree,t':events]
-    strength 1
-
 tSchema eventArbitrary:(btree,bayesPlus,interBTreeBayes) =
     source t:btree
     target t':event <- eventFromString[t1':string]
     antecedent :metaTrue <- COPY[t:btree,t1':string]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 1
+    strength 0
 
 tSchema copybranch:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:nonBChar,t2:btree]
@@ -118,7 +126,7 @@ tSchema copybranch:(btree,bayesPlus,interBTreeBayes) =
     antecedent :metaTrue <- SAME[t1:nonBChar,t1':nonBChar],
                :metaTrue <- COPY[t2:btree,t2':string]
     consequent :metaTrue <- COPY[t:btree,t':string]
-    strength 2
+    strength 1
 
 tSchema copyEmpty:(btree,bayesPlus,interBTreeBayes) =
     source t:dummy:leaf
@@ -132,7 +140,7 @@ tSchema copyNonBChar:(btree,bayesPlus,interBTreeBayes) =
     target t':string <- cons[t1':?x:nonBChar,t2':empty]
     antecedent
     consequent :metaTrue <- COPY[t:?x:nonBChar,t':string]
-    strength 2
+    strength 1
 
 tSchema sameNonBChar:(btree,bayesPlus,interBTreeBayes) =
     source t:?x:nonBChar
@@ -154,7 +162,7 @@ tSchema eqn:(btree,bayesPlus,interBTreeBayes) =
                                                 t22:btree <- branch[t221:btree,
                                                                     t222:btree]]]
     target t':probEqn <- makeEqn[t1':events, t2':numExp]
-    antecedent :metaTrue <- EVT[t221:btree,t1':events],
+    antecedent :metaTrue <- EVTS[t221:btree,t1':events],
                :metaTrue <- EQREAL[t222:btree,t2':numExp]
     consequent :metaTrue <- EQN[t:btree,t':probEqn]
     strength 2
@@ -164,15 +172,7 @@ tSchema evtX:(btree,bayesPlus,interBTreeBayes) =
     target t':?v:nonBChar
     antecedent
     consequent :metaTrue <- EVT[t:?v:nonBChar,t':?v:nonBChar]
-    strength 2
-
-tSchema evt0:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,
-                             t2:dummy:leaf]
-    target t':event
-    antecedent :metaTrue <- EVT[t1:btree,t':event]
-    consequent :metaTrue <- EVT[t:btree,t':event]
-    strength -1
+    strength 3
 
 tSchema binAND:(btree,bayesPlus,interBTreeBayes) =
     source t:&:nonBChar
@@ -188,7 +188,7 @@ tSchema binOR:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- BIN[t:U:nonBChar,t':union]
     strength 1
 
-tSchema evt1:(btree,bayesPlus,interBTreeBayes) =
+tSchema evtBin:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
                              t2:btree <- branch[t21:btree,
                                                 t22:btree]]
@@ -197,26 +197,23 @@ tSchema evt1:(btree,bayesPlus,interBTreeBayes) =
                :metaTrue <- BIN[t21:btree,t2':bin],
                :metaTrue <- EVT[t22:btree,t3':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 1
+    strength 3
 
-tSchema evt2:(btree,bayesPlus,interBTreeBayes) =
+tSchema evtComp:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:-:nonBChar,t2:btree]
     target t':event <- complement[t1':event]
     antecedent :metaTrue <- EVT[t2:btree,t1':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 1
+    strength 3
 
-tSchema evt3:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,
-                             t2:btree <- branch[t21:|:nonBChar,
-                                                t22:btree]]
+tSchema evtCond:(btree,bayesPlus,interBTreeBayes) =
+    source t:btree <- branch[t1:btree,t2:btree]
     target t':condEvent <- makeCond[t1':event, t2':event]
     antecedent :metaTrue <- EVT[t1:btree,t1':event],
-               :metaTrue <- EVT[t22:btree,t2':event]
-    consequent :metaTrue <- EVT[t:btree,t':condEvent]
-    strength 1
+               :metaTrue <- EVT[t2:btree,t2':event]
+    consequent :metaTrue <- COND[t:btree,t':condEvent]
+    strength 5
 
-comment TODO: real var
 
 tSchema real0:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:0:nonBChar,
@@ -392,136 +389,3 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
             antecedent
             consequent :metaTrue <- NAT[t:9:nonBChar,t':9]
             strength 1
-
-
-
-construction prEquation:string = liftString Pr(ab U c | d) = 0.21
-construction prSystem:string = liftString Pr(ab U c | d) = 0.21; Pr(d) = 0.6
-
-transfer
-    sourceConstruction prSystem
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- TREEIFY[t:Pr(ab U c | d) = 0.21; Pr(d) = 0.6:string,t':btree]
-    searchLimit 100
-    output test1
-    limit 1
-    save test1
-
-transfer
-    sourceConstruction test1
-    targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 100
-    output test2
-    save test2
-    limit 1
-
-transfer
-    sourceConstruction test2
-    targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SEMICOLON[v_{55}:btree,t':btree]
-    searchLimit 200
-    output test3
-    save test3
-    limit 1
-
-transfer
-    sourceConstruction test3
-    targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 100
-    output test4
-    save test4
-    limit 1
-
-transfer
-    sourceConstruction test4
-    targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SPACE[v_{53}:btree,t':btree]
-    searchLimit 200
-    output test5
-    save test5
-    limit 10
-
-transfer
-    sourceConstruction test5
-    targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{34}:btree,t':btree]
-    searchLimit 100
-    output test6
-    save test6
-    limit 1
-
-transfer
-    sourceConstruction test6
-    targetConSpec bayesPlus
-    interConSpec interBTreeBayes
-    goal :metaTrue <- SYS[v_{17}:btree,t':probSys]
-    searchLimit 100
-    output test7
-    save test7
-    limit 10
-
-
-construction string0:string = liftString Pr(a) = 0.21
-construction string1:string = liftString Pr(a U b) = 0.21
-construction string2:string = liftString Pr(((a U b) & c) | -d) = 0.21
-
-comment #transfer
-    sourceConstruction string6b
-    targetConSpec bayesPlus
-    interConSpec interBTreeBayes
-    goal :metaTrue <- EQN[v_{10}:btree,t':probEqn]
-    searchLimit 200
-    output string6c
-    limit 1
-    save string6c
-
-comment #transfer
-    sourceConstruction string2
-    targetConSpec btree
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0:free,t:Pr(((a U b) & c) | -d) = 0.21:string,t':btree]
-    searchLimit 200
-    output sss
-    limit 1
-    save sss
-
-comment #transfer
-    sourceConstruction sss
-    targetConSpec bayesPlus
-    interConSpec interBTreeBayes
-    goal :metaTrue <- EQN[v_{0}:btree,t':probEqn]
-    searchLimit 100
-    output sss1
-    limit 1
-    save sss1
-
-comment #transfer
-    sourceConstruction sss1
-    targetConSpec btree
-    interConSpec interBTreeBayes
-    goal :metaTrue <- EQN[v_{0}:btree,v_{37}:probEqn]
-    searchLimit 100
-    output sss2
-    limit 1
-    save sss2
-    inverse
-
-comment #transfer
-    sourceConstruction sss2
-    targetConSpec string
-    interConSpec interStringBTree
-    goal :metaTrue <- L[z:0:free,v_{1}:string,v_{1}:btree]
-    searchLimit 200
-    output sss3
-    limit 1
-    unistructured
-    save sss3
-    inverse

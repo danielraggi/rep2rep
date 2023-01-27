@@ -42,7 +42,8 @@ conSpec interBTreeBTree:interBTreeBTreeT =
         EQCHAR : [nonBChar,nonBChar] -> metaBool,
         SEMICOLON : [btree,btree] -> metaBool,
         SPACE : [btree,btree] -> metaBool,
-        SIMPLIFY : [btree,btree] -> metaBool
+        SIMPLIFY : [btree,btree] -> metaBool,
+        MID : [btree,btree] -> metaBool
 
 
 tSchema treeify:(string,btree,interStringBTree) =
@@ -178,13 +179,6 @@ tSchema tokeniseChar:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:?x:nonBChar,t':?x:nonBChar]
     strength 1
 
-comment tokeniseChar':(btree,btree,interBTreeBTree) =
-    source t:?v:nonBChar
-    target t':dummy:leaf
-    antecedent
-    consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:?v:nonBChar,t':dummy:leaf]
-    strength 1
-
 tSchema restart:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:?v:nonBChar,
                              t2:btree]
@@ -199,13 +193,13 @@ tSchema end:(btree,btree,interBTreeBTree) =
     target t':dummy:leaf
     antecedent
     consequent :metaTrue <- HEAD[z:?v:nonBChar,t:btree,t':dummy:leaf]
-    strength 2
+    strength 20
 
-tSchema copyhead:(btree,btree,interBTreeBTree) =
-    source t:nonBChar
-    target t':nonBChar
-    antecedent :metaTrue <- EQCHAR[t:nonBChar,t':nonBChar]
-    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:nonBChar,t':nonBChar]
+tSchema copyAtHead:(btree,btree,interBTreeBTree) =
+    source t:?v:nonBChar
+    target t':?v:nonBChar
+    antecedent
+    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:?v:nonBChar,t':?v:nonBChar]
     strength 2
 
 tSchema skipUntilTail:(btree,btree,interBTreeBTree) =
@@ -223,20 +217,13 @@ tSchema eqChars:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- EQCHAR[t:?x:nonBChar,t':?x:nonBChar]
     strength 1
 
-tSchema dumms0:(btree,btree,interBTreeBTree) =
-    source t:dummy:leaf
-    target t':dummy:leaf
-    antecedent
-    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:dummy:leaf,t':dummy:leaf]
-    strength 2
-
 
 tSchema dumms1:(btree,btree,interBTreeBTree) =
     source t:nonBChar
     target t':dummy:leaf
     antecedent
     consequent :metaTrue <- TAIL[z:?x:nonBChar,t:nonBChar,t':dummy:leaf]
-    strength 0
+    strength 1
 
 tSchema start:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
@@ -246,16 +233,6 @@ tSchema start:(btree,btree,interBTreeBTree) =
     antecedent :metaTrue <- HEAD[z:?x:nonBChar,t:btree,t1':btree],
                :metaTrue <- TAIL[z:?x:nonBChar,t2:btree,t2':btree]
     consequent :metaTrue <- TOKENISE[z:?x:nonBChar,t:btree,t':btree]
-    strength 1
-
-tSchema headNonBChar:(btree,btree,interBTreeBTree) =
-    source t:btree <- branch[t1:nonBChar,
-                             t2:btree]
-    target t':btree <- branch[t1':nonBChar,
-                              t2':btree]
-    antecedent :metaTrue <- EQCHAR[t1:nonBChar,t1':nonBChar],
-               :metaTrue <- HEAD[z:?x:nonBChar,t2:btree,t2':btree]
-    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:btree,t':btree]
     strength 1
 
 tSchema branchHead:(btree,btree,interBTreeBTree) =
@@ -282,6 +259,13 @@ tSchema spaceStart:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- SPACE[t:btree,t':btree]
     strength 1
 
+tSchema midStart:(btree,btree,interBTreeBTree) =
+    source t:btree
+    target t':btree
+    antecedent :metaTrue <- TOKENISE[z:|:nonBChar,t:btree,t':btree]
+    consequent :metaTrue <- MID[t:btree,t':btree]
+    strength 1
+
 
 
 tSchema simplifyDumms:(btree,btree,interBTreeBTree) =
@@ -290,7 +274,7 @@ tSchema simplifyDumms:(btree,btree,interBTreeBTree) =
     target t':btree
     antecedent :metaTrue <- SIMPLIFY[t1:btree,t':btree]
     consequent :metaTrue <- SIMPLIFY[t:btree,t':btree]
-    strength 2
+    strength 3
 
 tSchema simplifyBranch:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
@@ -300,7 +284,7 @@ tSchema simplifyBranch:(btree,btree,interBTreeBTree) =
     antecedent :metaTrue <- SIMPLIFY[t1:btree,t1':btree],
                :metaTrue <- SIMPLIFY[t2:btree,t2':btree]
     consequent :metaTrue <- SIMPLIFY[t:btree,t':btree]
-    strength 1
+    strength 2
 
 tSchema simplifyNonBChar:(btree,btree,interBTreeBTree) =
     source t:?x:nonBChar

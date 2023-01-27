@@ -1,0 +1,111 @@
+import bTreeBayes
+
+
+construction c:btree = v_{1}:btree <- branch[v_{0}:P:nonBChar, v_{3}:btree <- branch[v_{4}:r:nonBChar, v_{5}:btree <- branch[v_{7}:btree <- branch[v_{8}:a:nonBChar, v_{9}:btree <- branch[v_{10}:b:nonBChar, v_{12}:btree <- branch[v_{13}: :nonBChar, v_{14}:btree <- branch[v_{15}:U:nonBChar, v_{16}:btree <- branch[v_{17}: :nonBChar, v_{18}:btree <- branch[v_{19}:c:nonBChar, v_{20}:btree <- branch[v_{21}: :nonBChar, v_{22}:btree <- branch[v_{23}:|:nonBChar, v_{24}:btree <- branch[v_{25}: :nonBChar, v_{26}:btree <- branch[v_{2}:d:nonBChar, v_{27}:dummy:leaf]]]]]]]]]], v_{28}:btree <- branch[v_{6}:=:nonBChar, v_{29}:btree <- branch[v_{30}:0:nonBChar, v_{31}:btree <- branch[v_{32}:.:nonBChar, v_{33}:btree <- branch[v_{34}:2:nonBChar, v_{35}:btree <- branch[v_{36}:1:nonBChar, v_{37}:btree <- branch[v_{38}:;:nonBChar, v_{39}:btree <- branch[v_{40}:P:nonBChar, v_{41}:btree <- branch[v_{42}:r:nonBChar, v_{43}:btree <- branch[v_{49}:btree <- branch[v_{11}:d:nonBChar, v_{46}:dummy:leaf], v_{44}:btree <- branch[v_{45}:=:nonBChar, v_{47}:btree <- branch[v_{48}:0:nonBChar, v_{50}:btree <- branch[v_{51}:.:nonBChar, v_{52}:btree <- branch[v_{53}:6:nonBChar, v_{54}:dummy:leaf]]]]]]]]]]]]]]]]
+
+transfer
+    sourceConstruction c
+    targetConSpec bayesPlus
+    interConSpec interBTreeBayes
+    goal :metaTrue <- SYS[v_{1}:btree,t':probSys]
+    searchLimit 200
+    output testC
+    limit 10
+
+
+
+construction prEquation:string = liftString Pr(ab U c | d) = 0.21
+construction prSystem:string = liftString Pr(ab U c | d) = 0.21; Pr(d) = 0.6
+
+transfer
+    sourceConstruction prSystem
+    targetConSpec btree
+    interConSpec interStringBTree
+    goal :metaTrue <- TREEIFY[t:Pr(ab U c | d) = 0.21; Pr(d) = 0.6:string,t':btree]
+    searchLimit 100
+    output test1
+    limit 1
+    save test1
+    unistructured
+
+transfer
+    sourceConstruction test1
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 100
+    output test2
+    save test2
+    limit 1
+    unistructured
+
+transfer
+    sourceConstruction test2
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SEMICOLON[v_{55}:btree,t':btree]
+    searchLimit 100
+    output test3
+    save test3
+    limit 1
+    unistructured
+
+transfer
+    sourceConstruction test3
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test4
+    save test4
+    limit 1
+
+transfer
+    sourceConstruction test4
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SPACE[v_{2}:btree,t':btree]
+    searchLimit 100
+    output test5
+    save test5
+    limit 10
+
+transfer
+    sourceConstruction test5
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test6
+    save test6
+    limit 1
+
+transfer
+    sourceConstruction test6
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- MID[v_{3}:btree,t':btree]
+    searchLimit 100
+    output test7
+    save test7
+    limit 10
+
+transfer
+    sourceConstruction test7
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test8
+    save test8
+    limit 10
+
+transfer
+    sourceConstruction test8
+    targetConSpec bayesPlus
+    interConSpec interBTreeBayes
+    goal :metaTrue <- SYS[v_{3}:btree,t':probSys]
+    searchLimit 200
+    output test9
+    save test9
+    limit 10
