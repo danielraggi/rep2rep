@@ -359,7 +359,7 @@ struct
 
 
 fun structureTransfer searchLimit unistructured targetPattOption st =
-  let val maxNumGoals = 3
+  let val maxNumGoals = 10
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
       val maxCompSize = 200
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
