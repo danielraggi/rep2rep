@@ -157,7 +157,7 @@ struct
       fun partialFunComp1 f g x = (case g x of NONE => f x | SOME y => f y)
       fun partialFunComp2 f g x = (case g x of NONE => f x
                                              | SOME y => (case f y of NONE => SOME y
-                                                                            | SOME z => SOME z))
+                                                                    | SOME z => SOME z))
       fun funComp f g x = (case g x of NONE => NONE | SOME y => f y)
 
       fun referenced x =
@@ -413,9 +413,9 @@ struct
 
 
 fun structureTransfer searchLimit unistructured targetPattOption st =
-  let val maxNumGoals = case searchLimit of SOME x => Int.max(x div 4, 20) | NONE => 20
+  let val maxNumGoals = 3
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
-      val maxCompSize = 80
+      val maxCompSize = 200
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of

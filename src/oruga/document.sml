@@ -19,6 +19,7 @@ sig
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData
   val findConstructionWithName : documentContent -> string -> constructionData
   val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
+  val normaliseString : string -> string
 
   val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint
 
@@ -89,13 +90,49 @@ struct
         then ([],s,ws)
         else (case breakListOn s ws of (x,s',y) => (w::x,s',y))
 
-  fun parseToken s = case String.breakOn ":" (String.stripSpaces s) of
-                  (ts,_,tys) => CSpace.makeToken ts (Type.fromString tys)
-  fun parseCTyp s = case Parser.list Type.fromString (String.stripSpaces s) of
-                  (ty::tys) => (tys,ty)
-                | _ => raise ParseError ("bad constructor sig: " ^ s)
-  fun parseConstructor s = case String.breakOn ":" (String.stripSpaces s) of
-                        (cs,_,ctys) => CSpace.makeConstructor (cs, parseCTyp ctys)
+  fun ignoreUntil _ [] = []
+    | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
+
+  val standAloneChars = [#"(",#")",#"[",#"]",#"{",#"}",#"\"",#",",#";",#"="]
+
+  fun tokenise s =
+    let fun commentChar x = (x = #"#")
+        fun lineBreak x = (x = #"\n")
+        fun separator x = (x = #"\n" orelse x = #" ")
+        fun standAlone x = List.exists (fn y => y = x) standAloneChars
+        fun t [] = (true,[])
+          | t (x::xs) =
+            if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
+            else if separator x then (true, #2(t xs))
+            else if List.exists (fn y => y = x) standAloneChars then (true, str x :: #2(t xs))
+            else (case t xs of
+                    (true,L) => (false, str x :: L)
+                  | (false,r::rs) => (false, str x ^ r :: rs)
+                  | _ => raise ParseError "Completely unexpected error. Inform a developer!")
+        val (_,ts) = t (String.explode s)
+    in ts end;
+
+  fun deTokenise [] = ""
+    | deTokenise [s] = s
+    | deTokenise (s1::s2::L) =
+    if List.exists (fn y => str y = s1 orelse str y = s2) standAloneChars
+    then s1 ^ deTokenise (s2::L)
+    else s1 ^ " " ^ deTokenise (s2::L)
+
+  fun normaliseString s = if List.all (fn x => x = #" ") (String.explode s) then " " else (deTokenise o tokenise) s
+
+  fun parseTyp s = case String.breakOn ":" s of
+                      (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
+                    | _ => Type.fromString (normaliseString s)
+  fun parseToken s = case String.breakOn ":" s of
+                        (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
+                      | _ => raise ParseError ("no type for token: " ^ s)
+  fun parseCTyp s = case Parser.list parseTyp s of
+                      (ty::tys) => (tys,ty)
+                    | _ => raise ParseError ("bad constructor sig: " ^ s)
+  fun parseConstructor s = case String.breakOn ":" s of
+                              (cs,":",ctys) => CSpace.makeConstructor (normaliseString cs, parseCTyp ctys)
+                            | _ => raise ParseError ("no sig for constructor: " ^ s)
 
 
    fun findConstructorInConSpec s cspec =
@@ -103,9 +140,9 @@ struct
      handle Option => raise ParseError ("no constructor " ^ s ^ " in " ^ (#name cspec))
 
   fun parseTCPair s cspec =
-    case String.breakOn "<-" (String.stripSpaces s) of
+    case String.breakOn "<-"  s of
           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
-       |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec cfgs cspec}
+       |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
 
   fun parseConstruction cspec s =
     let fun c s' =
@@ -119,7 +156,7 @@ struct
                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
              in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
              end
-    in Construction.fixReferences (c (String.stripSpaces s))
+    in Construction.fixReferences (c s)
     end;
 
   val parseConstruction_rpc =
@@ -133,28 +170,6 @@ struct
                                        handle ParseError => NONE)
                           (findCSpec cspecName) );
 
-  fun ignoreUntil _ [] = []
-    | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
-
-  fun tokenise s =
-    let fun commentChar x = (x = #"#")
-        fun lineBreak x = (x = #"\n")
-        fun separator x = (x = #"\n" orelse x = #" ")
-        fun standAlone x = (x = #"(" orelse x = #")" orelse
-                            x = #"[" orelse x = #"]" orelse
-                            x = #"{" orelse x = #"}" orelse
-                            x = #"\"" orelse x = #"," orelse x = #"=")
-        fun t [] = (true,[])
-          | t (x::xs) =
-            if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
-            else if separator x then (true, #2(t xs))
-            else if standAlone x then (true, str x :: #2(t xs))
-            else (case t xs of
-                    (true,L) => (false, str x :: L)
-                  | (false,r::rs) => (false, str x ^ r :: rs)
-                  | _ => raise ParseError "Completely unexpected error. Inform a developer!")
-        val (_,ts) = t (String.explode s)
-    in ts end;
 
   fun removeOuterBrackets wL =
     let fun removeOuterJunk (L,L') =
@@ -450,7 +465,7 @@ struct
                               raise ParseError ("no " ^ k ^ " in iSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (String.concat (removeOuterBrackets ps))
+            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (deTokenise (removeOuterBrackets ps))
             else getPattern k L
       fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in iSchema " ^ String.concat cs))
@@ -597,8 +612,8 @@ struct
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
       val cspec = findConSpecWithName dc cspecN
       val ct = case removeOuterBrackets bs of
-                  "liftString" :: ctL => Lift.string (String.concat ctL)
-                | ctL => parseConstruction cspec (String.concat ctL)
+                  "liftString" :: ctL => Lift.string (deTokenise ctL)
+                | ctL => parseConstruction cspec (deTokenise ctL)
 
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
@@ -664,7 +679,7 @@ struct
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
             if x = SOME goalKW
-            then parseConstruction interConSpecData (String.concat (removeOuterBrackets c))
+            then parseConstruction interConSpecData (deTokenise (removeOuterBrackets c))
             else getGoal L
       fun getOutput [] = NONE
         | getOutput ((x,c)::L) =
@@ -684,7 +699,7 @@ struct
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
-            then (let val mtct = parseConstruction targetConSpecData (String.concat (removeOuterBrackets c))
+            then (let val mtct = parseConstruction targetConSpecData (deTokenise (removeOuterBrackets c))
                       val _ = if Construction.wellFormed targetConSpecData mtct
                               then Logging.write "\n  pattern for matching is well formed"
                               else Logging.write "\n  WARNING: pattern for matching is not well formed"
@@ -851,7 +866,7 @@ struct
       val blocks = gatherMaterialByKeywords bigKeywords words
 
       val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
-      val importedContents = map (read o String.concat o #2) importFilenames
+      val importedContents = map (read o deTokenise o #2) importFilenames
       val importedContent = joinDocumentContents importedContents
 
       fun distribute [] = importedContent
