@@ -404,59 +404,69 @@ transfer
     interConSpec interStringBTree
     goal :metaTrue <- TREEIFY[t:Pr(ab U c | d) = 0.21; Pr(d) = 0.6:string,t':btree]
     searchLimit 100
-    output string6a
+    output test1
     limit 1
-    save string6a
+    save test1
 
 transfer
-    sourceConstruction string6a
+    sourceConstruction test1
     targetConSpec btree
     interConSpec interBTreeBTree
-    goal :metaTrue <- SEMICOLON[v_{1}:btree,t':btree]
-    searchLimit 500
-    output string6b
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 100
+    output test2
+    save test2
     limit 1
-    save string6b
 
 transfer
-    sourceConstruction string6b
+    sourceConstruction test2
     targetConSpec btree
     interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{56}:btree,t':btree]
+    goal :metaTrue <- SEMICOLON[v_{55}:btree,t':btree]
     searchLimit 200
-    output string6ba
+    output test3
+    save test3
     limit 1
-    save string6ba
 
 transfer
-    sourceConstruction string6ba
+    sourceConstruction test3
     targetConSpec btree
     interConSpec interBTreeBTree
-    goal :metaTrue <- SPACE[v_{1}:btree,t':btree]
-    searchLimit 500
-    output string6c
-    limit 10
-    save string6c
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 100
+    output test4
+    save test4
+    limit 1
 
 transfer
-    sourceConstruction string6c
+    sourceConstruction test4
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SPACE[v_{53}:btree,t':btree]
+    searchLimit 200
+    output test5
+    save test5
+    limit 10
+
+transfer
+    sourceConstruction test5
     targetConSpec btree
     interConSpec interBTreeBTree
     goal :metaTrue <- SIMPLIFY[v_{34}:btree,t':btree]
     searchLimit 100
-    output string6d
+    output test6
+    save test6
     limit 1
-    save string6d
 
 transfer
-    sourceConstruction string6d
+    sourceConstruction test6
     targetConSpec bayesPlus
     interConSpec interBTreeBayes
     goal :metaTrue <- SYS[v_{17}:btree,t':probSys]
     searchLimit 100
-    output string6e
+    output test7
+    save test7
     limit 10
-    save string6e
 
 
 construction string0:string = liftString Pr(a) = 0.21

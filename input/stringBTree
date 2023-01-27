@@ -170,12 +170,20 @@ tSchema empty:(string,btree,interStringBTree) =
     strength 1
 
 
-tSchema TOKENISE:(btree,btree,interBTreeBTree) =
-    source t:btree <- branch[t1:?v:nonBChar,t2:btree]
-    target t':btree
-    antecedent :metaTrue <- TOKENISE[z:?v:nonBChar,t2:btree,t':btree]
-    consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:btree,t':btree]
-    strength 40
+
+tSchema tokeniseChar:(btree,btree,interBTreeBTree) =
+    source t:?x:nonBChar
+    target t':?x:nonBChar
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:?x:nonBChar,t':?x:nonBChar]
+    strength 1
+
+comment tokeniseChar':(btree,btree,interBTreeBTree) =
+    source t:?v:nonBChar
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:?v:nonBChar,t':dummy:leaf]
+    strength 1
 
 tSchema restart:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:?v:nonBChar,
@@ -200,13 +208,6 @@ tSchema copyhead:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- HEAD[z:?x:nonBChar,t:nonBChar,t':nonBChar]
     strength 2
 
-comment tokeniseChar:(btree,btree,interBTreeBTree) =
-    source t:?v:nonBChar
-    target t':?v:nonBChar
-    antecedent
-    consequent :metaTrue <- TOKENISE[z:?x:nonBChar,t:?v:nonBChar,t':?v:nonBChar]
-    strength 2
-
 tSchema skipUntilTail:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
@@ -222,13 +223,6 @@ tSchema eqChars:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- EQCHAR[t:?x:nonBChar,t':?x:nonBChar]
     strength 1
 
-tSchema dummsT:(btree,btree,interBTreeBTree) =
-    source t:dummy:leaf
-    target t':dummy:leaf
-    antecedent
-    consequent :metaTrue <- TOKENISE[z:?x:nonBChar,t:dummy:leaf,t':dummy:leaf]
-    strength 1
-
 tSchema dumms0:(btree,btree,interBTreeBTree) =
     source t:dummy:leaf
     target t':dummy:leaf
@@ -236,20 +230,13 @@ tSchema dumms0:(btree,btree,interBTreeBTree) =
     consequent :metaTrue <- HEAD[z:?x:nonBChar,t:dummy:leaf,t':dummy:leaf]
     strength 2
 
-tSchema dumms1':(btree,btree,interBTreeBTree) =
-    source t:btree <- branch[t1:nonBChar,t2:nonBChar]
-    target t':dummy:leaf
-    antecedent
-    consequent :metaTrue <- TAIL[z:?x:nonBChar,t:btree,t':dummy:leaf]
-    strength -10
-
 
 tSchema dumms1:(btree,btree,interBTreeBTree) =
-    source t:dummy:leaf
+    source t:nonBChar
     target t':dummy:leaf
     antecedent
-    consequent :metaTrue <- TAIL[z:?x:nonBChar,t:dummy:leaf,t':dummy:leaf]
-    strength -10
+    consequent :metaTrue <- TAIL[z:?x:nonBChar,t:nonBChar,t':dummy:leaf]
+    strength 0
 
 tSchema start:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,

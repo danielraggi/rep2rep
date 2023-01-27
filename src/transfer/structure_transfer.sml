@@ -178,9 +178,17 @@ struct
       (*val _ = if Pattern.wellFormed targetConSpecData target then () else raise TransferSchemaNotApplicable*)
       val antecedent = map (Pattern.applyTypeVarInstantiation typeVarMap) antecedent
       (*val _ = if List.all (Pattern.wellFormed interConSpecData) antecedent then () else raise TransferSchemaNotApplicable*)
+      fun updateCMap [] = consequentMap
+        | updateCMap (tk::tks) =
+        let val f' = updateCMap tks
+        in fn x => (case (typeVarMap (CSpace.typeOfToken tk), consequentMap tk) of
+                        (SOME ityp, mtk) => (if Type.equal (CSpace.typeOfToken x) ityp andalso CSpace.nameOfToken tk = CSpace.nameOfToken x then mtk else f' x)
+                      | _ => f' x)
+        end
+      val consequentMap = updateCMap (Construction.tokensOfConstruction consequent)
+
       val targetConstruct = Pattern.constructOf target
       val usedTokenNames = map CSpace.nameOfToken (State.tokensInUse st)
-
       val freshName = firstUnusedName usedTokenNames
 
       fun makeAttachmentToken tt =
@@ -413,9 +421,9 @@ struct
 
 
 fun structureTransfer searchLimit unistructured targetPattOption st =
-  let val maxNumGoals = 3
+  let val maxNumGoals = 4
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
-      val maxCompSize = 200
+      val maxCompSize = 300
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
