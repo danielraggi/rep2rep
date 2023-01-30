@@ -32,8 +32,6 @@ conSpec real10:real10T =
 
 typeSystem bayesPlusT =
     imports bayes, real10T, stringT
-    types _:nonBChar
-    order nonBChar < event
 
 conSpec bayesPlus:bayesPlusT =
     imports bayesG, real10, string
@@ -68,14 +66,14 @@ tSchema prob:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- PROB[t:btree,t':problem]
     strength 1
 
-tSchema evts1:(btree,bayesPlus,interBTreeBayes) =
+tSchema evtsCond:(btree,bayesPlus,interBTreeBayes) =
     source t:btree
     target t':condEvent
     antecedent :metaTrue <- COND[t:btree,t':condEvent]
     consequent :metaTrue <- EVTS[t:btree,t':condEvent]
-    strength 2
+    strength 3
 
-tSchema evts1:(btree,bayesPlus,interBTreeBayes) =
+tSchema evtsEvt:(btree,bayesPlus,interBTreeBayes) =
     source t:btree
     target t':event
     antecedent :metaTrue <- EVT[t:btree,t':event]
@@ -128,7 +126,7 @@ tSchema copybranch:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- COPY[t:btree,t':string]
     strength 1
 
-tSchema copyEmpty:(btree,bayesPlus,interBTreeBayes) =
+comment copyEmpty:(btree,bayesPlus,interBTreeBayes) =
     source t:dummy:leaf
     target t':empty
     antecedent
@@ -167,26 +165,19 @@ tSchema eqn:(btree,bayesPlus,interBTreeBayes) =
     consequent :metaTrue <- EQN[t:btree,t':probEqn]
     strength 2
 
-tSchema evtX:(btree,bayesPlus,interBTreeBayes) =
-    source t:?v:nonBChar
-    target t':?v:nonBChar
-    antecedent
-    consequent :metaTrue <- EVT[t:?v:nonBChar,t':?v:nonBChar]
-    strength 3
-
 tSchema binAND:(btree,bayesPlus,interBTreeBayes) =
     source t:&:nonBChar
     target t':inter
     antecedent
     consequent :metaTrue <- BIN[t:&:nonBChar,t':inter]
-    strength 1
+    strength 4
 
 tSchema binOR:(btree,bayesPlus,interBTreeBayes) =
     source t:U:nonBChar
     target t':union
     antecedent
     consequent :metaTrue <- BIN[t:U:nonBChar,t':union]
-    strength 1
+    strength 4
 
 tSchema evtBin:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
@@ -197,14 +188,14 @@ tSchema evtBin:(btree,bayesPlus,interBTreeBayes) =
                :metaTrue <- BIN[t21:btree,t2':bin],
                :metaTrue <- EVT[t22:btree,t3':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 3
+    strength 6
 
 tSchema evtComp:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:-:nonBChar,t2:btree]
     target t':event <- complement[t1':event]
     antecedent :metaTrue <- EVT[t2:btree,t1':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 3
+    strength 4
 
 tSchema evtCond:(btree,bayesPlus,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:btree]
