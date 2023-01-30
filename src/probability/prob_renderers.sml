@@ -1589,254 +1589,326 @@ fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagr
               len, 18.0))
     end;
 
-fun drawArea x =
-    let fun parseAreaShading (Construction.Source(x)) =
-                if String.substring((#2 x), 0, 5) = "empty" then ([],[])
-                else raise AreaError
-            |parseAreaShading (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "colour" then
-                    let val (x1, y1) = parseAreaShading (hd(y))
-                        val (x2,_) = parseArea (List.nth(y, 1))
-                        val (x3,_) = parseShading (List.last(y)) in
-                        if x1 = [] then
-                            (case x2 of
-                            LABEL(a)     => ([SEVENT(a)],[x3,WHITE])
-                            |NLABEL(a)   => ([NEVENT(a)],[WHITE,x3])
-                            |_ => raise AreaError)
-                        else (case (hd(x1), x2) of
-                            (SEVENT(a), LABEL(b))   => (x1@[SEVENT(b)], y1@[x3,WHITE,WHITE,WHITE])
-                            |(SEVENT(a), NLABEL(b)) => (x1@[NEVENT(b)], y1@[WHITE,x3,WHITE,WHITE])
-                            |(NEVENT(a), LABEL(b))  => (x1@[SEVENT(b)], y1@[WHITE,WHITE,x3,WHITE])
-                            |(NEVENT(a), NLABEL(b)) => (x1@[NEVENT(b)], y1@[WHITE,WHITE,WHITE,x3])
-                            |_ => raise AreaError)
-                    end
-                else raise AreaError
-            |parseAreaShading _ = raise AreaError
-        and parseArea (Construction.Source(x)) =
-                if String.isSubstring "empty" (#2 x) then (EMPTY,[(#1 x,"EMPTY",0.0)])
-                else (case String.breakOn ":" (#2 x) of
-                        (a,":",_) => (LABEL(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                        |_ => raise AreaError)
-            |parseArea (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "reverseTag" then 
-                    (case (parseArea (hd(y))) of
-                        (LABEL(a),b) => (NLABEL(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
-                        |_ => raise AreaError)
-                else if (#1 (#constructor x)) = "cPoint" then 
-                    let val (x1,z1) = ProbNum.parseNum (hd(y))
-                        val (x2,z2) = ProbNum.parseNum (List.last(y)) in
-                        (POINT(x1,x2),(#1 (#token x),"("^(#2 (hd(z1)))^","^(#2 (hd(z2)))^")",(#3 (hd(z1)))+(#3 (hd(z2))))::z1@z2)
-                    end
-                else if (#1 (#constructor x)) = "cRect" then 
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.last(y)) in
-                        (RECT(x1,x2),(#1 (#token x),(#2 (hd(y1)))^" - "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "overlayRect" then 
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.nth(y,1))
-                        val (x3,y3) = parseArea (List.nth(y,2))
-                        val (x4,y4) = parseShading (List.last(y)) in
-                        (OVERLAY((#1 (#token x)),x1,x2,x3,x4),y1@y2@y3@y4)
-                    end
-                else if (#1 (#constructor x)) = "combine" then 
-                    let val (x1,y1) = parseArea (hd(y))
-                        val (x2,y2) = parseArea (List.last(y)) in
-                        (COMBAREA((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "addColour" then 
-                    let val (x1,y1) = parseArea (hd(y))
-                        val x2 = parseAreaShading (List.last(y)) in
-                        (ADDAREA((#1 (#token x)),x1,x2),y1)
-                    end
-                else raise AreaError
-            |parseArea (Construction.Reference(x)) = raise AreaError
-        fun convertArea EMPTY = (([],[],[],[],[]),[])
-            |convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[],[]),[])
-            |convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[],[]),[])
-            |convertArea (POINT(x,y)) = (([],[x,y],[],[],[]),[])
-            |convertArea (RECT(x,y)) = 
-                let val ((_,y2,_,_,_),_) = convertArea x
-                    val ((_,y3,_,_,_),_) = convertArea y in 
-                    (([],y2@y3,[],[],[]),[])
+
+fun drawArea c =
+    let fun parseArea (Construction.Source((id, typ))) =
+            if typ = "empty" then (EMPTY, [(id, "EMPTY", 0.0)])
+            else (case String.breakOn ":" typ of
+                      (a, ":" ,_) => (LABEL(a), [(id, a, Real.fromInt (String.size a) + 0.5)])
+                    | _ => raise AreaError)
+          | parseArea (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                 ("reverseTag", [tag]) =>
+                 let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                 in case parseArea tag of
+                        (LABEL(a), (id', l, s)::_) => (NLABEL(a), [(id', overline l, s)])
+                      | _ => raise AreaError
+                 end
+               | ("cPoint", [x, y]) =>
+                 let val (x', xHTML) = parseNum x;
+                     val (y', yHTML) = parseNum y;
+                 in case (xHTML, yHTML) of
+                        ((_, s1, w1)::_, (_, s2, w2)::_) => (POINT(x', y'),
+                                                             (id, "("^s1^","^s2^")", w1+w2) :: xHTML @ yHTML)
+                      | _ => raise AreaError
+                 end
+               | ("cRect", [pt1, pt2]) =>
+                 let val (p1, p1HTML) = parseArea pt1;
+                     val (p2, p2HTML) = parseArea pt2;
+                 in case (p1HTML, p2HTML) of
+                        ((_, s1, w1)::_, (_, s2, w2)::_) => (RECT(p1, p2),
+                                                             (id, s1^" - "^s2, w1+w2+0.5) :: p1HTML @ p2HTML)
+                      | _ => raise AreaError
+                 end
+               | ("overlayRect", [area, rect, tag, shading]) =>
+                 let val (a, areaHTML) = parseArea area;
+                     val (r, rectHTML) = parseArea rect;
+                     val (t, tagHTML) = parseArea tag;
+                     val (s, shadingHTML) = parseShading shading;
+                 in (OVERLAY(id, a, r, t, s), areaHTML @ rectHTML @ tagHTML @ shadingHTML) end
+               | ("combine", [area1, area2]) =>
+                 let val (a1, a1HTML) = parseArea area1;
+                     val (a2, a2HTML) = parseArea area2;
+                 in (COMBAREA(id, a1, a2), a1HTML @ a2HTML) end
+               | _ => raise AreaError)
+          | parseArea (Construction.Reference(_)) = raise AreaError
+        fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
+          | convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
+          | convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
+          | convertArea (POINT(x,y)) = (([],[x,y],[],[]),[])
+          | convertArea (RECT(p1, p2)) =
+            let val ((_,pts1,_,_),_) = convertArea p1;
+                val ((_,pts2,_,_),_) = convertArea p2;
+            in (([], pts1 @ pts2, [], []), []) end
+          | convertArea (OVERLAY(id, area, rect, tag, shading)) =
+                let fun flipShading x = case x of
+                                            BLUE => RED
+                                          | RED => BLUE
+                                          | _ => x;
+                    val ((v1, p1, s1, w1), html) = convertArea area;
+                    val (( _, p2,  _,  _),    _) = convertArea rect;
+                    val ((v3,  _,  _,  _),    _) = convertArea tag;
+                in if w1 = []
+                   then case (hd v3) of
+                            SEVENT _ => let val shading = [shading];
+                                            val probs = case p2 of
+                                                            (_::_::p::_) => [p, MINUS(NUM 1, p)]
+                                                          | _ => raise AreaError;
+                                        in ((    v3, p2, shading, probs),
+                                            (id, v3, p2, shading, probs) :: html)
+                                        end
+                          | NEVENT _ => let val (points, probs) =
+                                                case p2 of
+                                                    (_::_::p::_) => ([MINUS(NUM 1, p), NUM 0, NUM 1, NUM 1],
+                                                                     [MINUS(NUM 1, p), p])
+                                                  | _ => raise AreaError;
+                                          val shading = [flipShading shading];
+                                      in ((    v3, points, shading, probs),
+                                          (id, v3, points, shading, probs) :: html)
+                                      end
+                   else case (hd v1, hd v3) of
+                            (SEVENT _, SEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ p2;
+                                val shading = s1 @ [shading];
+                                val probs = case p2 of
+                                                (_::_::_::p::_) => w1 @ [p, MINUS(NUM 1, p)]
+                                              | _ => raise AreaError;
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (SEVENT _, NEVENT _) =>
+                            let val events = v1 @ v3;
+                                val (points, probs) =
+                                    case p2 of
+                                        (p::_::_::q::_) => (p1 @ [p, MINUS(NUM 1, q), q, NUM 1],
+                                                            w1 @ [MINUS(NUM 1, q), q])
+                                     | _ => raise AreaError;
+                                val shading = s1 @ [flipShading shading];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (NEVENT _, SEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ [List.nth(p1,0),List.nth(p2,1),List.nth(p1,2),List.nth(p2,3)];
+                                val shading = s1 @ [shading];
+                                val probs = w1 @ [List.nth(p2,3),MINUS(NUM(1),List.nth(p2,3))];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
+                          | (NEVENT _, NEVENT _) =>
+                            let val events = v1 @ v3;
+                                val points = p1 @ [List.nth(p1,0),MINUS(NUM(1),List.nth(p2,3)),List.nth(p1,2),NUM(1)];
+                                val shading = s1 @ [flipShading shading];
+                                val probs = w1 @ [MINUS(NUM(1),List.nth(p2,3)), List.nth(p2,3)];
+                            in ((    events, points, shading, probs),
+                                (id, events, points, shading, probs) :: html)
+                            end
                 end
-            |convertArea (OVERLAY(m,x,y,z,w)) = 
-                let fun flipShading x =
-                        case x of 
-                        BLUE => RED
-                        |RED => BLUE
-                        |_ => x
-                    val ((x1,y1,z1,w1,_),n) = convertArea x
-                    val ((_,y2,_,_,_),_) = convertArea y
-                    val ((x3,_,_,_,_),_) = convertArea z in
-                    if w1 = [] then 
-                        case (hd(x3)) of
-                        SEVENT(a) => ((x3,y2,[w],[List.nth(y2,2),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2))],[]),(m,x3,y2,[w],[List.nth(y2,2),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2))],[])::n)
-                        |NEVENT(a) => ((x3,[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2)),ProbNum.NUM(0),ProbNum.NUM(1),ProbNum.NUM(1)],[(flipShading w)],[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2)),List.nth(y2,2)],[]),(m,x3,[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2)),ProbNum.NUM(0),ProbNum.NUM(1),ProbNum.NUM(1)],[(flipShading w)],[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,2)),List.nth(y2,2)],[])::n)
-                    else case (hd(x1),hd(x3)) of
-                        (SEVENT(_),SEVENT(_)) => ((x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3))],[]),(m,x1@x3,y1@y2,z1@[w],w1@[List.nth(y2,3),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3))],[])::n)
-                        |(SEVENT(_),NEVENT(_)) => ((x1@x3,y1@[List.nth(y2,0),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,2),ProbNum.NUM(1)],z1@[(flipShading w)],w1@[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,3)],[]),(m,x1@x3,y1@[List.nth(y2,0),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,2),ProbNum.NUM(1)],z1@[(flipShading w)],w1@[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,3)],[])::n)
-                        |(NEVENT(_),SEVENT(_)) => ((x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3))],[]),(m,x1@x3,y1@[List.nth(y1,0),List.nth(y2,1),List.nth(y1,2),List.nth(y2,3)],z1@[w],w1@[List.nth(y2,3),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3))],[])::n)
-                        |(NEVENT(_),NEVENT(_)) => ((x1@x3,y1@[List.nth(y1,0),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y1,2),ProbNum.NUM(1)],z1@[(flipShading w)],w1@[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,3)],[]),(m,x1@x3,y1@[List.nth(y1,0),ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y1,2),ProbNum.NUM(1)],z1@[(flipShading w)],w1@[ProbNum.MINUS(ProbNum.NUM(1),List.nth(y2,3)),List.nth(y2,3)],[])::n)
-                end
-            |convertArea (COMBAREA(m,x,y)) =
-                let fun toRects ws = [ProbNum.NUM(0),ProbNum.NUM(0),(hd(ws)),ProbNum.NUM(1),ProbNum.NUM(0),ProbNum.NUM(0),(hd(ws)),(List.nth(ws,2)),(hd(ws)),ProbNum.NUM(0),ProbNum.NUM(1),(List.nth(ws,4))]
-                    fun mergeShading x y = 
-                        if x = PATTERN then y
-                        else if y = PATTERN then x
-                        else if x = WHITE then y
-                        else x
-                    fun extractNum x y w =
-                        if List.length x = 1 then w@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]
-                        else if List.length w = 6 then w
-                        else case (hd(x)) of
-                            SEVENT(a) => w@[ProbNum.U,ProbNum.U]
-                            |NEVENT(a) => List.take(w,2)@[ProbNum.U,ProbNum.U]@List.drop(w,2)
-                    fun areaMerge x2 y2 a x3 y3 b =
-                        let fun ff b =
-                                if List.nth(b,2) = ProbNum.U then 
-                                let val xs = [ProbNum.VAR("z"),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")),
-                                            ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,4),List.nth(b,1)),ProbNum.VAR("z"))), ProbNum.FRAC(ProbNum.MULT(List.nth(b,4),List.nth(b,1)),ProbNum.VAR("z")), 
-                                            ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")))),ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")))]
-                                    val xss = List.map ProbNum.simplify xs in 
-                                    (xss, (toRects xss))
-                                end
-                                else if List.nth(b,4) = ProbNum.U then 
-                                let val xs = [ProbNum.VAR("z"), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")),
-                                              ProbNum.FRAC(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.VAR("z")), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.VAR("z"))),
-                                              ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))))]
-                                    val xss = List.map ProbNum.simplify xs in 
-                                    (xss, (toRects xss))
-                                end
-                                else let val xs = [ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1))), ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1))), 
-                                                   ProbNum.FRAC(ProbNum.MULT(List.nth(b,2), List.nth(b,0)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1)))), ProbNum.FRAC(ProbNum.MULT(List.nth(b,4), List.nth(b,1)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1)))), 
-                                                   ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1)))),  ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1))))] 
-                                        val xss = List.map ProbNum.simplify xs in 
-                                    (xss, (toRects xss))
-                                end 
-                            in
-                            if eventToString (hd(x2)) = eventToString (hd(x3)) then 
-                                let fun merger a b y2 y3 c d e f =
-                                        case (a,b) of
-                                        ([],[]) => ((List.rev c),(List.rev d),e,f)
-                                        |(x::xxs::xs,y::yys::ys) => if x = ProbNum.U andalso y = ProbNum.U then merger xs ys y2 y3 c d e f
-                                                                    else if x = ProbNum.U then merger xs ys y2 (List.drop(y3,4)) (xxs::x::c) (yys::y::d) (e@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]) (f@(List.take(y3,4)))
-                                                                    else if y = ProbNum.U then merger xs ys (List.drop(y2,4)) y3 (xxs::x::c) (yys::y::d) (e@(List.take(y2,4))) (f@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U])
-                                                                    else merger xs ys (List.drop(y2,4)) (List.drop(y3,4)) (xxs::x::c) (yys::y::d) (e@(List.take(y2,4))) (f@(List.take(y3,4)))
-                                        |_ => raise AreaError
-                                    val (c,d,e,f) = merger a b y2 y3 [] [] [] [] in
-                                    if List.length x2 > List.length x3 then (x2, c, d, e, f)
-                                    else (x3, c, d, e, f)
-                                end
-                            else if List.length x2 = List.length x3 andalso List.length x2 = 1 then 
-                                let val xss = [ProbNum.VAR("z"),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")), ProbNum.VAR("x"), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("x")), ProbNum.FRAC(ProbNum.MINUS(hd(b),ProbNum.MULT(ProbNum.VAR("z"),ProbNum.VAR("x"))),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MINUS(hd(b),ProbNum.MULT(ProbNum.VAR("z"),ProbNum.VAR("x"))),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))))] in 
-                                    (x2@x3, a, xss, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], (toRects xss))
-                                end 
-                            else if List.length x2 = List.length x3 andalso List.length y2 = 8 then 
-                                let val (xss,yss) = ff b in (x2, a, xss, (y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]), yss) end
-                            else if List.length x2 = List.length x3 then
-                                let val (xss,yss) = ff b in (x2, a, xss, y2, yss) end
-                            else if List.length x3 > List.length x2 then
-                                let val (xss,yss) = ff b in ((List.rev x3), a, xss, (y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]), yss) end
-                            else let val (xss,yss) = ff a in ((List.rev x2), xss, b, yss, (y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U])) end
-                        end
-                    val ((x2,y2,z2,w2,_),n1) = convertArea x
-                    val ((x3,y3,z3,w3,_),n2) = convertArea y 
-                    val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3)
-                    val g = ProbNum.resolve (c@e) (d@f) (List.length c) in
-                    if List.length g = 12 then ((x,(List.drop(g,4)),[(mergeShading (hd(z2)) (hd(z3))),PATTERN],List.take(g,4),[]),(m,x,(List.drop(g,4)), [(mergeShading (hd(z2)) (hd(z3))),PATTERN],List.take(g,4),[])::n1@n2)
-                    else ((x,(toRects (List.take(g,6))),[WHITE,BLUE,RED],List.take(g,6),[]),(m,x,(toRects (List.take(g,6))),[WHITE,BLUE,RED],List.take(g,6),[])::n1@n2)
-                end
-            |convertArea (ADDAREA(m,x,y)) =
-                let fun toWhite xs =
-                        case xs of 
-                        [] => []
-                        |x::xs => WHITE::(toWhite xs)
-                    fun changeShade l n new =
-                        if n = 0 then new::(tl(l))
-                        else (hd(l))::changeShade (tl(l)) (n-1) new
-                    fun addRect xs ws n =
-                        case xs of
-                        [] => []
-                        |x::xs => if x = WHITE then addRect xs ws (n+1)
-                                else case n of
-                                        0 => ([ProbNum.NUM(0),ProbNum.NUM(0),(hd(ws)),ProbNum.NUM(1)], x)::addRect xs ws (n+1)
-                                        |1 => ([(hd(ws)),ProbNum.NUM(0),ProbNum.NUM(1),ProbNum.NUM(1)], x)::addRect xs ws (n+1)
-                                        |2 => ([ProbNum.NUM(0),ProbNum.NUM(0),(hd(ws)),(List.nth(ws,2))], x)::addRect xs ws (n+1)
-                                        |3 => ([ProbNum.NUM(0),(List.nth(ws,2)),(hd(ws)),ProbNum.NUM(1)], x)::addRect xs ws (n+1)
-                                        |4 => ([(hd(ws)),ProbNum.NUM(0),ProbNum.NUM(1),(List.nth(ws,4))], x)::addRect xs ws (n+1)
-                                        |5 => ([(hd(ws)),(List.nth(ws,4)),ProbNum.NUM(1),ProbNum.NUM(1)], x)::addRect xs ws (n+1)
-                                        |_ => addRect xs ws (n+1)
-                    fun revert xs l ws n =
-                        case xs of
-                        [] => []
-                        |x::xs => if x = WHITE then revert xs l ws (n+1)
-                                else case n of
-                                        0 => (addRect (changeShade (changeShade (toWhite l) 4 x) 2 x) ws 0)@(revert xs l ws (n+1))
-                                        |1 => (addRect (changeShade (changeShade (toWhite l) 5 x) 3 x) ws 0)@(revert xs l ws (n+1))
-                                        |2 => (addRect (changeShade (toWhite l) 2 x) ws 0)@(revert xs l ws (n+1))
-                                        |3 => (addRect (changeShade (toWhite l) 4 x) ws 0)@(revert xs l ws (n+1))
-                                        |4 => (addRect (changeShade (toWhite l) 3 x) ws 0)@(revert xs l ws (n+1))
-                                        |5 => (addRect (changeShade (toWhite l) 5 x) ws 0)@(revert xs l ws (n+1))
-                                        |_ => revert xs l ws (n+1)
-                    val ((x2,y2,z2,w2,_),n) = convertArea x
-                    val (x3,y3) = y in
-                    if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2,y2,(toWhite z2),w2,addRect y3 w2 0),(m,x2,y2,(toWhite z2),w2,addRect y3 w2 0)::n)
-                    else if List.length x2 = List.length x3 andalso List.length x2 = 2 then ((x2,y2,(toWhite z2),w2, (revert y3 y3 w2 0)),(m,x2,y2,(toWhite z2),w2, (revert y3 y3 w2 0))::n)
-                    else if List.length x2 = List.length x3 then ((x2@x3,y2,(toWhite z2),w2, (revert y3 y3 w2 0)),(m,x2@x3,y2,(toWhite z2),w2, (revert y3 y3 w2 0))::n)
-                    else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2,y2,(toWhite z2),w2,addRect y3 w2 0),(m,x2,y2,(toWhite z2),w2,addRect y3 w2 0)::n)
-                    else if List.length x2 > List.length x3 then ((x2,y2,(toWhite z2),w2,(revert y3 (y3@[WHITE,WHITE,WHITE,WHITE]) w2 0)),(m,x2,y2,(toWhite z2),w2,(revert y3 (y3@[WHITE,WHITE,WHITE,WHITE]) w2 0))::n)
-                    else if List.length x2 < List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x3,y2,(toWhite z2),w2,addRect y3 w2 0),(m,x3,y2,(toWhite z2),w2,addRect y3 w2 0)::n)
-                    else ((List.rev x3,y2,(toWhite z2),w2,(revert y3 y3 w2 0)),(m,List.rev x3,y2,(toWhite z2),w2,(revert y3 y3 w2 0))::n)
-                end
-        fun areaToHTML (m,a,b,c,d,e) =
-            let fun toNum x =
-                    if ProbNum.onlyNum x then ProbNum.numToString (ProbNum.PLUS(ProbNum.NUM(30),ProbNum.MULT(ProbNum.NUM(200),x)))
-                    else ProbNum.numToString (ProbNum.NUM(80))
-                fun calcLen x y k n = 
-                    if ProbNum.onlyNum x andalso ProbNum.onlyNum y then ProbNum.numToString (ProbNum.MULT(ProbNum.NUM(200),ProbNum.MINUS(x,y)))
-                    else if ProbNum.numToString k = ProbNum.numToString (ProbNum.NUM(0)) then ProbNum.numToString (ProbNum.NUM(50))
-                    else ProbNum.numToString (ProbNum.MULT(n,ProbNum.NUM(50)))
-                fun calcMid x n =
-                    if ProbNum.onlyNum x then ProbNum.numToString (ProbNum.PLUS(n,ProbNum.MULT(ProbNum.NUM(100),x)))
-                    else ProbNum.numToString (ProbNum.PLUS(ProbNum.NUM(25),n))
-                fun calcLab n =
-                    if ProbNum.numToString n = ProbNum.numToString (ProbNum.NUM(0)) then ProbNum.numToString (ProbNum.NUM(15))
-                    else ProbNum.numToString (ProbNum.NUM(245))
-                fun shadeToString x =
-                    case x of
-                    BLUE => "#4d79ff"
-                    |RED => "#ff4d4d"
-                    |GREEN => "#39ac73"
-                    |WHITE => "white"
-                    |PATTERN => "url(#diagonalHatch)"
-                fun rectToString xs =
-                    case xs of
-                    [] => ""
-                    |(ns,c)::xs => "<rect width=\""^(calcLen (List.nth(ns,2)) (List.nth(ns,0)) (List.nth(ns,0)) (ProbNum.NUM(1)))^"\" height=\""^(calcLen (List.nth(ns,3)) (List.nth(ns,1)) (List.nth(ns,3)) (ProbNum.NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(ns,0)))^","^(toNum (List.nth(ns,1)))^")\" style=\"fill:"^(shadeToString c)^";stroke-width:1;stroke:black\" />\n"^(rectToString xs)
-                fun toDocArea (x,y,z,w,m) =
-                    if List.length x = 1 then   "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                                                "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (ProbNum.NUM(3)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (ProbNum.NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^m^
-                                                "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",25)\">"^(ProbNum.numToString (List.nth(w,0)))^"</text>\n"
-                    else if List.length w = 4 then
-                        "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                        "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (ProbNum.NUM(3)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (ProbNum.NUM(3)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^
-                        "<rect width=\""^(calcLen (List.nth(y,6)) (List.nth(y,4)) (List.nth(y,4)) (ProbNum.NUM(3)))^"\" height=\""^(calcLen (List.nth(y,7)) (List.nth(y,5)) (List.nth(y,7)) (ProbNum.NUM(3)))^"\" transform=\"translate("^(toNum (List.nth(y,4)))^","^(toNum (List.nth(y,5)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,1))^";stroke-width:1;stroke:black\"/>\n"^m^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",25)\">"^(ProbNum.numToString (List.nth(w,0)))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcLab (List.nth(y,4)))^","^(calcMid (List.nth(w,2)) (ProbNum.NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                        "<text text-anchor=\"middle\" transform=\"translate("^(calcLab (List.nth(y,4)))^","^(calcMid (List.nth(w,2)) (ProbNum.NUM(38)))^")\">"^(ProbNum.numToString (List.nth(w,2)))^"</text>\n"   
-                    else    "<rect width=\"200\" height=\"200\" transform=\"translate(30,30)\" style=\"fill:white;stroke-width:1;stroke:black\" />\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,2)) (List.nth(y,0)) (List.nth(y,0)) (ProbNum.NUM(1)))^"\" height=\""^(calcLen (List.nth(y,3)) (List.nth(y,1)) (List.nth(y,3)) (ProbNum.NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,0)))^","^(toNum (List.nth(y,1)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,0))^";stroke-width:1;stroke:black\" />\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,6)) (List.nth(y,4)) (List.nth(y,4)) (ProbNum.NUM(1)))^"\" height=\""^(calcLen (List.nth(y,7)) (List.nth(y,5)) (List.nth(y,7)) (ProbNum.NUM(1)))^"\" transform=\"translate("^(toNum (List.nth(y,4)))^","^(toNum (List.nth(y,5)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,1))^";stroke-width:1;stroke:black\"/>\n"^
-                            "<rect width=\""^(calcLen (List.nth(y,10)) (List.nth(y,8)) (List.nth(y,8)) (ProbNum.NUM(3)))^"\" height=\""^(calcLen (List.nth(y,11)) (List.nth(y,9)) (List.nth(y,11))  (ProbNum.NUM(2)))^"\" transform=\"translate("^(toNum (List.nth(y,8)))^","^(toNum (List.nth(y,9)))^")\" style=\"fill-opacity:50%;fill:"^(List.nth(z,2))^";stroke-width:1;stroke:black\" />\n"^m^
-                            "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",10)\">"^(List.nth(x,0))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate("^(calcMid (List.nth(w,0)) (ProbNum.NUM(30)))^",25)\">"^(ProbNum.numToString (List.nth(w,0)))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(15,"^(calcMid (List.nth(w,2)) (ProbNum.NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(15,"^(calcMid (List.nth(w,2)) (ProbNum.NUM(38)))^")\">"^(ProbNum.numToString (List.nth(w,2)))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(245,"^(calcMid (List.nth(w,4)) (ProbNum.NUM(22)))^")\">"^(List.nth(x,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(245,"^(calcMid (List.nth(w,4)) (ProbNum.NUM(38)))^")\">"^(ProbNum.numToString (List.nth(w,4)))^"</text>\n"
+            | convertArea (COMBAREA(id, x, y)) =
+              let fun toRects [w0, _, w2, _, w4, _] =
+                      let val z = NUM 0;
+                          val i = NUM 1;
+                      in [z, z, w0, i,
+                          z, z, w0, w2,
+                          w0, z, i, w4] end
+                    | toRects _ = raise AreaError;
+                  fun mergeShading PATTERN y = y
+                    | mergeShading x PATTERN = x
+                    | mergeShading WHITE y = y
+                    | mergeShading x _ = x
+                  fun extractNum [] y w = if List.length w = 6 then w else raise AreaError (*remove y*)
+                    | extractNum (x::xs) y w =
+                      if xs = [] then w@[U, U, U, U]
+                      else if List.length w = 6 then w
+                      else case x of
+                               SEVENT(a) => w@[U,U]
+                             | NEVENT(a) => let val (pre, post) = List.split (w, 2);
+                                            in pre @ [U, U] @ post end;
+                  fun areaMerge x2 y2 a x3 y3 b =
+                      let fun ff (b0::b1::b2::b3::b4::b5::_) =
+                              let val z = VAR("z");
+                                  val z' = MINUS(NUM(1), z);
+                                  fun mktree xs = let val xs' = List.map simplify xs;
+                                                  in (xs, (toRects xs)) end;
+                              in case (b2, b4) of
+                                     (U, _) => mktree [z, z',
+                                                       MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                       FRAC(MULT(b4, b1), z),
+                                                       MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                       FRAC(MULT(b5, b1), z')]
+                                   | (_, U) => mktree [z, z',
+                                                       FRAC(MULT(b2, b0), z),
+                                                       MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                       FRAC(MULT(b3, b0), z'),
+                                                       MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                   | (_, _) => let val y1 = PLUS(MULT(b2, b0), MULT(b4, b1));
+                                                   val y2 = PLUS(MULT(b3, b0), MULT(b5, b1));
+                                               in mktree [y1, y2,
+                                                          FRAC(MULT(b2, b0), y1), FRAC(MULT(b4, b1), y1),
+                                                          FRAC(MULT(b3, b0), y2), FRAC(MULT(b5, b1), y2)]
+                                               end
+                              end
+                            | ff _ = raise AreaError;
+                          fun merger [] [] _ _ c d e f = (List.rev c, List.rev d, e, f)
+                            | merger (x::xxs::xs) (y::yys::ys) y2 y3 c d e f =
+                              (case (x, y) of
+                                   (U, U) => merger xs ys y2 y3 c d e f
+                                 | (U, _) => let val (pre, post) = List.split (y3, 4);
+                                             in merger xs ys
+                                                       y2 post
+                                                       (xxs::x::c) (yys::y::d)
+                                                       (e@[U,U,U,U]) (f@pre) end
+                                 | (_, U) => let val (pre, post) = List.split(y2, 4);
+                                             in merger xs ys
+                                                       post y3
+                                                       (xxs::x::c) (yys::y::d)
+                                                       (e@pre) (f@[U,U,U,U]) end
+                                 | _ => let val (pre2, post2) = List.split(y2, 4);
+                                            val (pre3, post3) = List.split(y3, 4);
+                                        in merger xs ys
+                                                  post2 post3
+                                                  (xxs::x::c) (yys::y::d)
+                                                  (e@pre2) (f@pre3) end)
+                            | merger _ _ _ _ _ _ _ _ = raise AreaError;
+                      in if eventToString (hd(x2)) = eventToString (hd(x3)) then
+                             let val (c, d, e, f) = merger a b y2 y3 [] [] [] [];
+                                 val x = if List.length x2 > List.length x3 then x2 else x3;
+                             in (x, c, d, e, f) end
+                         else if List.length x2 = List.length x3 andalso List.length x2 = 1
+                         then let val z = VAR("z");
+                                  val z' = MINUS(NUM(1), z);
+                                  val x = VAR("x");
+                                  val x' = MINUS(NUM(1), x);
+                                  val xss = [z, z', x, x',
+                                             FRAC(MINUS(hd(b),MULT(z, x)), z'),
+                                             MINUS(NUM(1), FRAC(MINUS(hd(b), MULT(z, x)), z'))];
+                              in (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss)) end
+                         else if List.length x2 = List.length x3 andalso List.length y2 = 8 then
+                             let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
+                         else if List.length x2 = List.length x3 then
+                             let val (xss,yss) = ff b in (x2, a, xss, y2, yss) end
+                         else if List.length x3 > List.length x2 then
+                             let val (xss,yss) = ff b in ((List.rev x3), a, xss, (y2@[U,U,U,U,U,U,U,U]), yss) end
+                         else let val (xss,yss) = ff a in ((List.rev x2), xss, b, yss, (y3@[U,U,U,U,U,U,U,U])) end
+                      end;
+                  val ((x2,y2,z2,w2),n1) = convertArea x;
+                  val ((x3,y3,z3,w3),n2) = convertArea y;
+                  val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3);
+                  val g = resolve (c@e) (d@f) (List.length c);
+              in if List.length g = 12
+                 then let val (pre, post) = List.split (g, 4);
+                          val shading = mergeShading (hd z2) (hd z3);
+                      in ((    x, post, [shading, PATTERN], pre),
+                          (id, x, post, [shading, PATTERN], pre) :: n1 @ n2)
+                      end
+                 else let val pre = List.take (g, 6);
+                          val rects = toRects pre;
+                          val shading = [WHITE, BLUE, RED];
+                      in ((    x, rects, shading, pre),
+                          (id, x, rects, shading, pre) :: n1 @ n2)
+                      end
+              end;
+        fun areaToHTML (id, events, b, fills, d) =
+            let fun toNum x = if onlyNum x
+                              then numToString (PLUS(NUM(30),MULT(NUM(200),x)))
+                              else numToString (NUM(80));
+                fun calcLen x y k n = if onlyNum x andalso onlyNum y
+                                      then numToString (MULT(NUM(200),MINUS(x,y)))
+                                      else if numToString k = numToString (NUM(0))
+                                      then numToString (NUM(50))
+                                      else numToString (MULT(n,NUM(50)));
+                fun calcMid x n = if onlyNum x
+                                  then numToString (PLUS(n,MULT(NUM(100),x)))
+                                  else numToString (PLUS(NUM(25),n));
+                fun calcLab n = if numToString n = numToString (NUM(0))
+                                then numToString (NUM(15))
+                                else numToString (NUM(245));
+                fun shadeToString x = case x of
+                                          BLUE => "#4d79ff"
+                                        | RED => "#ff4d4d"
+                                        | GREEN => "#39ac73"
+                                        | WHITE => "white"
+                                        | PATTERN => "url(#diagonalHatch)";
+                fun toDocArea (events, y, fills, w) =
+                    let fun rect (width, height) (trX, trY) fill =
+                            String.concat ["<rect ",
+                                           "width=\"", width, "\" ",
+                                           "height=\"", height, "\" ",
+                                           "transform=\"translate(", trX, ",", trY, ")\" ",
+                                           "style=\"fill:", fill, ";stroke-width:1;stroke:black\" />"];
+                        fun text (trX, trY) s =
+                            String.concat ["<text ",
+                                           "text-anchor=\"middle\" ",
+                                           "transform=\"translate(", trX, ",", trY, ")\">",
+                                           s,
+                                           "</text>"];
+                        val bg = rect ("200", "200") ("30", "30") "white";
+                    in case (events, y, fills, w) of
+                           ([event1], y0::y1::y2::y3::_, fill::_, w0::_) =>
+                           let val width = calcLen y2 y0 y0 (NUM 3);
+                               val height = calcLen y3 y1 y3 (NUM 1);
+                               val translate = (toNum y0, toNum y1);
+                               val mid = calcMid w0 (NUM 30);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width, height) translate fill), "\n",
+                                   id, (* We emit the token ID, not sure why... *)
+                                   (text (mid, "10") event1), "\n",
+                                   (text (mid, "25") (numToString w0)), "\n"
+                               ] end
+                         | ([event1, event2],
+                            y0::y1::y2::y3::y4::y5::y6::y7::_,
+                            fill1::fill2::_,
+                            [w0, w1, w2, w3]) =>
+                           let val width1 = calcLen y2 y0 y0 (NUM 3);
+                               val height1 = calcLen y3 y1 y2 (NUM 3);
+                               val translate1 = (toNum y0, toNum y1);
+                               val width2 = calcLen y6 y4 y4 (NUM 3);
+                               val height2 = calcLen y7 y5 y7 (NUM 3);
+                               val translate2 = (toNum y4, toNum y5);
+                               val mid = calcMid w0 (NUM 30);
+                               val lab = calcLab y4;
+                               fun mid2 v = calcMid w2 (NUM v);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width1, height1) translate1 fill1), "\n",
+                                   (rect (width2, height2) translate2 fill2), "\n",
+                                   id,
+                                   (text (mid, "10") event1), "\n",
+                                   (text (mid, "25") (numToString w0)), "\n",
+                                   (text (lab, (mid2 22)) event2), "\n",
+                                   (text (lab, (mid2 38)) (numToString w2)), "\n"
+                               ] end
+                         | ([event1, event2],
+                            y0::y1::y2::y3::y4::y5::y6::y7::y8::y9::y10::y11::_,
+                            fill1::fill2::fill3::_,
+                            w0::w1::w2::w3::w4::_) =>
+                           let val width1 = calcLen y2 y0 y0 (NUM 1);
+                               val height1 = calcLen y3 y1 y3 (NUM 1);
+                               val translate1 = (toNum y4, toNum y5);
+                               val width2 = calcLen y6 y4 y4 (NUM 1);
+                               val height2 = calcLen y7 y5 y7 (NUM 1);
+                               val translate2 = (toNum y4, toNum y5);
+                               val width3 = calcLen y10 y8 y8 (NUM 3);
+                               val height3 = calcLen y11 y9 y11 (NUM 2);
+                               val translate3 = (toNum y8, toNum y9);
+                               fun mid wi v = calcMid wi (NUM v);
+                           in String.concat [
+                                   bg, "\n",
+                                   (rect (width1, height1) translate1 fill1), "\n",
+                                   (rect (width2, height2) translate2 fill2), "\n",
+                                   (rect (width3, height3) translate3 fill3), "\n",
+                                   id,
+                                   (text (mid w0 30, "10") event1), "\n",
+                                   (text (mid w0 30, "25") (numToString w0)), "\n",
+                                   (text ("15", mid w2 22) event2), "\n",
+                                   (text ("15", mid w2 22) (numToString w2)), "\n",
+                                   (text ("245", mid w4 22) event2), "\n",
+                                   (text ("245", mid w4 38) (numToString w4)), "\n"
+                               ] end
+                         | _ => raise Match
+                    end;
                 val header = "<div>\n"^
                             "<svg width=\"300\" height=\"240\" background-color=\"white\" font-size=\"12px\">\n"^
                             "<pattern id=\"diagonalHatch\" patternUnits=\"userSpaceOnUse\" width=\"4\" height=\"4\">\n"^
@@ -1844,18 +1916,13 @@ fun drawArea x =
                             "</pattern>\n"
                 val footer = "</svg>\n"^
                             "</div>\n"
-                val content = toDocArea ((List.map eventToString a), b, (List.map shadeToString c), d, (rectToString e))
-                in 
-                (m,((header^content^footer),300.0,240.0))
-            end
-        val (a,b) = parseArea x
-        val (_,n) = convertArea a
-        val ns = List.map areaToHTML n 
-        val outputFile = TextIO.openOut "output/area.html";
-        val _ = TextIO.output(outputFile, (concatAll (ns@(stringToHTML b))));
-        val _ = TextIO.closeOut outputFile in
-        ns@(stringToHTML b)
-    end
+                val content = toDocArea ((List.map eventToString events), b, (List.map shadeToString fills), d)
+                in
+                (id, ((header ^ content ^ footer), 300.0, 240.0))
+            end;
+        val (rects, strings) = parseArea c;
+        val (_, areas) = convertArea rects;
+    in (List.map areaToHTML areas) @ (List.map stringToHTML strings) end;
 
 fun drawTable x =
     let fun parseTableShading (Construction.Source(x)) =
