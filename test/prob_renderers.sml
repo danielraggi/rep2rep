@@ -65,24 +65,27 @@ fun transfer constr srcSpaceName tgtSpaceName transferMap spaces knowledge =
 
 
 fun run_test transferMap spaces knowledge (input, expected_output) =
-    let val _ = print (input ^ "\n");
+    let val () = print (input ^ "\n");
         val t = ProbParser.produce_construction input;
         val transfer = fn tgt => transfer t "bayesG" tgt transferMap spaces knowledge;
+        val () = print "Area...";
         val t_area = transfer "areaDiagramG";
         val area_diagram = Result.flatmap ProbRender.drawArea t_area;
         val _ = case area_diagram of
-                    Result.OK toks => ()
-                  | Result.ERROR errs => print (List.toString Diagnostic.message errs ^ "\n");
+                    Result.OK toks => print "done.\n"
+                  | Result.ERROR errs => print ("\n" ^ (List.toString Diagnostic.message errs) ^ "\n");
+        val () = print "Table...";
         val t_tabl = transfer "contTableG";
         val tabl_diagram = Result.flatmap ProbRender.drawTable t_tabl;
         val _ = case tabl_diagram of
-                    Result.OK toks => ()
-                  | Result.ERROR errs => print (List.toString Diagnostic.message errs ^ "\n");
+                    Result.OK toks => print "done.\n"
+                  | Result.ERROR errs => print ("\n" ^ (List.toString Diagnostic.message errs )^ "\n");
+        val () = print "Tree...";
         val t_tree = transfer "probTreeG";
         val tree_diagram = Result.flatmap ProbRender.drawTree t_tree;
         val _ = case tree_diagram of
-                    Result.OK toks => ()
-                  | Result.ERROR errs => print (List.toString Diagnostic.message errs ^ "\n");
+                    Result.OK toks => print "done.\n"
+                  | Result.ERROR errs => print ("\n" ^ (List.toString Diagnostic.message errs) ^ "\n");
     in () end
     handle _ => print ("FAIL: " ^ input ^ "\n");
 

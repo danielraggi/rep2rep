@@ -2317,7 +2317,11 @@ fun wrap renderer c = Result.ok (List.flatmap renderer c)
                                      Diagnostic.create
                                          Diagnostic.ERROR
                                          ("Failed to render structure graph: "
-                                          ^ (exnMessage e) ^ ".")
+                                          ^ (exnMessage e)
+                                          ^ "-"
+                                          ^ (PolyML.makestring
+                                                 (PolyML.Exception.exceptionLocation e))
+                                          ^ ".")
                                          []];
 
 val drawArea = wrap drawArea;

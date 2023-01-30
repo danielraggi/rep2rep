@@ -99,7 +99,7 @@ fun parse x =
     end;
 
 fun produce_construction e =
-  let fun constructEvent n (EVENT(x)) = (Construction.Source("t"^n, x^":eventVar"), x)
+  let fun constructEvent n (EVENT(x)) = (Construction.Source("t"^n, x^":event"), x)
           |constructEvent n (NOT(x)) =
             let val (x2, x3) = constructEvent (n^"2") x in
                 (Construction.TCPair({constructor = ("complement", (["event"], "event")), token = ("t"^n, "not-"^x3^":event")}, [x2]), "not-"^x3)
