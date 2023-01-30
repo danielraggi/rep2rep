@@ -10,7 +10,23 @@ signature PROBRENDER = sig
     val drawBayes: renderer;
 end;
 
-structure ProbRender : PROBRENDER = struct
+signature PROBNUM = sig
+
+    include PROBRENDER
+
+    datatype numExp =
+             U
+             | NUM of int
+             | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+             | VAR of string
+             | PLUS of numExp * numExp
+             | MINUS of numExp * numExp
+             | MULT of numExp * numExp
+             | FRAC of numExp * numExp;
+
+end;
+
+structure ProbNum : PROBNUM = struct
 
 type renderer = Construction.construction list
                 -> ((string * (string * real * real)) list, Diagnostic.t list) Result.t;
@@ -2310,3 +2326,5 @@ val drawTree = wrap drawTree;
 val drawBayes = wrap drawBayes;
 
 end;
+
+structure ProbRender : PROBRENDER = ProbNum;
