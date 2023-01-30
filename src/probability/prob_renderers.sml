@@ -1924,181 +1924,132 @@ fun drawArea c =
         val (_, areas) = convertArea rects;
     in (List.map areaToHTML areas) @ (List.map stringToHTML strings) end;
 
-fun drawTable x =
-    let fun parseTableShading (Construction.Source(x)) =
-            if String.substring((#2 x), 0, 5) = "blank" then ([],[])
-            else raise TableError
-            |parseTableShading (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "highlight" then
-                    let val (x1, y1) = parseTableShading (hd(y))
-                        val (x2,_) = parseTable (List.nth(y, 1))
-                        val (x3,_) = parseShading (List.last(y)) in
-                        if x1 = [] then
-                            (case x2 of
-                            NAME(a)     => ([SEVENT(a)],[x3,WHITE])
-                            |NNAME(a)   => ([NEVENT(a)],[WHITE,x3])
-                            |_ => raise TableError)
-                        else (case (hd(x1), x2) of
-                            (SEVENT(a), NAME(b))    => (x1@[SEVENT(b)], y1@[WHITE,WHITE,x3,WHITE,WHITE,WHITE])
-                            |(SEVENT(a), NNAME(b))  => (x1@[NEVENT(b)], y1@[WHITE,WHITE,WHITE,x3,WHITE,WHITE])
-                            |(NEVENT(a), NAME(b))   => (x1@[SEVENT(b)], y1@[WHITE,WHITE,WHITE,WHITE,x3,WHITE])
-                            |(NEVENT(a), NNAME(b))  => (x1@[NEVENT(b)], y1@[WHITE,WHITE,WHITE,WHITE,WHITE,x3])
-                            |_ => raise TableError)
-                    end
-                else raise TableError
-            |parseTableShading _ = raise TableError 
-        and parseTable (Construction.Source(x)) =
-                (case String.breakOn ":" (#2 x) of
-                    (a,":",_) => (NAME(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                    |_ => raise TableError)
-            |parseTable (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "notName" then 
-                    (case (parseTable (hd(y))) of 
-                        (NAME(a),b) => (NNAME(a),[(#1 (hd(b)),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))]) 
-                        |_ => raise TableError)
-                else if (#1 (#constructor x)) = "constructOne" then 
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = ProbNum.parseNum (List.last(y)) in 
-                        (ONEWAY((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "constructTwo" then 
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = parseTable (List.nth(y, 1))
-                        val (x3,y3) = ProbNum.parseNum (List.last(y)) in 
-                        (TWOWAY((#1 (#token x)),x1,x2,x3),y1@y2@y3)
-                    end
-                else if (#1 (#constructor x)) = "combine" then 
-                    let val (x1,y1) = parseTable (hd(y))
-                        val (x2,y2) = parseTable (List.last(y)) in 
-                        (COMB((#1 (#token x)),x1,x2),y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "colourTable" then 
-                    let val (x1,y1) = parseTable (hd(y))
-                        val x2 = parseTableShading (List.last(y)) in 
-                        (CTABLE((#1 (#token x)),x1,x2),y1)
-                    end
-                else raise TableError
-            |parseTable _ = raise TableError
-        fun convertTable (NAME(x)) = (([SEVENT(x)],[],[]),[])
-            |convertTable (NNAME(x)) = (([NEVENT(x)],[],[]),[])
-            |convertTable (ONEWAY(m,x,y)) = 
-                let val ((x2,_,_),_) = convertTable x in
-                    case (hd(x2)) of 
-                    SEVENT(a) => ((x2,[y,ProbNum.MINUS(ProbNum.NUM(1),y)],[]),[(m,x2,[y,ProbNum.MINUS(ProbNum.NUM(1),y)],[])])
-                    |NEVENT(a) => ((x2,[ProbNum.MINUS(ProbNum.NUM(1),y),y],[]),[(m,x2,[ProbNum.MINUS(ProbNum.NUM(1),y),y],[])])
-                end
-            |convertTable (TWOWAY(m,x,y,z)) = 
-                let val ((x2,y2,_),n1) = convertTable x
-                    val ((x3,y3,_),n2) = convertTable y in
-                        case ((hd(x2)),(hd(x3))) of 
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[z,ProbNum.MINUS((hd(y2)),z),ProbNum.MINUS((hd(y3)),z),ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(hd(y3)))),(hd(y2)))],[]),(m,x2@x3,y2@y3@[z,ProbNum.MINUS((hd(y2)),z),ProbNum.MINUS((hd(y3)),z),ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(hd(y3)))),(hd(y2)))],[])::n1@n2)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[ProbNum.MINUS(List.nth(y2,0), z), z, ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1), ProbNum.MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))), ProbNum.MINUS((List.nth(y3,1)),z)],[]), (m,x2@x3,y2@y3@[ProbNum.MINUS(List.nth(y2,0), z), z, ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(List.nth(y3,1)))),(List.nth(y2,0))),ProbNum.MINUS((List.nth(y3,1)),z)],[])::n1@n2)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3,y2@y3@[ProbNum.MINUS((List.nth(y3,0)),z), ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))), z, ProbNum.MINUS((List.nth(y2,1)),z)],[]), (m,x2@x3,y2@y3@[ProbNum.MINUS((List.nth(y3,0)),z), ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(List.nth(y3,0)))),(List.nth(y2,1))),z,ProbNum.MINUS((List.nth(y2,1)),z)],[])::n1@n2)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3,y2@y3@[ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))), ProbNum.MINUS((List.nth(y3,1)),z), ProbNum.MINUS((List.nth(y2,1)),z), z],[]), (m,x2@x3,y2@y3@[ProbNum.MINUS(ProbNum.PLUS(ProbNum.NUM(1),ProbNum.MINUS(z,(List.nth(y3,1)))),(List.nth(y2,1))),ProbNum.MINUS((List.nth(y3,1)),z),ProbNum.MINUS((List.nth(y2,1)),z),z],[])::n1@n2)
-                end
-            |convertTable (COMB(m,x,y)) =
-                let fun tableMerge x2 y2 x3 y3 =
-                        let fun rotate y2 = [List.nth(y2,2),List.nth(y2,3),List.nth(y2,0),List.nth(y2,1),List.nth(y2,4),List.nth(y2,6),List.nth(y2,5),List.nth(y2,7)] in 
-                            if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, y3)
-                            else if List.length x2 = List.length x3 andalso List.length x2 = 1 then ((x2@x3),(y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]),([ProbNum.U,ProbNum.U]@y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]))
-                            else if List.length x2 = List.length x3 then (x2, y2, rotate y3)
-                            else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2,y2,(y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]))
-                            else if List.length x2 > List.length x3 then (x2,y2,([ProbNum.U,ProbNum.U]@y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]))
-                            else if eventToString (hd(x2)) = eventToString (hd(x3)) then (x3,(y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]),y3)
-                            else (x3,([ProbNum.U,ProbNum.U]@y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]),y3)
-                        end
-                    val ((x2,y2,_),n1) = convertTable y
-                    val ((x3,y3,_),n2) = convertTable x 
-                    val (a,b,c) = tableMerge x2 y2 x3 y3 in
-                    if List.length a = 1 then ((a, ProbNum.resolve b c (List.length b), []),(m, a, ProbNum.resolve b c (List.length b), [])::n1@n2)
-                    else ((a, ProbNum.resolve b c (List.length b), []),(m, a, ProbNum.resolve b c (List.length b), [])::n1@n2)
-                end
-            |convertTable (CTABLE(m,x,y)) =
-                let fun rotate y2 = List.nth(y2,2)::List.nth(y2,3)::List.nth(y2,0)::List.nth(y2,1)::List.nth(y2,4)::List.nth(y2,6)::List.nth(y2,5)::[List.nth(y2,7)]
-                    val ((x2,y2,_),n) = convertTable x 
-                    val (x3,y3) = y in
-                    if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2,y2,y3),(m,x2,y2,y3)::n)
-                    else if List.length x2 = List.length x3 andalso List.length x2 = 2 then ((x2,y2,rotate y3),(m,x2,y2,rotate y3)::n)
-                    else if List.length x2 = List.length x3 then ((x2@x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], [WHITE, WHITE]@y3@[WHITE, WHITE, WHITE, WHITE]),(m, x2@x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], [WHITE, WHITE]@y3@[WHITE, WHITE, WHITE, WHITE])::n)
-                    else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2, y2, y3@[WHITE, WHITE, WHITE, WHITE, WHITE, WHITE]),(m, x2, y2, y3@[WHITE, WHITE, WHITE, WHITE, WHITE, WHITE])::n)
-                    else if List.length x2 > List.length x3 then ((x2, y2, [WHITE, WHITE]@y3@[WHITE, WHITE, WHITE, WHITE]),(m, x2, y2, [WHITE, WHITE]@y3@[WHITE, WHITE, WHITE, WHITE])::n)
-                    else if List.length x2 < List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], y3),(m, x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], y3)::n)
-                    else ((List.rev x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], rotate y3),(m, List.rev x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], rotate y3)::n)
-                end
-        fun tableToHTML (m,a,b,c) =
-            let fun convertShade x n =
-                    let fun shadeToString x =
-                            case x of
-                            BLUE => "background-color:lightblue;"
-                            |RED => "background-color:lightyellow;"
-                            |WHITE => ""
-                            |GREEN => "background-color:lightcoral;"
-                            |PATTERN => "background-color:lightSeaGreen;"
-                        fun emptyList n =
-                            if n = 0 then []
-                            else ""::(emptyList (n-1))
-                    in
-                        if x = [] then emptyList n
-                        else List.map shadeToString x
-                    end
-                fun toDocTable (x,y,z) =
-                    if List.length x = 1 then  ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">Total</th>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">"^(List.nth(x,0))^"</th>\n"^
-                                                "<td style=\"border: 1px solid;"^(List.nth(z,0))^"\">"^(List.nth(y,0))^"</td>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,0))^"</span></th>\n"^
-                                                "<td style=\"border: 1px solid"^(List.nth(z,1))^"\">"^(List.nth(y,1))^"</td>\n"^
-                                                "</tr>\n"^
-                                                "<tr>\n"^
-                                                "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">Total</th>\n"^
-                                                "<td style=\"border: 1px solid;\">1</td>\n",
-                                                140.0)
-                    else   ("<th style=\"background-color:lightgrey; border:1px solid; height:25px; width:70px;\"></th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">"^(List.nth(x,1))^"</th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,1))^"</span></th>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; width:70px;\">Total</th>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">"^(List.nth(x,0))^"</th>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,4))^"\">"^(List.nth(y,4))^"</td>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,5))^"\">"^(List.nth(y,5))^"</td>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,0))^"\">"^(List.nth(y,0))^"</td>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\"><span style=\"text-decoration:overline\">"^(List.nth(x,0))^"</span></th>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,6))^"\">"^(List.nth(y,6))^"</td>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,7))^"\">"^(List.nth(y,7))^"</td>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,1))^"\">"^(List.nth(y,1))^"</td>\n"^
-                            "</tr>\n"^
-                            "<tr>\n"^
-                            "<th style=\"background-color:lightgrey; border:1px solid; height:25px;\">Total</th>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,2))^"\">"^(List.nth(y,2))^"</td>\n"^
-                            "<td style=\"border: 1px solid;"^(List.nth(z,3))^"\">"^(List.nth(y,3))^"</td>\n"^
-                            "<td style=\"border: 1px solid;\">1</td>\n",
-                            280.0)
-                val header =    "<div>\n"^
-                                "<table style=\"text-align:center; border-collapse:collapse; background-color:white; font-size:12px;\">\n"^
-                                "<tr>\n"
-                val footer =    "</tr>\n"^
-                                "</table>\n"^
-                                "</div>\n"
-                val (content,w) = toDocTable ((List.map eventToString a),(List.map ProbNum.numToString b),(convertShade c (List.length b)))
-                in
-                (m, ((header^content^footer),w,100.0))
-            end
-        val (a,b) = parseTable x
-        val (_,n) = convertTable a
-        val ns = List.map tableToHTML n
-        val outputFile = TextIO.openOut "output/table.html";
-        val _ = TextIO.output(outputFile, (concatAll (ns@(stringToHTML b))))
-        val _ = TextIO.closeOut outputFile
-        in
-        ns@(stringToHTML b)
-    end
+fun drawTable c =
+    let fun parseTable (Construction.Source((id, typ))) =
+            (case String.breakOn ":" typ of
+                 (a,":",_) => (NAME(a),[(id, a, Real.fromInt (String.size a) + 0.5)])
+               | _ => raise TableError)
+          | parseTable (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                 ("buildOne", [name, numExp]) =>
+                 let val (var, varHTML) = parseTable name;
+                     val (prob, probHTML) = parseNum numExp;
+                 in (ONEWAY(id, var, prob), varHTML @ probHTML) end
+               | ("buildTwo", [oneDim, twoDim, numExp]) =>
+                 let val (t1, t1HTML) = parseTable oneDim;
+                     val (t2, t2HTML) = parseTable twoDim;
+                     val (conj, conjHTML) = parseNum numExp;
+                 in (TWOWAY(id, t1, t2, conj), t1HTML @ t2HTML @ conjHTML) end
+               | ("combine", [table1, table2]) =>
+                 let val (t1, t1HTML) = parseTable table1;
+                     val (t2, t2HTML) = parseTable table2;
+                 in (COMB(id, t1, t2), t1HTML@t2HTML) end
+               | ("notName", [name]) =>
+                 let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                 in case parseTable name of
+                        (NAME a, [(id, label, size)]) => (NNAME(a), [(id, overline label, size)])
+                      | _ => raise TableError
+                 end
+               | _ => raise TableError)
+          | parseTable _ = raise TableError;
+        fun convertTable (NAME(x)) = (([SEVENT(x)],[]), [])
+          | convertTable (NNAME(x)) = (([NEVENT(x)],[]), [])
+          | convertTable (ONEWAY(id, var, prob)) =
+            let val ((v, _), _) = convertTable var;
+                val probs = case v of
+                            [SEVENT(_)] => [prob, MINUS(NUM(1), prob)]
+                          | [NEVENT(_)] => [MINUS(NUM(1), prob), prob]
+                          | _ => raise TableError;
+            in ((v, probs), [(id, v, probs)]) end
+          | convertTable (TWOWAY(id, t1, t2, conj)) =
+            let val ((v1, probs1), tabs1) = convertTable t1;
+                val ((v2, probs2), tabs2) = convertTable t2;
+                val vs = v1 @ v2;
+                val conjs = case (v1, v2, probs1, probs2) of
+                            ([SEVENT _], [SEVENT _], [p1, _], [p2, _])
+                            => [conj, MINUS(p1, conj), MINUS(p2, conj),
+                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1)]
+                          | ([SEVENT _], [NEVENT _], [p1, _], [_, p2])
+                            => [MINUS(p1, conj), conj,
+                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj)]
+                          | ([NEVENT _], [SEVENT _], [_, p1], [p2, _])
+                            => [MINUS(p2, conj), MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1),
+                                conj, MINUS(p1, conj)]
+                          | ([NEVENT _], [NEVENT _], [_, p1], [_, p2])
+                            => [MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj),
+                                MINUS(p1, conj), conj]
+                          | _ => raise TableError;
+                val probs = probs1 @ probs2 @ conjs;
+            in ((vs, probs), (id, vs, probs)::(tabs1 @ tabs2)) end
+          | convertTable (COMB(id, t1, t2)) =
+            let fun tableMerge [] _ _ _ = raise TableError
+                  | tableMerge _ _ [] _ = raise TableError
+                  | tableMerge (v1 as var1::_) probs1 (v2 as var2::_) probs2 =
+                    let
+                        (* Transpose:
+                                 c   d      =>       a   b
+                               ---------          ---------
+                            a |  e   f         c |   e   g
+                            b |  g   h         d |   f   h
+                         *)
+                        fun transpose [a, b, c, d, e, f, g, h] = [c, d, a, b, e, g, f, h]
+                          | transpose _ = raise TableError;
+                        val l1 = List.length v1;
+                        val l2 = List.length v2;
+                        val s1 = eventToString var1;
+                        val s2 = eventToString var2;
+                    in if l1 = l2 then (if s1 = s2 then (v1, probs1, probs2)
+                                        else if l1 = 1 then ((v1 @ v2),
+                                                             (probs1 @ [U,U,U,U,U,U]),
+                                                             ([U,U] @ probs2 @ [U,U,U,U]))
+                                        else (v1, probs1, transpose probs2))
+                       else if l1 > l2 then (if s1 = s2 then (tableMerge v1 probs1 v1 (probs2 @ [U,U,U,U,U,U]))
+                                             else (v1, probs1, ([U,U] @ probs2 @ [U,U,U,U])))
+                       else if s1 = s2 then (tableMerge v2 (probs1 @ [U,U,U,U,U,U]) v2 probs2)
+                       else (v2, ([U,U] @ probs1 @ [U,U,U,U]), probs2)
+                    end;
+                val ((v1, probs1), tabs1) = convertTable t1;
+                val ((v2, probs2), tabs2) = convertTable t2;
+                val (vs, b, c) = tableMerge v1 probs1 v2 probs2;
+                val probs = resolve b c (List.length b);
+            in ((vs, probs), (id, vs, probs)::tabs1 @ tabs2) end;
+        fun tableToHTML (id, events, probabilities) =
+            let fun toDocTable (events, probabilities) =
+                    let fun th s = "<th style=\"background-color:lightgrey; "
+                                   ^ "border:1px solid; height:25px; width:70px;\">"
+                                   ^ s ^ "</th>";
+                        fun td s = "<td style=\"border: 1px solid;\">" ^ s ^ "</td>";
+                        fun tr cells = "<tr>" ^ (String.concat cells) ^ "</tr>";
+                        fun overline x = "<span style=\"text-decoration:overline\">" ^ x ^ "</span>";
+                    in case (events, probabilities) of
+                           ([v], [p, p']) =>
+                           (String.concatWith "\n" [
+                                 tr [th "", th "Total"],
+                                 tr [th v, td p],
+                                 tr [th (overline v), td p'],
+                                 tr [th "Total", td "1"]
+                             ], 140.0)
+                         | ([v1, v2], [p1, p1', p2, p2', p12, p12', p1'2, p1'2']) =>
+                           (String.concatWith "\n" [
+                                 tr [th "", th v2, th (overline v2), th "Total"],
+                                 tr [th v1, td p12, td p12', td p1],
+                                 tr [th (overline v1), td p1'2, td p1'2', td p1'],
+                                 tr [th "Total", td p2, td p2', td "1"]
+                           ], 280.0)
+                         | _ => raise TableError
+                    end;
+                val header = "<div style=\"padding: 10px;\">\n"
+                             ^ "<table style=\"text-align:center; "
+                             ^ "border-collapse:collapse; "
+                             ^ "background-color:white; "
+                             ^ "font-size:12px;\">\n";
+                val footer = "\n</table>\n</div>\n";
+                val (content, width) = toDocTable ((List.map eventToString events),
+                                                   (List.map numToString probabilities));
+            in (id, ((header ^ content ^ footer), width + 20.0, 120.0)) end;
+        val (tabs, strings) = parseTable c;
+        val (_, tables) = convertTable tabs;
+    in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
 fun drawTree x =
     let fun parseTreeShading (Construction.Source(x)) =
