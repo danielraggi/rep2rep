@@ -131,14 +131,14 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                   let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
                       val minus = (id', "-", 1.5);
                   in (MINUS(a', b'), diff::y1@(minus::y2)) end
+                | "div" =>
+                  let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+                      val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+                      val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
+                      val divd = (id', "/", 1.5);
+                  in (FRAC(a', b'), frac::y1@(divd::y2)) end
                 | _ => raise NumError
            end
-         | ("frac", [a, Construction.Source((id', "div")), b]) =>
-           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-               val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
-               val divd = (id', "/", 1.5);
-           in (FRAC(a', b'), frac::y1@(divd::y2)) end
          | ("multiply", [a, b]) =>
            let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
@@ -1956,9 +1956,9 @@ fun drawTable c =
                      val (conj, conjHTML) = parseNum numExp;
                  in (TWOWAY(id, t1, t2, conj), t1HTML @ t2HTML @ conjHTML) end
                | ("combine", [table1, table2]) =>
-                 let val (x1,y1) = parseTable table1;
-                     val (x2,y2) = parseTable table2;
-                 in (COMB(id, x1, x2), y1@y2) end
+                 let val (t1, t1HTML) = parseTable table1;
+                     val (t2, t2HTML) = parseTable table2;
+                 in (COMB(id, t1, t2), t1HTML@t2HTML) end
                | ("notName", [name]) =>
                  let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
                  in case parseTable name of
