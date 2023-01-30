@@ -2,58 +2,64 @@ import "oruga.document";
 import "works.prob_parser";
 import "works.prob_renderer";
 
-signature TRANSFERPROB = sig
-    val renderArea: string -> unit
-    val renderTable: string -> unit;
-    val renderTree: string -> unit;
-    val renderBayes: string -> unit;
-end;
+exception Error;
 
-structure TransferProb : TRANSFERPROB = struct
-fun renderArea p = 
-    let val DC = Document.read "transferSchemas/bayesArea"
-        val KB = Document.knowledgeOf DC
-        val ST = #typeSystem (Document.findTypeSystemDataWithName DC "bayes")
-        val TT = #typeSystem (Document.findTypeSystemDataWithName DC "areaDiagram")
-        val x = ProbParser.produce_construction p
-        val goal = Relation.makeRelationship ([(Construction.constructOf x)],[("t'","area")],"encode")
-        val results = Transfer.masterTransfer false false NONE KB ST TT x goal
-        val v = List.hd(Composition.resultingConstructions (State.patternCompOf (Seq.hd results)))
-        val _ = ProbRender.drawArea v in
-        ()
+fun mkGoal constr interConstructors tgt_type =
+    let val construct = Construction.constructOf constr;
+        val encodeConstructor = FiniteSet.find (fn c => "encode" = CSpace.nameOfConstructor c) interConstructors;
+        val trueTok = CSpace.makeToken "" (Type.fromString "metaTrue");
+        val dummy = CSpace.makeToken "t'" (Type.fromString tgt_type);
+    in case encodeConstructor of
+           SOME(encodeConstructor) =>
+           Construction.TCPair({token = trueTok, constructor = encodeConstructor},
+                                [Construction.Source(construct), Construction.Source(dummy)])
+         | _ => raise Error
     end;
+
+fun filterResults (Result.OK x) = List.hd x
+  | filterResults (Result.ERROR _) = raise Error;
+
+fun renderArea p = 
+    let val DC = Document.read "transferSchemas/bayesArea";
+        val KB = Document.knowledgeOf DC;
+        val S = Document.findConSpecWithName DC "bayesG";
+        val T = Document.findConSpecWithName DC "areaDiagramG";
+        val I = Document.findConSpecWithName DC "interBayesArea";
+        val x = ProbParser.produce_construction p;
+        val goal = mkGoal x (#constructors I) "area";
+        val results = Transfer.applyTransfer S T I KB x goal;
+        val v = filterResults results;
+        val _ = drawArea v 
+    in () end;
 
 fun renderTable p = 
-    let val DC = Document.read "transferSchemas/bayesTable"
-        val KB = Document.knowledgeOf DC
-        val ST = #typeSystem (Document.findTypeSystemDataWithName DC "bayes")
-        val TT = #typeSystem (Document.findTypeSystemDataWithName DC "contTable")
-        val x = ProbParser.produce_construction p
-        val goal = Relation.makeRelationship ([(Construction.constructOf x)],[("t'","table")],"encode")
-        val results = Transfer.masterTransfer false false NONE KB ST TT x goal
-        val v = List.hd(Composition.resultingConstructions (State.patternCompOf (Seq.hd results)))
-        val _ = ProbRender.drawTable v in
-        ()
-    end;
+    let val DC = Document.read "transferSchemas/bayesTable";
+        val KB = Document.knowledgeOf DC;
+        val S = Document.findConSpecWithName DC "bayesG";
+        val T = Document.findConSpecWithName DC "contTableG";
+        val I = Document.findConSpecWithName DC "interBayesTable";
+        val x = ProbParser.produce_construction p;
+        val goal = mkGoal x (#constructors I) "table";
+        val results = Transfer.applyTransfer S T I KB x goal;
+        val v = filterResults results;
+        val _ = drawTable v; 
+    in v end;
 
 fun renderTree p = 
-    let val DC = Document.read "transferSchemas/bayesTree"
-        val KB = Document.knowledgeOf DC
-        val ST = #typeSystem (Document.findTypeSystemDataWithName DC "bayes")
-        val TT = #typeSystem (Document.findTypeSystemDataWithName DC "probTree")
-        val x = ProbParser.produce_construction p
-        val goal = Relation.makeRelationship ([(Construction.constructOf x)],[("t'","tree")],"encode")
-        val results = Transfer.masterTransfer false false NONE KB ST TT x goal
-        val v = List.hd(Composition.resultingConstructions (State.patternCompOf (Seq.hd results)))
-        val _ = ProbRender.drawTree v in
-        ()
-    end;
+    let val DC = Document.read "transferSchemas/bayesTree";
+        val KB = Document.knowledgeOf DC;
+        val S = Document.findConSpecWithName DC "bayesG";
+        val T = Document.findConSpecWithName DC "probTreeG";
+        val I = Document.findConSpecWithName DC "interBayesTree";
+        val x = ProbParser.produce_construction p;
+        val goal = mkGoal x (#constructors I) "tree";
+        val results = Transfer.applyTransfer S T I KB x goal;
+        val v = filterResults results;
+        val _ = drawTree v; 
+    in () end;
 
 fun renderBayes p = 
-    let val v = ProbParser.produce_construction p
-        val _ = ProbRender.drawBayes v in
-        ()
-    end;
-
-end;
+    let val v = ProbParser.produce_construction p;
+        val _ = drawBayes v; 
+    in () end;
     
