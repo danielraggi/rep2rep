@@ -22,6 +22,7 @@ sig
     val flip : ('a * 'b) -> ('b * 'a);
     val curry: ('a * 'b -> 'c) -> 'a -> 'b -> 'c
     val uncurry: ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+    val timeFn: string -> (unit -> 'a) -> 'a;
 end;
 
 
@@ -71,6 +72,12 @@ fun curry f a b = f (a, b);
 
 fun uncurry f (a, b) = f a b;
 
+fun timeFn name f =
+    let val t = Timer.startRealTimer ();
+        val result = f ();
+        val () = print ("Time for " ^ name ^ ": " ^ (Time.fmt 6 (Timer.checkRealTimer t)) ^ "s\n");
+    in result end;
+
 end;
 
 open Rep2RepLib
@@ -87,6 +94,7 @@ sig
 
     val intersperse : 'a -> 'a list -> 'a list;
 
+    val upTo : int -> int list;
     val enumerate : 'a list -> (int * 'a) list;
     val enumerateFrom : int -> 'a list -> (int * 'a) list;
 
@@ -122,6 +130,7 @@ sig
     val sumMap : ('a -> real) -> 'a list -> real;
     val weightedSum : (real -> real) -> real list -> real;
     val sum : real list -> real;
+    val sumMapInt : ('a -> int) -> 'a list -> int;
 
     val weightedAvgIndexed : ('a -> real) -> ('a -> real) -> 'a list -> real;
     val avgIndexed : ('a -> real) -> 'a list -> real;
@@ -131,6 +140,7 @@ sig
     val allZip : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool;
     val funZip : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list;
     val maps : ('a -> 'b list) -> 'a list -> 'b list;
+    val filterThenMap : ('a -> bool) -> ('a -> 'b) -> 'a list -> 'b list
 end;
 
 structure List : LIST =
@@ -156,7 +166,7 @@ fun split (xs, i) =
 
 fun inout lst =
     let fun loop ans _ [] = List.rev ans
-          | loop ans ys (x::xs) = loop ((x, (List.rev ys)@xs)::ans) (x::ys) xs;
+          | loop ans ys (x::xs) = loop ((x, List.revAppend (ys, xs))::ans) (x::ys) xs;
     in loop [] [] lst end;
 
 fun mergesort cmp [] = []
@@ -193,6 +203,11 @@ fun enumerateFrom start list =
     end;
 
 fun enumerate xs = enumerateFrom 0 xs;
+
+fun upTo n =
+    let fun f 0 xs = xs
+          | f n xs = f (n-1) ((n-1)::xs);
+    in f n [] end;
 
 fun filterOption xs = mapPartial (fn x => x) xs;
 
@@ -284,6 +299,8 @@ fun weightedSum w L = weightedSumMap w (fn x => x) L;
 fun sumMap f L = weightedSumMap (fn _ => 1.0) f L;
 fun sum L = weightedSumMap (fn _ => 1.0) (fn x => x) L;
 
+fun sumMapInt f L = List.foldr (fn (x, s) => (f x) + s) 0 L;
+
 fun weightedAvgIndexed w f L = if null L then raise Empty else (weightedSumMap w f L) / (sumMap w L)
 
 fun weightedAvg w L = weightedAvgIndexed w (fn x => x) L;
@@ -315,6 +332,10 @@ fun funZip _ [] [] = []
 
 fun maps f [] = []
   | maps f (x :: xs) = f x @ maps f xs;
+
+fun filterThenMap f m [] = []
+  | filterThenMap f m (x::L) =
+      if f x then m x :: filterThenMap f m L else filterThenMap f m L
 end;
 
 
@@ -441,10 +462,11 @@ sig
     include TEXT_IO;
 
     val lookaheadN : (instream *  int) -> string;
+    val inputLines: instream -> string list;
 
 end;
 
-structure TextIO :> TEXT_IO =
+structure TextIO : TEXT_IO =
 struct
 
 open TextIO;
@@ -457,5 +479,32 @@ fun lookaheadN (istr, count) =
     in
         lookahead
     end;
+
+fun inputLines istr =
+    let fun getln istr' = Option.map (fn l => (l, istr')) (inputLine  istr');
+    in List.unfold getln istr end;
+
+end;
+
+
+
+signature REAL =
+sig
+    include REAL;
+
+    val roundDecimal: real -> int -> real;
+end;
+
+structure Real : REAL =
+struct
+
+open Real;
+
+fun roundDecimal n p =
+    let fun e res 0 = res
+          | e res p = e (res * 10.0) ((Int.-)(p, 1));
+        fun up x = x * (e 1.0 p);
+        fun down x = x / (e 1.0 p);
+    in (down o realRound o up) n end;
 
 end;

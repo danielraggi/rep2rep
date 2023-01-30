@@ -94,6 +94,8 @@ signature RPC = sig
     type endpoint
     type service
 
+    val endpointName: endpoint -> string;
+
     (* create: address * port -> service *)
     val create: (string * int) -> service
 
@@ -460,6 +462,8 @@ type service = {
     address: INetSock.sock_addr
 }
 
+fun endpointName {identifier: string, ...} = identifier;
+
 fun create (host, port) = {
     address = INetSock.toAddr (Option.valOf (NetHostDB.fromString host), port)
 };
@@ -512,7 +516,7 @@ fun serve {address = addr} endpoints =
             end handle RpcError => Http.Server.makeResponse
                                        Http.BAD_REQUEST
                                        ("text/plain", Datatype.empty);
-    in Http.Server.listen addr handler end;
+    in Http.Server.listen addr (fn r => timeFn "handling" (fn () => handler r)) end;
 
 end;
 

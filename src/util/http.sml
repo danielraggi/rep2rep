@@ -244,7 +244,7 @@ fun recvVecNB (sock, chunk_size) =
                 rds = [Socket.sockDesc sock],
                 wrs = [],
                 exs = [],
-                timeout = SOME(Time.fromMilliseconds 100)
+                timeout = SOME(Time.fromMilliseconds 10)
             };
     in if List.length (#rds ready) = 0
        then NONE
@@ -262,10 +262,7 @@ fun recv_bytes sock =
                                 else f (inv::ans)
             end
         val invec = f [];
-    in if Word8Vector.length invec = 0
-        then recv_bytes sock
-        else invec
-    end;
+    in invec end;
 
 fun recv_http sock reader =
     let fun loop old_bytes =
@@ -362,15 +359,30 @@ fun listen addr callback =
                    ^ "\n");
         fun forever f = (f() handle e => (); forever f);
         val sock = INetSock.TCP.socket ();
+        val () = Socket.Ctl.setREUSEADDR (sock, true);
         val () = Socket.bind (sock, addr);
         val () = Socket.listen (sock, 512);
+        fun cleanup () =
+            let val _ = print ("Stopping server...\n");
+                val () = Socket.close sock;
+            in () end;
+        val _ = Signal.signal (Posix.Signal.int,
+                               Signal.SIG_HANDLE (
+                                   fn _ => (
+                                       cleanup();
+                                       Signal.signal (Posix.Signal.int, Signal.SIG_DFL);
+                                       Posix.Process.kill (Posix.Process.K_SAME_GROUP,
+                                                           Posix.Signal.int))));
     in
         forever
             (fn () =>
                 let val (sock', remote_addr) = Socket.accept sock;
                     fun handler () = let
                         val response =
-                            let val request = recv_request sock' in
+                            let val () = print ("Recieving request...\n");
+                                val request = recv_request sock' ;
+                                val () = print("Request for " ^ (#endpoint request) ^ "\n");
+                            in
                                 case #method request of
                                     OPTIONS => preflight
                                   | _ =>  callback request
@@ -382,10 +394,11 @@ fun listen addr callback =
                                              internalError);
                         val () = send_response sock' response;
                         val () = Socket.close sock';
+                        val () = print ("Handled Request.\n");
                     in () end handle e => printDiagnostics e;
                     val _ = Thread.Thread.fork (handler, []);
                 in () end)
-    end;
+    end handle e as (OS.SysErr (msg, _)) => let val () = print("ERROR: " ^ msg ^ "\n"); in raise e end;
 
 end;
 

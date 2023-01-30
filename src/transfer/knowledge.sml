@@ -1,27 +1,34 @@
-import "core.transferSchema";
+import "core.interCSpace";
 import "core.composition";
 
 signature KNOWLEDGE =
 sig
+  type iSchema = {context : Pattern.construction,
+                  antecedent : Pattern.construction list,
+                  consequent : Pattern.construction}
+  type iSchemaData = {name : string,
+                      contextConSpecN : string,
+                      idConSpecN : string,
+                      iSchema : iSchema}
   type base
 
-  (* CSpace knowledge *)
-
-
-  (* Relational knowledge *)
-(*)  val relationshipsOf : base -> Relation.relationship FiniteSet.set;*)
-  (*val related : base -> Relation.T -> CSpace.token list -> CSpace.token list -> bool;*)
-  val subRelation : base -> Relation.T -> Relation.T -> bool;
-
   (* TransferSchema knowledge *)
-  val tSchemasOf : base -> TransferSchema.tSch Seq.seq;
+  val inferenceSchemasOf : base -> iSchemaData Seq.seq;
+  val transferSchemasOf : base -> InterCSpace.tSchemaData Seq.seq;
   val strengthOf : base -> string -> real option
+  val conSpecImportsOf : base -> (string * string list) list
+
+  val conSpecIsImportedBy : (string * string list) list -> string -> string -> bool
 
   (* Building a knowledge base *)
-  val addTransferSchema : base -> TransferSchema.tSch -> real -> (TransferSchema.tSch * TransferSchema.tSch -> order) -> base;
+  val addInferenceSchema : base -> iSchemaData -> real -> (iSchemaData * iSchemaData -> order) -> base;
+  val addTransferSchema : base -> InterCSpace.tSchemaData -> real -> (InterCSpace.tSchemaData * InterCSpace.tSchemaData -> order) -> base;
+  val addConSpecImports : base -> (string * string list) -> base
+  val filterForISpace : string -> base -> base;
 
-  (*val addRelationships : base -> Relation.relationship list -> base;*)
-  val findTransferSchemaWithName : base -> string -> TransferSchema.tSch option;
+
+  val findInferenceSchemaWithName : base -> string -> iSchemaData option;
+  val findTransferSchemaWithName : base -> string -> InterCSpace.tSchemaData option;
 
   val join : base -> base -> base;
   val empty : base;
@@ -29,49 +36,77 @@ end;
 
 structure Knowledge : KNOWLEDGE =
 struct
-  type base = {(*relationships : Relation.relationship FiniteSet.set,*)
-               subRelation : Relation.T * Relation.T -> bool,
-               tSchemas : TransferSchema.tSch Seq.seq,
-               strength : string -> real option};
-
-  (* Relational knowledge *)
-  fun subRelation KB R1 R2 = (#subRelation KB) (R1,R2);
-(*)
-  fun related KB R a b =
-    let fun sat (X,Y,R') = List.allZip CSpace.sameTokens a X andalso List.allZip CSpace.sameTokens b Y andalso subRelation KB R' R
-    in Relation.same R Relation.alwaysTrue orelse Option.isSome (FiniteSet.find sat (relationshipsOf KB))
-    end;*)
+  type iSchema = {context : Pattern.pattern,
+                  antecedent : Pattern.pattern list,
+                  consequent : Pattern.pattern}
+  type iSchemaData = {name : string,
+                      contextConSpecN : string,
+                      idConSpecN : string,
+                      iSchema : iSchema}
+  type base = {transferSchemas : InterCSpace.tSchemaData Seq.seq,
+               inferenceSchemas : iSchemaData Seq.seq,
+               strength : string -> real option,
+               conSpecImports : (string * string list) list};
 
   (* TransferSchema knowledge *)
-  fun tSchemasOf KB = #tSchemas KB;
+  fun inferenceSchemasOf KB = #inferenceSchemas KB
+  fun transferSchemasOf KB = #transferSchemas KB
   fun strengthOf KB = #strength KB
+  fun conSpecImportsOf KB = #conSpecImports KB
+
+  fun addInferenceSchema KB isch s f =
+    {inferenceSchemas = Seq.insert isch (#inferenceSchemas KB) f,
+     transferSchemas = #transferSchemas KB,
+     conSpecImports = #conSpecImports KB,
+     strength = (fn cn => if #name isch = cn then SOME s else (#strength KB) cn)}
 
   fun addTransferSchema KB tsch s f =
-    {(*relationships= #relationships KB,*)
-      subRelation = #subRelation KB,
-      tSchemas = Seq.insert tsch (#tSchemas KB) f,
-      strength = (fn cn => if #name tsch = cn then SOME s else (#strength KB) cn)}
+    {inferenceSchemas = #inferenceSchemas KB,
+     transferSchemas = Seq.insert tsch (#transferSchemas KB) f,
+     conSpecImports = #conSpecImports KB,
+     strength = (fn cn => if #name tsch = cn then SOME s else (#strength KB) cn)}
 
-(*fun addRelationships KB rels =
-    {relationships= FiniteSet.union (#relationships KB) rels,
-      subRelation = #subRelation KB,
-      tSchemas = #tSchemas KB}*)
+  fun addConSpecImports KB (n,L) =
+    {inferenceSchemas = #inferenceSchemas KB,
+     transferSchemas = #transferSchemas KB,
+     conSpecImports = (n,L) :: #conSpecImports KB,
+     strength = #strength KB}
 
+  fun conSpecIsImportedBy conSpecImports n1 n2 =
+    List.exists (fn (x,L) => x = n2 andalso
+                             (List.exists (fn y => n1 = y) L orelse List.exists (fn y => conSpecIsImportedBy conSpecImports n1 y) L))
+                conSpecImports
+
+  fun filterForISpace name KB =
+    let val {conSpecImports,...} = KB
+        fun iSchemaInISpace x =
+            #idConSpecN x = name orelse conSpecIsImportedBy conSpecImports (#idConSpecN x) name
+        fun tSchemaInISpace x =
+            #interConSpecN x = name orelse conSpecIsImportedBy conSpecImports (#interConSpecN x) name
+    in
+      {inferenceSchemas = Seq.filter iSchemaInISpace (#inferenceSchemas KB),
+       transferSchemas = Seq.filter tSchemaInISpace (#transferSchemas KB),
+       conSpecImports = conSpecImports,
+       strength = #strength KB}
+    end
+
+
+  fun findInferenceSchemaWithName KB name =
+    Seq.findFirst (fn x => #name x = name) (#inferenceSchemas KB)
   fun findTransferSchemaWithName KB name =
-    Seq.findFirst (fn x => TransferSchema.nameOf x = name) (#tSchemas KB)
+    Seq.findFirst (fn x => InterCSpace.nameOf x = name) (#transferSchemas KB)
 
-  fun subRelUnion subR1 subR2 (x,y) = subR1(x,y) orelse subR2(x,y)
 
   fun join k1 k2 =
-    {subRelation = subRelUnion (#subRelation k1) (#subRelation k2),
-     tSchemas = Seq.append (#tSchemas k1) (#tSchemas k2),
+    {inferenceSchemas = Seq.append (#inferenceSchemas k1) (#inferenceSchemas k2),
+     transferSchemas = Seq.append (#transferSchemas k1) (#transferSchemas k2),
+     conSpecImports = (#conSpecImports k1) @ (#conSpecImports k2),
      strength = (fn cn => case (#strength k2) cn of SOME r => SOME r | NONE => (#strength k1) cn)}
 
   val empty =
-    let fun subrel (R1,R2) = Relation.same R1 R2
-    in {(*relationships= FiniteSet.ofList rels,*)
-        subRelation = subrel,
-        tSchemas = Seq.empty,
-        strength = (fn _ => NONE)}
-  end
+    {inferenceSchemas = Seq.empty,
+     transferSchemas = Seq.empty,
+     conSpecImports = [],
+     strength = (fn _ => NONE)}
+
 end;

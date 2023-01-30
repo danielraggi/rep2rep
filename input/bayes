@@ -2,10 +2,10 @@ import arith
 
 typeSystem bayes =
   imports arith
-  types _:eventVar, _:event, _:condEvent, _:events,
+  types _:event, _:condEvent, _:events,
         _:probEqn, _:probSys,
         inter, union, bin
-  order probEqn < probSys, inter < bin, union < bin, eventVar < event, event < events, condEvent < events
+  order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
 
 conSpec bayesG:bayes =
   imports arithG

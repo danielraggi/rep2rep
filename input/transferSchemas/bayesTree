@@ -1,106 +1,69 @@
 import bayes
 import probTree
-import transferSchemas/numNum
+import metaLogic
+import transferSchemas/arithArith
 
-tSchema eventA:(bayesG,probTreeG) =
-    source t:A:event
-    target t':A:label
+typeSystem interBayesTreeT =
+    imports bayes, probTree, metaLogicT
+    types
+    order
+
+conSpec interBayesTree:interBayesTreeT =
+    imports probTreeG, bayesG, interArithArith
+    constructors
+        match : [events,label] -> metaBool,
+        encode : [probSys,tree] -> metaBool
+
+tSchema eventV:(bayesG,probTreeG,interBayesTree) =
+    source t:?v:event
+    target t':?v:event
     antecedent
-    consequent ([t:A:event],[t':A:label]) :: match
+    consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength 1
 
-tSchema eventB:(bayesG,probTreeG) =
-    source t:B:event
-    target t':B:label
-    antecedent
-    consequent ([t:B:event],[t':B:label]) :: match
-    strength 1
-
-tSchema notEvent:(bayesG,probTreeG) =
-    source t:event <- complement[t1:overline,t2:event]
+tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
+    source t:event <- complement[t1:event]
     target t':label <- notLabel[t1':label]
-    antecedent ([t2:event],[t1':label]) :: match
-    consequent ([t:event],[t':label]) :: match
+    antecedent :metaTrue <- match[t1:event,t1':label]
+    consequent :metaTrue <- match[t:event,t':label]
     strength 1
 
-tSchema makeEvent:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:events,t2:numExp]
+tSchema makeEvent:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:event,t2:numExp]
     target t':tree <- construct[t1':label,t2':numExp]
-    antecedent ([t1:events],[t1':label]) :: match, ([t2:numExp],[t2':numExp]) :: equal
-    consequent ([t:probEqn],[t':tree]) :: encode
+    antecedent :metaTrue <- match[t1:event,t1':label],
+               :metaTrue <- equal[t2:numExp,t2':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1
 
-tSchema makeCond:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:condEvent <- condition[t11:event,t12:cond,t13:event],
+tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                              t2:numExp]
-    target t':tree <- addBranch[t1':tree <- construct[t11':label,t12':y:var],
+    target t':tree <- addBranch[t1':tree <-construct[t11':label,t12':y:var],
                                 t2':label,
                                 t3':numExp]
-    antecedent ([t13:event],[t11':label]) :: match, ([t11:event],[t2':label]) :: match, ([t2:numExp],[t3':numExp]) :: equal
-    consequent ([t:probEqn],[t':tree]) :: encode
+    antecedent :metaTrue <- match[t12:event,t11':label],
+               :metaTrue <- match[t11:event,t2':label],
+               :metaTrue <- equal[t2:numExp,t3':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1
 
-tSchema makeInter:(bayesG,probTreeG) =
-    source t:probEqn <- prob[t1:event <- infix[t11:event,t12:inter,t13:event],
+tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
+    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                              t2:numExp]
     target t':tree <- addBranch[t1':tree <- construct[t11':label, t12':x:var],
-                                t2':label, 
-                                t3':numExp <- frac[t31':numExp,t32':div,t12':x:var]]
-    antecedent ([t11:event],[t11':label]) :: match, ([t13:event],[t2':label]) :: match, ([t2:numExp],[t31':numExp]) :: equal
-    consequent ([t:probEqn],[t':tree]) :: encode
+                                t2':label,
+                                t3':numExp <- infixOp[t31':numExp,t32':div,t12':x:var]]
+    antecedent :metaTrue <- match[t11:event,t11':label],
+               :metaTrue <- match[t13:event,t2':label],
+               :metaTrue <- equal[t2:numExp,t31':numExp]
+    consequent :metaTrue <- encode[t:probEqn,t':tree]
     strength 1
 
-tSchema resolveTree:(bayesG,probTreeG) =
+tSchema resolveTree:(bayesG,probTreeG,interBayesTree) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]
     target t':tree <- resolve[t1':tree,t2':tree]
-    antecedent ([t1:probEqn],[t1':tree]) :: encode, ([t2:probSys],[t2':tree]) :: encode
-    consequent ([t:probSys],[t':tree]) :: encode
-    strength 1
-
-tSchema colourA:(bayesG,probTreeG) =
-    source t:A:event
-    target t':coloured <- colour[t1':empty,t2':A:label,t3':blue]
-    antecedent
-    consequent ([t:A:event],[t':coloured]) :: cMatch
-    strength 1
-
-tSchema colourB:(bayesG,probTreeG) =
-    source t:B:event
-    target t':coloured <- colour[t1':empty,t2':B:label,t3':blue]
-    antecedent
-    consequent ([t:B:event],[t':coloured]) :: cMatch
-    strength 1
-
-tSchema colourNot:(bayesG,probTreeG) =
-    source t:event <- complement[t1:overline,t2:event]
-    target t':coloured <- colour[t1':empty,
-                                 t2':label <- notLabel[t21':label],
-                                 t3':blue]
-    antecedent ([t2:event],[t21':label]) :: match
-    consequent ([t:event],[t':coloured]) :: cMatch
-    strength 1
-
-tSchema colourCond:(bayesG,probTreeG) =
-    source t:condEvent <- condition[t1:event,t2:cond,t3:event]
-    target t':coloured <- colour[t1':coloured <- colour[t11':empty,t12':label,t13':white],
-                                 t2':label,
-                                 t3':blue]
-    antecedent ([t3:event],[t12':label]) :: match, ([t1:event],[t2':label]) :: match
-    consequent ([t:condEvent],[t':coloured]) :: cMatch
-    strength 1
-    
-tSchema colourInter:(bayesG,probTreeG) =
-    source t:event <- infix[t1:event,t2:inter,t3:event]
-    target t':coloured <- colour[t1':coloured  <- colour[t11':empty,t12':label,t13':white],
-                                 t2':label,
-                                 t3':red]
-    antecedent ([t1:event],[t12':label]) :: match, ([t3:event],[t2':label]) :: match
-    consequent ([t:event],[t':coloured]) :: cMatch
-    strength 1
-
-tSchema colourTree:(bayesG,probTreeG) =
-    source t:probSys <- calculate[t1:probSys,t2:events]
-    target t':tree <- colourTree[t1':tree,t2':coloured]
-    antecedent ([t1:probSys],[t1':tree]) :: encode, ([t2:events],[t2':coloured]) :: cMatch
-    consequent ([t:probSys],[t':tree]) :: encode
+    antecedent :metaTrue <- encode[t1:probEqn,t1':tree],
+               :metaTrue <- encode[t2:probSys,t2':tree]
+    consequent :metaTrue <- encode[t:probSys,t':tree]
     strength 1

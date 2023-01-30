@@ -1,4 +1,6 @@
 import "core.cspace";
+import "util.result";
+import "util.diagnostic";
 import "util.rpc";
 
 signature CONSTRUCTION =
@@ -13,11 +15,16 @@ sig
   val construction_rpc: construction Rpc.Datatype.t;
   val walk_rpc: walk Rpc.Datatype.t;
 
+
   val same : construction -> construction -> bool;
+  val isTrivial : construction -> bool;
   (*val similar : construction -> construction -> bool;*)
+  val isGenerator : construction -> construction -> bool;
   val subConstruction : construction -> construction -> bool;
   val constructOf : construction -> CSpace.token;
-  val wellFormed : (*CSpace.conSpec ->*) Type.typeSystem -> construction -> bool;
+  val childrenOf : construction -> construction list;
+  val wellFormed : CSpace.conSpecData -> construction -> bool;
+  val typeCheck : CSpace.conSpecData -> construction -> (unit, Diagnostic.t list) Result.t;
   val size : construction -> int;
   (*val almostWellFormed : construction -> bool;*)
 (*
@@ -25,19 +32,20 @@ sig
   val inducedConstruction : construction -> walk -> construction;
   val foundationSequence : construction -> CSpace.token list;*)
   val leavesOfConstruction : construction -> CSpace.token list;
-  val fullTokenSequence : construction -> CSpace.token list;
-  val isGenerator : construction -> construction -> bool;
+  val tokensOfConstruction : construction -> CSpace.token FiniteSet.set;
   (*)
   val split : construction -> construction -> construction list;
   val unsplit : (construction * construction list) -> construction;*)
-  val fixLoops : construction -> construction;
   val fixReferences : construction -> construction;
-  val findAndExpandSubConstruction : construction -> CSpace.token -> construction
+  val largestSubConstructionWithConstruct : construction -> CSpace.token -> construction
   val attachAtSource : construction -> construction -> construction;
 
   val replaceConstruct : construction -> CSpace.token -> construction;
 
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
+
+  val minus : construction -> construction -> construction list;
+  val subConstructionsRaw : construction -> construction Seq.seq;
 
   val toString : construction -> string;
 
@@ -45,6 +53,7 @@ sig
 
   structure R : sig
                 val toString : Rpc.endpoint
+                val typeCheck: (string -> CSpace.conSpecData option) -> Rpc.endpoint
             end;
 end;
 
@@ -101,15 +110,19 @@ struct
   fun toString (Source t) = CSpace.stringOfToken t
     | toString (Reference t) = CSpace.stringOfToken t
     | toString (TCPair ({token,constructor}, cs)) =
-       CSpace.stringOfToken token ^ " <- " ^ CSpace.stringOfConstructor constructor ^ " <-" ^ (String.stringOfList toString cs)
+       CSpace.stringOfToken token ^ " <- " ^ CSpace.nameOfConstructor constructor ^ (String.stringOfList toString cs)
+
+  fun sameTCPairs {token = t, constructor = c} {token = t', constructor = c'} =
+    CSpace.sameTokens t t' andalso CSpace.sameConstructors c c'
 
   (* The following assumes well-formed *)
   fun same (Source t) (Source t') = CSpace.sameTokens t t'
     | same (Reference t) (Reference t') = CSpace.sameTokens t t'
-    | same (TCPair ({token = t, constructor = u}, cs)) (TCPair ({token = t', constructor = u'}, cs')) =
-        CSpace.sameTokens t t' andalso CSpace.sameConstructors u u'
-        andalso List.allZip same cs cs'
+    | same (TCPair (tc, cs)) (TCPair (tc', cs')) = sameTCPairs tc tc' andalso List.allZip same cs cs'
     | same _ _ = false
+
+  fun isTrivial (TCPair _) = false
+    | isTrivial _ = true
 
   (* The following assumes well-formed *)
   fun similar (Source t) (Source t') = CSpace.tokensHaveSameType t t'
@@ -119,20 +132,12 @@ struct
         andalso List.allZip similar cs cs'
     | similar _ _ = false
 
-  fun subConstruction (Source t) (Source t') = CSpace.sameTokens t t'
-    | subConstruction (Reference t) (Reference t') = CSpace.sameTokens t t'
-    | subConstruction (TCPair ({token = t, constructor = u}, cs)) (TCPair ({token = t', constructor = u'}, cs')) =
-        CSpace.sameTokens t t' andalso CSpace.sameConstructors u u'
-        andalso List.allZip subConstruction cs cs'
-    | subConstruction (Source t) (TCPair ({token = t', ...}, _)) = CSpace.sameTokens t t'
-    | subConstruction _ _ = false
-
   fun constructOf (Source t) = t
     | constructOf (Reference t) = t
     | constructOf (TCPair ({token, ...}, _)) = token
 
   fun leavesOfConstruction (Source t) = [t]
-    | leavesOfConstruction (Reference t) = [t]
+    | leavesOfConstruction (Reference t) = []
     | leavesOfConstruction (TCPair ({token, ...}, cs)) = List.concat (map leavesOfConstruction cs)
 (*
   fun CTS (Source t) = [[Token t]]
@@ -195,8 +200,11 @@ struct
     | specialises T (ty::tys) (ty'::tys') = if (#subType T) (ty, ty') then specialises T tys tys' else false
     | specialises _ _ _ = false
 
-  fun wellFormed T ct =
-    let fun wf (Source t) prev = (not (List.exists (fn x => x = t) prev), t::prev)
+  fun wellFormed CSD ct =
+    let val T = #typeSystem (#typeSystemData CSD)
+        fun wf (Source t) prev = (not (List.exists (fn x => x = t) prev) andalso
+                                    Set.elementOf (CSpace.typeOfToken t) (#Ty T),
+                                  t::prev)
           | wf (Reference t) prev = (List.exists (fn x => x = t) prev, prev)
           | wf (TCPair ({token,constructor}, cs)) prev =
             let val ty = CSpace.typeOfToken token
@@ -204,19 +212,111 @@ struct
               (*  val constructorFromCSpec = valOf (CSpace.findConstructorWithName (CSpace.nameOfConstructor constructor) C)
                 val eqConstructors = CSpace.sameConstructors constructorFromCSpec constructor*)
                 val (ctys,cty) = CSpace.csig constructor
-                val typeChecks = specialises T (ty::tys) (cty::ctys)
                 fun wfr [] prev' = (true,prev')
                   | wfr (ct'::L) prev' =
                     (case wf ct' prev' of
                       (WFX,tokenSeqX) => (case wfr L tokenSeqX of
                                               (WFY,tokenSeqY) => (WFX andalso WFY, tokenSeqY)))
-                val (WF,uprev) = if typeChecks andalso not (List.exists (fn x => x = token) prev)
+                val (WF,uprev) = if Set.elementOf (CSpace.typeOfToken token) (#Ty T) andalso
+                                    FiniteSet.exists (CSpace.sameConstructors constructor) (#constructors CSD) andalso
+                                    specialises T (ty::tys) (cty::ctys) andalso
+                                    not (List.exists (CSpace.sameTokens token) prev)
                                  then wfr cs (token::prev)
                                  else (false,prev)
             in (WF,uprev)
             end handle Option => (false,[])
     in #1 (wf ct [])
-    end
+    end;
+
+  fun typeCheck space ct =
+      let val typeSystem = #typeSystem (#typeSystemData space);
+          val types = #Ty typeSystem;
+          val subType = #subType typeSystem;
+          fun check (Source t) seen =
+              let val notAlreadySeen =
+                      if (not (List.exists (fn x => x = t) seen))
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  "'Source' token has been encountered directly twice."
+                                  [CSpace.nameOfToken t]];
+                  val knownType =
+                      if Set.elementOf (CSpace.typeOfToken t) types
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  ("Token has unknown type "
+                                   ^ (Type.nameOfType (CSpace.typeOfToken t))
+                                   ^ ".")
+                                  [CSpace.nameOfToken t]];
+                  val both = Result.allUnit List.concat [notAlreadySeen, knownType];
+              in (both, t::seen) end
+            | check (Reference t) seen =
+              let val alreadySeen =
+                      if List.exists (fn x => x = t) seen
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  "'Reference' token has never been seen before."
+                                  [CSpace.nameOfToken t]];
+              in (alreadySeen, seen) end
+            | check (TCPair ({token, constructor}, cs)) seen =
+              let val ty = CSpace.typeOfToken token;
+                  val inToks = map constructOf cs;
+                  val tys = map CSpace.typeOfToken inToks;
+                  val (ctys, cty) = CSpace.csig constructor;
+                  val rightLength =
+                      let val l = List.length tys;
+                          val lc = List.length ctys;
+                      in if l = lc
+                         then Result.ok ()
+                         else Result.error [
+                                 Diagnostic.create
+                                     Diagnostic.ERROR
+                                     ("Constructor needs "
+                                      ^ (Int.toString lc)
+                                      ^ " input tokens; only given "
+                                      ^ (Int.toString l) ^ ".")
+                                     (List.map CSpace.nameOfToken inToks)]
+                      end;
+                  fun rightType tok (conTyp, realTyp) verb =
+                      if subType (realTyp, conTyp)
+                      then Result.ok ()
+                      else Result.error [
+                              Diagnostic.create
+                                  Diagnostic.ERROR
+                                  ("Token has incorrect type; constructor "
+                                   ^ verb
+                                   ^ " "
+                                   ^ (Type.nameOfType conTyp)
+                                   ^ ", but token has type "
+                                   ^ (Type.nameOfType realTyp)
+                                   ^ ".")
+                                  [CSpace.nameOfToken tok]];
+                  val rightOutTy = rightType token (cty, ty) "produces";
+                  val rightInTys = Result.allUnit
+                                       List.concat
+                                       (ListPair.map
+                                            (fn (tok, tys) => rightType tok tys "requires")
+                                            (inToks, (ListPair.zip (ctys, tys))));
+                  val (recs, seen') =
+                      List.foldl
+                          (fn (c, (rs, seen)) => let val (r, seen') = check c seen;
+                                                 in (r::rs, seen') end)
+                          ([], token::seen)
+                          cs;
+                  val recursiveCheck = Result.allUnit List.concat recs;
+                  val allChecks =
+                      Result.allUnit List.concat
+                                     [rightLength,
+                                      rightOutTy,
+                                      rightInTys,
+                                      recursiveCheck];
+              in (allChecks, seen') end;
+      in #1 (check ct []) end;
 
   fun size (Source t) = 1
     | size (Reference t) = 0
@@ -266,12 +366,13 @@ struct
   fun removeDuplicates eq [] = []
     | removeDuplicates eq (h::t) = h :: removeDuplicates eq (List.filter (fn x => not(eq x h)) t)
 
-  fun fullTokenSequence ct =
+  (* assumes well-formed, otherwise will contain repetition *)
+  fun tokensOfConstruction ct =
     let fun fvs (Source t) = [t]
-          | fvs (Reference t) = []
+          | fvs (Reference _) = []
           | fvs (TCPair ({token,constructor},cs)) =
               token :: List.concat (map fvs cs)
-    in fvs ct
+    in FiniteSet.ofListQuick (fvs ct)
     end
 
   fun isGenerator (Source t) (Source t') = CSpace.sameTokens t t'
@@ -281,9 +382,70 @@ struct
         andalso List.allZip isGenerator cs cs'
     | isGenerator (Source t) (TCPair ({token, ...}, _)) =
         CSpace.sameTokens t token
-    | isGenerator (Source t) (Reference t') =
-        CSpace.sameTokens t t'
     | isGenerator _ _ = false
+
+  fun fixReferences ct =
+    let fun fix (Source t) prev =
+              if List.exists (CSpace.sameTokens t) prev
+              then (Reference t,prev)
+              else (Source t, t::prev)
+          | fix (Reference t) prev =
+              if List.exists (CSpace.sameTokens t) prev
+              then (Reference t,prev)
+              else (Source t, t::prev)
+          | fix (TCPair (tc, cs)) prev =
+              let fun fixr [] prev' = ([],prev')
+                    | fixr (ct'::L) prev' =
+                      (case fix ct' prev' of (fixedct',tokenSeqX) =>
+                        (case fixr L tokenSeqX of (fixedctL',tokenSeqY) =>
+                          (fixedct'::fixedctL', tokenSeqY)))
+                  val _ = if List.exists (CSpace.sameTokens (#token tc)) prev
+                          then (raise MalformedConstructionTerm (toString ct))
+                          else ()
+                  val (fixedcs,uprev) = fixr cs (#token tc :: prev)
+              in (TCPair (tc, fixedcs),uprev)
+              end
+    in #1 (fix ct [])
+    end
+
+  fun findFirstSOME (SOME x :: _) = SOME x
+    | findFirstSOME (NONE :: L) = findFirstSOME L
+    | findFirstSOME [] = NONE
+
+  fun findSubConstructionWithConstruct (Source t') t =
+        if CSpace.sameTokens t' t then SOME (Source t') else NONE
+    | findSubConstructionWithConstruct (Reference _) _ = NONE
+    | findSubConstructionWithConstruct (TCPair (tc, cs)) t =
+        if CSpace.sameTokens (#token tc) t
+        then SOME (TCPair (tc, cs))
+        else findFirstSOME (map (fn x => findSubConstructionWithConstruct x t) cs)
+
+  exception TokenNotPresent of (string * string)
+  fun takeGeneratorUntil L (Source t) =
+        if List.exists (fn x => CSpace.sameTokens x t) L
+        then Reference t
+        else Source t
+    | takeGeneratorUntil _ (Reference t) = Reference t
+    | takeGeneratorUntil L (TCPair (tc, cs)) =
+        if List.exists (fn x => CSpace.sameTokens x (#token tc)) L
+        then Reference (#token tc)
+        else TCPair (tc, map (takeGeneratorUntil L) cs)
+  fun largestSubConstructionWithConstruct ct t =
+    let val smallConstruction = valOf (findSubConstructionWithConstruct ct t)
+        val tokensOfSmallConstruction = tokensOfConstruction smallConstruction
+        fun expandReferencesUntil (Source t') = Source t'
+          | expandReferencesUntil (Reference t') = takeGeneratorUntil tokensOfSmallConstruction (valOf (findSubConstructionWithConstruct ct t'))
+          | expandReferencesUntil (TCPair (tc,cs)) = TCPair (tc, map expandReferencesUntil cs)
+    in fixReferences (expandReferencesUntil smallConstruction)
+    end handle Option => raise TokenNotPresent (toString ct,CSpace.stringOfToken t)
+
+  fun subConstruction ct ct' =
+    isGenerator ct (largestSubConstructionWithConstruct ct' (constructOf ct))
+    handle TokenNotPresent _ => false
+
+  fun childrenOf (Source t) = []
+    | childrenOf (Reference t) = []
+    | childrenOf (TCPair (tc,cts)) = cts
 
 (*)
   exception badTrail
@@ -311,75 +473,7 @@ struct
   exception NotASplit
   fun split c c' = map (inducedConstruction c) (CTS c')
 *)
-  fun fixLoops c =
-    let
-      fun fic _ (Source t) = (Source t)
-        | fic wk (Reference t) = if List.exists (fn x => #token x = t) wk then Reference t else Source t
-        | fic wk (TCPair (tc, cs)) =
-            TCPair (tc, map (fic (tc::wk)) cs)
-    in fic [] c
-    end
 
-  fun fixReferences ct =
-    let fun fix (Source t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
-          | fix (Reference t) prev = if List.exists (fn x => CSpace.sameTokens x t) prev then (Reference t,prev) else (Source t, t::prev)
-          | fix (TCPair (tc, cs)) prev =
-            let fun fixr [] prev' = ([],prev')
-                  | fixr (ct'::L) prev' =
-                    (case fix ct' prev' of
-                      (fixedct',tokenSeqX) => (case fixr L tokenSeqX of
-                                                (fixedctL',tokenSeqY) => (fixedct'::fixedctL', tokenSeqY)))
-                val (fixedcs,uprev) = fixr cs (#token tc :: prev)
-            in (TCPair (tc, fixedcs),uprev)
-            end
-    in #1 (fix ct [])
-    end
-
-  fun findFirstSOME (SOME x :: _) = SOME x
-    | findFirstSOME (NONE :: L) = findFirstSOME L
-    | findFirstSOME [] = NONE
-
-  fun findSubConstructionWithConstruct (Source t') t =
-        if CSpace.sameTokens t' t then SOME (Source t') else NONE
-    | findSubConstructionWithConstruct (Reference _) _ = NONE
-    | findSubConstructionWithConstruct (TCPair (tc, cs)) t =
-        if CSpace.sameTokens (#token tc) t
-        then SOME (TCPair (tc, cs))
-        else findFirstSOME (map (fn x => findSubConstructionWithConstruct x t) cs)
-
-  fun takeGeneratorUntil L (Source t) = if List.exists (fn x => x = t) L then Reference t else (Source t)
-    | takeGeneratorUntil _ (Reference t) = Reference t
-    | takeGeneratorUntil L (TCPair (tc, cs)) =
-        if List.exists (fn x => x = #token tc) L
-        then Reference (#token tc)
-        else TCPair (tc, map (takeGeneratorUntil L) cs)
-  fun findAndExpandSubConstruction ct t =
-    let val smallConstruction = valOf (findSubConstructionWithConstruct ct t)
-        val tokensOfSmallConstruction = fullTokenSequence smallConstruction
-        fun expandReferencesUntil (Source t') = Source t'
-          | expandReferencesUntil (Reference t') = takeGeneratorUntil tokensOfSmallConstruction (valOf (findSubConstructionWithConstruct ct t'))
-          | expandReferencesUntil (TCPair (tc,cs)) = TCPair (tc, map expandReferencesUntil cs)
-    in expandReferencesUntil smallConstruction
-    end handle Option => (print "what?";raise BadConstruction)
-
-(*)
-  (* The choice of how this function is built may seem strange, but it's made
-      so that if the split is not actually a split but something like a pattern split, where
-      the induced construction are specialisations, it uses the construct of the
-      specialisation instead of the original token *)
-  fun unsplit x =
-    let fun unsplit' (Source _,[ct]) = ct
-          | unsplit' (Reference _, [ct]) = Reference (constructOf ct)
-          | unsplit' ((TCPair (tc,cs)), cts) =
-              let fun us (c::L) icts = (case List.split(icts, length (foundationSequence c)) of
-                                            (cLx,cly) => unsplit' (c, cLx) :: us L cly)
-                    | us [] _ = []
-              in TCPair (tc, us cs cts)
-              end
-          | unsplit' _ = raise NotASplit
-        val result = fixLoops (unsplit' x)
-      (*  val _ = if wellFormed T result then () else print "\n WARNING: " ^ toString result ^ " is malformed" *)
-    in result end*)
 
   fun isReference (Reference _) = true
     | isReference _ = false
@@ -406,9 +500,9 @@ struct
     | attachConstructionAtToken (Reference t) _ _ = [Reference t]
     | attachConstructionAtToken (TCPair (tc, cs)) t ct =
         if CSpace.sameTokens (#token tc) t
-        then (if subConstruction ct (TCPair (tc, cs))
+        then (if isGenerator ct (TCPair (tc, cs))
               then [TCPair (tc, cs)]
-              else if subConstruction (TCPair (tc, cs)) ct
+              else if isGenerator (TCPair (tc, cs)) ct
                    then [ct]
                    else [TCPair (tc, cs), ct])
         else
@@ -417,6 +511,65 @@ struct
           in map mkNew (List.listProduct csr)
           end
 
+  exception NotGenerator;
+  fun minusGenerator (TCPair (tc,cts)) (TCPair (tc',cts')) =
+        let fun minusL [] [] = []
+              | minusL (x::L) (x'::L') = minusGenerator x x' @ minusL L L'
+              | minusL _ _ = raise NotGenerator
+        in if tc = tc'
+           then minusL cts cts'
+           else raise NotGenerator
+        end
+    | minusGenerator (Reference t) (Reference t') =
+        if CSpace.sameTokens t t'
+        then []
+        else raise NotGenerator
+    | minusGenerator ct (Source t') =
+        if CSpace.sameTokens (constructOf ct) t'
+        then childrenOf ct
+        else raise NotGenerator
+    | minusGenerator _ _ = raise NotGenerator;
+
+  fun minusTCPair ct tc' =
+    let fun minusTC' (TCPair (tc,cts)) =
+            if sameTCPairs tc tc'
+            then (Source (#token tc), List.filter (fn x => not (isTrivial x)) cts)
+            else (case map minusTC' cts of R =>
+                  (TCPair (tc, map #1 R), List.concat (map #2 R)))
+          | minusTC' (Source t) = (Source t,[])
+          | minusTC' (Reference t) = (Source t,[])
+        val (c,L) = minusTC' ct
+    in if not (isTrivial c) orelse null L then [c] @ L else L
+    end
+
+  fun minusTCPairs ct (tc::L) =
+        List.maps (fn x => minusTCPair x tc) (minusTCPairs ct L)
+      (*)  List.maps (fn x => minusTCPairs x L) (minusTCPair ct tc)*)
+    | minusTCPairs ct [] = [ct]
+
+  fun collectTCPairs (TCPair (tc,cts)) = tc :: List.maps collectTCPairs cts
+    | collectTCPairs _ = []
+
+  fun minus ct ct' = minusTCPairs ct (collectTCPairs ct')
+
+  fun subConstructionsRaw (Source t) = Seq.cons (Source t) Seq.empty
+    | subConstructionsRaw (Reference t) = Seq.cons (Reference t) Seq.empty
+    | subConstructionsRaw (TCPair (tc,cs)) =
+        Seq.cons (TCPair (tc,cs)) (Seq.maps subConstructionsRaw (Seq.of_list cs))
+
+(*)
+  exception NotSubConstruction;
+  fun minusSubConstruction ct ct' = minusGenerator ct ct'
+    handle NotGenerator =>
+      (case ct of TCPair (tc,cts) =>
+        let fun minusSC' (x::L) = (minusSubConstruction x ct' handle NotSubConstruction => [x]) @ minusSC' L
+              | minusSC' [] = []
+        in TCPair (tc, minusSC')
+        end ))
+*)
+
+
+
   structure R = struct
   fun url s = "core.construction." ^ s;
 
@@ -424,6 +577,20 @@ struct
                               construction_rpc,
                               String.string_rpc)
                              toString;
+
+  val typeCheck =
+   fn getSpace =>
+      Rpc.provide (url "typeCheck",
+                   Rpc.Datatype.tuple2 (String.string_rpc, construction_rpc),
+                   Result.t_rpc (unit_rpc, List.list_rpc Diagnostic.t_rpc))
+                  (fn (space, construction) =>
+                      case Option.map (fn s => typeCheck s construction) (getSpace space) of
+                          NONE => Result.error [
+                                     Diagnostic.create
+                                         Diagnostic.ERROR
+                                         ("Unknown Construction Space " ^ space)
+                                         []]
+                        | SOME r => r);
   end;
 
 end;

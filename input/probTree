@@ -2,8 +2,8 @@ import arith
 
 typeSystem probTree =
   imports arith
-  types  _:label, _:tree, _:eventVar
-  order eventVar < label
+  types  _:label, _:tree, _:event
+  order event < label
 
 conSpec probTreeG:probTree =
   imports arithG

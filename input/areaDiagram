@@ -3,8 +3,8 @@ import shade
 
 typeSystem areaDiagram =
   imports arith, shade
-  types _:tag, _:area, _:rect, _:point, empty, _:eventVar
-  order empty < area, eventVar < tag
+  types _:tag, _:area, _:rect, _:point, empty, _:event
+  order empty < area, event < tag
 
 conSpec areaDiagramG:areaDiagram =
   imports arithG

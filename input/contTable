@@ -2,8 +2,8 @@ import arith
 
 typeSystem contTable =
  imports arith
- types _:name, _:oneDim, _:twoDim, _:table, _:eventVar
- order oneDim < table, twoDim < table, eventVar < name
+ types _:name, _:oneDim, _:twoDim, _:table, _:event
+ order oneDim < table, twoDim < table, event < name
 
 conSpec contTableG:contTable =
  imports arithG

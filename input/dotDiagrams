@@ -1,10 +1,12 @@
 typeSystem dotDiagrams =
-    types _:arr
-    order
+    types _:dot, _:line, _:rectangle, _:triangle, _:arr, _:manipulation, _:numeral
+    order dot < line, line < rectangle, dot < triangle, triangle < arr, rectangle < arr
 
 conSpec dotDiagramsG:dotDiagrams =
   constructors
     join : [arr,arr] -> arr,
-    rotateX : [arr] -> arr,
+    manipulate : [arr,manipulation] -> arr,
     remove : [arr,arr] -> arr,
-    makeRectangle : [arr,arr] -> arr
+    fillRectangle : [line,line] -> rectangle,
+    intersect : [arr,arr] -> arr,
+    someLine : [numeral] -> line

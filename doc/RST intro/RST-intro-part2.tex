@@ -151,8 +151,8 @@
 	See below the type of transfer schemas, as implemented\footnote{Note this is a \textit{record} type.}:
 	\begin{alltt}
 type tsch = \{name : string,
-             sourcePattern : Pattern.construction,
-             targetPattern : Pattern.construction,
+             source : Pattern.construction,
+             target : Pattern.construction,
              antecedent : Relation.relationship list,
              consequent : Relation.relationship\};
 	\end{alltt}
@@ -172,7 +172,7 @@ type tsch = \{name : string,
 	\paragraph{Knowledge base} A knowledge base consists of a set of transfer schemas, and a \textit{sub-relation function}, which tells you whether some relations are included in others (e.g., the relation $=$ is included in the relation $\leq$). See below the type of a knowledge base, as implemented:
 	\begin{alltt}
 type base = \{subRelation : Relation.T * Relation.T -> bool,
-             tSchemas : TransferSchema.tSch Seq.seq\};
+             tSchemas : InterCSpace.tSchema Seq.seq\};
 	\end{alltt}
 	 $\mathtt{subRelation}$, where $\mathtt{subRelation}(R_1,R_2) = \mathtt{true}$ if $R_1 \subseteq R_2$. The default is that $\mathtt{subRelation}(R_1,R_2)$ will output true only if $R_1$ equals $R_2$, but in principle this knowledge can be augmented.
 
@@ -258,8 +258,7 @@ typeSystem arith =
 conSpec arithG:arith =
     infixOp : [numExp,binOp,numExp] -> numExp,
     infixRel : [numExp,binRel,numExp] -> formula,
-    frac : [numExp,div,numExp] -> numExp,
-    implicitMult : [numExp,numExp] -> numExp,
+    multiply : [numExp,numExp] -> numExp,
     addParentheses : [oB,numExp,cB] -> numExp
 \end{alltt}
 	Each constructor is declared along with its signature. It should be self-evident how the above is interpreted as constructors with their signatures.
@@ -288,8 +287,8 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                    t13:4:numeral],
                     t2:equals,
                     t3:4oB4plus1cBdiv2:numExp
-                        <- frac[t31:4oB4plus1cB:numExp
-                                    <- implicitMult[t311:4:numeral,
+                        <- infixOp[t31:4oB4plus1cB:numExp
+                                    <- multiply[t311:4:numeral,
                                                     t312:oB3plus1cB:numExp
                                                         <- addParentheses[t3121:oB,
                                                                           t3122:4plus1:numExp

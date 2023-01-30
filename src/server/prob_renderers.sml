@@ -115,14 +115,14 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                   let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
                       val minus = (id', "-", 1.5);
                   in (MINUS(a', b'), diff::y1@(minus::y2)) end
-                | "div" =>
-                  let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-                      val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-                      val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
-                      val divd = (id', "/", 1.5);
-                  in (FRAC(a', b'), frac::y1@(divd::y2)) end
                 | _ => raise NumError
            end
+         | ("frac", [a, Construction.Source((id', "div")), b]) =>
+           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+               val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
+               val divd = (id', "/", 1.5);
+           in (FRAC(a', b'), frac::y1@(divd::y2)) end
          | ("multiply", [a, b]) =>
            let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
@@ -798,8 +798,8 @@ fun resolve a b (n:int) =
               | (MINUS(MULT(m, VAR(k)), n), y) => SOME (VAR(k), FRAC(PLUS(y, n), m))
               | (x, MINUS(n, MULT(m, VAR(k)))) => SOME (VAR(k), FRAC(MINUS(n, x), m))
               | (MINUS(n, MULT(m, VAR(k))), y) => SOME (VAR(k), FRAC(MINUS(n, y), m))
-              | (MULT(m, VAR(n)), y) => if contains (VAR(n)) y 
-                                        then NONE 
+              | (MULT(m, VAR(n)), y) => if contains (VAR(n)) y
+                                        then NONE
                                         else SOME (VAR(n), FRAC(y, m))
               | (x, MULT(m, VAR(n))) => if contains (VAR(n)) x
                                         then NONE
@@ -819,14 +819,14 @@ fun resolve a b (n:int) =
                     else if x = U then filterNum' (y::ans) xs ys
                     else if y = U then filterNum' (x::ans) xs ys
                     else if nx > ny then filterNum' (y::ans) xs ys
-                    else filterNum' (x::ans) xs ys
+                    else filterNum' (x::ans) xs ys;
             in filterNum' [] xs ys end;
         fun tResolve a b c d 0 = (List.revAppend (c, a), List.revAppend (d, b))
           | tResolve [] [] c d _ = (List.rev c, List.rev d)
           | tResolve (a::aas) (b::bbs) c d e =
             if allNum (a::aas@c) orelse allNum (b::bbs@d)
             then (List.revAppend (c, (a::aas)), List.revAppend (d, (b::bbs)))
-            else 
+            else
               let val x = simplify a;
                   val y = simplify b;
                   val xs = List.map simplify aas;
@@ -1587,7 +1587,7 @@ fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagr
               "</svg>\n"^
               "</div>",
               len, 18.0))
-    end;a
+    end;
 
 fun drawArea c =
     let fun parseArea (Construction.Source((id, typ))) =
@@ -1940,9 +1940,9 @@ fun drawTable c =
                      val (conj, conjHTML) = parseNum numExp;
                  in (TWOWAY(id, t1, t2, conj), t1HTML @ t2HTML @ conjHTML) end
                | ("combine", [table1, table2]) =>
-                 let val (t1, t1HTML) = parseTable table1;
-                     val (t2, t2HTML) = parseTable table2;
-                 in (COMB(id, t1, t2), t1HTML@t2HTML) end
+                 let val (x1,y1) = parseTable table1;
+                     val (x2,y2) = parseTable table2;
+                 in (COMB(id, x1, x2), y1@y2) end
                | ("notName", [name]) =>
                  let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
                  in case parseTable name of
@@ -2050,11 +2050,11 @@ fun drawTable c =
         val (_, tables) = convertTable tabs;
     in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
-fun drawTree c =
+fun drawTree x =
     let fun parseTree (Construction.Source((id, typ))) =
                 (case String.breakOn ":" typ of
                     (subtype, ":", _) => (BRANCH(subtype), [(id, subtype, Real.fromInt (String.size subtype) + 0.5)])
-                    | _ => raise TreeError)
+                  | _ => raise TreeError)
           | parseTree (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
             (case (cname, cons) of
                 ("construct", [label, value]) =>
@@ -2231,7 +2231,7 @@ fun drawTree c =
                 val footer = "</svg>\n</div>";
                 val (content, h, w) = toDocTree ((List.map eventToString a), (List.map numToString b))
             in (id, ((header ^ content ^ footer), w + 10.0, h + 10.0)) end;
-        val (tr, strings) = parseTree c;
+        val (tr, strings) = parseTree x;
         val (_, trees) = convertTree tr;
     in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
@@ -2295,7 +2295,7 @@ fun drawBayes c =
                | _ => parseEvent c)
           | parseBayes c = parseEvent c;
     in List.map stringToHTML (parseBayes c) end;
-    
+
 fun wrap renderer c = Result.ok (List.flatmap renderer c)
                       handle e => Result.error [
                                      Diagnostic.create
