@@ -9,7 +9,7 @@ sig
   val applyTransferSchema : State.T -> InterCSpace.tSchemaData -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
 
-  val structureTransfer : int option -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
+  val structureTransfer : int option * int option * int option -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
 (*)
   val iterativeStructureTransfer : bool -> Pattern.pattern option
                                         -> State.T -> State.T Seq.seq*)
@@ -17,11 +17,12 @@ sig
   val targetedTransfer : Pattern.pattern
                             -> State.T -> State.T Seq.seq*)
 
-  val masterTransfer : int option -> bool
-                                  -> bool
-                                  -> Pattern.pattern option
-                                  -> State.T
-                                  -> State.T Seq.seq
+  val masterTransfer : int option * int option * int option
+                          -> bool
+                          -> bool
+                          -> Pattern.pattern option
+                          -> State.T
+                          -> State.T Seq.seq
 
   val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
                   CSpace.conSpecData -> (* Target Constructor Specification *)
@@ -225,7 +226,7 @@ struct
               SOME ((_,f,x),_) => SOME (f, x)
             | _ => getTargetEmbedding L)
       val targetConstructions = List.maps Composition.resultingConstructions patternComps
-      val (targetReifiesInComposition,targetMap, updatedTarget) =
+      val (targetReifiedByComposition,targetMap,updatedTarget) =
         (case getTargetEmbedding targetConstructions of
             SOME (f,_) =>
               let val tmap = preferentialFunUnion f targetConstructMap
@@ -244,7 +245,7 @@ struct
 
       val (_,updatedAntecedent) = applyMorphismRefreshingNONEs cstMap usedTokensCT antecedent
     in
-      (targetReifiesInComposition,
+      (targetReifiedByComposition,
        preferentialFunUnion goalMap compositionMap,
        InterCSpace.declareTransferSchema {source = matchingSubConstruction,
                                           target = updatedTarget,
@@ -255,11 +256,11 @@ struct
 
   fun applyTransferSchemaForGoal st tschData goal =
     let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} = tschData
-        val (targetReifiesInComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
+        val (targetReifiedByComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
 
         val patternComps = State.patternCompsOf st
         val renamedPatternComps = map (Composition.applyPartialMorphism stateRenaming) patternComps
-        val updatedPatternComps = if targetReifiesInComposition then renamedPatternComps else
+        val updatedPatternComps = if targetReifiedByComposition then renamedPatternComps else
             Composition.attachConstructions renamedPatternComps [#target instantiatedTSchema]
 
         val goals = State.goalsOf st
@@ -358,10 +359,10 @@ struct
       handle Nope => false
 
 
-fun structureTransfer searchLimit unistructured targetPattOption st =
-  let val maxNumGoals = 10
+fun structureTransfer (goalLimit,compositionLimit,searchLimit) unistructured targetPattOption st =
+  let val maxNumGoals = case goalLimit of SOME x => x | NONE => 15
+      val maxCompSize = case compositionLimit of SOME x => x | NONE => 200
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
-      val maxCompSize = 200
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
@@ -418,8 +419,8 @@ fun structureTransfer searchLimit unistructured targetPattOption st =
     end*)
 
 
-  fun masterTransfer searchLimit iterative unistructured targetPattOption st =
-    structureTransfer searchLimit unistructured targetPattOption st
+  fun masterTransfer limits iterative unistructured targetPattOption st =
+    structureTransfer limits unistructured targetPattOption st
 
   fun initState sCSD tCSD iCSD inverse KB ct goal =
     let val tTS = #typeSystem (#typeSystemData tCSD)
@@ -440,7 +441,7 @@ fun structureTransfer searchLimit unistructured targetPattOption st =
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
       let val st = initState sCSD tCSD iCSD false KB ct goal
-          val stateSeq = structureTransfer NONE false NONE st;
+          val stateSeq = structureTransfer (NONE,NONE,NONE) false NONE st;
           fun getStructureGraph st =
               List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
           fun makeDiagnostic goal =

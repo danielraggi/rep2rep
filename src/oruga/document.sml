@@ -70,6 +70,8 @@ struct
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
+  val goalLimitKW = "goalLimit"
+  val compositionLimitKW = "compositionLimit"
   val searchLimitKW = "searchLimit"
   val iterativeKW = "iterative"
   val unistructuredKW = "unistructured"
@@ -696,6 +698,16 @@ struct
             if x = SOME searchLimitKW
             then Int.fromString (String.concat c)
             else getSearchLimit L
+      fun getCompositionLimit [] = NONE
+        | getCompositionLimit ((x,c)::L) =
+            if x = SOME compositionLimitKW
+            then Int.fromString (String.concat c)
+            else getCompositionLimit L
+      fun getGoalLimit [] = NONE
+        | getGoalLimit ((x,c)::L) =
+            if x = SOME goalLimitKW
+            then Int.fromString (String.concat c)
+            else getGoalLimit L
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
@@ -731,6 +743,8 @@ struct
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
+      val goalLimit = getGoalLimit C
+      val compositionLimit = getCompositionLimit C
       val searchLimit = getSearchLimit C
       val iterative = getIterative C
       val KB = knowledgeOf DC
@@ -783,7 +797,7 @@ struct
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
       val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
-      val results = Transfer.masterTransfer searchLimit iterative unistructured targetPattern state;
+      val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
       val endTime = Time.now();
