@@ -1,16 +1,14 @@
-import num
+import arith
 
 typeSystem probTree =
-  imports num, shade
-  types  _:label, _:tree, _:coloured, empty
-  order empty < coloured
+  imports arith
+  types  _:label, _:tree, _:eventVar
+  order eventVar < label
 
 conSpec probTreeG:probTree =
-  imports numG
+  imports arithG
   constructors
     notLabel: [label] -> label,
     construct: [label, numExp] -> tree,
     addBranch: [tree, label, numExp] -> tree,
-    resolve: [tree, tree] -> tree,
-    colour : [coloured, label, shading] -> coloured,
-    colourTree: [tree, coloured] -> tree
+    resolve: [tree, tree] -> tree

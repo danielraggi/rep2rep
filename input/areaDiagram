@@ -1,17 +1,16 @@
-import num
+import arith
+import shade
 
 typeSystem areaDiagram =
-  imports num, shade
-  types  _:tag, _:area, _:rect, _:point, _:coloured, empty
-  order empty < area, empty < coloured
+  imports arith, shade
+  types _:tag, _:area, _:rect, _:point, empty, _:eventVar
+  order empty < area, eventVar < tag
 
 conSpec areaDiagramG:areaDiagram =
-  imports numG
+  imports arithG
   constructors
     reverseTag: [tag] -> tag,
     cPoint:[numExp, numExp] -> point,
     cRect: [point, point] -> rect,
     overlayRect: [area, rect, tag, shading] -> area,
-    colour: [coloured, tag, shading] -> coloured,
-    addColour: [area, coloured] -> area,
-    combine: [area,area] -> area
+    combine: [area, area] -> area

@@ -1,16 +1,14 @@
-import num
+import arith
 
 typeSystem contTable =
- imports num, shade
- types _:name, _:oneway, _:twoway, _:table, blank, _:coloured
- order oneway < table, twoway < table, blank < coloured
+ imports arith
+ types _:name, _:oneDim, _:twoDim, _:table, _:eventVar
+ order oneDim < table, twoDim < table, eventVar < name
 
-conSpec contTableG:contTable = 
- imports numG
+conSpec contTableG:contTable =
+ imports arithG
  constructors
   notName : [name] -> name,
-  constructOne : [name,numExp] -> oneway,
-  constructTwo : [oneway,oneway,numExp] -> twoway,
-  highlight : [coloured, name, shading] -> coloured,
-  colourTable : [table, coloured] -> table,
+  buildOne : [name,numExp] -> oneDim,
+  buildTwo : [oneDim,oneDim,numExp] -> twoDim,
   combine : [table,table] -> table
