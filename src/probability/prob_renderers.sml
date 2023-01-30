@@ -2236,56 +2236,66 @@ fun drawTree c =
         val (_, trees) = convertTree tr;
     in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
-fun drawBayes x =
-    let fun parseEvent (Construction.Source(x)) = 
-                (case String.breakOn ":" (#2 x) of
-                (a,":",_) => [(#1 x,a,Real.fromInt(String.size a)+0.5)]
-                | _ => raise BayesError)
-            |parseEvent (Construction.TCPair(x,y)) =
-                let val t = (#1 (#token x)) in
-                    if (#1 (#constructor x)) = "complement" then 
-                        let val y1 = parseEvent (List.last y) in 
-                            (case (List.nth (y,0)) of
-                            Construction.Source(z) => (t,"<tspan text-decoration=\"overline\">"^(#2 (hd(y1)))^"</tspan>",(#3 (hd(y1))))::((#1 z,"-",1.5))::y1
-                            |_ => raise BayesError)
-                        end
-                    else let val y1 = parseEvent (hd(y))
-                             val y2 = parseEvent (List.last(y)) in
-                                if (#1 (#constructor x)) = "condition" then 
-                                    (case (List.nth (y,1)) of
-                                    Construction.Source(z) => (t,(#2 (hd(y1)))^"|"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2))))::y1@[(#1 z,"|",1.5)]@y2
-                                    |_ => raise BayesError)
-                                else case (List.nth (y,1)) of
-                                        Construction.Source(z) => 
-                                            (case (#2 z) of
-                                            "inter" => (t,(#2 (hd(y1)))^"&cap;"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[(#1 z,"&cap;",1.5)]@y2
-                                            |"union" => (t,(#2 (hd(y1)))^"&cup;"^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+0.5)::y1@[(#1 z,"&cup;",1.5)]@y2
-                                            |_ => raise BayesError)
-                                        |_ => raise BayesError
-                         end
-                end
-            |parseEvent (Construction.Reference(x)) = raise BayesError
-        fun parseBayes (Construction.TCPair(x,y)) = 
-                if (#1 (#constructor x)) = "prob" then
-                    let val y1 = parseEvent (hd(y)) 
-                        val (_,y2) = ProbNum.parseNum (List.last y) 
-                        in  
-                        (#1 (#token x),"Pr("^(#2 (hd(y1)))^") = "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))+3.0)::y1@y2
-                    end
-                else if (#1 (#constructor x)) = "addEqn" then
-                    let val y1 = parseBayes (hd(y))
-                        val y2 = parseBayes (List.last y) in
-                        (#1 (#token x),(#2 (hd(y1)))^", "^(#2 (hd(y2))),(#3 (hd(y1)))+(#3 (hd(y2)))-1.0)::y1@y2   
-                    end
-                else raise BayesError
-            |parseBayes _ = raise BayesError
-        val a = (parseBayes x)
-        val outputFile = TextIO.openOut "output/bayes.html";
-        val _ = TextIO.output(outputFile, (concatAll (stringToHTML a)));
-        val _ = TextIO.closeOut outputFile
-        in
-        stringToHTML a
-    end;
+fun drawBayes c =
+    let fun parseOp (Construction.Source((id, "inter"))) = [(id, inter, 1.5)]
+          | parseOp (Construction.Source((id, "union"))) = [(id, union, 1.5)]
+          | parseOp _ = raise BayesError;
+        fun parseEvent (Construction.Source((id, typ))) =
+            (case String.breakOn ":" typ of
+                 (label, ":", _) => [(id, label, Real.fromInt (String.size label) + 0.5)]
+               | _ => raise NumError)
+          | parseEvent (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                 ("complement", [event]) =>
+                 let val html = parseEvent event;
+                     fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>"
+                 in case html of
+                        ((_, evt, width)::_) => (id, overline evt, width + 0.1)::html
+                      | _ => raise BayesError
+                 end
+               | ("makeCond", [event1, event2]) =>
+                 let val html1 = parseEvent event1;
+                     val html2 = parseEvent event2;
+                 in case (html1, html2) of
+                        ((_, e1, w1)::_, (_, e2, w2)::_) => (id, e1 ^ "|" ^ e2, w1+w2+0.1) :: html1 @ html2
+                      | _ => raise BayesError
+                 end
+               | ("infix", [event1, setop, event2]) =>
+                 let val html1 = parseEvent event1;
+                     val html2 = parseEvent event2;
+                     val htmlOp = parseOp setop;
+                 in case (html1, htmlOp, html2) of
+                        ((_, e1, w1)::_, (_, ops, w3)::_, (_, e2, w2)::_) =>
+                        (id, e1 ^ ops ^ e2, w1 + w2 + w3 - 1.0):: html1 @ html2 @ htmlOp
+                      | _ => raise BayesError
+                 end
+               | _ => raise BayesError)
+          | parseEvent (Construction.Reference(_)) = raise BayesError
+        fun parseBayes (c as Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                 ("makeEqn", [events, value]) =>
+                 let val html1 = parseEvent events;
+                     val (_, html2) = parseNum value;
+                 in case (html1, html2) of
+                        ((_, ev, w1)::_, (_, pr, w2)::_) =>
+                        let val eqn = "Pr(" ^ ev ^ ") = " ^ pr;
+                            val width = w1 + w2 + 3.0;
+                        in (id, eqn, width) :: html1 @ html2 end
+                      | _ => raise BayesError
+                 end
+               | ("addEqn", [eqn, system]) =>
+                 let val html1 = parseBayes eqn;
+                     val html2 = parseBayes system;
+                 in case (html1, html2) of
+                        ((_, eq1, w1)::_, (_, eq2, w2)::_) =>
+                        let val eqns = eq1 ^ ", " ^ eq2;
+                            val width = w1 + w2;
+                        in (id, eqns, width) :: html1 @ html2 end
+                      | _ => raise BayesError
+                 end
+               | _ => parseEvent c)
+          | parseBayes c = parseEvent c;
+    in List.map stringToHTML (parseBayes c) end;
     
 fun wrap renderer c = Result.ok (List.flatmap renderer c)
                       handle e => Result.error [
