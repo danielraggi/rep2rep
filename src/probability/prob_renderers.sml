@@ -60,6 +60,9 @@ exception TreeError;
 
 exception BayesError;
 
+val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
+val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
+
 fun eventToString (SEVENT(x)) = x
     |eventToString (NEVENT(x)) = x
 
@@ -1566,6 +1569,25 @@ fun resolve a b (n:int) =
           | tResolve _ _ _ _ _ = raise NumError;
         val (x, y) = tResolve a b [] [] n;
     in filterNum x y (countU a) (countU b) end
+
+fun stringToHTML (id, "EMPTY", _) = (* NOT A STRING: This is an EMPTY area Diagram! *)
+    (id, ("<div>\n"^
+         "<svg width=\"220\" height=\"220\">\n"^
+         "<rect x=\"10\" y=\"10\" width=\"200\" height=\"200\" style=\"fill:white;stroke-width:1;stroke:black\"/>\n"^
+         "</svg>\n"^
+         "</div>",
+         220.0, 220.0))
+  | stringToHTML (id, text, width) =
+    let val mid = width * 5.0;
+        val len = width * 10.0;
+    in
+        (id, ("<div>\n"^
+              "<svg width=\""^(Real.toString len)^"\" height=\"18\" font-size=\"12px\">\n"^
+              "<text text-anchor=\"middle\" transform=\"translate("^(Real.toString mid)^",13)\">"^text^"</text>\n"^
+              "</svg>\n"^
+              "</div>",
+              len, 18.0))
+    end;
 
 fun drawArea x =
     let fun parseAreaShading (Construction.Source(x)) =
