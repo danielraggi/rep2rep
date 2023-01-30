@@ -2051,218 +2051,190 @@ fun drawTable c =
         val (_, tables) = convertTable tabs;
     in (List.map tableToHTML tables) @ (List.map stringToHTML strings) end;
 
-fun drawTree x =
-    let fun parseTreeShading (Construction.Source(x)) =
-            if String.substring((#2 x), 0, 5) = "empty" then ([],10)
-            else raise TableError
-            |parseTreeShading (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "colour" then
-                    let val (x1, _) = parseTreeShading (hd(y))
-                        val (x2,_) = parseTree (List.nth(y, 1))
-                        val (x3,_) = parseShading (List.last(y)) in
-                    if x1 = [] then
-                        (case x2 of
-                        BRANCH(a) => ([SEVENT(a)],0)
-                        |NBRANCH(a) => ([NEVENT(a)],1)
-                        |_ => raise TableError)
-                    else (case (hd(x1), x2, x3) of
-                        (SEVENT(a), BRANCH(b),  BLUE)   => (x1@[SEVENT(b)], 2)
-                        |(SEVENT(a), NBRANCH(b), BLUE)   => (x1@[NEVENT(b)], 3)
-                        |(NEVENT(a), BRANCH(b),  BLUE)   => (x1@[SEVENT(b)], 4)
-                        |(NEVENT(a), NBRANCH(b), BLUE)   => (x1@[NEVENT(b)], 5)
-                        |(SEVENT(a), BRANCH(b),  RED)    => (x1@[SEVENT(b)], 6)
-                        |(SEVENT(a), NBRANCH(b), RED)    => (x1@[NEVENT(b)], 7)
-                        |(NEVENT(a), BRANCH(b),  RED)    => (x1@[SEVENT(b)], 8)
-                        |(NEVENT(a), NBRANCH(b), RED)    => (x1@[NEVENT(b)], 9)
-                        |_ => raise TableError)
-                    end
-                else raise TableError
-            |parseTreeShading _ = raise TableError 
-        and parseTree (Construction.Source(x)) = 
-                (case String.breakOn ":" (#2 x) of
-                    (a,":",_) => (BRANCH(a),[(#1 x,a,Real.fromInt(String.size a)+0.5)])
-                    |_ => raise TreeError)
-            |parseTree (Construction.TCPair(x,y)) =
-                if (#1 (#constructor x)) = "notLabel" then 
-                    (case (parseTree (hd(y))) of
-                        (BRANCH(a),b) => (NBRANCH(a),[((#1 (hd(b))),"<tspan text-decoration=\"overline\">"^(#2 (hd(b)))^"</tspan>",(#3 (hd(b))))])
-                        |_ => raise TreeError)
-                else if (#1 (#constructor x)) = "construct" then 
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = ProbNum.parseNum (List.last(y)) in
-                        (TREE((#1 (#token x)),x1,x2), y1@y2)
-                    end
-                else if (#1 (#constructor x)) = "addBranch" then 
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseTree (List.nth(y,1)) 
-                        val (x3,y3) = ProbNum.parseNum (List.last(y)) in
-                        (ADD((#1 (#token x)),x1,x2,x3),y1@y2@y3)
-                    end
-                else if (#1 (#constructor x)) = "resolve" then 
-                    let val (x1,y1) = parseTree (hd(y))
-                        val (x2,y2) = parseTree (List.last(y)) in
-                        (RESOLVE((#1 (#token x)),x1,x2),y1@y2)
-                    end   
-                else if (#1 (#constructor x)) = "colourTree" then 
-                    let val (x1,y1) = parseTree (hd(y))
-                        val x2 = parseTreeShading (List.last(y)) in
-                        (CTREE((#1 (#token x)),x1,x2), y1)
-                    end 
-                    
-                else raise TreeError
-            |parseTree (Construction.Reference(x)) = raise TreeError
-        fun convertTree (BRANCH(x)) = (([SEVENT(x)],[],[]),[])
-            |convertTree (NBRANCH(x)) = (([NEVENT(x)],[],[]),[])
-            |convertTree (TREE(m,x,y)) =
-                let val ((x2,_,_),_) = convertTree x in
-                    case (hd(x2)) of
-                    NEVENT(a) => ((x2,[ProbNum.MINUS(ProbNum.NUM(1),y),y],[]),[(m,x2,[ProbNum.MINUS(ProbNum.NUM(1),y),y],[])])
-                    |SEVENT(a) => ((x2,[y,ProbNum.MINUS(ProbNum.NUM(1),y)],[]),[(m,x2,[y,ProbNum.MINUS(ProbNum.NUM(1),y)],[])])
+fun drawTree c =
+    let fun parseTree (Construction.Source((id, typ))) =
+                (case String.breakOn ":" typ of
+                    (subtype, ":", _) => (BRANCH(subtype), [(id, subtype, Real.fromInt (String.size subtype) + 0.5)])
+                    | _ => raise TreeError)
+          | parseTree (Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
+            (case (cname, cons) of
+                ("construct", [label, value]) =>
+                let val (l, lHTML) = parseTree label;
+                    val (v, vHTML) = parseNum value;
+                in (TREE(id, l, v), lHTML @ vHTML) end
+              | ("addBranch", [tree, label, value]) =>
+                let val (t, tHTML) = parseTree tree;
+                    val (l, lHTML) = parseTree label;
+                    val (v, vHTML) = parseNum value;
+                in (ADD(id, t, l, v), tHTML @ lHTML @ vHTML) end
+              | ("resolve", [tree1, tree2]) =>
+                let val (t1, t1HTML) = parseTree tree1;
+                    val (t2, t2HTML) = parseTree tree2;
+                in (RESOLVE(id, t1, t2), t1HTML @ t2HTML) end
+              | ("notLabel", [label]) =>
+                let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
+                in case (parseTree label) of
+                       (BRANCH(l), (id', lab, size)::_) => (NBRANCH(l), [(id', overline lab, size)])
+                     | _ => raise TreeError
                 end
-            |convertTree (ADD(m,x,y,z)) =
-                let val ((x2,y2,_),n) = convertTree x
-                    val ((x3,_,_),_) = convertTree y in
-                    case ((hd(x2)), (hd(x3))) of
-                        (SEVENT(a),SEVENT(b)) => ((x2@x3,y2@[z,ProbNum.MINUS(ProbNum.NUM(1),z),ProbNum.U,ProbNum.U],[]),(m,x2@x3,y2@[z,ProbNum.MINUS(ProbNum.NUM(1),z),ProbNum.U,ProbNum.U],[])::n)
-                        |(SEVENT(a),NEVENT(b)) => ((x2@x3,y2@[ProbNum.MINUS(ProbNum.NUM(1),z),z,ProbNum.U,ProbNum.U],[]),(m,x2@x3,y2@[ProbNum.MINUS(ProbNum.NUM(1),z),z,ProbNum.U,ProbNum.U],[])::n)
-                        |(NEVENT(a),SEVENT(b)) => ((x2@x3,y2@[ProbNum.U,ProbNum.U,z,ProbNum.MINUS(ProbNum.NUM(1),z)],[]),(m,x2@x3,y2@[ProbNum.U,ProbNum.U,z,ProbNum.MINUS(ProbNum.NUM(1),z)],[])::n)
-                        |(NEVENT(a),NEVENT(b)) => ((x2@x3,y2@[ProbNum.U,ProbNum.U,ProbNum.MINUS(ProbNum.NUM(1),z),z],[]),(m,x2@x3,y2@[ProbNum.U,ProbNum.U,ProbNum.MINUS(ProbNum.NUM(1),z),z],[])::n)
-                end 
-            |convertTree ((RESOLVE(m,x,y))) =
-                let fun treeMerge x2 y2 x3 y3 =
-                        let fun f b = 
-                                if List.nth(b,2) = ProbNum.U then List.map ProbNum.simplify [ProbNum.VAR("z"),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")),
-                                                                                             ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,4),List.nth(b,1)), ProbNum.VAR("z"))),ProbNum.FRAC(ProbNum.MULT(List.nth(b,4), List.nth(b,1)),ProbNum.VAR("z")), 
-                                                                                             ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")))),ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")))]
-                                else if List.nth(b,4) = ProbNum.U then List.map ProbNum.simplify [ProbNum.VAR("z"), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")),
-                                                                                ProbNum.FRAC(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.VAR("z")), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.VAR("z"))),
-                                                                                ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))))]
-                                else List.map ProbNum.simplify 
-                                    [ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1))), ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1))), 
-                                     ProbNum.FRAC(ProbNum.MULT(List.nth(b,2), List.nth(b,0)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1)))), ProbNum.FRAC(ProbNum.MULT(List.nth(b,4), List.nth(b,1)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,2),List.nth(b,0)),ProbNum.MULT(List.nth(b,4),List.nth(b,1)))), 
-                                     ProbNum.FRAC(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1)))),  ProbNum.FRAC(ProbNum.MULT(List.nth(b,5),List.nth(b,1)),ProbNum.PLUS(ProbNum.MULT(List.nth(b,3),List.nth(b,0)),ProbNum.MULT(List.nth(b,5),List.nth(b,1))))] 
-                            fun countNum xs = 
-                                case xs of
-                                [] => 0
-                                |(x::xs) => if (ProbNum.onlyNum x) then (countNum xs) + 1 else countNum xs
-                        in
-                            if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, y3)
-                            else if List.length x2 = 1 andalso List.length x2 = List.length x3 then ((x2@x3), (y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]),  [ProbNum.VAR("z"), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z")), ProbNum.VAR("y"), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("y")), ProbNum.FRAC(ProbNum.MINUS((hd(y3)),ProbNum.MULT(ProbNum.VAR("z"),ProbNum.VAR("y"))),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))), ProbNum.MINUS(ProbNum.NUM(1),ProbNum.FRAC(ProbNum.MINUS((hd(y3)),ProbNum.MULT(ProbNum.VAR("z"),ProbNum.VAR("y"))),ProbNum.MINUS(ProbNum.NUM(1),ProbNum.VAR("z"))))])
-                            else if List.length x2 = List.length x3 then 
-                                if (countNum y2) > (countNum y3) then (x2, y2, (f y3)) else (x3, (f y2), y3) 
-                            else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then (x2, y2, (y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U])) 
-                            else if List.length x2 > List.length x3 then (List.rev x2, f y2, y3@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U])
-                            else if eventToString (hd(x2)) = eventToString (hd(x3)) then (x3, (y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]), y3)
-                            else (List.rev x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], f y3)
-                        end
-                    val ((x2,y2,_),n1) = convertTree y
-                    val ((x3,y3,_),n2) = convertTree x 
-                    val (a,b,c) = treeMerge x2 y2 x3 y3 
-                    in 
-                    if List.length a = 1 then ((a, ProbNum.resolve b c (List.length b), []),(m, a, ProbNum.resolve b c (List.length b), [])::n1@n2)
-                    else ((a, ProbNum.resolve b c (List.length b), []),(m, a, ProbNum.resolve b c (List.length b), [])::n1@n2)
-                end 
-            |convertTree (CTREE(m,x,y)) =
-                let fun changeShade l n new =
-                        if n = 0 then new::(tl(l))
-                        else (hd(l))::changeShade (tl(l)) (n-1) new
-                    fun numToList n len = 
-                        if len = 1 then changeShade [WHITE,WHITE] n RED
-                        else changeShade [WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE] n RED
-                    fun revert n =
-                        let val l = [WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE] in
-                            case n of
-                                0 => changeShade (changeShade l 8 RED) 6 RED
-                                |1 => changeShade (changeShade l 9 RED) 7 RED
-                                |2 => changeShade (changeShade l 8 RED) 6 PATTERN
-                                |3 => changeShade (changeShade l 6 RED) 8 PATTERN
-                                |4 => changeShade (changeShade l 9 RED) 7 PATTERN
-                                |5 => changeShade (changeShade l 7 RED) 9 PATTERN
-                                |6 => changeShade l 6 RED
-                                |7 => changeShade l 8 RED
-                                |8 => changeShade l 7 RED
-                                |9 => changeShade l 9 RED
-                                |_ => raise TreeError
-                        end
-                    val ((x2,y2,_),n) = convertTree x
-                    val (x3,y3) = y 
-                    in
-                    if List.length x2 = List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2,y2,numToList y3 (List.length x2)),(m,x2,y2,numToList y3 (List.length x2))::n)
-                    else if List.length x2 = List.length x3 andalso List.length x2 = 2 then ((x2,y2,revert y3),(m,x2,y2,revert y3)::n)
-                    else if List.length x2 = List.length x3 then ((x2@x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], revert y3),(m, x2@x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], revert y3)::n)
-                    else if List.length x2 > List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x2, y2, numToList y3 (List.length x2)),(m, x2, y2, numToList y3 (List.length x2))::n)
-                    else if List.length x2 > List.length x3 then ((x2, y2, revert y3),(m, x2, y2, revert y3)::n)
-                    else if List.length x2 < List.length x3 andalso eventToString (hd(x2)) = eventToString (hd(x3)) then ((x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], numToList y3 (List.length x3)),(m, x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], numToList y3 (List.length x3))::n)
-                    else ((List.rev x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], revert y3),(m, List.rev x3, y2@[ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U], revert y3)::n)
-                end
-        fun treeToHTML (m,a,b,c) =
-            let fun convertShade x n =
-                    let fun shadeToString x =
-                            case x of
-                            BLUE => " fill=\"lightblue\""
-                            |RED => " fill=\"lightcoral\""
-                            |WHITE => ""
-                            |GREEN => " fill=\"lightsalmon\""
-                            |PATTERN => " fill=\"lightseagreen\""
-                        fun emptyList n =
-                            if n = 0 then []
-                            else ""::(emptyList (n-1))
-                    in
-                        if x = [] then emptyList n
-                        else List.map shadeToString x
-                    end
-                fun addJoint y =
-                    if List.length y = 2 then []
-                    else if List.nth(y,2) = ProbNum.U andalso List.nth(y,4) = ProbNum.U then [ProbNum.U,ProbNum.U,ProbNum.U,ProbNum.U]
-                    else if List.nth(y,2) = ProbNum.U then [ProbNum.U,ProbNum.U,ProbNum.MULT(List.nth(y,4),List.nth(y,1)),ProbNum.MULT(List.nth(y,5),List.nth(y,1))]
-                    else if List.nth(y,4) = ProbNum.U then [ProbNum.MULT(List.nth(y,2),List.nth(y,0)),ProbNum.MULT(List.nth(y,3),List.nth(y,0)),ProbNum.U,ProbNum.U]
-                    else [ProbNum.MULT(List.nth(y,2),List.nth(y,0)),ProbNum.MULT(List.nth(y,3),List.nth(y,0)),ProbNum.MULT(List.nth(y,4),List.nth(y,1)),ProbNum.MULT(List.nth(y,5),List.nth(y,1))]
-                fun toDocTree (x,y,z) =
-                    if List.length x = 1 then  ("<svg height=\"90\" width=\"120\" style=\"background-color:white\" font-size=\"12px\">\n"^
-                                                "<text transform=\"translate(85,27)\">P("^(List.nth(x,0))^")</text>\n"^
-                                                "<text transform=\"translate(85,83)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>)</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate(40,35) rotate(-17)\""^(List.nth(z,0))^">"^(List.nth(y,0))^"</text>\n"^
-                                                "<text text-anchor=\"middle\" transform=\"translate(40,74) rotate(17)\""^(List.nth(z,1))^">"^(List.nth(y,1))^"</text>\n"^
-                                                "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"25\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                                                "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"75\" style=\"stroke:black;stroke-width:1\"/>\n",
-                                                90.0, 120.0)
-                    else   ("<svg height=\"110\" width=\"350\" style=\"background-color:white\" font-size=\"12px\">\n"^
-                            "<text transform=\"translate(85,27)\">P("^(List.nth(x,0))^")</text>\n"^
-                            "<text transform=\"translate(85,83)\">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>)</text>\n"^
-                            "<text transform=\"translate(225,10)\""^(List.nth(z,6))^">P("^(List.nth(x,0))^"&cap;"^(List.nth(x,1))^") "^(List.nth(y,6))^"</text>\n"^
-                            "<text transform=\"translate(225,38)\""^(List.nth(z,7))^">P("^(List.nth(x,0))^"&cap;<tspan text-decoration=\"overline\">"^(List.nth(x,1))^"</tspan>) "^(List.nth(y,7))^"</text>\n"^
-                            "<text transform=\"translate(225,70)\""^(List.nth(z,8))^">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>&cap;"^(List.nth(x,1))^") "^(List.nth(y,8))^"</text>\n"^
-                            "<text transform=\"translate(225,98)\""^(List.nth(z,9))^">P(<tspan text-decoration=\"overline\">"^(List.nth(x,0))^"</tspan>&cap;<tspan text-decoration=\"overline\">"^(List.nth(x,1))^"</tspan>) "^(List.nth(y,9))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(40,35) rotate(-17)\""^(List.nth(z,0))^">"^(List.nth(y,0))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(40,74) rotate(17)\""^(List.nth(z,1))^">"^(List.nth(y,1))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,11) rotate(-7)\""^(List.nth(z,2))^">"^(List.nth(y,2))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,37) rotate(7)\""^(List.nth(z,3))^">"^(List.nth(y,3))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,71) rotate(-7)\""^(List.nth(z,4))^">"^(List.nth(y,4))^"</text>\n"^
-                            "<text text-anchor=\"middle\" transform=\"translate(170,97) rotate(7)\""^(List.nth(z,5))^">"^(List.nth(y,5))^"</text>\n"^
-                            "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"25\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"0\" y1=\"50\" x2=\"80\" y2=\"75\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"20\" x2=\"220\" y2=\"7\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"20\" x2=\"220\" y2=\"33\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"80\" x2=\"220\" y2=\"67\" style=\"stroke:black;stroke-width:1\"/>\n"^
-                            "<line x1=\"120\" y1=\"80\" x2=\"220\" y2=\"93\" style=\"stroke:black;stroke-width:1\"/>\n",
-                            110.0, 350.0)
-                val header = "<div>\n"
-                val footer = "</svg>\n"^
-                             "</div>"
-                val b = b@(addJoint b)
-                val (content,h,w) = toDocTree ((List.map eventToString a),(List.map ProbNum.numToString b),(convertShade c (List.length b)))
-                in
-                (m, ((header^content^footer),w,h))
+              | _ =>  raise TreeError)
+          | parseTree (Construction.Reference(_)) = raise TreeError;
+        fun convertTree (BRANCH(x)) = (([SEVENT(x)], []), [])
+          | convertTree (NBRANCH(x)) = (([NEVENT(x)], []), [])
+          | convertTree (TREE(id, label, prob)) =
+            let val ((vars, _), _) = convertTree label;
+                val prob' = MINUS(NUM 1, prob);
+            in case vars of
+                   [NEVENT _] => ((vars, [prob', prob]), [(id, vars, [prob', prob])])
+                 | [SEVENT _] => ((vars, [prob, prob']), [(id, vars, [prob, prob'])])
+                 | _ => raise TreeError
             end
-        val (a,b) = parseTree x
-        val (_,n) = convertTree a
-        val ns = List.map treeToHTML n
-        val outputFile = TextIO.openOut "output/tree.html";
-        val _ = TextIO.output(outputFile, (concatAll (ns@(stringToHTML b))));
-        val _ = TextIO.closeOut outputFile
-        in
-        ns@(stringToHTML b)
-    end
+          | convertTree (ADD(id, tree, label, prob)) =
+            let val ((v1, ps), tHTML) = convertTree tree;
+                val ((v2, _), _) = convertTree label;
+                val vars = v1 @ v2;
+                val prob' = MINUS(NUM 1, prob);
+            in case (v1, v2) of
+                   ([SEVENT _], [SEVENT _]) => let val ps = ps @ [prob, prob', U, U];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([SEVENT _], [NEVENT _]) => let val ps = ps @ [prob', prob, U, U];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([NEVENT _], [SEVENT _]) => let val ps = ps @ [U, U, prob, prob'];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | ([NEVENT _], [NEVENT _]) => let val ps = ps @ [U, U, prob', prob];
+                                               in ((vars, ps), (id, vars, ps)::tHTML) end
+                 | _ => raise TreeError
+            end
+          | convertTree (RESOLVE(id, tree1, tree2)) =
+            let fun treeMerge x2 y2 x3 y3 =
+                    let fun f (b0::b1::b2::b3::b4::b5::_) =
+                            let val z = VAR "z";
+                                val z' = MINUS(NUM 1, z);
+                            in case (b2, b4) of
+                                   (U, _) => List.map simplify [
+                                                z, z', MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                FRAC(MULT(b4, b1), z),
+                                                MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                FRAC(MULT(b5, b1), z')]
+                                 | (_, U) => List.map simplify [
+                                                z, z', FRAC(MULT(b2, b0), z),
+                                                MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                FRAC(MULT(b3, b0), z'),
+                                                MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                 | (_, _) => List.map simplify [
+                                                PLUS(MULT(b2, b0), MULT(b4, b1)),
+                                                PLUS(MULT(b3, b0), MULT(b5, b1)),
+                                                FRAC(MULT(b2, b0), PLUS(MULT(b2, b0), MULT(b4, b1))),
+                                                FRAC(MULT(b4, b1), PLUS(MULT(b2, b0), MULT(b4, b1))),
+                                                FRAC(MULT(b3, b0), PLUS(MULT(b3, b0), MULT(b5, b1))),
+                                                FRAC(MULT(b5, b1), PLUS(MULT(b3, b0), MULT(b5, b1)))]
+                            end
+                          | f _ = raise TreeError;
+                        fun countNum xs =
+                            let fun f ans [] = ans
+                                  | f ans (x::xs) = if onlyNum x then f (ans + 1) xs else f ans xs;
+                            in f 0 xs end;
+                        val l1 = List.length x2;
+                        val l2 = List.length x3;
+                        val s1 = eventToString (hd x2);
+                        val s2 = eventToString (hd x3);
+                        val (z, z') = (VAR  "z", MINUS(NUM 1, VAR "z"));
+                        val (y, y') = (VAR  "y", MINUS(NUM 1, VAR "y"));
+                    in if l1 = l2
+                       then (if s1 = s2
+                             then (x2, y2, y3)
+                             else (if l1 = 1
+                                   then let val probs = [z, z', y, y',
+                                                         FRAC(MINUS(hd y3, MULT(z, y)), z'),
+                                                         MINUS(NUM 1, FRAC(MINUS(hd y3, MULT(z, y)), z'))];
+                                        in (x2 @ x3, y2 @ [U, U, U, U], probs) end
+                                   else (if (countNum y2) > (countNum y3)
+                                         then (x2, y2, f y3)
+                                         else (x3, f y2, y3))))
+                       else (if l1 > l2
+                             then (if s1 = s2
+                                   then (x2, y2, y3 @ [U, U, U, U])
+                                   else (List.rev x2, f y2, y3 @ [U, U, U, U]))
+                        else (if s1 = s2
+                              then (x3, y2 @ [U, U, U, U], y3)
+                              else (List.rev x3, y2 @ [U, U, U, U], f y3)))
+                    end;
+                val ((v1, p1), html1) = convertTree tree1;
+                val ((v2, p2), html2) = convertTree tree2;
+                val (vars, b, c) = treeMerge v1 p1 v2 p2;
+                val probs = resolve b c (List.length b);
+            in ((vars, probs), (id, vars, probs) :: html1 @ html2) end;
+        fun treeToHTML (id, a, b) =
+            let fun addJoint (y0::y1::y2::y3::y4::y5::_) =
+                    (case (y2, y4) of
+                         (U, U) => [U, U, U, U]
+                       | (U, _) => [U, U, MULT(y4, y1), MULT(y5, y1)]
+                       | (_, U) => [MULT(y2, y0), MULT(y3, y0), U, U]
+                       | (_, _) => [MULT(y2, y0), MULT(y3, y0), MULT(y4, y1), MULT(y5, y1)])
+                  | addJoint [p, p'] = []
+                  | addJoint _ = raise TreeError;
+                fun overline x = "<tspan text-decoration=\"overline\">" ^ x ^ "</tspan>";
+                fun svg (height, width) = String.concat [
+                        "<svg height=\"", height, "\" width=\"", width, "\" font-size=\"12px\">\n"
+                    ];
+                fun text s (x, y) mid rotate = String.concat [
+                        "<text ",
+                        (if mid then "text-anchor=\"middle\" " else ""),
+                        "transform=\"translate(", x, ",", y, ")",
+                        (case rotate of
+                             NONE => ""
+                          | SOME rot => " rotate(" ^ rot ^ ")"),
+                        "\">",
+                        s,
+                        "</text>\n"
+                    ];
+                fun line (x1, y1) (x2, y2) = String.concat [
+                        "<line ",
+                        "x1=\"", x1, "\" y1=\"", y1, "\" ",
+                        "x2=\"", x2, "\" y2=\"", y2, "\" ",
+                        "style=\"stroke:black;stroke-width:1\"/>\n"
+                    ];
+                fun toDocTree ([x], [p, p']) =
+                    (String.concat [
+                          svg ("90", "120"),
+                          text ("Pr(" ^ x ^ ")") ("85", "27") false NONE,
+                          text ("Pr(" ^ (overline x) ^ ")") ("85", "83") false NONE,
+                          text p ("40", "35") true (SOME "-17"),
+                          text p' ("40", "74") true (SOME "17"),
+                          line ("0", "50") ("80", "25"),
+                          line ("0", "50") ("80", "75")
+                      ], 90.0, 120.0)
+                  | toDocTree ([x1, x2], [y0, y1, y2, y3, y4, y5, y6, y7, y8, y9]) =
+                    (String.concat [
+                          svg ("110", "350"),
+                          text ("Pr(" ^ x1 ^ ")") ("85", "27") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ ")") ("85", "83") false NONE,
+                          text ("Pr(" ^ x1 ^ inter ^ x2 ^ ") " ^ y6) ("225", "10") false NONE,
+                          text ("Pr(" ^ x1 ^ inter ^ (overline x2) ^ ") " ^ y7) ("225", "38") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ inter ^ x2 ^ ") " ^ y8) ("225", "70") false NONE,
+                          text ("Pr(" ^ (overline x1) ^ inter ^ (overline x2) ^ ") " ^ y9) ("225", "98") false NONE,
+                          text y0 ("40", "35") true (SOME "-17"),
+                          text y1 ("40", "74") true (SOME "17"),
+                          text y2 ("170", "11") true (SOME "-7"),
+                          text y3 ("170", "37") true (SOME "7"),
+                          text y4 ("170", "71") true (SOME "-7"),
+                          text y5 ("170", "97") true (SOME "7"),
+                          line ("0", "50") ("80", "25"),
+                          line ("0", "50") ("80", "75"),
+                          line ("120", "20") ("220", "7"),
+                          line ("120", "20") ("220", "33"),
+                          line ("120", "80") ("220", "67"),
+                          line ("120", "80") ("220", "93")
+                      ], 110.0, 350.0)
+                  | toDocTree _ = raise TreeError;
+                val b = b @ (addJoint b);
+                val header = "<div style=\"padding:5px;\">\n";
+                val footer = "</svg>\n</div>";
+                val (content, h, w) = toDocTree ((List.map eventToString a), (List.map numToString b))
+            in (id, ((header ^ content ^ footer), w + 10.0, h + 10.0)) end;
+        val (tr, strings) = parseTree c;
+        val (_, trees) = convertTree tr;
+    in (List.map treeToHTML trees) @ (List.map stringToHTML strings) end
 
 fun drawBayes x =
     let fun parseEvent (Construction.Source(x)) = 
