@@ -78,7 +78,7 @@ tSchema evtsEvt:(btree,bayesPlus,interBTreeBayes) =
     target t':event
     antecedent :metaTrue <- EVT[t:btree,t':event]
     consequent :metaTrue <- EVTS[t:btree,t':event]
-    strength 1
+    strength 2
 
 tSchema sysEqn:(btree,bayesPlus,interBTreeBayes) =
     source t:btree
