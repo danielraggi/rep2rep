@@ -1,5 +1,5 @@
 import "core.construction";
-import "works.prob_num";
+(* Require numExp constructs *)
 
 signature PROBPARSER = sig
   datatype probEvent = EVENT of string
@@ -98,10 +98,10 @@ fun parse x =
     end;
 
 fun produce_construction e = 
-  let fun constructEvent n (EVENT(x)) = (Construction.Source("t"^n, x^":event"), x)
+  let fun constructEvent n (EVENT(x)) = (Construction.Source("t"^n, x^":eventVar"), x)
           |constructEvent n (NOT(x)) = 
             let val (x2, x3) = constructEvent (n^"2") x in
-                (Construction.TCPair({constructor = ("complement", (["overline","event"], "event")), token = ("t"^n, "overline-"^x3^":event")}, Construction.Source("t"^n^"1", "overline")::[x2]), "overline-"^x3)
+                (Construction.TCPair({constructor = ("complement", (["event"], "event")), token = ("t"^n, "not-"^x3^":event")}, [x2]), "not-"^x3)
             end
           |constructEvent n (INTER(x,y)) = 
             let val (x2, x3) = constructEvent (n^"1") x
@@ -116,7 +116,7 @@ fun produce_construction e =
           |constructEvent n (COND(x,y)) = 
             let val (x2, x3) = constructEvent (n^"1") x
                 val (y2, y3) = constructEvent (n^"3") y in
-                (Construction.TCPair({constructor=("condition", (["event","cond","event"],"condEvent")), token=("t"^n,x3^"-cond-"^y3^":condEvent")}, x2::Construction.Source("t"^n^"2", "cond")::[y2]), x3^"-cond-"^y3)
+                (Construction.TCPair({constructor=("makeCond", (["event","event"],"condEvent")), token=("t"^n,x3^"-cond-"^y3^":condEvent")}, x2::[y2]), x3^"-cond-"^y3)
             end 
           |constructEvent n E = raise ParseError
       fun constructNum n (ProbNum.U) = (Construction.Source("t"^n, "numExp"), "")
@@ -136,7 +136,7 @@ fun produce_construction e =
           |constructNum n (ProbNum.FRAC(x,y)) = 
             let val (x2, x3) = constructNum (n^"1") x
                 val (y2, y3) = constructNum (n^"3") y in
-                (Construction.TCPair({constructor=("frac", (["numExp","div","numExp"],"numExp")), token=("t"^n,x3^"-div-"^y3^":numExp")}, x2::Construction.Source("t"^n^"2", "div")::[y2]), x3^"-div-"^y3)
+                (Construction.TCPair({constructor=("infixOp", (["numExp","binOp","numExp"],"numExp")), token=("t"^n,x3^"-div-"^y3^":numExp")}, x2::Construction.Source("t"^n^"2", "div")::[y2]), x3^"-div-"^y3)
             end
           |constructNum n (ProbNum.MULT(x,y)) = 
             let val (x2, x3) = constructNum (n^"1") x
@@ -151,7 +151,7 @@ fun produce_construction e =
           |construct n (EQN(x,y)) = 
             let val (x2, x3) = constructEvent (n^"1") x
                 val (y2, y3) = constructNum (n^"2") y in
-                (Construction.TCPair({constructor=("prob", (["events","numExp"],"probEqn")), token=("t"^n,x3^"-is-"^y3^":probEqn")}, x2::[y2]), x3^"-is-"^y3)
+                (Construction.TCPair({constructor=("makeEqn", (["events","numExp"],"probEqn")), token=("t"^n,x3^"-is-"^y3^":probEqn")}, x2::[y2]), x3^"-is-"^y3)
             end
       fun constructQ n (PROOF(x,y)) =
             let val (x2, x3) = construct (n^"1") x
