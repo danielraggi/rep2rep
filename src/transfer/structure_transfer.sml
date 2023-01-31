@@ -9,7 +9,7 @@ sig
   val applyTransferSchema : State.T -> InterCSpace.tSchemaData -> State.T Seq.seq
   val singleStepTransfer : State.T -> State.T Seq.seq
 
-  val structureTransfer : int option * int option * int option -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
+  val structureTransfer : int option * int option * int option -> bool -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
 (*)
   val iterativeStructureTransfer : bool -> Pattern.pattern option
                                         -> State.T -> State.T Seq.seq*)
@@ -18,6 +18,7 @@ sig
                             -> State.T -> State.T Seq.seq*)
 
   val masterTransfer : int option * int option * int option
+                          -> bool
                           -> bool
                           -> bool
                           -> Pattern.pattern option
@@ -336,14 +337,14 @@ struct
 
   val transferElseInfer =  Seq.ORELSE (singleStepTransfer,singleStepInference)
 
-  fun structureTransferTac h ign forget state =
+  fun structureTransferTac h ign forget stop state =
       (*Search.breadthFirstIgnore transferElseInfer ign state*)
       (*Search.breadthFirstIgnoreForget transferElseInfer ign forget state*)
       (*Search.depthFirstIgnore transferElseInfer ign state*)
       (*Search.depthFirstIgnoreForget transferElseInfer ign forget state*)
       (*Search.bestFirstIgnore transferElseInfer h ign state*)
-      Search.bestFirstIgnoreForget transferElseInfer h ign forget state
-
+      (*Search.bestFirstIgnoreForget transferElseInfer h ign forget state*)
+      Search.bestFirstAll transferElseInfer h ign forget stop state
 
   exception Nope
 
@@ -359,7 +360,7 @@ struct
       handle Nope => false
 
 
-fun structureTransfer (goalLimit,compositionLimit,searchLimit) unistructured targetPattOption st =
+fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructured targetPattOption st =
   let val maxNumGoals = case goalLimit of SOME x => x | NONE => 15
       val maxCompSize = case compositionLimit of SOME x => x | NONE => 200
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
@@ -371,7 +372,8 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) unistructured tar
       fun fgtPT (x,L) = case targetPattOption of
                       SOME tpt => not (matchesTarget targetTypeSystem tpt x) orelse Heuristic.forgetRelaxed (x,L)
                     | NONE => Heuristic.forgetRelaxed (x,L)
-      val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT
+      fun stop x = if eager then null (State.goalsOf x) else false
+      val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT stop
   in tac st
   end
 
@@ -419,8 +421,8 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) unistructured tar
     end*)
 
 
-  fun masterTransfer limits iterative unistructured targetPattOption st =
-    structureTransfer limits unistructured targetPattOption st
+  fun masterTransfer limits eager iterative unistructured targetPattOption st =
+    structureTransfer limits eager unistructured targetPattOption st
 
   fun initState sCSD tCSD iCSD inverse KB ct goal =
     let val tTS = #typeSystem (#typeSystemData tCSD)
@@ -441,7 +443,7 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) unistructured tar
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
       let val st = initState sCSD tCSD iCSD false KB ct goal
-          val stateSeq = structureTransfer (NONE,NONE,NONE) false NONE st;
+          val stateSeq = structureTransfer (NONE,NONE,NONE) true false NONE st;
           fun getStructureGraph st =
               List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
           fun makeDiagnostic goal =

@@ -73,6 +73,7 @@ struct
   val goalLimitKW = "goalLimit"
   val compositionLimitKW = "compositionLimit"
   val searchLimitKW = "searchLimit"
+  val eagerKW = "eager"
   val iterativeKW = "iterative"
   val unistructuredKW = "unistructured"
   val inverseKW = "inverse"
@@ -81,7 +82,7 @@ struct
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
   val saveKW = "save"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,
+  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
@@ -718,6 +719,11 @@ struct
                   in SOME mtct
                   end)
             else getMatchTarget L
+      fun getEager [] = false
+        | getEager ((x,_)::L) =
+            if x = SOME eagerKW
+            then true
+            else getEager L
       fun getIterative [] = false
         | getIterative ((x,_)::L) =
             if x = SOME iterativeKW
@@ -746,6 +752,7 @@ struct
       val goalLimit = getGoalLimit C
       val compositionLimit = getCompositionLimit C
       val searchLimit = getSearchLimit C
+      val eager = getEager C
       val iterative = getIterative C
       val KB = knowledgeOf DC
       val inverse = getInverse C
@@ -797,7 +804,7 @@ struct
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
       val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
-      val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) iterative unistructured targetPattern state;
+      val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
       val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
       val endTime = Time.now();
