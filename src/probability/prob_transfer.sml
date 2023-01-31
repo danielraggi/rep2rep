@@ -2,6 +2,14 @@ import "oruga.document";
 import "works.prob_parser";
 import "works.prob_renderer";
 
+signature TRANSFERPROB = sig
+    val renderArea: string -> unit
+    val renderTable: string -> unit;
+    val renderTree: string -> unit;
+    val renderBayes: string -> unit;
+end;
+
+structure TransferProb : TRANSFERPROB = struct
 exception Error;
 
 fun mkGoal constr interConstructors tgt_type =
@@ -62,4 +70,5 @@ fun renderBayes p =
     let val v = ProbParser.produce_construction p;
         val _ = drawBayes v; 
     in () end;
-    
+ 
+end;
