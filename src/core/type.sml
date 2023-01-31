@@ -172,7 +172,7 @@ struct
 
   fun isTypeVar s = String.isPrefix "?" s
   fun parentOfDanglyType s =
-    (case String.breakOn ":" s of (x,":",y) => y | _ => raise badType)
+    (case String.breakOn ":" s of (_,":",y) => y | _ => raise badType)
   fun isDanglyType Ty s =
     (case String.breakOn ":" s of (_,":",y) => Set.elementOf y Ty | _ => false)
 

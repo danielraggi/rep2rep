@@ -67,3 +67,11 @@ tSchema combineEqn:(bayesG,contTableG,interBayesTable) =
                :metaTrue <- encode[t2:probSys,t2':table]
     consequent :metaTrue <- encode[t:probSys,t':table]
     strength 1
+
+
+tSchema problemInter:(bayesG,contTableG,interBayesTable) =
+    source t:problem <- makeProblem[t1:probSys,t2:events]
+    target t':table
+    antecedent :metaTrue <- encode[t1:probSys,t':table]
+    consequent :metaTrue <- encode[t:problem,t':table]
+    strength -1

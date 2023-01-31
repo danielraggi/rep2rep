@@ -67,3 +67,10 @@ tSchema resolveTree:(bayesG,probTreeG,interBayesTree) =
                :metaTrue <- encode[t2:probSys,t2':tree]
     consequent :metaTrue <- encode[t:probSys,t':tree]
     strength 1
+
+tSchema problemInter:(bayesG,probTreeG,interBayesTree) =
+    source t:problem <- makeProblem[t1:probSys,t2:events]
+    target t':tree
+    antecedent :metaTrue <- encode[t1:probSys,t':tree]
+    consequent :metaTrue <- encode[t:problem,t':tree]
+    strength -1

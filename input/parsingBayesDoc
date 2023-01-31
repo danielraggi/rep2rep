@@ -1,0 +1,98 @@
+import bTreeBayes
+
+
+construction prEquation:string = liftString Pr(ab U c | d) = 0.21
+construction prSystem:string = liftString Pr(ab U c | d) = 0.21; Pr(d) = 0.6
+
+transfer
+    sourceConstruction prSystem
+    targetConSpec btree
+    interConSpec interStringBTree
+    goal :metaTrue <- TREEIFY[t:Pr(ab U c | d) = 0.21; Pr(d) = 0.6:string,t':btree]
+    searchLimit 100
+    output test1
+    limit 1
+    save test1
+    unistructured
+
+transfer
+    sourceConstruction test1
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 100
+    output test2
+    save test2
+    limit 1
+    unistructured
+
+transfer
+    sourceConstruction test2
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SEMICOLON[v_{55}:btree,t':btree]
+    searchLimit 100
+    output test3
+    save test3
+    limit 1
+    unistructured
+
+transfer
+    sourceConstruction test3
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test4
+    save test4
+    limit 1
+
+transfer
+    sourceConstruction test4
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SPACE[v_{2}:btree,t':btree]
+    searchLimit 100
+    output test5
+    save test5
+    limit 10
+
+transfer
+    sourceConstruction test5
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test6
+    save test6
+    limit 1
+
+transfer
+    sourceConstruction test6
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- MID[v_{3}:btree,t':btree]
+    searchLimit 100
+    output test7
+    save test7
+    limit 10
+
+transfer
+    sourceConstruction test7
+    targetConSpec btree
+    interConSpec interBTreeBTree
+    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    searchLimit 50
+    output test8
+    save test8
+    limit 10
+
+transfer
+    sourceConstruction test8
+    targetConSpec bayesPlus
+    interConSpec interBTreeBayes
+    goal :metaTrue <- SYS[v_{3}:btree,t':probSys]
+    searchLimit 200
+    output test9
+    save test9
+    limit 10

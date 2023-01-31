@@ -56,7 +56,13 @@ struct
 
 
   fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
-  fun nodeNameOfToken t = String.addParentheses (String.implode (List.filter nodeNameCharFilter (String.explode (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t)))))
+
+  fun nodeNameOfToken t =
+    let val nt = CSpace.nameOfToken t
+        val tt = CSpace.typeOfToken t
+        val charL = case List.filter nodeNameCharFilter (String.explode (nt ^ "" ^ Type.nameOfType tt)) of #" " :: L => #"Q" :: #" " :: L | L => L
+    in String.addParentheses (String.implode charL)
+    end
 
   fun nodeNameOfConstructor c t =
     let val nc = CSpace.nameOfConstructor c
@@ -97,7 +103,7 @@ struct
                    ";"]
 
 
-  val normalScale = 0.17
+  val normalScale = 0.16
   val scriptScale = normalScale * 0.7
   val nodeConstant = 1.0 * normalScale
 

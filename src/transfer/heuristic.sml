@@ -48,8 +48,7 @@ fun ignore ngoals nresults csize unistructured (st,L) =
   length L > nresults orelse
   List.sumMapInt Composition.size (State.patternCompsOf st) > csize orelse
   (unistructured andalso
-    (length (State.patternCompsOf st) > 1 orelse
-      not (Composition.unistructurable (#typeSystem (State.targetTypeSystemOf st)) (hd (State.patternCompsOf st)))))
+    length (List.maps Composition.resultingConstructions (State.patternCompsOf st)) > 1)
 
 fun ignoreRelaxed ngoals nresults (st,L) =
   List.length (State.goalsOf st) > ngoals orelse

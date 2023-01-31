@@ -84,3 +84,10 @@ tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
                :metaTrue <- encode[t2:probSys,t2':area]
     consequent :metaTrue <- encode[t:probSys,t':area]
     strength 1
+
+tSchema problemInter:(bayesG,areaDiagramG,interBayesArea) =
+    source t:problem <- makeProblem[t1:probSys,t2:events]
+    target t':area
+    antecedent :metaTrue <- encode[t1:probSys,t':area]
+    consequent :metaTrue <- encode[t:problem,t':area]
+    strength -1
