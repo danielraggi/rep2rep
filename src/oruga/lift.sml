@@ -20,7 +20,12 @@ fun string s =
       fun cl n [] = Construction.Source (CSpace.makeToken ("t" ^ n) emptyTyp)
         | cl n (x::xs) =
           let val thisTok = CSpace.makeToken ("t" ^ n) (String.implode (x::xs) ^ ":string")
-              val charTy = case x of #"(" => "oB" | #")" => "cB" | _ => str x ^ ":nonBChar"
+              val charTy = case x of #"(" => "oB"
+                                   | #")" => "cB"
+                                   | #" " => "space"
+                                   | #";" => "semicolon"
+                                   | #"|" => "mid"
+                                   | _ => str x ^ ":char"
               val charT = Construction.Source (CSpace.makeToken ("t" ^ n ^ "0") charTy)
               val stringT = cl (n ^ "1") xs
           in Construction.TCPair ({token = thisTok, constructor = consCons}, [charT,stringT])
@@ -32,9 +37,12 @@ exception UnkownStringType of string
 fun dropString ct =
   let fun atFnd t =
         (case String.breakOn ":" (CSpace.typeOfToken t) of
-            (s,":","nonBChar") => s
+            (s,":","char") => s
           | ("oB","",_) => "("
           | ("cB","",_) => ")"
+          | ("space","",_) => " "
+          | ("semicolon","",_) => ";"
+          | ("mid","",_) => "|"
           | ("empty","",_) => ""
           | (s1,s2,s3) => raise UnkownStringType (s1 ^ s2 ^ s3))
   in case ct of

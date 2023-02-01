@@ -82,7 +82,7 @@ struct
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
   val saveKW = "save"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,eagerKW,
+  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 

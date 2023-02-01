@@ -1,8 +1,13 @@
 import metaLogic
 
+typeSystem charT =
+    types oB, cB, B, _:char, char, space, semicolon, mid
+    order oB < B, cB < B, B < char, semicolon < char, space < char, mid < char
+
 typeSystem stringT =
-    types  oB, cB, B, _:nonBChar, char, empty, _:string
-    order oB < B, cB < B, B < char, nonBChar < char, empty < string
+    imports charT
+    types empty, _:string
+    order empty < string
 
 conSpec string:stringT =
     constructors
@@ -39,7 +44,7 @@ conSpec interBTreeBTree:interBTreeBTreeT =
         TOKENISE : [char,btree,btree] -> metaBool,
         HEAD : [char,btree,btree] -> metaBool,
         TAIL : [char,btree,btree] -> metaBool,
-        EQCHAR : [nonBChar,nonBChar] -> metaBool,
+        EQCHAR : [char,char] -> metaBool,
         SEMICOLON : [btree,btree] -> metaBool,
         SPACE : [btree,btree] -> metaBool,
         SIMPLIFY : [btree,btree] -> metaBool,
@@ -120,47 +125,68 @@ tSchema cBL4:(string,btree,interStringBTree) =
 
 
 tSchema nBL0:(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string]
+    source t:string <- cons[t1:char, t2:string]
     target t':btree <- branch[t1':leaf, t2':btree]
-    antecedent :metaTrue <- ATOM[t1:nonBChar,t1':leaf],
+    antecedent :metaTrue <- ATOM[t1:char,t1':leaf],
                :metaTrue <- LEVEL[x:0:free,t2:string,t2':btree]
     consequent :metaTrue <- LEVEL[x:0:free,t:string,t':btree]
     strength 1
 
 tSchema nBL1:(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string]
+    source t:string <- cons[t1:char, t2:string]
     target t':btree
     antecedent :metaTrue <- LEVEL[x:1:free,t2:string,t':btree]
     consequent :metaTrue <- LEVEL[x:1:free,t:string,t':btree]
     strength 0
 
 tSchema nBL2:(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string]
+    source t:string <- cons[t1:char, t2:string]
     target t':btree
     antecedent :metaTrue <- LEVEL[x:2:free,t2:string,t':btree]
     consequent :metaTrue <- LEVEL[x:2:free,t:string,t':btree]
     strength 0
 
 tSchema nBL3:(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string]
+    source t:string <- cons[t1:char, t2:string]
     target t':btree
     antecedent :metaTrue <- LEVEL[x:3:free,t2:string,t':btree]
     consequent :metaTrue <- LEVEL[x:3:free,t:string,t':btree]
     strength 0
 
 tSchema nBL4:(string,btree,interStringBTree) =
-    source t:string <- cons[t1:nonBChar, t2:string]
+    source t:string <- cons[t1:char, t2:string]
     target t':btree
     antecedent :metaTrue <- LEVEL[x:4:free,t2:string,t':btree]
     consequent :metaTrue <- LEVEL[x:4:free,t:string,t':btree]
     strength 0
 
 
-tSchema leafL0:(string,btree,interStringBTree) =
-    source t:?x:nonBChar
-    target t':?x:nonBChar
+tSchema atomMid:(string,btree,interStringBTree) =
+    source t:mid
+    target t':mid
     antecedent
-    consequent :metaTrue <- ATOM[t:?x:nonBChar,t':?x:nonBChar]
+    consequent :metaTrue <- ATOM[t:mid,t':mid]
+    strength 1
+
+tSchema atomSpace:(string,btree,interStringBTree) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- ATOM[t:space,t':space]
+    strength 1
+
+tSchema atomSemicolon:(string,btree,interStringBTree) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- ATOM[t:semicolon,t':semicolon]
+    strength 1
+
+tSchema atomNonB:(string,btree,interStringBTree) =
+    source t:?x:char
+    target t':?x:char
+    antecedent
+    consequent :metaTrue <- ATOM[t:?x:char,t':?x:char]
     strength 1
 
 tSchema empty:(string,btree,interStringBTree) =
@@ -172,97 +198,349 @@ tSchema empty:(string,btree,interStringBTree) =
 
 
 
-tSchema tokeniseChar:(btree,btree,interBTreeBTree) =
-    source t:?x:nonBChar
-    target t':?x:nonBChar
+tSchema tokeniseSCChar:(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':?x:char
     antecedent
-    consequent :metaTrue <- TOKENISE[z:?v:nonBChar,t:?x:nonBChar,t':?x:nonBChar]
+    consequent :metaTrue <- TOKENISE[z:semicolon,t:?x:char,t':?x:char]
+    strength 1
+tSchema tokeniseSCSp:(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:semicolon,t:space,t':space]
+    strength 1
+tSchema tokeniseSCMid':(btree,btree,interBTreeBTree) =
+    source t:mid
+    target t':mid
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:semicolon,t:mid,t':mid]
     strength 1
 
+tSchema tokeniseSpChar:(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':?x:char
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:space,t:?x:char,t':?x:char]
+    strength 1
+tSchema tokeniseSpSC:(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:space,t:semicolon,t':semicolon]
+    strength 1
+tSchema tokeniseSpMid':(btree,btree,interBTreeBTree) =
+    source t:mid
+    target t':mid
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:space,t:mid,t':mid]
+    strength 1
+
+tSchema tokeniseMidChar:(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':?x:char
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:mid,t:?x:char,t':?x:char]
+    strength 1
+tSchema tokeniseMidSC:(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:mid,t:semicolon,t':semicolon]
+    strength 1
+tSchema tokeniseMidSp:(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- TOKENISE[z:mid,t:space,t':space]
+    strength 1
+
+
 tSchema restart:(btree,btree,interBTreeBTree) =
-    source t:btree <- branch[t1:?v:nonBChar,
+    source t:btree <- branch[t1:semicolon,
                              t2:btree]
     target t':btree
-    antecedent :metaTrue <- TOKENISE[z:?v:nonBChar,t2:btree,t':btree]
-    consequent :metaTrue <- TAIL[z:?v:nonBChar,t:btree,t':btree]
-    strength 4
+    antecedent :metaTrue <- TOKENISE[z:semicolon,t2:btree,t':btree]
+    consequent :metaTrue <- TAIL[z:semicolon,t:btree,t':btree]
+    strength 2
+tSchema restart':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:space,
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- TOKENISE[z:space,t2:btree,t':btree]
+    consequent :metaTrue <- TAIL[z:space,t:btree,t':btree]
+    strength 2
+tSchema restart'':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:mid,
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- TOKENISE[z:mid,t2:btree,t':btree]
+    consequent :metaTrue <- TAIL[z:mid,t:btree,t':btree]
+    strength 2
 
 tSchema end:(btree,btree,interBTreeBTree) =
-    source t:btree <- branch[t1:?v:nonBChar,
+    source t:btree <- branch[t1:semicolon,
                              t2:btree]
     target t':dummy:leaf
     antecedent
-    consequent :metaTrue <- HEAD[z:?v:nonBChar,t:btree,t':dummy:leaf]
-    strength 20
+    consequent :metaTrue <- HEAD[z:semicolon,t:btree,t':dummy:leaf]
+    strength 10
+tSchema end':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:space,
+                             t2:btree]
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- HEAD[z:space,t:btree,t':dummy:leaf]
+    strength 10
+tSchema end'':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:mid,
+                             t2:btree]
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- HEAD[z:mid,t:btree,t':dummy:leaf]
+    strength 10
 
 tSchema copyAtHead:(btree,btree,interBTreeBTree) =
-    source t:?v:nonBChar
-    target t':?v:nonBChar
+    source t:?v:char
+    target t':?v:char
     antecedent
-    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:?v:nonBChar,t':?v:nonBChar]
+    consequent :metaTrue <- HEAD[z:semicolon,t:?v:char,t':?v:char]
+    strength 2
+tSchema copyAtHead':(btree,btree,interBTreeBTree) =
+    source t:?v:char
+    target t':?v:char
+    antecedent
+    consequent :metaTrue <- HEAD[z:space,t:?v:char,t':?v:char]
+    strength 2
+tSchema copyAtHead'':(btree,btree,interBTreeBTree) =
+    source t:?v:char
+    target t':?v:char
+    antecedent
+    consequent :metaTrue <- HEAD[z:mid,t:?v:char,t':?v:char]
     strength 2
 
 tSchema skipUntilTail:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
     target t':btree
-    antecedent :metaTrue <- TAIL[z:?x:nonBChar,t2:btree,t':btree]
-    consequent :metaTrue <- TAIL[z:?x:nonBChar,t:btree,t':btree]
-    strength 0
+    antecedent :metaTrue <- TAIL[z:semicolon,t2:btree,t':btree],
+               :metaFalse <- EQCHAR[t1:btree,z:semicolon]
+    consequent :metaTrue <- TAIL[z:semicolon,t:btree,t':btree]
+    strength 2
+tSchema skipUntilTail':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- TAIL[z:space,t2:btree,t':btree],
+               :metaFalse <- EQCHAR[t1:btree,z:space]
+    consequent :metaTrue <- TAIL[z:space,t:btree,t':btree]
+    strength 2
+tSchema skipUntilTail'':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- TAIL[z:mid,t2:btree,t':btree],
+               :metaFalse <- EQCHAR[t1:btree,z:mid]
+    consequent :metaTrue <- TAIL[z:mid,t:btree,t':btree]
+    strength 2s
+
+tSchema noteq:(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:?x:char,z:space]
+    strength 1
+tSchema noteq':(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:?x:char,z:semicolon]
+    strength 1
+tSchema noteq'':(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:?x:char,z:mid]
+    strength 1
+tSchema noteq''':(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:semicolon,z:space]
+    strength 1
+tSchema noteq'''':(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:space,z:semicolon]
+    strength 1
+tSchema noteq''''':(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:space,z:mid]
+    strength 1
+tSchema noteq'''''':(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:semicolon,z:space]
+    strength 1
+tSchema noteq''''''':(btree,btree,interBTreeBTree) =
+    source t:mid
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:mid,z:semicolon]
+    strength 1
+tSchema noteq'''''''':(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:space,z:mid]
+    strength 1
+tSchema noteq''''''''':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,t2:btree]
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:btree,z:semicolon]
+    strength 1
+tSchema noteq'''''''''':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,t2:btree]
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:btree,z:space]
+    strength 1
+tSchema noteq'''''''''':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,t2:btree]
+    target t':btree
+    antecedent
+    consequent :metaFalse <- EQCHAR[t:btree,z:mid]
+    strength 1
 
 tSchema eqChars:(btree,btree,interBTreeBTree) =
-    source t:?x:nonBChar
-    target t':?x:nonBChar
+    source t:?x:char
+    target t':?x:char
     antecedent
-    consequent :metaTrue <- EQCHAR[t:?x:nonBChar,t':?x:nonBChar]
+    consequent :metaTrue <- EQCHAR[t:?x:char,t':?x:char]
     strength 1
 
+tSchema eqChars':(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- EQCHAR[t:space,t':space]
+    strength 1
 
-tSchema dumms1:(btree,btree,interBTreeBTree) =
-    source t:nonBChar
+tSchema eqChars'':(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- EQCHAR[t:semicolon,t':semicolon]
+    strength 1
+
+tSchema eqChars''':(btree,btree,interBTreeBTree) =
+    source t:mid
+    target t':mid
+    antecedent
+    consequent :metaTrue <- EQCHAR[t:mid,t':mid]
+    strength 1
+
+tSchema dummTail:(btree,btree,interBTreeBTree) =
+    source t:?x:char
     target t':dummy:leaf
     antecedent
-    consequent :metaTrue <- TAIL[z:?x:nonBChar,t:nonBChar,t':dummy:leaf]
-    strength 1
+    consequent :metaTrue <- TAIL[z:space,t:?x:char,t':dummy:leaf]
+    strength 0
+tSchema dummsTail':(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- TAIL[z:semicolon,t:?x:char,t':dummy:leaf]
+    strength 0
+tSchema dummsTail'':(btree,btree,interBTreeBTree) =
+    source t:?x:char
+    target t':dummy:leaf
+    antecedent
+    consequent :metaTrue <- TAIL[z:mid,t:?x:char,t':dummy:leaf]
+    strength 0
+
 
 tSchema start:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
     target t':btree <- branch[t1':btree,
                               t2':btree]
-    antecedent :metaTrue <- HEAD[z:?x:nonBChar,t:btree,t1':btree],
-               :metaTrue <- TAIL[z:?x:nonBChar,t2:btree,t2':btree]
-    consequent :metaTrue <- TOKENISE[z:?x:nonBChar,t:btree,t':btree]
-    strength 1
+    antecedent :metaTrue <- HEAD[z:semicolon,t:btree,t1':btree],
+               :metaTrue <- TAIL[z:semicolon,t2:btree,t2':btree]
+    consequent :metaTrue <- TOKENISE[z:semicolon,t:btree,t':btree]
+    strength 2
+tSchema start':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree <- branch[t1':btree,
+                              t2':btree]
+    antecedent :metaTrue <- HEAD[z:space,t:btree,t1':btree],
+               :metaTrue <- TAIL[z:space,t2:btree,t2':btree]
+    consequent :metaTrue <- TOKENISE[z:space,t:btree,t':btree]
+    strength 2
+tSchema start'':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree <- branch[t1':btree,
+                              t2':btree]
+    antecedent :metaTrue <- HEAD[z:mid,t:btree,t1':btree],
+               :metaTrue <- TAIL[z:mid,t2:btree,t2':btree]
+    consequent :metaTrue <- TOKENISE[z:mid,t:btree,t':btree]
+    strength 2
 
 tSchema branchHead:(btree,btree,interBTreeBTree) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
     target t':btree <- branch[t1':btree,
                               t2':btree]
-    antecedent :metaTrue <- TOKENISE[z:?x:nonBChar,t1:btree,t1':btree],
-               :metaTrue <- HEAD[z:?x:nonBChar,t2:btree,t2':btree]
-    consequent :metaTrue <- HEAD[z:?x:nonBChar,t:btree,t':btree]
-    strength 2
+    antecedent :metaTrue <- TOKENISE[z:semicolon,t1:btree,t1':btree],
+               :metaTrue <- HEAD[z:semicolon,t2:btree,t2':btree]
+    consequent :metaTrue <- HEAD[z:semicolon,t:btree,t':btree]
+    strength 4
+tSchema branchHead':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree <- branch[t1':btree,
+                              t2':btree]
+    antecedent :metaTrue <- TOKENISE[z:space,t1:btree,t1':btree],
+               :metaTrue <- HEAD[z:space,t2:btree,t2':btree]
+    consequent :metaTrue <- HEAD[z:space,t:btree,t':btree]
+    strength 4
+tSchema branchHead'':(btree,btree,interBTreeBTree) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree <- branch[t1':btree,
+                              t2':btree]
+    antecedent :metaTrue <- TOKENISE[z:mid,t1:btree,t1':btree],
+               :metaTrue <- HEAD[z:mid,t2:btree,t2':btree]
+    consequent :metaTrue <- HEAD[z:mid,t:btree,t':btree]
+    strength 4
+
+
 
 tSchema semicolonStart:(btree,btree,interBTreeBTree) =
     source t:btree
     target t':btree
-    antecedent :metaTrue <- TOKENISE[z:;:nonBChar,t:btree,t':btree]
+    antecedent :metaTrue <- TOKENISE[z:semicolon,t:btree,t':btree]
     consequent :metaTrue <- SEMICOLON[t:btree,t':btree]
     strength 1
 
 tSchema spaceStart:(btree,btree,interBTreeBTree) =
     source t:btree
     target t':btree
-    antecedent :metaTrue <- TOKENISE[z: :nonBChar,t:btree,t':btree]
+    antecedent :metaTrue <- TOKENISE[z:space,t:btree,t':btree]
     consequent :metaTrue <- SPACE[t:btree,t':btree]
     strength 1
 
 tSchema midStart:(btree,btree,interBTreeBTree) =
     source t:btree
     target t':btree
-    antecedent :metaTrue <- TOKENISE[z:|:nonBChar,t:btree,t':btree]
+    antecedent :metaTrue <- TOKENISE[z:mid,t:btree,t':btree]
     consequent :metaTrue <- MID[t:btree,t':btree]
     strength 1
 
@@ -287,10 +565,31 @@ tSchema simplifyBranch:(btree,btree,interBTreeBTree) =
     strength 2
 
 tSchema simplifyNonBChar:(btree,btree,interBTreeBTree) =
-    source t:?x:nonBChar
-    target t':?x:nonBChar
+    source t:?x:char
+    target t':?x:char
     antecedent
-    consequent :metaTrue <- SIMPLIFY[t:?x:nonBChar,t':?x:nonBChar]
+    consequent :metaTrue <- SIMPLIFY[t:?x:char,t':?x:char]
+    strength 1
+
+tSchema simplifySemicolon:(btree,btree,interBTreeBTree) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- SIMPLIFY[t:semicolon,t':semicolon]
+    strength 1
+
+tSchema simplifySpace:(btree,btree,interBTreeBTree) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- SIMPLIFY[t:space,t':space]
+    strength 1
+
+tSchema simplifyMid:(btree,btree,interBTreeBTree) =
+    source t:mid
+    target t':mid
+    antecedent
+    consequent :metaTrue <- SIMPLIFY[t:mid,t':mid]
     strength 1
 
 

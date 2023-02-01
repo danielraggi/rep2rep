@@ -362,8 +362,8 @@ struct
 
 fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructured targetPattOption st =
   let val maxNumGoals = case goalLimit of SOME x => x | NONE => 15
-      val maxCompSize = case compositionLimit of SOME x => x | NONE => 200
-      val maxNumResults = case searchLimit of SOME x => x | NONE => 500
+      val maxCompSize = case compositionLimit of SOME x => x | NONE => 300
+      val maxNumResults = case searchLimit of SOME x => x | NONE => 1000
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
