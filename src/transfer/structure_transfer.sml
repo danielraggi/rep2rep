@@ -165,7 +165,8 @@ struct
       fun referenced x =
           not (Type.isTypeVar (CSpace.typeOfToken x)) andalso
           (FiniteSet.elementOf x (Construction.tokensOfConstruction source) orelse
-           FiniteSet.elementOf x (Construction.tokensOfConstruction target))
+           FiniteSet.elementOf x (Construction.tokensOfConstruction target) orelse
+           FiniteSet.elementOf x (FiniteSet.maps Construction.tokensOfConstruction antecedent))
 
       val givenTokens = FiniteSet.filter referenced (Construction.tokensOfConstruction consequent)
 

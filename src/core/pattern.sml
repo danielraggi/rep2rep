@@ -229,7 +229,7 @@ struct
              (fn x => if CSpace.sameTokens x t then SOME nt else NONE,
               fn x => if CSpace.sameTokens x t' then SOME nt else NONE,
               fn x => if Type.isTypeVar ty andalso Type.equal x ty then SOME ty' else NONE)
-           else if FiniteSet.elementOf t givenTokens then
+           else if FiniteSet.elementOf t givenTokens andalso isSome (Type.greatestCommonSubType TSD ty ty') then
               (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
                fn x => if CSpace.sameTokens x t' then SOME t' else NONE,
                fn x => if Type.isTypeVar ty andalso Type.equal x ty then SOME ty' else NONE)
