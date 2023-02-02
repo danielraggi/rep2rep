@@ -1,3 +1,8 @@
+(*
+To run these tests:
+$ polyc test/prob_renderers.sml -o test/prob_renderers
+$ ./test/prob_renderers --transfer-map transferMap bayes probTree contTable areaDiagram arith transferSchemas/bayesTable transferSchemas/bayesArea transferSchemas/bayesTree
+*)
 use "base.sml";
 import "probability.prob_parser";
 import "transfer.structure_transfer";
