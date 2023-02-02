@@ -26,7 +26,7 @@ tSchema complEvent:(bayesG,contTableG,interBayesTable) =
     target t':name <- notName[t1':name]
     antecedent :metaTrue <- match[t1:event,t1':name]
     consequent :metaTrue <- match[t:event,t':name]
-    strength 10
+    strength 8
 
 tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
     source t:probEqn <- makeEqn[t1:events,t2:numExp]
@@ -46,7 +46,7 @@ tSchema condProb:(bayesG,contTableG,interBayesTable) =
                :metaTrue <- match[t12:event,t21':name],
                :metaTrue <- equal[t2:numExp,t31':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':twoDim]
-    strength 10
+    strength 8
 
 tSchema jointProb:(bayesG,contTableG,interBayesTable) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
@@ -58,7 +58,7 @@ tSchema jointProb:(bayesG,contTableG,interBayesTable) =
                :metaTrue <- match[t13:event,t21':name],
                :metaTrue <- equal[t2:numExp,t3':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':twoDim]
-    strength 10
+    strength 4
 
 tSchema combineEqn:(bayesG,contTableG,interBayesTable) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]

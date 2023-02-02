@@ -20,7 +20,7 @@ tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     target t':?v:event
     antecedent
     consequent :metaTrue <- match[t:?v:event,t':?v:event]
-    strength 1
+    strength -1
 
 tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:event <- complement[t1:event]
@@ -43,7 +43,7 @@ tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
 
 tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
-                             t2:numExp]
+                                t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
                                                                             t122':point <- cPoint[t1221':x:var,t1222':1:numeral]],
@@ -57,11 +57,11 @@ tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
                :metaTrue <- match[t12:event,t13':tag],
                :metaTrue <- equal[t2:numExp,t222':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
-    strength 10
+    strength 8
 
 tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
-                             t2:numExp]
+                                t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
                                                           t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
                                                                             t122':point <- cPoint[t1221':y:var,t1222':1:numeral]],
@@ -76,7 +76,7 @@ tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
                :metaTrue <- match[t13:event,t3':tag],
                :metaTrue <- equal[t2:numExp,t2221':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
-    strength 1
+    strength 4
 
 tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]
@@ -108,7 +108,7 @@ tSchema colourCond:(bayesG,areaDiagramG,interBayesArea) =
     antecedent :metaTrue <- cMatch[t3:event,t1':coloured],
                :metaTrue <- match[t1:event,t2':tag]
     consequent :metaTrue <- cMatch[t:condEvent,t':coloured]
-    strength 2
+    strength 4
 
 tSchema colourInter:(bayesG,areaDiagramG,interBayesArea) =
     source t:event <- infix[t1:event,t2:inter,t3:event]
