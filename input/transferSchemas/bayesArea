@@ -12,7 +12,8 @@ conSpec interBayesArea:interBayesAreaT =
     imports areaDiagramG, bayesG, interArithArith
     constructors
         match : [events,tag] -> metaBool,
-        encode : [probSys,area] -> metaBool
+        encode : [probSys,area] -> metaBool,
+        cMatch : [events,coloured] -> metaBool
 
 tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     source t:?v:event
@@ -56,7 +57,7 @@ tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
                :metaTrue <- match[t12:event,t13':tag],
                :metaTrue <- equal[t2:numExp,t222':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
-    strength 1
+    strength 10
 
 tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
@@ -85,9 +86,44 @@ tSchema combineEqn:(bayesG,areaDiagramG,interBayesArea) =
     consequent :metaTrue <- encode[t:probSys,t':area]
     strength 1
 
-tSchema problemInter:(bayesG,areaDiagramG,interBayesArea) =
-    source t:problem <- makeProblem[t1:probSys,t2:events]
-    target t':area
-    antecedent :metaTrue <- encode[t1:probSys,t':area]
-    consequent :metaTrue <- encode[t:problem,t':area]
-    strength -1
+tSchema colourV:(bayesG,areaDiagramG,interBayesArea) =
+    source t:event
+    target t':coloured <- colour[t1':empty,t2':tag,t3':green]
+    antecedent :metaTrue <- match[t:event,t2':tag]
+    consequent :metaTrue <- cMatch[t:event,t':coloured]
+    strength 1
+
+tSchema colourNot:(bayesG,areaDiagramG,interBayesArea) =
+    source t:event <- complement[t2:event]
+    target t':coloured <- colour[t1':empty,
+                                 t2':tag <- reverseTag[t21':tag],
+                                 t3':green]
+    antecedent :metaTrue <- match[t2:event,t21':tag]
+    consequent :metaTrue <- cMatch[t:event,t':coloured]
+    strength 1
+
+tSchema colourCond:(bayesG,areaDiagramG,interBayesArea) =
+    source t:condEvent <- makeCond[t1:event,t3:event]
+    target t':coloured <- colour[t1':coloured,t2':tag,t3':pattern]
+    antecedent :metaTrue <- cMatch[t3:event,t1':coloured],
+               :metaTrue <- match[t1:event,t2':tag]
+    consequent :metaTrue <- cMatch[t:condEvent,t':coloured]
+    strength 2
+
+tSchema colourInter:(bayesG,areaDiagramG,interBayesArea) =
+    source t:event <- infix[t1:event,t2:inter,t3:event]
+    target t':coloured <- colour[t1':coloured <- colour[t11':empty,t12':tag,t13':white],
+                                 t2':tag,
+                                 t3':green]
+    antecedent :metaTrue <- match[t1:event,t12':tag],
+               :metaTrue <- match[t3:event,t2':tag]
+    consequent :metaTrue <- cMatch[t:event,t':coloured]
+    strength 1
+
+tSchema colourArea:(bayesG,areaDiagramG,interBayesArea) =
+    source t:probSys <- calculate[t1:probSys,t2:events]
+    target t':area <- addColour[t1':area, t2':coloured]
+    antecedent :metaTrue <- encode[t1:probSys,t1':area],
+               :metaTrue <- cMatch[t2:events,t2':coloured]
+    consequent :metaTrue <- encode[t:probSys,t':area]
+    strength 1

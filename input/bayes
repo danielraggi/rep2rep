@@ -15,4 +15,4 @@ conSpec bayesG:bayes =
     infix : [event,bin,event] -> event,
     makeCond : [event,event] -> condEvent,
     addEqn : [probEqn,probSys] -> probSys,
-    makeProblem : [probSys,events] -> problem
+    calculate : [probSys,events] -> probSys

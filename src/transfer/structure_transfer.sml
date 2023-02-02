@@ -373,7 +373,7 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructur
       fun fgtPT (x,L) = case targetPattOption of
                       SOME tpt => not (matchesTarget targetTypeSystem tpt x) orelse Heuristic.forgetRelaxed (x,L)
                     | NONE => Heuristic.forgetRelaxed (x,L)
-      fun stop x = if eager then null (State.goalsOf x) else false
+      val stop = if eager then (fn x => null (State.goalsOf x)) else (fn _ => false)
       val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT stop
   in tac st
   end
@@ -444,7 +444,7 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructur
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
       let val st = initState sCSD tCSD iCSD false KB ct goal
-          val stateSeq = structureTransfer (NONE,NONE,NONE) true false NONE st;
+          val stateSeq = structureTransfer (SOME 5,NONE,NONE) true false NONE st;
           fun getStructureGraph st =
               List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
           fun makeDiagnostic goal =
