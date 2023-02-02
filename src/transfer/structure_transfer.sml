@@ -399,7 +399,7 @@ struct
 
 fun structureTransfer unistructured targetPattOption st =
   let val ignI = Heuristic.ignoreRelaxed 10 199
-      val ignT = Heuristic.ignore 15 199 45 unistructured
+      val ignT = Heuristic.ignore 4 700 200 unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
                       SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
