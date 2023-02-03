@@ -1,4 +1,4 @@
-import stringBTree
+import stringBTree_alt
 import bayes
 
 typeSystem nat10T =
@@ -58,8 +58,8 @@ conSpec interBTreeBayes:interBTreeBayesT =
         COPY : [btree,string] -> metaBool,
         SAME : [char,char] -> metaBool
 
-tSchema prob:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,t2:btree <- branch[t21:btree,t22:btree <- branch[t221:=:char,t222:?:char]]]
+comment prob:(btree,bayesPlus,interBTreeBayes) =
+    source t:btree <- branch[t1:btree,t2:btree <- branch[t21:btree,t22:btree <- branch[t221:=:ordinary,t222:?:ordinary]]]
     target t':problem <- makeProblem[t1':probSys,t2':events]
     antecedent :metaTrue <- SYS[t1:btree,t1':probSys],
                :metaTrue <- EVTS[t21:btree,t2':events]
@@ -135,29 +135,29 @@ comment copyEmpty:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema copyNonBChar:(btree,bayesPlus,interBTreeBayes) =
-    source t:?x:char
-    target t':string <- cons[t1':?x:char,t2':empty]
+    source t:?x:ordinary
+    target t':string <- cons[t1':?x:ordinary,t2':empty]
     antecedent
-    consequent :metaTrue <- COPY[t:?x:char,t':string]
+    consequent :metaTrue <- COPY[t:?x:ordinary,t':string]
     strength 1
 
 tSchema sameNonBChar:(btree,bayesPlus,interBTreeBayes) =
-    source t:?x:char
-    target t':?x:char
+    source t:?x:ordinary
+    target t':?x:ordinary
     antecedent
-    consequent :metaTrue <- SAME[t:?x:char,t':?x:char]
+    consequent :metaTrue <- SAME[t:?x:ordinary,t':?x:ordinary]
     strength 1
 
 tSchema eqreal:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:=:char,t2:btree]
+    source t:btree <- branch[t1:=:ordinary,t2:btree]
     target t':real10
     antecedent :metaTrue <- REAL[t2:btree,t':real10]
     consequent :metaTrue <- EQREAL[t:btree,t':real10]
     strength 1
 
 tSchema eqn:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:P:char,
-                             t2:btree <- branch[t21:r:char,
+    source t:btree <- branch[t1:P:ordinary,
+                             t2:btree <- branch[t21:r:ordinary,
                                                 t22:btree <- branch[t221:btree,
                                                                     t222:btree]]]
     target t':probEqn <- makeEqn[t1':events, t2':numExp]
@@ -167,17 +167,17 @@ tSchema eqn:(btree,bayesPlus,interBTreeBayes) =
     strength 5
 
 tSchema binAND:(btree,bayesPlus,interBTreeBayes) =
-    source t:&:char
+    source t:&:ordinary
     target t':inter
     antecedent
-    consequent :metaTrue <- BIN[t:&:char,t':inter]
+    consequent :metaTrue <- BIN[t:&:ordinary,t':inter]
     strength 4
 
 tSchema binOR:(btree,bayesPlus,interBTreeBayes) =
-    source t:U:char
+    source t:U:ordinary
     target t':union
     antecedent
-    consequent :metaTrue <- BIN[t:U:char,t':union]
+    consequent :metaTrue <- BIN[t:U:ordinary,t':union]
     strength 4
 
 tSchema evtBin:(btree,bayesPlus,interBTreeBayes) =
@@ -192,7 +192,7 @@ tSchema evtBin:(btree,bayesPlus,interBTreeBayes) =
     strength 6
 
 tSchema evtComp:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:-:char,t2:btree]
+    source t:btree <- branch[t1:-:ordinary,t2:btree]
     target t':event <- complement[t1':event]
     antecedent :metaTrue <- EVT[t2:btree,t1':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
@@ -208,8 +208,8 @@ comment evtCond:(btree,bayesPlus,interBTreeBayes) =
 
 
 tSchema real0:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:0:char,
-                             t2:btree <- branch[t21:.:char,
+    source t:btree <- branch[t1:0:ordinary,
+                             t2:btree <- branch[t21:.:ordinary,
                                                 t22:btree]]
     target t':real10 <- makeReal[t1':0, t2':nat10]
     antecedent :metaTrue <- NAT[t22:btree,t2':nat10]
@@ -217,14 +217,14 @@ tSchema real0:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema real1:(btree,bayesPlus,interBTreeBayes) =
-    source t:1:char
+    source t:1:ordinary
     target t':1
     antecedent
-    consequent :metaTrue <- REAL[t:1:char,t':1]
+    consequent :metaTrue <- REAL[t:1:ordinary,t':1]
     strength 1
 
 tSchema natural0:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:0:char,
+    source t:btree <- branch[t1:0:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':0, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -232,7 +232,7 @@ tSchema natural0:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural1:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:1:char,
+    source t:btree <- branch[t1:1:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':1, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -240,7 +240,7 @@ tSchema natural1:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural2:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:2:char,
+    source t:btree <- branch[t1:2:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':2, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -248,7 +248,7 @@ tSchema natural2:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural3:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:3:char,
+    source t:btree <- branch[t1:3:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':3, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -256,7 +256,7 @@ tSchema natural3:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural4:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:4:char,
+    source t:btree <- branch[t1:4:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':4, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -264,7 +264,7 @@ tSchema natural4:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural5:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:5:char,
+    source t:btree <- branch[t1:5:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':5, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -272,7 +272,7 @@ tSchema natural5:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural6:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:6:char,
+    source t:btree <- branch[t1:6:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':6, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -280,7 +280,7 @@ tSchema natural6:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural7:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:7:char,
+    source t:btree <- branch[t1:7:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':7, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -288,7 +288,7 @@ tSchema natural7:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural8:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:8:char,
+    source t:btree <- branch[t1:8:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':8, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -296,7 +296,7 @@ tSchema natural8:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
 tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
-    source t:btree <- branch[t1:9:char,
+    source t:btree <- branch[t1:9:ordinary,
                              t2:btree]
     target t':nat10 <- addDigit[t1':9, t2':nat10]
     antecedent :metaTrue <- NAT[t2:btree,t2':nat10]
@@ -304,7 +304,7 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
     strength 1
 
     tSchema natural0':(btree,bayesPlus,interBTreeBayes) =
-        source t:btree <- branch[t1:0:char,
+        source t:btree <- branch[t1:0:ordinary,
                                  t2:dummy:leaf]
         target t':0
         antecedent
@@ -313,71 +313,71 @@ tSchema natural9:(btree,bayesPlus,interBTreeBayes) =
 
 
         tSchema natural0'':(btree,bayesPlus,interBTreeBayes) =
-            source t:0:char
+            source t:0:ordinary
             target t':0
             antecedent
-            consequent :metaTrue <- NAT[t:0:char,t':0]
+            consequent :metaTrue <- NAT[t:0:ordinary,t':0]
             strength 1
 
         tSchema natural1'':(btree,bayesPlus,interBTreeBayes) =
-            source t:1:char
+            source t:1:ordinary
             target t':1
             antecedent
-            consequent :metaTrue <- NAT[t:1:char,t':1]
+            consequent :metaTrue <- NAT[t:1:ordinary,t':1]
             strength 1
 
         tSchema natural2'':(btree,bayesPlus,interBTreeBayes) =
-            source t:2:char
+            source t:2:ordinary
             target t':2
             antecedent
-            consequent :metaTrue <- NAT[t:2:char,t':2]
+            consequent :metaTrue <- NAT[t:2:ordinary,t':2]
             strength 1
 
         tSchema natural3'':(btree,bayesPlus,interBTreeBayes) =
-            source t:3:char
+            source t:3:ordinary
             target t':3
             antecedent
-            consequent :metaTrue <- NAT[t:3:char,t':3]
+            consequent :metaTrue <- NAT[t:3:ordinary,t':3]
             strength 1
 
         tSchema natural4'':(btree,bayesPlus,interBTreeBayes) =
-            source t:4:char
+            source t:4:ordinary
             target t':4
             antecedent
-            consequent :metaTrue <- NAT[t:4:char,t':4]
+            consequent :metaTrue <- NAT[t:4:ordinary,t':4]
             strength 1
 
         tSchema natural5'':(btree,bayesPlus,interBTreeBayes) =
-            source t:5:char
+            source t:5:ordinary
             target t':5
             antecedent
-            consequent :metaTrue <- NAT[t:5:char,t':5]
+            consequent :metaTrue <- NAT[t:5:ordinary,t':5]
             strength 1
 
         tSchema natural6'':(btree,bayesPlus,interBTreeBayes) =
-            source t:6:char
+            source t:6:ordinary
             target t':6
             antecedent
-            consequent :metaTrue <- NAT[t:6:char,t':6]
+            consequent :metaTrue <- NAT[t:6:ordinary,t':6]
             strength 1
 
         tSchema natural7'':(btree,bayesPlus,interBTreeBayes) =
-            source t:7:char
+            source t:7:ordinary
             target t':7
             antecedent
-            consequent :metaTrue <- NAT[t:7:char,t':7]
+            consequent :metaTrue <- NAT[t:7:ordinary,t':7]
             strength 1
 
         tSchema natural8'':(btree,bayesPlus,interBTreeBayes) =
-            source t:8:char
+            source t:8:ordinary
             target t':8
             antecedent
-            consequent :metaTrue <- NAT[t:8:char,t':8]
+            consequent :metaTrue <- NAT[t:8:ordinary,t':8]
             strength 1
 
         tSchema natural9'':(btree,bayesPlus,interBTreeBayes) =
-            source t:9:char
+            source t:9:ordinary
             target t':9
             antecedent
-            consequent :metaTrue <- NAT[t:9:char,t':9]
+            consequent :metaTrue <- NAT[t:9:ordinary,t':9]
             strength 1

@@ -19,18 +19,18 @@ transfer
 transfer
     sourceConstruction test1
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
     eager
     output test2
     save test2
     limit 1
-    goalLimit 3
+    goalLimit 4
 
 transfer
     sourceConstruction test2
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSEMICOLON
     goal :metaTrue <- SEMICOLON[v_{69}:btree,t':btree]
     eager
     output test3
@@ -41,8 +41,8 @@ transfer
 transfer
     sourceConstruction test3
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    interConSpec interBTreeBTreeSIMPLIFY
+    goal :metaTrue <- SIMPLIFY[v_{0}:btree,t':btree]
     eager
     output test4
     save test4
@@ -52,8 +52,8 @@ transfer
 transfer
     sourceConstruction test4
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SPACE[v_{2}:btree,t':btree]
+    interConSpec interBTreeBTreeSPACE
+    goal :metaTrue <- SPACE[v_{67}:btree,t':btree]
     eager
     output test5
     save test5
@@ -63,7 +63,7 @@ transfer
 transfer
     sourceConstruction test5
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
     eager
     output test6
@@ -74,8 +74,8 @@ transfer
 transfer
     sourceConstruction test6
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- MID[v_{3}:btree,t':btree]
+    interConSpec interBTreeBTreeMID
+    goal :metaTrue <- MID[v_{63}:btree,t':btree]
     eager
     output test7
     save test7
@@ -85,7 +85,7 @@ transfer
 transfer
     sourceConstruction test7
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
     eager
     output test8
@@ -97,7 +97,7 @@ transfer
     sourceConstruction test8
     targetConSpec bayesPlus
     interConSpec interBTreeBayes
-    goal :metaTrue <- SYS[v_{3}:btree,t':probSys]
+    goal :metaTrue <- SYS[v_{57}:btree,t':probSys]
     eager
     output test9
     save test9

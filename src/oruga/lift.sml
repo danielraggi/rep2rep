@@ -25,7 +25,7 @@ fun string s =
                                    | #" " => "space"
                                    | #";" => "semicolon"
                                    | #"|" => "mid"
-                                   | _ => str x ^ ":char"
+                                   | _ => str x ^ ":ordinary"
               val charT = Construction.Source (CSpace.makeToken ("t" ^ n ^ "0") charTy)
               val stringT = cl (n ^ "1") xs
           in Construction.TCPair ({token = thisTok, constructor = consCons}, [charT,stringT])
@@ -37,7 +37,7 @@ exception UnkownStringType of string
 fun dropString ct =
   let fun atFnd t =
         (case String.breakOn ":" (CSpace.typeOfToken t) of
-            (s,":","char") => s
+            (s,":","ordinary") => s
           | ("oB","",_) => "("
           | ("cB","",_) => ")"
           | ("space","",_) => " "

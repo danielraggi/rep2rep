@@ -44,7 +44,7 @@ fun similarStates (st,st') =
   end
 
 fun ignore ngoals nresults csize unistructured (st,L) =
-  List.length (State.goalsOf st) > ngoals orelse
+  length (State.goalsOf st) > ngoals orelse
   length L > nresults orelse
   List.sumMapInt Composition.size (State.patternCompsOf st) > csize orelse
   (unistructured andalso
