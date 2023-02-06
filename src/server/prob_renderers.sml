@@ -144,6 +144,7 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
                val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
            in (MULT(a', b'), prod::y1@y2) end
+          (* INSERT HERE STUFF RELATED TO MAKEREAL FUNCTION *)
          | (_, _) => raise NumError
     end
 end;

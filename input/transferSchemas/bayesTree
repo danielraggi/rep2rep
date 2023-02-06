@@ -4,12 +4,12 @@ import metaLogic
 import transferSchemas/arithArith
 
 typeSystem interBayesTreeT =
-    imports bayes, probTree, metaLogicT
+    imports bayes, probTree, metaLogicT, interArithArithT, interEventEventT
     types
     order
 
 conSpec interBayesTree:interBayesTreeT =
-    imports probTreeG, bayesG, interArithArith
+    imports probTreeG, bayesG, interArithArith, interEventEvent
     constructors
         match : [events,label] -> metaBool,
         encode : [probSys,tree] -> metaBool
@@ -20,6 +20,13 @@ tSchema eventV:(bayesG,probTreeG,interBayesTree) =
     antecedent
     consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength -1
+
+tSchema eventMatchSame:(bayesG,probTreeG,interBayesTree) =
+    source t:event <- makeEvent[t1:string]
+    target t':event <- makeEvent[t1':string]
+    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+    consequent :metaTrue <- match[t:event,t':event]
+    strength 1
 
 tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
     source t:event <- complement[t1:event]

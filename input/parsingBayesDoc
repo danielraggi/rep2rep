@@ -1,19 +1,21 @@
 import bTreeBayes
+import transferSchemas/bayesArea
+import transferSchemas/bayesTable
+import transferSchemas/bayesTree
 
-
-construction prEquation:string = liftString Pr(ab U c | d) = 0.21
-construction prSystem:string = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
-construction prSystem1:string = liftString Pr(-x | y) = 0.63; Pr(s) = 0.5; Pr(z | s) = 1
+construction prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
+construction prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
+construction prSystem1:stringRich = liftString Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1
 
 transfer
     sourceConstruction prSystem1
     targetConSpec btree
     interConSpec interStringBTree
-    goal :metaTrue <- TREEIFY[t:Pr(-x | y) = 0.63; Pr(s) = 0.5; Pr(z | s) = 1:string,t':btree]
+    goal :metaTrue <- TREEIFY[t:Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1:string,t':btree]
     eager
     output test1
     save test1
-    limit 1
+    limit 2
     goalLimit 3
 
 transfer
@@ -95,11 +97,44 @@ transfer
 
 transfer
     sourceConstruction test8
-    targetConSpec bayesPlus
+    targetConSpec bayesG
     interConSpec interBTreeBayes
     goal :metaTrue <- SYS[v_{57}:btree,t':probSys]
     eager
     output test9
     save test9
     limit 10
-    goalLimit 6
+    goalLimit 4
+
+transfer
+    sourceConstruction test9
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[v_{0}:probSys,t':area]
+    eager
+    output test10area
+    save test10area
+    limit 10
+    goalLimit 5
+
+transfer
+    sourceConstruction test9
+    targetConSpec contTableG
+    interConSpec interBayesTable
+    goal :metaTrue <- encode[v_{0}:probSys,t':table]
+    eager
+    output test10table
+    save test10table
+    limit 10
+    goalLimit 5
+
+transfer
+    sourceConstruction test9
+    targetConSpec probTreeG
+    interConSpec interBayesTree
+    goal :metaTrue <- encode[v_{0}:probSys,t':tree]
+    eager
+    output test10tree
+    save test10tree
+    limit 10
+    goalLimit 5

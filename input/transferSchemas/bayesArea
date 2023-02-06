@@ -4,12 +4,12 @@ import metaLogic
 import transferSchemas/arithArith
 
 typeSystem interBayesAreaT =
-    imports bayes, areaDiagram, metaLogicT
+    imports bayes, areaDiagram, metaLogicT, interArithArithT, interEventEventT
     types
     order
 
 conSpec interBayesArea:interBayesAreaT =
-    imports areaDiagramG, bayesG, interArithArith
+    imports areaDiagramG, bayesG, interArithArith, interEventEvent
     constructors
         match : [events,tag] -> metaBool,
         encode : [probSys,area] -> metaBool,
@@ -22,6 +22,13 @@ tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength -1
 
+tSchema eventMatchSame:(bayesG,areaDiagramG,interBayesArea) =
+    source t:event <- makeEvent[t1:string]
+    target t':event <- makeEvent[t1':string]
+    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+    consequent :metaTrue <- match[t:event,t':event]
+    strength 1
+
 tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:event <- complement[t1:event]
     target t':tag <- reverseTag[t1':tag]
@@ -32,8 +39,8 @@ tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
 tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:events,t2:numExp]
     target t':area <- overlayRect[t1':empty,
-                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
-                                                    t22':point <- cPoint[t221':numExp,t222':1:numeral]],
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:real10,t212':0:real10],
+                                                    t22':point <- cPoint[t221':numExp,t222':1:real10]],
                                   t3':tag,
                                   t4':pattern]
     antecedent :metaTrue <- match[t1:events,t3':tag],
@@ -45,11 +52,11 @@ tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
                                 t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
-                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
-                                                                            t122':point <- cPoint[t1221':x:var,t1222':1:numeral]],
+                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:real10,t1212':0:real10],
+                                                                            t122':point <- cPoint[t1221':x:var,t1222':1:real10]],
                                                           t13':tag,
                                                           t14':blue],
-                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:real10,t212':0:real10],
                                                     t22':point <- cPoint[t1221':x:var,t222':numExp]],
                                   t3':tag,
                                   t4':pattern]
@@ -63,11 +70,11 @@ tSchema constructInter:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
                                 t2:numExp]
     target t':area <- overlayRect[t1':area <- overlayRect[t11':empty,
-                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:numeral,t1212':0:numeral],
-                                                                            t122':point <- cPoint[t1221':y:var,t1222':1:numeral]],
+                                                          t12':rect<- cRect[t121':point <- cPoint[t1211':0:real10,t1212':0:real10],
+                                                                            t122':point <- cPoint[t1221':y:var,t1222':1:real10]],
                                                           t13':tag,
                                                           t14':white],
-                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:numeral,t212':0:numeral],
+                                  t2':rect <- cRect[t21':point <- cPoint[t211':0:real10,t212':0:real10],
                                                     t22':point <- cPoint[t1221':y:var,
                                                                          t222':numExp <- infixOp[t2221':numExp,t2222':div,t1221':y:var]]],
                                   t3':tag,

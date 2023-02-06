@@ -1,13 +1,41 @@
 import basicLogic
 
+typeSystem nat10T =
+    types 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, digit, _:nat10
+    order digit < nat10,
+          0 < digit,
+          1 < digit,
+          2 < digit,
+          3 < digit,
+          4 < digit,
+          5 < digit,
+          6 < digit,
+          7 < digit,
+          8 < digit,
+          9 < digit
+
+conSpec nat10:nat10T =
+    constructors
+        addDigit : [digit,nat10] -> nat10
+
+typeSystem real10T =
+    imports nat10T
+    types _:real10
+    order nat10 < real10
+
+conSpec real10:real10T =
+    imports nat10
+    constructors
+        makeReal : [nat10,nat10] -> real10
+
 typeSystem arith =
-    imports basicLogic
-    types _:numeral, _:var, _:numExp, _:formula,
+    imports basicLogic, real10T
+    types _:real10, _:var, _:numExp, _:formula,
           plus, minus, times, div, binOp,
           leq, equals, binRel,
           oB, cB, par
     order var < numExp,
-          numeral < numExp,
+          real10 < numExp,
           plus < binOp,
           minus < binOp,
           times < binOp,
@@ -18,7 +46,7 @@ typeSystem arith =
           cB < par
 
 conSpec arithG:arith =
-  imports basicLogicG
+  imports basicLogicG, real10
   constructors
     infixOp : [numExp,binOp,numExp] -> numExp,
     infixRel : [numExp,binRel,numExp] -> formula,
