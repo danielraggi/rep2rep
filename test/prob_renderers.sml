@@ -35,8 +35,8 @@ fun mkGoal constr (interSpace : CSpace.conSpecData) =
         val tgt_type = case inTypes of
                            SOME([_, t]) => SOME(t)
                          | _ =>  NONE
-        val trueTok = Option.map (CSpace.makeToken "true") outType;
-        val dummy = Option.map (CSpace.makeToken "tok") tgt_type;
+        val trueTok = Option.map (CSpace.makeToken "-") outType;
+        val dummy = Option.map (CSpace.makeToken "t") tgt_type;
     in case (encodeConstructor, trueTok, dummy) of
            (SOME(encodeConstructor), SOME(trueTok), SOME(dummy)) =>
            SOME(Construction.TCPair(

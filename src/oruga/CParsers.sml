@@ -11,9 +11,9 @@ struct
   fun parseProbSys s =
       let val dContent = Document.read "bTreeBayes"
           val KB = Document.knowledgeOf dContent
-          val stringConSpecData = Document.findConSpecWithName dContent "string"
+          val stringConSpecData = Document.findConSpecWithName dContent "stringRich"
           val btreeConSpecData = Document.findConSpecWithName dContent "btree"
-          val bayesConSpecData = Document.findConSpecWithName dContent "bayesPlus"
+          val bayesConSpecData = Document.findConSpecWithName dContent "bayesG"
           val interStringBTreeConSpecData = Document.findConSpecWithName dContent "interStringBTree"
           val interBTreeBTreeSPACEConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeSPACE"
           val interBTreeBTreeSIMPLIFYConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeSIMPLIFY"

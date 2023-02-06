@@ -18,6 +18,7 @@ signature PROBNUM = sig
              U
              | NUM of int
              | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+             | REAL of real
              | VAR of string
              | PLUS of numExp * numExp
              | MINUS of numExp * numExp
@@ -35,6 +36,7 @@ datatype numExp =
            U
          | NUM of int
          | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+         | REAL of real
          | VAR of string
          | PLUS of numExp * numExp
          | MINUS of numExp * numExp
@@ -94,6 +96,35 @@ fun parseShading (Construction.Source((id, typ))) =
     end
   | parseShading _ = raise ShadeError;
 
+fun getDigitList(Construction.Source d) = [valOf (Int.fromString (CSpace.typeOfToken d))]
+  | getDigitList(Construction.Reference d) = [valOf (Int.fromString (CSpace.typeOfToken d))]
+  | getDigitList(Construction.TCPair({constructor,...}, inputs)) =
+    (case constructor of ("addDigit", _) => List.maps getDigitList inputs
+                | _ => raise NumError)
+
+fun crunchDigitList L = foldl (fn (x,y) => 10*y + valOf(Int.fromString x)) 0 L;
+
+fun parseReal(Construction.Source d) = (REAL(valOf (Real.fromString (CSpace.typeOfToken d))), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(Construction.Reference d) = (REAL(valOf (Real.fromString (CSpace.typeOfToken d))), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(tcp as (Construction.TCPair({constructor,token}, inputs))) =
+    (case (constructor,inputs) of
+        (("makeReal",_),[a,b]) =>
+            let val aDL = getDigitList a
+                val bDL = getDigitList b
+                val intPart = Real.fromInt (crunchDigitList aDL)
+                val decPart = Real.fromInt (crunchDigitList bDL) * Math.pow(10,~(Real.fromInt (length b)))
+                val x = intPart + decPart
+                val stringX = Real.toString x
+            in (REAL(x),[(CSpace.nameOfToken token, stringX, Real.fromInt (String.size stringX) - 0.5)])
+            end
+      | (("addDigit",_),_) =>
+            let val dL = getDigitList tcp
+                val x = Real.fromInt (crunchDigitList dL)
+                val stringX = Real.toString x
+            in (REAL(x),[(CSpace.nameOfToken token, stringX, Real.fromInt (String.size stringX) + 0.5)])
+            end
+      | _ => raise NumError)
+
 local
     fun parseSource (id, typ) =
         let val (subType, _, _) = String.breakOn ":" typ;
@@ -114,7 +145,7 @@ local
 in
 fun parseNum (Construction.Source(tok)) = parseSource tok
   | parseNum (Construction.Reference(tok)) = parseSource tok (* WARNING - ASSUMES REF IS SOURCE *)
-  | parseNum (Construction.TCPair({token=tok, constructor=con}, inputs)) =
+  | parseNum (tcp as (Construction.TCPair({token=tok, constructor=con}, inputs))) =
     let val (id, typ) = tok;
         val (cname, ctyp) = con;
         val parseWithValAndLength = parseWithValAndLength parseNum;
@@ -144,6 +175,8 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
                val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
            in (MULT(a', b'), prod::y1@y2) end
+         | ("makeReal", _) => parseReal tcp
+         | ("addDigit", ) => parseReal tcp
           (* INSERT HERE STUFF RELATED TO MAKEREAL FUNCTION *)
          | (_, _) => raise NumError
     end
@@ -153,6 +186,8 @@ fun onlyNum U = false
   | onlyNum (NUM(x)) = true
   | onlyNum (DEC(x)) = true
   | onlyNum (VAR(x)) = false
+  | onlyNum (NAT(x,y)) = true
+  | onlyNum (REAL(x,y)) = true
   | onlyNum (PLUS(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
