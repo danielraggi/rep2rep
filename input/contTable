@@ -1,14 +1,15 @@
 import arith
+import event
 
 typeSystem contTable =
- imports arith
- types _:name, _:oneDim, _:twoDim, _:table, _:event
- order oneDim < table, twoDim < table, event < name
+    imports arith, eventT
+    types _:name, _:oneDim, _:twoDim, _:table
+    order oneDim < table, twoDim < table, event < name
 
 conSpec contTableG:contTable =
- imports arithG
- constructors
-  notName : [name] -> name,
-  buildOne : [name,numExp] -> oneDim,
-  buildTwo : [oneDim,oneDim,numExp] -> twoDim,
-  combine : [table,table] -> table
+    imports arithG, event
+    constructors
+        notName : [name] -> name,
+        buildOne : [name,numExp] -> oneDim,
+        buildTwo : [oneDim,oneDim,numExp] -> twoDim,
+        combine : [table,table] -> table

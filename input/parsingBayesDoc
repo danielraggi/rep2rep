@@ -1,98 +1,140 @@
 import bTreeBayes
+import transferSchemas/bayesArea
+import transferSchemas/bayesTable
+import transferSchemas/bayesTree
 
-
-construction prEquation:string = liftString Pr(ab U c | d) = 0.21
-construction prSystem:string = liftString Pr(ab U c | d) = 0.21; Pr(d) = 0.6
+construction prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
+construction prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
+construction prSystem1:stringRich = liftString Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1
 
 transfer
-    sourceConstruction prSystem
+    sourceConstruction prSystem1
     targetConSpec btree
     interConSpec interStringBTree
-    goal :metaTrue <- TREEIFY[t:Pr(ab U c | d) = 0.21; Pr(d) = 0.6:string,t':btree]
-    searchLimit 100
+    goal :metaTrue <- TREEIFY[t:Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1:string,t':btree]
+    eager
     output test1
-    limit 1
     save test1
-    unistructured
+    limit 2
+    goalLimit 3
 
 transfer
     sourceConstruction test1
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 100
+    eager
     output test2
     save test2
     limit 1
-    unistructured
+    goalLimit 4
 
 transfer
     sourceConstruction test2
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SEMICOLON[v_{55}:btree,t':btree]
-    searchLimit 100
+    interConSpec interBTreeBTreeSEMICOLON
+    goal :metaTrue <- SEMICOLON[v_{69}:btree,t':btree]
+    eager
     output test3
     save test3
     limit 1
-    unistructured
+    goalLimit 4
 
 transfer
     sourceConstruction test3
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 50
+    interConSpec interBTreeBTreeSIMPLIFY
+    goal :metaTrue <- SIMPLIFY[v_{0}:btree,t':btree]
+    eager
     output test4
     save test4
     limit 1
+    goalLimit 4
 
 transfer
     sourceConstruction test4
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- SPACE[v_{2}:btree,t':btree]
-    searchLimit 100
+    interConSpec interBTreeBTreeSPACE
+    goal :metaTrue <- SPACE[v_{67}:btree,t':btree]
+    eager
     output test5
     save test5
-    limit 10
+    limit 1
+    goalLimit 4
 
 transfer
     sourceConstruction test5
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 50
+    eager
     output test6
     save test6
     limit 1
+    goalLimit 4
 
 transfer
     sourceConstruction test6
     targetConSpec btree
-    interConSpec interBTreeBTree
-    goal :metaTrue <- MID[v_{3}:btree,t':btree]
-    searchLimit 100
+    interConSpec interBTreeBTreeMID
+    goal :metaTrue <- MID[v_{63}:btree,t':btree]
+    eager
     output test7
     save test7
     limit 10
+    goalLimit 4
 
 transfer
     sourceConstruction test7
     targetConSpec btree
-    interConSpec interBTreeBTree
+    interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
-    searchLimit 50
+    eager
     output test8
     save test8
     limit 10
+    goalLimit 4
 
 transfer
     sourceConstruction test8
-    targetConSpec bayesPlus
+    targetConSpec bayesG
     interConSpec interBTreeBayes
-    goal :metaTrue <- SYS[v_{3}:btree,t':probSys]
-    searchLimit 200
+    goal :metaTrue <- SYS[v_{57}:btree,t':probSys]
+    eager
     output test9
     save test9
     limit 10
+    goalLimit 4
+
+transfer
+    sourceConstruction test9
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[v_{0}:probSys,t':area]
+    eager
+    output test10area
+    save test10area
+    limit 10
+    goalLimit 5
+
+transfer
+    sourceConstruction test9
+    targetConSpec contTableG
+    interConSpec interBayesTable
+    goal :metaTrue <- encode[v_{0}:probSys,t':table]
+    eager
+    output test10table
+    save test10table
+    limit 10
+    goalLimit 5
+
+transfer
+    sourceConstruction test9
+    targetConSpec probTreeG
+    interConSpec interBayesTree
+    goal :metaTrue <- encode[v_{0}:probSys,t':tree]
+    eager
+    output test10tree
+    save test10tree
+    limit 10
+    goalLimit 5

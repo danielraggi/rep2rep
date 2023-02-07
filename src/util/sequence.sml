@@ -459,7 +459,7 @@ fun insertNoEQUAL x xq f =
   make (fn () =>
     case pull xq of
       NONE => SOME (x,empty)
-    | SOME (x',q) => (case f(x,x') of GREATER => SOME (x',insert x q f)
+    | SOME (x',q) => (case f(x,x') of GREATER => SOME (x',insertNoEQUAL x q f)
                                     | LESS => SOME (x,xq)
                                     | EQUAL => SOME (x',q)));
 

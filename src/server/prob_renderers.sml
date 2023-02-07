@@ -10,7 +10,23 @@ signature PROBRENDER = sig
     val drawBayes: renderer;
 end;
 
-structure ProbRender : PROBRENDER = struct
+signature PROBNUM = sig
+
+    include PROBRENDER
+
+    datatype numExp =
+             U
+             | NUM of int
+             | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+             | VAR of string
+             | PLUS of numExp * numExp
+             | MINUS of numExp * numExp
+             | MULT of numExp * numExp
+             | FRAC of numExp * numExp;
+
+end;
+
+structure ProbNum : PROBNUM = struct
 
 type renderer = Construction.construction list
                 -> ((string * (string * real * real)) list, Diagnostic.t list) Result.t;
@@ -59,6 +75,7 @@ datatype treeExp =
 exception TreeError;
 
 exception BayesError;
+exception StringError;
 
 val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
 val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
@@ -77,6 +94,56 @@ fun parseShading (Construction.Source((id, typ))) =
          | _ => (WHITE, [(id, "WHITE", 5.0)])
     end
   | parseShading _ = raise ShadeError;
+
+fun getCharList(Construction.Source d) =
+      (case String.breakOn ":" (CSpace.typeOfToken d) of
+          ("empty","",_) => []
+        | (c,":","ordinary") => [c]
+        | _ => raise StringError)
+  | getCharList(Construction.Reference d) =
+      (case String.breakOn ":" (CSpace.typeOfToken d) of
+          ("empty","",_) => []
+        | (c,":","ordinary") => [c]
+        | _ => raise StringError)
+  | getCharList(Construction.TCPair({constructor,...}, inputs)) =
+    (case constructor of ("cons", _) => List.maps getCharList inputs
+                | _ => raise StringError)
+
+fun parseString(Construction.Source d) = []
+  | parseString(Construction.Reference d) = []
+  | parseString(tcp as (Construction.TCPair({constructor,token}, _))) =
+    (case constructor of
+        ("cons",_) =>
+            let val cL = getCharList tcp
+                val cS = String.concat cL
+            in [(CSpace.nameOfToken token, cS, Real.fromInt (String.size cS) + 0.5)]
+            end
+      | _ => raise NumError)
+
+fun getDigitList(Construction.Source d) = [(CSpace.typeOfToken d)]
+  | getDigitList(Construction.Reference d) = [(CSpace.typeOfToken d)]
+  | getDigitList(Construction.TCPair({constructor,...}, inputs)) =
+    (case constructor of ("addDigit", _) => List.maps getDigitList inputs
+                | _ => raise NumError)
+
+fun parseReal(Construction.Source d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(Construction.Reference d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(tcp as (Construction.TCPair({constructor,token}, inputs))) =
+    (case (constructor,inputs) of
+        (("makeReal",_),[a,b]) =>
+            let val aDL = getDigitList a
+                val bDL = getDigitList b
+                val intPart = String.concat aDL
+                val decPart = String.concat bDL
+                val x = intPart ^ "." ^ decPart
+            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) - 0.5)])
+            end
+      | (("addDigit",_),_) =>
+            let val dL = getDigitList tcp
+                val x = String.concat dL
+            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) + 0.5)])
+            end
+      | _ => raise NumError)
 
 local
     fun parseSource (id, typ) =
@@ -98,7 +165,7 @@ local
 in
 fun parseNum (Construction.Source(tok)) = parseSource tok
   | parseNum (Construction.Reference(tok)) = parseSource tok (* WARNING - ASSUMES REF IS SOURCE *)
-  | parseNum (Construction.TCPair({token=tok, constructor=con}, inputs)) =
+  | parseNum (tcp as (Construction.TCPair({token=tok, constructor=con}, inputs))) =
     let val (id, typ) = tok;
         val (cname, ctyp) = con;
         val parseWithValAndLength = parseWithValAndLength parseNum;
@@ -115,19 +182,22 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                   let val diff = (id, String.concat [leftVal, " - ", rightVal], leftLen + rightLen + 0.5);
                       val minus = (id', "-", 1.5);
                   in (MINUS(a', b'), diff::y1@(minus::y2)) end
+                | "div" =>
+                  let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
+                      val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
+                      val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
+                      val divd = (id', "/", 1.5);
+                  in (FRAC(a', b'), frac::y1@(divd::y2)) end
                 | _ => raise NumError
            end
-         | ("frac", [a, Construction.Source((id', "div")), b]) =>
-           let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
-               val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
-               val frac = (id, String.concat [leftVal, "/", rightVal], leftLen + rightLen);
-               val divd = (id', "/", 1.5);
-           in (FRAC(a', b'), frac::y1@(divd::y2)) end
          | ("multiply", [a, b]) =>
            let val (a', y1, leftVal, leftLen) = parseWithValAndLength a;
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
                val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
            in (MULT(a', b'), prod::y1@y2) end
+         | ("makeReal", _) => parseReal tcp
+         | ("addDigit", _) => parseReal tcp
+          (* INSERT HERE STUFF RELATED TO MAKEREAL FUNCTION *)
          | (_, _) => raise NumError
     end
 end;
@@ -140,6 +210,9 @@ fun onlyNum U = false
   | onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
+
+fun allNum [] = true
+  | allNum (x::xs) = onlyNum x andalso allNum xs
 
 fun numToString x =
     let fun round n = Real.roundDecimal n 4;
@@ -613,7 +686,7 @@ and simplify (PLUS(x,y)) =
               then simplify (PLUS(MINUS(NUM(0), k), MULT(c, l)))
               else MULT(a,b)
          | (FRAC(c, k), MINUS(m, VAR(n))) (* c/(m-n) * (m-n) = c *)
-           => if k = b then c else MULT(a,b)
+           => if k = b orelse numToString k = numToString b then c else MULT(a,b)
          | (a, MINUS(c, VAR(k)))
            => if onlyNum a andalso onlyNum c (* a(c - k) = ac - ak *)
               then simplify (MINUS(MULT(a, c), MULT(a, VAR(k))))
@@ -665,6 +738,7 @@ and simplify (PLUS(x,y)) =
         val b = simplify y;
     in if numToString a = numToString b then NUM(1)
        else if numToString b = numToString (NUM(0)) then raise NumError
+       else if numToString a = numToString (NUM(0)) then NUM(0)
        else case (a, b) of
                 (NUM(0), _) => NUM(0)
               | (a, NUM(1)) => a
@@ -794,8 +868,12 @@ fun resolve a b (n:int) =
               | (MINUS(MULT(m, VAR(k)), n), y) => SOME (VAR(k), FRAC(PLUS(y, n), m))
               | (x, MINUS(n, MULT(m, VAR(k)))) => SOME (VAR(k), FRAC(MINUS(n, x), m))
               | (MINUS(n, MULT(m, VAR(k))), y) => SOME (VAR(k), FRAC(MINUS(n, y), m))
-              | (MULT(m, VAR(n)), y) => SOME (VAR(n), FRAC(y, m))
-              | (x, MULT(m, VAR(n))) => SOME (VAR(n), FRAC(x, m))
+              | (MULT(m, VAR(n)), y) => if contains (VAR(n)) y
+                                        then NONE
+                                        else SOME (VAR(n), FRAC(y, m))
+              | (x, MULT(m, VAR(n))) => if contains (VAR(n)) x
+                                        then NONE
+                                        else SOME (VAR(n), FRAC(x, m))
               | (MINUS(c, VAR(n)), y) => SOME (VAR(n), MINUS(c, y))
               | (x, MINUS(c, VAR(n))) => SOME (VAR(n), MINUS(c, x))
               | (MINUS(VAR(n), c), y) => SOME (VAR(n), PLUS(c, y))
@@ -803,30 +881,34 @@ fun resolve a b (n:int) =
               | _ => NONE;
         fun filterNum xs ys nx ny =
             let fun filterNum' ans [] [] = List.rev ans
+                  | filterNum' ans [] ys = (List.rev ans)@ys
+                  | filterNum' ans xs [] = (List.rev ans)@xs
                   | filterNum' ans (x::xs) (y::ys) =
                     if onlyNum x then filterNum' (x::ans) xs ys
                     else if onlyNum y then filterNum' (y::ans) xs ys
                     else if x = U then filterNum' (y::ans) xs ys
                     else if y = U then filterNum' (x::ans) xs ys
                     else if nx > ny then filterNum' (y::ans) xs ys
-                    else filterNum' (x::ans) xs ys
-                  | filterNum' _ _ _ = raise NumError;
+                    else filterNum' (x::ans) xs ys;
             in filterNum' [] xs ys end;
         fun tResolve a b c d 0 = (List.revAppend (c, a), List.revAppend (d, b))
           | tResolve [] [] c d _ = (List.rev c, List.rev d)
           | tResolve (a::aas) (b::bbs) c d e =
-            let val x = simplify a;
-                val y = simplify b;
-                val xs = List.map simplify aas;
-                val ys = List.map simplify bbs;
-            in if x = U
-               then tResolve xs ys (y::c) (y::d) (e-1)
-               else if y = U
-               then tResolve xs ys (x::c) (x::d) (e-1)
-               else if (x = y orelse (numToString x) = (numToString y)) andalso String.size (numToString x) > 1
-               then tResolve xs ys (x::c) (y::d) (e-1)
-               else if onlyNum y
-               then (case (x,y) of
+            if allNum (a::aas@c) orelse allNum (b::bbs@d)
+            then (List.revAppend (c, (a::aas)), List.revAppend (d, (b::bbs)))
+            else
+              let val x = simplify a;
+                  val y = simplify b;
+                  val xs = List.map simplify aas;
+                  val ys = List.map simplify bbs;
+              in if x = U
+                 then tResolve xs ys (y::c) (y::d) (e-1)
+                 else if y = U
+                 then tResolve xs ys (x::c) (x::d) (e-1)
+                 else if (x = y orelse (numToString x) = (numToString y)) andalso String.size (numToString x) > 1
+                 then tResolve xs ys (x::c) (y::d) (e-1)
+                 else if onlyNum y
+                 then (case (x,y) of
                          (VAR(n), y) => let val zs = List.map (replace y x) xs;
                                             val ws = List.map (replace y x) c;
                                         in tResolve zs ys (y::ws) (y::d) (e-1) end
@@ -1391,6 +1473,14 @@ fun resolve a b (n:int) =
                                   val zs = List.map f ys;
                                   val ws = List.map f d;
                               in tResolve xs zs (x::c) (x::ws) (e-1) end
+                       | (VAR(n), y) =>
+                         let val zs = List.map (replace y x) xs;
+                             val ws = List.map (replace y x) c;
+                         in tResolve zs ys (y::ws) (y::d) (e-1) end
+                       | (x, VAR(n)) =>
+                         let val zs = List.map (replace x y) ys;
+                             val ws = List.map (replace x y) d;
+                         in tResolve xs zs (x::c) (x::ws) (e-1) end
                        | (MINUS(VAR(n), m), k) =>
                          if contains (VAR(n)) k
                          then tResolve xs ys (x::c) (y::d) (e-1)
@@ -1425,14 +1515,6 @@ fun resolve a b (n:int) =
                              val zs = List.map f xs;
                              val ws = List.map f c;
                          in tResolve zs ys (y::ws) (y::d) (e-1) end
-                       | (VAR(n), y) =>
-                         let val zs = List.map (replace y x) xs;
-                             val ws = List.map (replace y x) c;
-                         in tResolve zs ys (y::ws) (y::d) (e-1) end
-                       | (x, VAR(n)) =>
-                         let val zs = List.map (replace x y) ys;
-                             val ws = List.map (replace x y) d;
-                         in tResolve xs zs (x::c) (x::ws) (e-1) end
                        | (MULT(q, VAR(l)), PLUS(m, MULT(n, VAR(k)))) =>
                          if l = k
                          then let val f = replace (FRAC(m,MINUS(q,n))) (VAR(l));
@@ -1617,6 +1699,7 @@ fun drawArea c =
                  let val (a1, a1HTML) = parseArea area1;
                      val (a2, a2HTML) = parseArea area2;
                  in (COMBAREA(id, a1, a2), a1HTML @ a2HTML) end
+               | ("makeEvent", [eventName]) => let val x = parseString eventName in (LABEL(#2 (hd x)),x) end
                | _ => raise AreaError)
           | parseArea (Construction.Reference(_)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
@@ -1704,7 +1787,7 @@ fun drawArea c =
                     | mergeShading x PATTERN = x
                     | mergeShading WHITE y = y
                     | mergeShading x _ = x
-                  fun extractNum [] y w = if List.length w = 6 then w else raise AreaError
+                  fun extractNum [] y w = if List.length w = 6 then w else raise AreaError (*remove y*)
                     | extractNum (x::xs) y w =
                       if xs = [] then w@[U, U, U, U]
                       else if List.length w = 6 then w
@@ -1928,15 +2011,16 @@ fun drawTable c =
                      val (conj, conjHTML) = parseNum numExp;
                  in (TWOWAY(id, t1, t2, conj), t1HTML @ t2HTML @ conjHTML) end
                | ("combine", [table1, table2]) =>
-                 let val (x1,y1) = parseTable table1;
-                     val (x2,y2) = parseTable table2;
-                 in (COMB(id, x1, x2), y1@y2) end
+                 let val (t1, t1HTML) = parseTable table1;
+                     val (t2, t2HTML) = parseTable table2;
+                 in (COMB(id, t1, t2), t1HTML@t2HTML) end
                | ("notName", [name]) =>
                  let fun overline x = "<tspan text-decoration=\"overline\">"^x^"</tspan>";
                  in case parseTable name of
                         (NAME a, [(id, label, size)]) => (NNAME(a), [(id, overline label, size)])
                       | _ => raise TableError
                  end
+               | ("makeEvent", [eventName]) => let val x = parseString eventName in (NAME(#2 (hd x)),x) end
                | _ => raise TableError)
           | parseTable _ = raise TableError;
         fun convertTable (NAME(x)) = (([SEVENT(x)],[]), [])
@@ -1990,13 +2074,13 @@ fun drawTable c =
                                                              (probs1 @ [U,U,U,U,U,U]),
                                                              ([U,U] @ probs2 @ [U,U,U,U]))
                                         else (v1, probs1, transpose probs2))
-                       else if l1 > l2 then (if s1 = s2 then (v1, probs2, (probs2 @ [U,U,U,U,U,U]))
+                       else if l1 > l2 then (if s1 = s2 then (tableMerge v1 probs1 v1 (probs2 @ [U,U,U,U,U,U]))
                                              else (v1, probs1, ([U,U] @ probs2 @ [U,U,U,U])))
-                       else if s1 = s2 then (v2, (probs1 @ [U,U,U,U,U,U]), probs2)
+                       else if s1 = s2 then (tableMerge v2 (probs1 @ [U,U,U,U,U,U]) v2 probs2)
                        else (v2, ([U,U] @ probs1 @ [U,U,U,U]), probs2)
                     end;
-                val ((v1, probs1), tabs1) = convertTable t2;
-                val ((v2, probs2), tabs2) = convertTable t1;
+                val ((v1, probs1), tabs1) = convertTable t1;
+                val ((v2, probs2), tabs2) = convertTable t2;
                 val (vs, b, c) = tableMerge v1 probs1 v2 probs2;
                 val probs = resolve b c (List.length b);
             in ((vs, probs), (id, vs, probs)::tabs1 @ tabs2) end;
@@ -2064,8 +2148,9 @@ fun drawTree x =
                        (BRANCH(l), (id', lab, size)::_) => (NBRANCH(l), [(id', overline lab, size)])
                      | _ => raise TreeError
                 end
+              | ("makeEvent", [eventName]) => let val x = parseString eventName in (BRANCH(#2 (hd x)),x) end
               | _ =>  raise TreeError)
-          | parseTree (Construction.Reference(_)) = raise TreeError
+          | parseTree (Construction.Reference(_)) = raise TreeError;
         fun convertTree (BRANCH(x)) = (([SEVENT(x)], []), [])
           | convertTree (NBRANCH(x)) = (([NEVENT(x)], []), [])
           | convertTree (TREE(id, label, prob)) =
@@ -2142,12 +2227,12 @@ fun drawTree x =
                              then (if s1 = s2
                                    then (x2, y2, y3 @ [U, U, U, U])
                                    else (List.rev x2, f y2, y3 @ [U, U, U, U]))
-                             else (if s1 = s2
-                                   then (x3, y2 @ [U, U, U, U], y3)
-                                   else (List.rev x3, y2 @ [U, U, U, U], f y3)))
+                        else (if s1 = s2
+                              then (x3, y2 @ [U, U, U, U], y3)
+                              else (List.rev x3, y2 @ [U, U, U, U], f y3)))
                     end;
-                val ((v1, p1), html1) = convertTree tree2;
-                val ((v2, p2), html2) = convertTree tree1;
+                val ((v1, p1), html1) = convertTree tree1;
+                val ((v2, p2), html2) = convertTree tree2;
                 val (vars, b, c) = treeMerge v1 p1 v2 p2;
                 val probs = resolve b c (List.length b);
             in ((vars, probs), (id, vars, probs) :: html1 @ html2) end;
@@ -2256,6 +2341,7 @@ fun drawBayes c =
                         (id, e1 ^ ops ^ e2, w1 + w2 + w3 - 1.0):: html1 @ html2 @ htmlOp
                       | _ => raise BayesError
                  end
+               | ("makeEvent", [eventName]) => parseString eventName
                | _ => raise BayesError)
           | parseEvent (Construction.Reference(_)) = raise BayesError
         fun parseBayes (c as Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =
@@ -2289,7 +2375,11 @@ fun wrap renderer c = Result.ok (List.flatmap renderer c)
                                      Diagnostic.create
                                          Diagnostic.ERROR
                                          ("Failed to render structure graph: "
-                                          ^ (exnMessage e) ^ ".")
+                                          ^ (exnMessage e)
+                                          ^ "-"
+                                          ^ (PolyML.makestring
+                                                 (PolyML.Exception.exceptionLocation e))
+                                          ^ ".")
                                          []];
 
 val drawArea = wrap drawArea;
@@ -2298,3 +2388,5 @@ val drawTree = wrap drawTree;
 val drawBayes = wrap drawBayes;
 
 end;
+
+structure ProbRender : PROBRENDER = ProbNum;
