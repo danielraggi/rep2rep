@@ -121,8 +121,8 @@ fun produce_construction e =
             end
           |constructEvent n E = raise ParseError
       fun constructNum n (ProbNum.U) = (Construction.Source("t"^n, "numExp"), "")
-          |constructNum n (ProbNum.NUM(x)) = (Construction.Source("t"^n, (Int.toString x)^":numeral"), (Int.toString x))
-          |constructNum n (ProbNum.DEC(x)) = (Construction.Source("t"^n, x^":numeral"), x)
+          |constructNum n (ProbNum.NUM(x)) = (Construction.Source("t"^n, (Int.toString x)^":real10"), (Int.toString x))
+          |constructNum n (ProbNum.DEC(x)) = (Construction.Source("t"^n, x^":real10"), x)
           |constructNum n (ProbNum.VAR(x)) = (Construction.Source("t"^n, x^":var"), x)
           |constructNum n (ProbNum.PLUS(x,y)) =
             let val (x2, x3) = constructNum (n^"1") x

@@ -1,4 +1,5 @@
 import "oruga.parser";
+import "oruga.lift";
 import "latex.latex";
 
 signature DOCUMENT =
@@ -18,6 +19,7 @@ sig
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData
   val findConstructionWithName : documentContent -> string -> constructionData
   val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
+  val normaliseString : string -> string
 
   val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint
 
@@ -68,15 +70,21 @@ struct
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
+  val goalLimitKW = "goalLimit"
+  val compositionLimitKW = "compositionLimit"
+  val searchLimitKW = "searchLimit"
+  val eagerKW = "eager"
   val iterativeKW = "iterative"
   val unistructuredKW = "unistructured"
+  val inverseKW = "inverse"
   val matchTargetKW = "matchTarget"
   val sourceConSpecKW = "sourceConSpec"
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,
+  val saveKW = "save"
+  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
-                          sourceConSpecKW,interConSpecKW]
+                          sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
 
   fun breakListOn s [] = ([],"",[])
@@ -85,15 +93,49 @@ struct
         then ([],s,ws)
         else (case breakListOn s ws of (x,s',y) => (w::x,s',y))
 
-  fun parseToken s = case String.breakOn ":" (String.stripSpaces s) of
-                  (ts,_,tys) => CSpace.makeToken ts (Type.fromString tys)
-  fun parseCTyp s = case Parser.list Type.fromString (String.stripSpaces s) of
-                  (ty::tys) => (tys,ty)
-                | _ => raise ParseError ("bad constructor sig: " ^ s)
-  fun parseConstructor s = case String.breakOn ":" (String.stripSpaces s) of
-                        (cs,_,ctys) => CSpace.makeConstructor (cs, parseCTyp ctys)
-  fun parseConfigurator s = case String.breakOn ":" (String.stripSpaces s) of
-                         (us,_,ccs) => CSpace.makeConfigurator (us, parseConstructor ccs)
+  fun ignoreUntil _ [] = []
+    | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
+
+  val standAloneChars = [#"(",#")",#"[",#"]",#"{",#"}",#"\"",#",",#";",#"="]
+
+  fun tokenise s =
+    let fun commentChar x = (x = #"#")
+        fun lineBreak x = (x = #"\n")
+        fun separator x = (x = #"\n" orelse x = #" ")
+        fun standAlone x = List.exists (fn y => y = x) standAloneChars
+        fun t [] = (true,[])
+          | t (x::xs) =
+            if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
+            else if separator x then (true, #2(t xs))
+            else if List.exists (fn y => y = x) standAloneChars then (true, str x :: #2(t xs))
+            else (case t xs of
+                    (true,L) => (false, str x :: L)
+                  | (false,r::rs) => (false, str x ^ r :: rs)
+                  | _ => raise ParseError "Completely unexpected error. Inform a developer!")
+        val (_,ts) = t (String.explode s)
+    in ts end;
+
+  fun deTokenise [] = ""
+    | deTokenise [s] = s
+    | deTokenise (s1::s2::L) =
+    if List.exists (fn y => str y = s1 orelse str y = s2) standAloneChars
+    then s1 ^ deTokenise (s2::L)
+    else s1 ^ " " ^ deTokenise (s2::L)
+
+  fun normaliseString s = if List.all (fn x => x = #" ") (String.explode s) then " " else (deTokenise o tokenise) s
+
+  fun parseTyp s = case String.breakOn ":" s of
+                      (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
+                    | _ => Type.fromString (normaliseString s)
+  fun parseToken s = case String.breakOn ":" s of
+                        (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
+                      | _ => raise ParseError ("no type for token: " ^ s)
+  fun parseCTyp s = case Parser.list parseTyp s of
+                      (ty::tys) => (tys,ty)
+                    | _ => raise ParseError ("bad constructor sig: " ^ s)
+  fun parseConstructor s = case String.breakOn ":" s of
+                              (cs,":",ctys) => CSpace.makeConstructor (normaliseString cs, parseCTyp ctys)
+                            | _ => raise ParseError ("no sig for constructor: " ^ s)
 
 
    fun findConstructorInConSpec s cspec =
@@ -101,9 +143,9 @@ struct
      handle Option => raise ParseError ("no constructor " ^ s ^ " in " ^ (#name cspec))
 
   fun parseTCPair s cspec =
-    case String.breakOn "<-" (String.stripSpaces s) of
+    case String.breakOn "<-"  s of
           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
-       |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec cfgs cspec}
+       |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
 
   fun parseConstruction cspec s =
     let fun c s' =
@@ -117,7 +159,7 @@ struct
                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
              in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
              end
-    in Construction.fixReferences (c (String.stripSpaces s))
+    in Construction.fixReferences (c s)
     end;
 
   val parseConstruction_rpc =
@@ -131,28 +173,6 @@ struct
                                        handle ParseError => NONE)
                           (findCSpec cspecName) );
 
-  fun ignoreUntil _ [] = []
-    | ignoreUntil f (h::L) = if f h then L else ignoreUntil f L
-
-  fun tokenise s =
-    let fun commentChar x = (x = #"#")
-        fun lineBreak x = (x = #"\n")
-        fun separator x = (x = #"\n" orelse x = #" ")
-        fun standAlone x = (x = #"(" orelse x = #")" orelse
-                            x = #"[" orelse x = #"]" orelse
-                            x = #"{" orelse x = #"}" orelse
-                            x = #"\"" orelse x = #"," orelse x = #"=")
-        fun t [] = (true,[])
-          | t (x::xs) =
-            if commentChar x then (true, #2(t (ignoreUntil lineBreak xs)))
-            else if separator x then (true, #2(t xs))
-            else if standAlone x then (true, str x :: #2(t xs))
-            else (case t xs of
-                    (true,L) => (false, str x :: L)
-                  | (false,r::rs) => (false, str x ^ r :: rs)
-                  | _ => raise ParseError "Completely unexpected error. Inform a developer!")
-        val (_,ts) = t (String.explode s)
-    in ts end;
 
   fun removeOuterBrackets wL =
     let fun removeOuterJunk (L,L') =
@@ -448,7 +468,7 @@ struct
                               raise ParseError ("no " ^ k ^ " in iSchema " ^ String.concat cs))
         | getPattern k ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (String.concat (removeOuterBrackets ps))
+            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (deTokenise (removeOuterBrackets ps))
             else getPattern k L
       fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
                               raise ParseError ("no token rels in iSchema " ^ String.concat cs))
@@ -581,13 +601,22 @@ struct
       strengths = strengthsUpd}
   end
 
+  fun insertConstruction ctRecord DC =
+       {typeSystemsData = #typeSystemsData DC,
+        conSpecsData = #conSpecsData DC,
+        knowledge = #knowledge DC,
+        constructionsData = ctRecord :: (#constructionsData DC),
+        transferRequests = #transferRequests DC,
+        strengths = #strengths DC}
+
   fun addConstruction (N, bs) dc =
   let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for construction " ^ String.concat N)
       val (name,x,cspecN) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
       val cspec = findConSpecWithName dc cspecN
-      val cts = String.concat (removeOuterBrackets bs)
-      val ct = parseConstruction cspec cts
+      val ct = case removeOuterBrackets bs of
+                  "liftString" :: ctL => Lift.string (deTokenise ctL)
+                | ctL => parseConstruction cspec (deTokenise ctL)
 
       val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
       val startTime = Time.now();
@@ -598,12 +627,7 @@ struct
       val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
 
       val ctRecord = {name = name, conSpecN = cspecN, construction = ct}
-  in {typeSystemsData = #typeSystemsData dc,
-      conSpecsData = #conSpecsData dc,
-      knowledge = #knowledge dc,
-      constructionsData = ctRecord :: (#constructionsData dc),
-      transferRequests = #transferRequests dc,
-      strengths = #strengths dc}
+  in insertConstruction ctRecord dc
   end
 
   fun addTransferRequests ws dc =
@@ -614,9 +638,8 @@ struct
       transferRequests = #transferRequests dc @ [ws],
       strengths = #strengths dc}
 
-
   exception BadGoal
-  fun parseTransferRequests DC ws =
+  fun processTransferRequests ws DC =
   let fun stringifyC ((x,c)::L) = "("^(valOf x)^","^ (String.stringOfList (fn x => x) c)^") : "^(stringifyC L)
         | stringifyC [] = ""
       val C = gatherMaterialByKeywords transferKeywords ws
@@ -626,6 +649,7 @@ struct
             if x = SOME sourceConstructionKW
             then findConstructionWithName DC (String.concat (removeOuterBrackets c))
             else getConstruction L
+
       val constructionRecord = getConstruction C
       val construction = #construction constructionRecord
       val sourceConSpecN = #conSpecN constructionRecord
@@ -651,34 +675,55 @@ struct
       val targetTypeSystem = getTargetTySys C*)
       val targetConSpecData = getTargetConSpec C
       val targetTypeSystem = #typeSystem (#typeSystemData targetConSpecData)
+
       val interConSpecData = getInterConSpec C
       val interTypeSystem = #typeSystem (#typeSystemData interConSpecData)
 
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
             if x = SOME goalKW
-            then parseConstruction interConSpecData (String.concat (removeOuterBrackets c))
+            then parseConstruction interConSpecData (deTokenise (removeOuterBrackets c))
             else getGoal L
-      fun getOutput [] = raise ParseError "no output file name for transfer"
+      fun getOutput [] = NONE
         | getOutput ((x,c)::L) =
             if x = SOME outputKW
-            then "output/latex/"^(String.concat (removeOuterBrackets c))^".tex"
+            then SOME ("output/latex/"^(String.concat (removeOuterBrackets c))^".tex")
             else getOutput L
-      fun getLimit [] = raise ParseError "no limit for transfer output file"
+      fun getLimit [] = NONE
         | getLimit ((x,c)::L) =
             if x = SOME limitKW
-            then valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!"
+            then SOME (valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!")
             else getLimit L
+      fun getSearchLimit [] = NONE
+        | getSearchLimit ((x,c)::L) =
+            if x = SOME searchLimitKW
+            then Int.fromString (String.concat c)
+            else getSearchLimit L
+      fun getCompositionLimit [] = NONE
+        | getCompositionLimit ((x,c)::L) =
+            if x = SOME compositionLimitKW
+            then Int.fromString (String.concat c)
+            else getCompositionLimit L
+      fun getGoalLimit [] = NONE
+        | getGoalLimit ((x,c)::L) =
+            if x = SOME goalLimitKW
+            then Int.fromString (String.concat c)
+            else getGoalLimit L
       fun getMatchTarget [] = NONE
         | getMatchTarget ((x,c)::L) =
             if x = SOME matchTargetKW
-            then (let val mtct = parseConstruction targetConSpecData (String.concat (removeOuterBrackets c))
+            then (let val mtct = parseConstruction targetConSpecData (deTokenise (removeOuterBrackets c))
                       val _ = if Construction.wellFormed targetConSpecData mtct
                               then Logging.write "\n  pattern for matching is well formed"
                               else Logging.write "\n  WARNING: pattern for matching is not well formed"
                   in SOME mtct
                   end)
             else getMatchTarget L
+      fun getEager [] = false
+        | getEager ((x,_)::L) =
+            if x = SOME eagerKW
+            then true
+            else getEager L
       fun getIterative [] = false
         | getIterative ((x,_)::L) =
             if x = SOME iterativeKW
@@ -686,18 +731,34 @@ struct
                       NONE => true
                     | _ => raise ParseError "iterative and matchTarget are incompatible")
             else getIterative L
+      fun getInverse [] = false
+        | getInverse ((x,_)::L) =
+            if x = SOME inverseKW
+            then true
+            else getInverse L
       fun getUnistructured [] = false
         | getUnistructured ((x,_)::L) =
             if x = SOME unistructuredKW
             then true
             else getUnistructured L
+      fun getSave [] = NONE
+        | getSave ((x,c)::L) =
+            if x = SOME saveKW
+            then SOME (String.concat c)
+            else getSave L
       val goal = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
+      val goalLimit = getGoalLimit C
+      val compositionLimit = getCompositionLimit C
+      val searchLimit = getSearchLimit C
+      val eager = getEager C
       val iterative = getIterative C
       val KB = knowledgeOf DC
+      val inverse = getInverse C
       val unistructured = getUnistructured C
       val targetPattern = getMatchTarget C
+      val save = getSave C
       fun mkLatexGoals res =
         let val goal = State.originalGoalOf res
             val goals = State.goalsOf res
@@ -711,12 +772,12 @@ struct
                                                                       ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
                                                                       ^ goalsS ^ "\\\\"
                                                                       ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
-                                                                      ^ Real.toString IS)
+                                                                      ^ Latex.realToString IS)
         in alignedGoals
         end
       fun mkLatexProof tproof =
         let val ct = TransferProof.toConstruction tproof;
-        in Latex.construction (0.0,0.0) ct
+        in (*Latex.construction (0.0,0.0) ct*) Latex.environment "alltt" "" (Construction.toString ct)
         end
       fun mkLatexConstructions comps =
         List.maps (fn x => map (Latex.construction (0.0,0.0)) (Composition.resultingConstructions x)) comps
@@ -732,29 +793,41 @@ struct
             val latexLeft = Latex.environment "minipage" "[t]{0.68\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals res
             val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
-            val latexProof = ""(*mkLatexProof tproof*)
+            val latexProof = mkLatexProof tproof
             (*val CSize = List.sumMapInt Composition.size comps*)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight,(*Int.toString CSize,*)latexProof]))
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*Int.toString CSize,*)]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();
       val targetTokens = FiniteSet.filter
                              (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
                              (Construction.leavesOfConstruction goal)
-                          handle Empty => (Logging.write "WARNING : goal has no tokens in target construction space\n"; raise BadGoal)
-      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData KB construction goal
-      val results = Transfer.masterTransfer iterative unistructured targetPattern state;
+                          handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
+      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
+      val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured targetPattern state;
       val nres = length (Seq.list_of results);
-      val (listOfResults,_) = Seq.chop limit results;
+      val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       (*fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)*)
-      val score = Heuristic.scoreMain (strengthsOf DC) (hd listOfResults) handle Empty => (0.0)
+      val (score,ngoals,constructionsToSave) =
+            case Seq.pull results of
+              SOME (x,_) => (Heuristic.scoreMain (strengthsOf DC) x,
+                             length (#goals x),
+                             List.maps Composition.resultingConstructions (State.patternCompsOf x))
+            | NONE => (0.0,~1,[])
+      fun resultingConstructionData _ [] = raise ParseError ""
+        | resultingConstructionData s [rct] = [{name = s, conSpecN = #name targetConSpecData, construction = rct}]
+        | resultingConstructionData s L = let fun assignNames n (rct::rctL) = {name = s ^ "_" ^ Int.toString n, conSpecN = #name targetConSpecData, construction = rct} :: assignNames (n+1) rctL
+                                                | assignNames _ [] = []
+                                          in assignNames 0 L end
+      val updDC = case save of SOME s => foldl (uncurry insertConstruction) DC (resultingConstructionData s constructionsToSave) | NONE => DC
       (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
       val _ = print (Construction.toString  (hd tproofConstruction))*)
-      val _ = print ("  transfer score: " ^ Real.toString score)
+      val _ = print ("  number of open goals (top result): " ^ Int.toString ngoals ^ "\n")
+      val _ = print ("  transfer score (top result): " ^ Real.toString score)
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
@@ -762,13 +835,16 @@ struct
       val _ = print "done\n";
       val _ = print "\nGenerating LaTeX document...";
       val latexOriginalConsAndGoals = Latex.environment "center" "" latexCT;
-      val outputFile = TextIO.openOut outputFilePath
       val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
-      val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
-      val _ = TextIO.closeOut outputFile;
-      val _ = print ("done!\n" ^ "  output file: "^outputFilePath^"\n\n");
-  in ()
+      val _ = case outputFilePath of
+                SOME filePath => let val outputFile = TextIO.openOut filePath
+                                     val _ = Latex.outputDocument outputFile (opening ^ latexOriginalConsAndGoals ^ "\n\n " ^ resultText ^ latexCompsAndGoals);
+                                     val _ = TextIO.closeOut outputFile;
+                                 in print ("done!\n" ^ "  output file: " ^ filePath ^ "\n\n")
+                                 end
+              | NONE => ()
+  in updDC
   end
 
   fun joinDocumentContents ({typeSystemsData = ts,
@@ -811,7 +887,7 @@ struct
       val blocks = gatherMaterialByKeywords bigKeywords words
 
       val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
-      val importedContents = map (read o String.concat o #2) importFilenames
+      val importedContents = map (read o deTokenise o #2) importFilenames
       val importedContent = joinDocumentContents importedContents
 
       fun distribute [] = importedContent
@@ -829,9 +905,11 @@ struct
           end handle Bind => raise ParseError "expected name = content, found multiple words before ="
 
       val nonImported = List.filter (fn (x,_) => x <> SOME importKW) blocks
-      val allContent = distribute (rev nonImported)
-      val _ = map (parseTransferRequests allContent) (#transferRequests allContent)
-  in allContent
+      val contentBeforeTransfers = distribute (rev nonImported)
+      val contentAfterTransfers = foldl (uncurry processTransferRequests)
+                                        contentBeforeTransfers
+                                        (#transferRequests contentBeforeTransfers)
+  in contentAfterTransfers
   end
 
 end

@@ -39,7 +39,7 @@ sig
   val closureOverFiniteSet : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool);
 
   val isTypeVar : typ -> bool
-  val parentTypeOfSubtypeable : typ -> typ
+  val parentOfDanglyType : typ -> typ
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
 
@@ -52,6 +52,9 @@ sig
                                 -> typ
                                 -> typ
                                 -> typ option
+
+  val min : (typ * typ -> bool) -> typ * typ -> typ option
+  val max : (typ * typ -> bool) -> typ * typ -> typ option
 
   val addLeastCommonSuperType : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
                                 -> typ
@@ -168,8 +171,10 @@ struct
 
 
   fun isTypeVar s = String.isPrefix "?" s
-  fun parentTypeOfSubtypeable s =
-    (case String.breakOn ":" s of (x,":",y) => y | _ => raise badType)
+  fun parentOfDanglyType s =
+    (case String.breakOn ":" s of (_,":",y) => y | _ => raise badType)
+  fun isDanglyType Ty s =
+    (case String.breakOn ":" s of (_,":",y) => Set.elementOf y Ty | _ => false)
 
   (* assumes subType is an order for the principal types and extends it to
     the ones hanging from subtypeable *)
@@ -192,14 +197,16 @@ struct
 
   fun superTypes {typeSystem,principalTypes,...} ty =
     let val {Ty,subType} = typeSystem
-        val pTys = FiniteSet.map #typ principalTypes
-    in FiniteSet.filter (fn x => subType (ty,x)) pTys
+        val candidateTys =
+             if isDanglyType (#Ty typeSystem) ty
+             then FiniteSet.insert ty (FiniteSet.map #typ principalTypes)
+             else FiniteSet.map #typ principalTypes
+    in FiniteSet.filter (fn x => subType (ty,x)) candidateTys
     end
 
-  fun subTypes {typeSystem,principalTypes,...} ty =
-    let val {Ty,subType} = typeSystem
-        val pTys = FiniteSet.map #typ principalTypes
-    in FiniteSet.filter (fn x => subType (x,ty)) pTys
+  fun subTypes TS ty =
+    let val {Ty,subType} = TS
+    in Set.filter (fn x => subType (x,ty)) Ty
     end
 
   fun maximal typeSystem tys =
@@ -217,8 +224,9 @@ struct
   fun immediateSuperTypes TSD ty =
     minimal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (superTypes TSD ty))
 
+(*
   fun immediateSubTypes TSD ty =
-    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypes TSD ty))
+    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypes TSD ty))*)
 
   fun superTypesIn TSD ty tys =
     let val {subType,...} = #typeSystem TSD
@@ -233,8 +241,9 @@ struct
   fun immediateSuperTypesIn TSD ty tys =
     minimal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (superTypesIn TSD ty tys))
 
+(*)
   fun immediateSubTypesIn TSD ty tys =
-    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypesIn TSD ty tys))
+    maximal (#typeSystem TSD) (FiniteSet.filter (fn x => not (equal x ty)) (subTypesIn TSD ty tys))*)
 
   datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ
   fun inTypeDAG ty (Node (ty',tTs)) = equal ty ty' orelse FiniteSet.exists (inTypeDAG ty) tTs
@@ -278,18 +287,23 @@ struct
     in makeDAG (map #typ (#principalTypes TSD)) ty
     end
 
+  fun min subType (x,y) = if subType (x,y) then SOME x else if subType (y,x) then SOME y else NONE
+  fun max subType (x,y) = if subType (x,y) then SOME y else if subType (y,x) then SOME x else NONE
   fun supremum R s =
     FiniteSet.find (fn x => FiniteSet.all (fn y => R (y,x)) s) s
 
   fun greatestCommonSubType TSD ty ty' =
-    let val subType = #subType (#typeSystem TSD)
-    in  if subType (ty,ty') then SOME ty
-        else if subType (ty',ty) then SOME ty'
-        else let val stys = subTypes TSD ty
-                 val stys' = subTypes TSD ty'
-                 val cstys = FiniteSet.intersection stys stys'
-             in supremum subType cstys
-             end
+    let val {typeSystem,principalTypes,...} = TSD
+        val {Ty,subType} = typeSystem
+    in case min subType (ty,ty') of
+          SOME x => SOME x
+        | NONE => if isDanglyType Ty ty orelse isDanglyType Ty ty' then NONE (* dangly but not related *)
+                  else let val pTys = FiniteSet.map #typ principalTypes
+                           val stys = subTypesIn TSD ty pTys
+                           val stys' = subTypesIn TSD ty' pTys
+                           val cstys = FiniteSet.intersection stys stys'
+                       in supremum subType cstys
+                       end
     end
 (*
   fun greatestCommonSubTypeL TSD [ty] = SOME ty

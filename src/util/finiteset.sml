@@ -21,6 +21,7 @@ sig
   val exists :  (''a -> bool) -> ''a set -> bool;
   val find : (''a -> bool) -> ''a set -> ''a option;
   val map : (''a -> ''b) -> ''a set -> ''b set;
+  val maps : (''a -> ''b set) -> ''a set -> ''b set;
   val toSeq : ''a set -> ''a Seq.seq
   val pull : ''a set -> ''a * ''a set;
   val isEmpty : ''a set -> bool;
@@ -57,6 +58,7 @@ struct
   val exists = List.exists
   val find = List.find
   val map = List.map
+  val maps = List.maps
   val toSeq = Seq.of_list
 
   fun pull x = (hd x, tl x)

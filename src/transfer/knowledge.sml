@@ -24,7 +24,7 @@ sig
   val addInferenceSchema : base -> iSchemaData -> real -> (iSchemaData * iSchemaData -> order) -> base;
   val addTransferSchema : base -> InterCSpace.tSchemaData -> real -> (InterCSpace.tSchemaData * InterCSpace.tSchemaData -> order) -> base;
   val addConSpecImports : base -> (string * string list) -> base
-  val filterForISpace : string -> base -> base;
+  val filterForISpace : string -> bool -> base -> base;
 
 
   val findInferenceSchemaWithName : base -> string -> iSchemaData option;
@@ -77,15 +77,17 @@ struct
                              (List.exists (fn y => n1 = y) L orelse List.exists (fn y => conSpecIsImportedBy conSpecImports n1 y) L))
                 conSpecImports
 
-  fun filterForISpace name KB =
+  fun filterForISpace name inverse KB =
     let val {conSpecImports,...} = KB
         fun iSchemaInISpace x =
             #idConSpecN x = name orelse conSpecIsImportedBy conSpecImports (#idConSpecN x) name
         fun tSchemaInISpace x =
             #interConSpecN x = name orelse conSpecIsImportedBy conSpecImports (#interConSpecN x) name
+        val relevantTSchemas = Seq.filter tSchemaInISpace (#transferSchemas KB)
+        val tSchemas = if inverse then Seq.map InterCSpace.inverseData relevantTSchemas else relevantTSchemas
     in
       {inferenceSchemas = Seq.filter iSchemaInISpace (#inferenceSchemas KB),
-       transferSchemas = Seq.filter tSchemaInISpace (#transferSchemas KB),
+       transferSchemas = tSchemas,
        conSpecImports = conSpecImports,
        strength = #strength KB}
     end

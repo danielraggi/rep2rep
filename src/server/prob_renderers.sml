@@ -75,6 +75,7 @@ datatype treeExp =
 exception TreeError;
 
 exception BayesError;
+exception StringError;
 
 val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
 val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
@@ -93,6 +94,56 @@ fun parseShading (Construction.Source((id, typ))) =
          | _ => (WHITE, [(id, "WHITE", 5.0)])
     end
   | parseShading _ = raise ShadeError;
+
+fun getCharList(Construction.Source d) =
+      (case String.breakOn ":" (CSpace.typeOfToken d) of
+          ("empty","",_) => []
+        | (c,":","ordinary") => [c]
+        | _ => raise StringError)
+  | getCharList(Construction.Reference d) =
+      (case String.breakOn ":" (CSpace.typeOfToken d) of
+          ("empty","",_) => []
+        | (c,":","ordinary") => [c]
+        | _ => raise StringError)
+  | getCharList(Construction.TCPair({constructor,...}, inputs)) =
+    (case constructor of ("cons", _) => List.maps getCharList inputs
+                | _ => raise StringError)
+
+fun parseString(Construction.Source d) = []
+  | parseString(Construction.Reference d) = []
+  | parseString(tcp as (Construction.TCPair({constructor,token}, _))) =
+    (case constructor of
+        ("cons",_) =>
+            let val cL = getCharList tcp
+                val cS = String.concat cL
+            in [(CSpace.nameOfToken token, cS, Real.fromInt (String.size cS) + 0.5)]
+            end
+      | _ => raise NumError)
+
+fun getDigitList(Construction.Source d) = [(CSpace.typeOfToken d)]
+  | getDigitList(Construction.Reference d) = [(CSpace.typeOfToken d)]
+  | getDigitList(Construction.TCPair({constructor,...}, inputs)) =
+    (case constructor of ("addDigit", _) => List.maps getDigitList inputs
+                | _ => raise NumError)
+
+fun parseReal(Construction.Source d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(Construction.Reference d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(tcp as (Construction.TCPair({constructor,token}, inputs))) =
+    (case (constructor,inputs) of
+        (("makeReal",_),[a,b]) =>
+            let val aDL = getDigitList a
+                val bDL = getDigitList b
+                val intPart = String.concat aDL
+                val decPart = String.concat bDL
+                val x = intPart ^ "." ^ decPart
+            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) - 0.5)])
+            end
+      | (("addDigit",_),_) =>
+            let val dL = getDigitList tcp
+                val x = String.concat dL
+            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) + 0.5)])
+            end
+      | _ => raise NumError)
 
 local
     fun parseSource (id, typ) =
@@ -114,7 +165,7 @@ local
 in
 fun parseNum (Construction.Source(tok)) = parseSource tok
   | parseNum (Construction.Reference(tok)) = parseSource tok (* WARNING - ASSUMES REF IS SOURCE *)
-  | parseNum (Construction.TCPair({token=tok, constructor=con}, inputs)) =
+  | parseNum (tcp as (Construction.TCPair({token=tok, constructor=con}, inputs))) =
     let val (id, typ) = tok;
         val (cname, ctyp) = con;
         val parseWithValAndLength = parseWithValAndLength parseNum;
@@ -144,6 +195,9 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
                val (b', y2, rightVal, rightLen) = parseWithValAndLength b;
                val prod = (id, String.concat [leftVal, "*", rightVal], leftLen + rightLen);
            in (MULT(a', b'), prod::y1@y2) end
+         | ("makeReal", _) => parseReal tcp
+         | ("addDigit", _) => parseReal tcp
+          (* INSERT HERE STUFF RELATED TO MAKEREAL FUNCTION *)
          | (_, _) => raise NumError
     end
 end;
@@ -1645,6 +1699,7 @@ fun drawArea c =
                  let val (a1, a1HTML) = parseArea area1;
                      val (a2, a2HTML) = parseArea area2;
                  in (COMBAREA(id, a1, a2), a1HTML @ a2HTML) end
+               | ("makeEvent", [eventName]) => let val x = parseString eventName in (LABEL(#2 (hd x)),x) end
                | _ => raise AreaError)
           | parseArea (Construction.Reference(_)) = raise AreaError
         fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
@@ -1965,6 +2020,7 @@ fun drawTable c =
                         (NAME a, [(id, label, size)]) => (NNAME(a), [(id, overline label, size)])
                       | _ => raise TableError
                  end
+               | ("makeEvent", [eventName]) => let val x = parseString eventName in (NAME(#2 (hd x)),x) end
                | _ => raise TableError)
           | parseTable _ = raise TableError;
         fun convertTable (NAME(x)) = (([SEVENT(x)],[]), [])
@@ -2092,6 +2148,7 @@ fun drawTree x =
                        (BRANCH(l), (id', lab, size)::_) => (NBRANCH(l), [(id', overline lab, size)])
                      | _ => raise TreeError
                 end
+              | ("makeEvent", [eventName]) => let val x = parseString eventName in (BRANCH(#2 (hd x)),x) end
               | _ =>  raise TreeError)
           | parseTree (Construction.Reference(_)) = raise TreeError;
         fun convertTree (BRANCH(x)) = (([SEVENT(x)], []), [])
@@ -2284,6 +2341,7 @@ fun drawBayes c =
                         (id, e1 ^ ops ^ e2, w1 + w2 + w3 - 1.0):: html1 @ html2 @ htmlOp
                       | _ => raise BayesError
                  end
+               | ("makeEvent", [eventName]) => parseString eventName
                | _ => raise BayesError)
           | parseEvent (Construction.Reference(_)) = raise BayesError
         fun parseBayes (c as Construction.TCPair({token=(id, typ), constructor=(cname, ctyp)}, cons)) =

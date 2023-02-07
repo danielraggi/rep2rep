@@ -3,13 +3,13 @@ import "util.sequence";
 signature SEARCH =
 sig
   val depthFirst : ('a -> 'a Seq.seq) -> int -> 'a -> 'a Seq.seq;
-  val graphDepthFirst : ('a -> 'a Seq.seq) -> ('a * 'a -> bool) -> int -> 'a -> 'a Seq.seq;
-  val depthFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val depthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val breadthFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val breadthFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val bestFirstSortAndIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
-  val bestFirstSortIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val depthFirstIgnore : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val depthFirstIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val breadthFirstIgnore : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val breadthFirstIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val bestFirstIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val bestFirstIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val bestFirstAll : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
 end;
 
 structure Search : SEARCH =
@@ -45,7 +45,7 @@ struct
     in gdf (Seq.single state) 0 []
     end
 
-  fun depthFirstSortAndIgnore next h ign state =
+  fun depthFirstIgnore next ign state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
@@ -55,14 +55,14 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in Seq.insert st recdfsi h end
+                            in Seq.append recdfsi (Seq.single st) end
                   | SOME (st',s'') => let val newFrontier = Seq.append (Seq.cons st' s'') s'
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in Seq.insert st recdfsi h end))
+                                      in Seq.append recdfsi (Seq.single st) end))
     in dfsi (Seq.single state) []
     end
 
-  fun depthFirstSortIgnoreForget next h ign forg state =
+  fun depthFirstIgnoreForget next ign forg state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
@@ -72,14 +72,14 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
+                            in if forg (st,acc) then recdfsi else Seq.append recdfsi (Seq.single st) end
                   | SOME (st',s'') => let val newFrontier = Seq.append (Seq.cons st' s'') s'
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
+                                      in if forg (st,acc) then recdfsi else Seq.append recdfsi (Seq.single st) end))
     in dfsi (Seq.single state) []
     end
 
-  fun breadthFirstSortAndIgnore next h ign state =
+  fun breadthFirstIgnore next ign state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
@@ -89,14 +89,14 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in Seq.insert st recdfsi h end
+                            in Seq.append recdfsi (Seq.single st) end
                   | SOME (st',s'') => let val newFrontier = Seq.append s' (Seq.cons st' s'')
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in Seq.insert st recdfsi h end))
+                                      in Seq.append recdfsi (Seq.single st) end))
     in dfsi (Seq.single state) []
     end
 
-  fun breadthFirstSortIgnoreForget next h ign forg state =
+  fun breadthFirstIgnoreForget next ign forg state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
@@ -106,14 +106,15 @@ struct
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
+                            in if forg (st,acc) then recdfsi else Seq.append recdfsi (Seq.single st) end
                   | SOME (st',s'') => let val newFrontier = Seq.append s' (Seq.cons st' s'')
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
+                                      in if forg (st,acc) then recdfsi else Seq.append recdfsi (Seq.single st) end))
     in dfsi (Seq.single state) []
     end
 
-  fun bestFirstSortAndIgnore next h ign state =
+  (* go back to this if the next one is not successful *)
+  fun bestFirstIgnore next h ign state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
@@ -130,20 +131,56 @@ struct
     in dfsi (Seq.single state) []
     end
 
-  fun bestFirstSortIgnoreForget next h ign forg state =
+  fun bestFirstIgnore next h ign state =
     let fun dfsi frontier acc =
           (case Seq.pull frontier of
             NONE => Seq.empty
           | SOME (st,s') =>
-              if ign (st,acc) then
-                dfsi s' acc
+              if ign (st,acc) then dfsi s' acc
               else
                 (case Seq.pull (next st) of
                     NONE => let val recdfsi = dfsi s' (st::acc)
-                            in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end
-                  | SOME (st',s'') => let val newFrontier = Seq.insertMany s'' (Seq.insert st' s' h) h
+                            in Seq.insertNoEQUAL st recdfsi h end
+                  | SOME (st',s'') => let val newFrontier = Seq.insertManyNoEQUAL s'' (Seq.insertNoEQUAL st' s' h) h
                                           val recdfsi = dfsi newFrontier (st::acc)
-                                      in if forg (st,acc) then recdfsi else Seq.insert st recdfsi h end))
+                                      in Seq.insertNoEQUAL st recdfsi h end))
+    in dfsi (Seq.single state) []
+    end
+
+  fun bestFirstIgnoreForget next h ign forg state =
+    let fun dfsi frontier acc =
+          (case Seq.pull frontier of
+            NONE => Seq.empty
+          | SOME (st,s') =>
+              if ign (st,acc) then dfsi s' acc
+              else
+                (case Seq.pull (next st) of
+                    NONE => let val recdfsi = dfsi s' (st::acc)
+                            in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h end
+                  | SOME (st',s'') => let val newFrontier = Seq.insertManyNoEQUAL s'' (Seq.insertNoEQUAL st' s' h) h
+                                          val recdfsi = dfsi newFrontier (st::acc)
+                                      in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h end))
+    in dfsi (Seq.single state) []
+    end
+
+  fun bestFirstAll unfold h ign forg stop state =
+    let fun dfsi frontier acc =
+          (case Seq.pull frontier of
+            NONE => Seq.empty
+          | SOME (st,s') =>
+              if stop st then frontier
+              else if ign (st,acc) then dfsi s' acc
+              else let val unfolded = unfold st
+                   in case Seq.pull unfolded of
+                          NONE => let val recdfsi = dfsi s' (st::acc)
+                                  in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h
+                                  end
+                        | SOME (st',s'') => let val newFrontier = Seq.insertManyNoEQUAL unfolded s' h
+                                                val recdfsi = dfsi newFrontier (st::acc)
+                                            in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h
+                                            end
+                   end
+          )
     in dfsi (Seq.single state) []
     end
 

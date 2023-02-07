@@ -1,14 +1,13 @@
 import arith
+import event
 
 typeSystem bayes =
-  imports arith
-  types _:event, _:condEvent, _:events,
-        _:probEqn, _:probSys,
-        inter, union, bin
+  imports arith, eventT
+  types _:condEvent, _:events, _:probEqn, _:probSys, inter, union, bin, _:problem
   order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
 
 conSpec bayesG:bayes =
-  imports arithG
+  imports arithG, event
   constructors
     makeEqn : [events,numExp] -> probEqn,
     complement : [event] -> event,

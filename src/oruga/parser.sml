@@ -1,6 +1,5 @@
 import "transfer.structure_transfer";
 import "util.logging";
-import "transfer.propagation";
 
 Logging.enable ();
 

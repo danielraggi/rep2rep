@@ -1,11 +1,15 @@
 import transferSchemas/bayesArea
 
 construction x:bayesG =
-    t:tt:probSys <- addEqn[t1:tt1:probEqn <- makeEqn[t11:A:event,
-                                                     t12:0.2:numeral],
+    t:tt:probSys <- addEqn[t1:tt1:probEqn <- makeEqn[t11:A:event,t12:0.2:real10],
                            t2:tt2:probEqn <- makeEqn[t21:B|A:condEvent <- makeCond[t211:B:event,t212:A:event],
-                                                     t22:0.8:numeral]
-                           ]
+                                                     t22:0.8:real10]
+                            ]
+construction y:bayesG =
+    t:A-is-0.2-and-B-cond-A-is-0.9-and-not-B-cond-not-A-is-0.7:probSys <- addEqn[t1:A-is-0.2:probEqn <- makeEqn[t11:A:event, t12:0.2:real10], t2:B-cond-A-is-0.9-and-not-B-cond-not-A-is-0.7:probSys <- addEqn[t21:B-cond-A-is-0.9:probEqn <- makeEqn[t211:B-cond-A:condEvent <- makeCond[t2111:B:event, t2113:A:event], t212:0.9:real10], t22:not-B-cond-not-A-is-0.7:probEqn <- makeEqn[t221:not-B-cond-not-A:condEvent <- makeCond[t2211:not-B:event <- complement[t22112:B:event], t2213:not-A:event <- complement[t22132:A:event]], t222:0.7:real10]]]
+
+construction z:bayesG =
+    t:A-is-0.4-and-B-cond-not-A-is-0.2-and-A-cond-not-B-is-0.5:probSys <- addEqn[t1:A-is-0.4:probEqn <- makeEqn[t11:A:event, t12:0.4:real10], t2:B-cond-not-A-is-0.2-and-A-cond-not-B-is-0.5:probSys <- addEqn[t21:B-cond-not-A-is-0.2:probEqn <- makeEqn[t211:B-cond-not-A:condEvent <- makeCond[t2111:B:event, t2113:not-A:event <- complement[t21132:A:event]], t212:0.2:real10], t22:A-cond-not-B-is-0.5:probEqn <- makeEqn[t221:A-cond-not-B:condEvent <- makeCond[t2211:A:event, t2213:not-B:event <- complement[t22132:B:event]], t222:0.5:real10]]]
 
 transfer
     sourceConstruction x
@@ -13,4 +17,23 @@ transfer
     interConSpec interBayesArea
     goal :metaTrue <- encode[t:tt:probSys,t':area]
     output bayesArea
+    eager
+    limit 20
+
+transfer
+    sourceConstruction y
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[t:A-is-0.2-and-B-cond-A-is-0.9-and-not-B-cond-not-A-is-0.7:probSys,t':area]
+    output bayesAreaY
+    eager
+    limit 20
+
+transfer
+    sourceConstruction z
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[t:A-is-0.4-and-B-cond-not-A-is-0.2-and-A-cond-not-B-is-0.5:probSys,t':area]
+    output bayesAreaZ
+    eager
     limit 20

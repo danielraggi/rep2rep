@@ -1,0 +1,61 @@
+import metaLogic
+import bayesAreaDoc
+import bayesTableDoc
+import arithDotsDoc
+import bTreeBayes
+
+typeSystem sandBoxT =
+  types _:ty
+
+conSpec sandBox:sandBoxT =
+  constructors
+    C : [ty,ty] -> ty
+
+typeSystem interSBSBT =
+  imports sandBoxT, metaLogicT
+
+conSpec interSBSB:interSBSBT =
+  imports metaLogic
+  constructors
+    R : [ty,ty] -> metaBool,
+    R1 : [ty,ty] -> metaBool,
+    R2 : [ty,ty] -> metaBool,
+    R3 : [ty,ty] -> metaBool,
+    R4 : [ty,ty] -> metaBool
+
+tSchema tsch:(sandBox,sandBox,interSBSB) =
+  source t:ty <- C[t1:ty,t2:ty]
+  target t':ty <- C[t1':ty,t2':ty]
+  antecedent :metaTrue <- R1[t1:ty,t':ty],
+             :metaTrue <- R2[t2:ty,t':ty]
+  consequent :metaTrue <- R[t:ty,t':ty]
+  strength 1
+
+tSchema tsch1:(sandBox,sandBox,interSBSB) =
+  source t:ty
+  target t':ty <- C[t1':ty,t2':ty]
+  antecedent :metaTrue <- R3[t:ty,t1':ty]
+  consequent :metaTrue <- R1[t:ty,t':ty]
+  strength 1
+
+tSchema tsch2:(sandBox,sandBox,interSBSB) =
+  source t:ty
+  target t':ty <- C[t1':ty,t2':ty]
+  antecedent :metaTrue <- R4[t:ty,t2':ty]
+  consequent :metaTrue <- R2[t:ty,t':ty]
+  strength 1
+
+
+
+construction ct1:sandBox = t:ty <- C[t1:ty,t2:ty]
+construction ct2:sandBox = t:ty <- C[t1:ty,t2:ty <- C[t21:ty,t22:ty]]
+
+transfer
+    sourceConstruction ct1
+    targetConSpec sandBox
+    interConSpec interSBSB
+    goal :metaTrue <- R[t:ty,t':ty]
+    output sandbox
+    limit 20
+    searchLimit 50
+    unistructured

@@ -1,0 +1,3 @@
+import transferSchemas/bayesArea
+import transferSchemas/bayesTable
+import transferSchemas/bayesTree

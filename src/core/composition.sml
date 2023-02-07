@@ -195,7 +195,7 @@ struct
     end
 
   fun pseudoSimilar C C' =
-    List.isPermutationOf (uncurry Pattern.similar) (resultingConstructions C) (resultingConstructions C')
+    Pattern.similarGraphs (resultingConstructions C) (resultingConstructions C')
 
   fun leavesOfComposition (Composition {attachments = (ct,C::CL)::L, construct}) =
         Construction.leavesOfConstruction ct :: ((leavesOfComposition C)

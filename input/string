@@ -1,0 +1,43 @@
+typeSystem charOrdinaryT =
+    types char, _:ordinary
+    order ordinary < char
+
+typeSystem stringT =
+    imports charOrdinaryT
+    types empty, _:string
+    order empty < string
+
+conSpec string:stringT =
+    constructors
+        cons : [char, string] -> string
+
+typeSystem charBT =
+    imports charOrdinaryT
+    types oB, cB, nonB
+    order ordinary < nonB, nonB < char, oB < char, cB < char
+
+typeSystem charSpaceT =
+    imports charOrdinaryT
+    types space, nonSpace, char
+    order ordinary < nonSpace, nonSpace < char, space < char,
+
+typeSystem charSemicolonT =
+    imports charOrdinaryT
+    types semicolon, nonSemicolon, char
+    order ordinary < nonSemicolon, semicolon < char, nonSemicolon < char
+
+typeSystem charMidT =
+    imports charOrdinaryT
+    types mid, nonMid, char
+    order ordinary < nonMid, mid < char, nonMid < char
+
+typeSystem charRichT =
+    imports charBT, charSpaceT, charSemicolonT, charMidT
+    order space < nonB, space < nonMid, space < nonSemicolon,
+          semicolon < nonB, semicolon < nonMid, semicolon < nonSpace,
+          mid < nonB, mid < nonSpace, mid < nonSemicolon
+
+typeSystem stringRichT =
+    imports charRichT, stringT
+
+conSpec stringRich:stringRichT = imports string
