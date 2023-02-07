@@ -9,13 +9,13 @@ sig
   type iSchemaData = {name : string,
                       contextConSpecN : string,
                       idConSpecN : string,
+                      strength : real,
                       iSchema : iSchema}
   type base
 
   (* TransferSchema knowledge *)
   val inferenceSchemasOf : base -> iSchemaData Seq.seq;
   val transferSchemasOf : base -> InterCSpace.tSchemaData Seq.seq;
-  val strengthOf : base -> string -> real option
   val conSpecImportsOf : base -> (string * string list) list
 
   val conSpecIsImportedBy : (string * string list) list -> string -> string -> bool
@@ -42,35 +42,31 @@ struct
   type iSchemaData = {name : string,
                       contextConSpecN : string,
                       idConSpecN : string,
+                      strength : real,
                       iSchema : iSchema}
   type base = {transferSchemas : InterCSpace.tSchemaData Seq.seq,
                inferenceSchemas : iSchemaData Seq.seq,
-               strength : string -> real option,
                conSpecImports : (string * string list) list};
 
   (* TransferSchema knowledge *)
   fun inferenceSchemasOf KB = #inferenceSchemas KB
   fun transferSchemasOf KB = #transferSchemas KB
-  fun strengthOf KB = #strength KB
   fun conSpecImportsOf KB = #conSpecImports KB
 
   fun addInferenceSchema KB isch s f =
     {inferenceSchemas = Seq.insert isch (#inferenceSchemas KB) f,
      transferSchemas = #transferSchemas KB,
-     conSpecImports = #conSpecImports KB,
-     strength = (fn cn => if #name isch = cn then SOME s else (#strength KB) cn)}
+     conSpecImports = #conSpecImports KB}
 
   fun addTransferSchema KB tsch s f =
     {inferenceSchemas = #inferenceSchemas KB,
      transferSchemas = Seq.insert tsch (#transferSchemas KB) f,
-     conSpecImports = #conSpecImports KB,
-     strength = (fn cn => if #name tsch = cn then SOME s else (#strength KB) cn)}
+     conSpecImports = #conSpecImports KB}
 
   fun addConSpecImports KB (n,L) =
     {inferenceSchemas = #inferenceSchemas KB,
      transferSchemas = #transferSchemas KB,
-     conSpecImports = (n,L) :: #conSpecImports KB,
-     strength = #strength KB}
+     conSpecImports = (n,L) :: #conSpecImports KB}
 
   fun conSpecIsImportedBy conSpecImports n1 n2 =
     List.exists (fn (x,L) => x = n2 andalso
@@ -88,8 +84,7 @@ struct
     in
       {inferenceSchemas = Seq.filter iSchemaInISpace (#inferenceSchemas KB),
        transferSchemas = tSchemas,
-       conSpecImports = conSpecImports,
-       strength = #strength KB}
+       conSpecImports = conSpecImports}
     end
 
 
@@ -100,17 +95,16 @@ struct
 
   fun cmpI (t1,t2) = List.compare String.compare ([#name t1,#idConSpecN t1],[#name t2,#idConSpecN t2])
   fun cmpT (t1,t2) = List.compare String.compare ([#name t1,#interConSpecN t1],[#name t2,#interConSpecN t2])
+  fun cmpCS ((s,L),(s',L')) = List.compare String.compare ((s::L),(s'::L'))
 
   fun join k1 k2 =
     {inferenceSchemas = Seq.insertManyNoEQUAL (#inferenceSchemas k1) (#inferenceSchemas k2) cmpI,
      transferSchemas = Seq.insertManyNoEQUAL (#transferSchemas k1) (#transferSchemas k2) cmpT,
-     conSpecImports = List.removeDuplicates ((#conSpecImports k1) @ (#conSpecImports k2)),
-     strength = (fn cn => case (#strength k2) cn of SOME r => SOME r | NONE => (#strength k1) cn)}
+     conSpecImports = List.mergeNoEQUAL cmpCS (#conSpecImports k1) (#conSpecImports k2)}
 
   val empty =
     {inferenceSchemas = Seq.empty,
      transferSchemas = Seq.empty,
-     conSpecImports = [],
-     strength = (fn _ => NONE)}
+     conSpecImports = []}
 
 end;

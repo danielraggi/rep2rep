@@ -11,15 +11,15 @@ struct
   fun parseProbSys s =
       let val dContent = Document.read "bTreeBayes"
           val KB = Document.knowledgeOf dContent
-          val stringConSpecData = Document.findConSpecWithName dContent "stringRich"
-          val btreeConSpecData = Document.findConSpecWithName dContent "btree"
-          val bayesConSpecData = Document.findConSpecWithName dContent "bayesG"
-          val interStringBTreeConSpecData = Document.findConSpecWithName dContent "interStringBTree"
-          val interBTreeBTreeSPACEConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeSPACE"
-          val interBTreeBTreeSIMPLIFYConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeSIMPLIFY"
-          val interBTreeBTreeSEMICOLONConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeSEMICOLON"
-          val interBTreeBTreeMIDConSpecData = Document.findConSpecWithName dContent "interBTreeBTreeMID"
-          val interBTreeBayesConSpecData = Document.findConSpecWithName dContent "interBTreeBayes"
+          val stringConSpecData = Document.getConSpecWithName dContent "stringRich"
+          val btreeConSpecData = Document.getConSpecWithName dContent "btree"
+          val bayesConSpecData = Document.getConSpecWithName dContent "bayesG"
+          val interStringBTreeConSpecData = Document.getConSpecWithName dContent "interStringBTree"
+          val interBTreeBTreeSPACEConSpecData = Document.getConSpecWithName dContent "interBTreeBTreeSPACE"
+          val interBTreeBTreeSIMPLIFYConSpecData = Document.getConSpecWithName dContent "interBTreeBTreeSIMPLIFY"
+          val interBTreeBTreeSEMICOLONConSpecData = Document.getConSpecWithName dContent "interBTreeBTreeSEMICOLON"
+          val interBTreeBTreeMIDConSpecData = Document.getConSpecWithName dContent "interBTreeBTreeMID"
+          val interBTreeBayesConSpecData = Document.getConSpecWithName dContent "interBTreeBayes"
           fun getTopConstruction st =
               hd (List.flatmap Composition.resultingConstructions (State.patternCompsOf st));
           val normalisedString = Document.normaliseString s

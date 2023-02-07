@@ -15,11 +15,11 @@ conSpec interArithDots:interArithDotsT =
         formulaIsValid : [formula] -> metaBool,
         perpendicular : [line,line] -> metaBool
 
-tSchema test:(arithG,dotDiagramsG,interArithDots) =
+tSchema multiplyRectangle:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- multiply[n:numExp,m:numExp]
     target t':rectangle <- fillRectangle[t1':line,t2':line]
     antecedent :metaTrue <- perpendicular[t1':line,t2':line],
-               :metaTrue <- count[t3':arr <- intersect[t1':line,t2':line],l:1:numeral],
+               :metaTrue <- count[t3':arr <- intersect[t1':line,t2':line],l:1:nat10],
                :metaTrue <- count[t1':line,n:numExp],
                :metaTrue <- count[t2':line,m:numExp]
     consequent :metaTrue <- count[t':rectangle,t:numExp]
@@ -57,7 +57,7 @@ tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =
     strength 2
 
 tSchema div2symmetry:(arithG,dotDiagramsG,interArithDots) =
-    source t:numExp <- infixOp[t1:numExp,tt:div,t2:2:numeral]
+    source t:numExp <- infixOp[t1:numExp,tt:div,t2:2:nat10]
     target t':arr <- manipulate[t1':arr <- remove[t2':arr,t':arr],t2':manipulation]
     antecedent :metaTrue <- count[t2':arr,t1:numExp]
     consequent :metaTrue <- count[t':arr,t:numExp]
@@ -71,8 +71,8 @@ tSchema parenthesesSuperfluous:(arithG,dotDiagramsG,interArithDots) =
     strength 2
 
 tSchema someLine:(arithG,dotDiagramsG,interArithDots) =
-    source t:?v:numeral
-    target t':line <- someLine[t1':?v:numeral]
+    source t:?v:nat10
+    target t':line <- someLine[t1':?v:nat10]
     antecedent
-    consequent :metaTrue <- count[t':line,t:?v:numeral]
+    consequent :metaTrue <- count[t':line,t:?v:nat10]
     strength 1

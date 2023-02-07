@@ -4,65 +4,66 @@ construction 1plus2plus3equalsStuff:arithG =
     t:1plus2plus3equals3oB3plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3:numExp
                         <- infixOp[t11:1plus2:numExp
-                                        <- infixOp[t111:1:numeral,
+                                        <- infixOp[t111:1:nat10,
                                                     t112:plus,
-                                                    t113:2:numeral],
+                                                    t113:2:nat10],
                                     t12:plus,
-                                    t13:3:numeral],
+                                    t13:3:nat10],
                      t2:equals,
                      t3:3oB3plus1cBdiv2:numExp
                         <- infixOp[t31:3oB3plus1cB:numExp
-                                    <- multiply[t311:3:numeral,
+                                    <- multiply[t311:3:nat10,
                                                 t312:oB3plus1cB:numExp
                                                     <- addParentheses[t3121:oB,
                                                                       t3122:3plus1:numExp
-                                                                            <- infixOp[t31221:3:numeral,
+                                                                            <- infixOp[t31221:3:nat10,
                                                                                         t31222:plus,
-                                                                                        t31223:1:numeral],
+                                                                                        t31223:1:nat10],
                                                                       t3123:cB]],
                                     t32:div,
-                                    t33:2:numeral]]
+                                    t33:2:nat10]]
 
 construction 1plus2plus3plus4equalsStuff:arithG =
     t:1+2+3+4=4(4+1)/2:formula
         <- infixRel[t1:1+2+3+4:numExp
                         <- infixOp[t11:1+2+3:numExp
                                         <- infixOp[t111:1+2:numExp
-                                                        <- infixOp[t1111:1:numeral,
+                                                        <- infixOp[t1111:1:nat10,
                                                                     t1112:plus,
-                                                                    t1113:2:numeral],
+                                                                    t1113:2:nat10],
                                                     t112:plus,
-                                                    t113:3:numeral],
+                                                    t113:3:nat10],
                                     t12:plus,
-                                    t13:4:numeral],
+                                    t13:4:nat10],
                      t2:equals,
                      t3:4(4+1)/2:numExp
                         <- infixOp[t31:4(4+1):numExp
-                                    <- multiply[t311:4:numeral,
+                                    <- multiply[t311:4:nat10,
                                                 t312:(4+1):numExp
                                                     <- addParentheses[t3121:oB,
                                                                       t3122:4+1:numExp
-                                                                            <- infixOp[t31221:4:numeral,
+                                                                            <- infixOp[t31221:4:nat10,
                                                                                         t31222:plus,
-                                                                                        t31223:1:numeral],
+                                                                                        t31223:1:nat10],
                                                                       t3123:cB]],
                                     t32:div,
-                                    t33:2:numeral]]
+                                    t33:2:nat10]]
 
 construction 1plus2equals3:arithG =
     t:1plus2equals3:formula
         <- infixRel[t1:1plus2:numExp
-                        <- infixOp[t11:1:numeral,
+                        <- infixOp[t11:1:nat10,
                                     t12:plus,
-                                    t13:2:numeral],
+                                    t13:2:nat10],
                      t2:equals,
-                     t3:3:numeral]
+                     t3:3:nat10]
 
 transfer
     sourceConstruction 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaTrue <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
+    searchLimit 200
     output test
     limit 1
 
@@ -71,11 +72,6 @@ transfer
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaBool <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
+    searchLimit 200
     output interSpaceTest
-    limit 2
-
-construction test1:arithG =
-    t:formula <- logicApplyUnary[t1:unary,t2:y:formula <- logicApplyUnary[t21:unary,t22:w:formula <- logicApplyUnary[t221:unary,t:formula]]]
-
-construction test2:arithG =
-    t22:w:formula <- logicApplyUnary[t221:unary,t3:formula <- logicApplyUnary[tx1:unary,tx2:formula]]
+    limit 1

@@ -89,7 +89,7 @@ struct
 
   exception InferenceSchemaNotApplicable
   fun applyInferenceSchemaForGoal st T idT ct ischData goal =
-  let val {name,contextConSpecN,idConSpecN,iSchema} = ischData
+  let val {name,contextConSpecN,idConSpecN,iSchema,strength} = ischData
       val {antecedent,consequent,context} = iSchema
       fun referenced x =
         FiniteSet.elementOf x (Construction.tokensOfConstruction context) orelse
@@ -123,7 +123,8 @@ struct
       val instantiatedISchemaData = {name = name,
                                      contextConSpecN = contextConSpecN,
                                      idConSpecN = idConSpecN,
-                                     iSchema = instantiatedISchema}
+                                     iSchema = instantiatedISchema,
+                                     strength = strength}
       val transferProof = State.transferProofOf st
       val updatedTransferProof = TransferProof.attachISchemaAt instantiatedISchemaData goal transferProof
 
@@ -257,7 +258,7 @@ struct
 
 
   fun applyTransferSchemaForGoal st tschData goal =
-    let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} = tschData
+    let val {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema,strength} = tschData
         val (targetReifiedByComposition,stateRenaming,instantiatedTSchema) = instantiateTransferSchema st tSchema goal
 
         val patternComps = State.patternCompsOf st
@@ -274,7 +275,8 @@ struct
                                         sourceConSpecN = sourceConSpecN,
                                         targetConSpecN = targetConSpecN,
                                         interConSpecN = interConSpecN,
-                                        tSchema = instantiatedTSchema}
+                                        tSchema = instantiatedTSchema,
+                                        strength = strength}
         val transferProof = State.transferProofOf st
         val updatedTransferProof = TransferProof.attachTSchemaAt instantiatedTSchemaData goal transferProof
 

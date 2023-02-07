@@ -9,14 +9,14 @@ exception TestError
 
 val DC = Document.read "probability"
 val KB = Document.knowledgeOf DC
-val Bayes = Document.findConSpecWithName DC "bayesG"
-val Area = Document.findConSpecWithName DC "areaDiagramG"
-val Table = Document.findConSpecWithName DC "contTableG"
-val Tree = Document.findConSpecWithName DC "probTreeG"
+val Bayes = Document.getConSpecWithName DC "bayesG"
+val Area = Document.getConSpecWithName DC "areaDiagramG"
+val Table = Document.getConSpecWithName DC "contTableG"
+val Tree = Document.getConSpecWithName DC "probTreeG"
 
-val interBayesArea = Document.findConSpecWithName DC "interBayesArea"
-val interBayesTable = Document.findConSpecWithName DC "interBayesTable"
-val interBayesTree = Document.findConSpecWithName DC "interBayesTree"
+val interBayesArea = Document.getConSpecWithName DC "interBayesArea"
+val interBayesTable = Document.getConSpecWithName DC "interBayesTable"
+val interBayesTree = Document.getConSpecWithName DC "interBayesTree"
 
 val ss1 = CParsers.parseProbSys "Pr(D) = 0.04; Pr(T | D) = 0.95; Pr(-T | -D) = 0.9";
 val construct = Construction.constructOf ss1
@@ -41,19 +41,19 @@ val _ = print "6\n"
 val t4 = ProbRender.drawTree [treeResult]
 val _ = print "7\n"
 val endTime = Time.now();
-val _ = print "\n";
 val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
-val _ = print "\n";
+val _ = print "\n\n\n";
 val _ = print (Latex.construction (0.0, 0.0) ss1);
-val _ = print "\n";
+val _ = print "\n\n\n";
 val _ = print ("  runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
 val _= print "\n";
 
-val _= print "\n\n";
+val _= print "\n\nBayes:\n";
 val _= case t1 of Result.OK (h::_) => print (#1 (#2 h)) | _ => raise TestError;
-val _= print "\n\n";
+val _= print "\n\nArea:\n";
 val _= case t2 of Result.OK (h::_) => print (#1 (#2 h)) | _ => raise TestError;
-val _= print "\n\n";
+val _= print "\n\nTable:\n";
 val _= case t3 of Result.OK (h::_) => print (#1 (#2 h)) | _ => raise TestError;
-val _= print "\n\n";
+val _= print "\n\nTrees:\n";
 val _= case t4 of Result.OK (h::_) => print (#1 (#2 h)) | _ => raise TestError;
+val _= print "\n\n";

@@ -1,0 +1,76 @@
+import arith
+import graph
+import metaLogic
+
+typeSystem interArithGraphs =
+    imports arith, graphs, metaLogicT
+    types arithExp
+    order numExp < arithExp, formula < arithExp
+
+conSpec interArithGraphs:interArithGraphs =
+    imports arithG, graphsG, metaLogic
+    constructors
+        encode : [arithExp,graph] -> metaBool,
+        countEdges : [graph,numExp] -> metaBool,
+        countVertices : [graph,numExp] -> metaBool,
+        isFullyConnected : [graph] -> metaBool
+
+iSchema v1:(graphsG,interArithGraphs) =
+    context t':one:graph
+    antecedent
+    consequent :metaTrue <- countVertices[t':one:graph,t:1:nat10]
+    strength 2
+
+iSchema v2:(graphsG,interArithGraphs) =
+    context t':graph <- addFullyConnectedVertex[t1':graph]
+    antecedent :metaTrue <- countVertices[t1':graph,t:1:nat10]
+    consequent :metaTrue <- countVertices[t':graph,t:2:nat10]
+    strength 2
+
+iSchema v3:(graphsG,interArithGraphs) =
+    context t':graph <- addFullyConnectedVertex[t1':graph]
+    antecedent :metaTrue <- countVertices[t1':graph,t:2:nat10]
+    consequent :metaTrue <- countVertices[t':graph,t:3:nat10]
+    strength 2
+
+iSchema v4:(graphsG,interArithGraphs) =
+    context t':graph <- addFullyConnectedVertex[t1':graph]
+    antecedent :metaTrue <- countVertices[t1':graph,t:3:nat10]
+    consequent :metaTrue <- countVertices[t':graph,t:4:nat10]
+    strength 2
+
+iSchema v5:(graphsG,interArithGraphs) =
+    context t':graph <- addFullyConnectedVertex[t1':graph]
+    antecedent :metaTrue <- countVertices[t1':graph,t:4:nat10]
+    consequent :metaTrue <- countVertices[t':graph,t:5:nat10]
+    strength 2
+
+tSchema edges0:(arithG,graphsG,interArithGraphs) =
+    source t:0:nat10
+    target t':one:graph
+    antecedent
+    consequent :metaTrue <- countEdges[t':one:graph,t:0:nat10]
+    strength 2
+
+tSchema x:(arithG,graphsG,interArithGraphs) =
+    source t:numExp <- infixOp[t1:numExp,t2:plus,t3:numExp]
+    target t':graph <- addFullyConnectedVertex[t1':graph]
+    antecedent tt1:metaTrue <- countEdges[t1':graph,t1:numExp],
+               tt2:metaTrue <- countVertices[t1':graph,t3:numExp]
+    consequent tt:metaTrue <- countEdges[t':graph,t:numExp]
+    strength 2
+
+tSchema encodeNumExp:(arithG,graphsG,interArithGraphs) =
+    source t:numExp
+    target g:graph
+    antecedent :metaTrue <- countEdges[g:graph,t:numExp]
+    consequent :metaTrue <- encode[t:numExp,g:graph]
+    strength 2
+
+tSchema encodeFormula:(arithG,graphsG,interArithGraphs) =
+    source t:formula <- infixRel[t1:numExp,t2:equals,t3:numExp]
+    target g:graph
+    antecedent tt1:metaTrue <- countEdges[g:graph,t1:numExp],
+               tt2:metaTrue <- countEdges[g:graph,t3:numExp]
+    consequent tt:metaTrue <- encode[t:formula,g:graph]
+    strength 2
