@@ -18,7 +18,7 @@ val interBayesArea = Document.findConSpecWithName DC "interBayesArea"
 val interBayesTable = Document.findConSpecWithName DC "interBayesTable"
 val interBayesTree = Document.findConSpecWithName DC "interBayesTree"
 
-val ss1 = CParsers.parseProbSys "Pr(s) = 0.63; Pr(-z | s) = 0.2";
+val ss1 = CParsers.parseProbSys "Pr(D) = 0.04; Pr(T | D) = 0.95; Pr(-T | -D) = 0.9";
 val construct = Construction.constructOf ss1
 val areaGoal = Document.parseConstruction interBayesArea (":metaTrue <- encode[" ^  CSpace.stringOfToken (construct) ^ ",t':area]")
 val tableGoal = Document.parseConstruction interBayesTable (":metaTrue <- encode[" ^  CSpace.stringOfToken (construct) ^ ",t':table]")
