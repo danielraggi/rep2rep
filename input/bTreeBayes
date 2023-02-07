@@ -89,16 +89,14 @@ tSchema sys:(btree,bayesG,interBTreeBayes) =
     strength 3
 
 tSchema dummsBin:(btree,bayesG,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,
-                             t2:dummy:leaf]
+    source t:btree <- branch[t1:btree,t2:dummy]
     target t':bin
     antecedent :metaTrue <- BIN[t1:btree,t':bin]
     consequent :metaTrue <- BIN[t:btree,t':bin]
     strength 1
 
 tSchema dummsEqreal:(btree,bayesG,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,
-                             t2:dummy:leaf]
+    source t:btree <- branch[t1:btree,t2:dummy]
     target t':numExp
     antecedent :metaTrue <- EQREAL[t1:btree,t':numExp]
     consequent :metaTrue <- EQREAL[t:btree,t':numExp]
@@ -297,7 +295,7 @@ tSchema natural9:(btree,bayesG,interBTreeBayes) =
 
     tSchema natural0':(btree,bayesG,interBTreeBayes) =
         source t:btree <- branch[t1:0:ordinary,
-                                 t2:dummy:leaf]
+                                 t2:dummy]
         target t':0
         antecedent
         consequent :metaTrue <- NAT[t:btree,t':0]
