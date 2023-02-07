@@ -21,8 +21,8 @@ sig
   val conSpecIsImportedBy : (string * string list) list -> string -> string -> bool
 
   (* Building a knowledge base *)
-  val addInferenceSchema : base -> iSchemaData -> real -> (iSchemaData * iSchemaData -> order) -> base;
-  val addTransferSchema : base -> InterCSpace.tSchemaData -> real -> (InterCSpace.tSchemaData * InterCSpace.tSchemaData -> order) -> base;
+  val addInferenceSchema : base -> iSchemaData -> real -> base;
+  val addTransferSchema : base -> InterCSpace.tSchemaData -> real -> base;
   val addConSpecImports : base -> (string * string list) -> base
   val filterForISpace : string -> bool -> base -> base;
 
@@ -53,14 +53,18 @@ struct
   fun transferSchemasOf KB = #transferSchemas KB
   fun conSpecImportsOf KB = #conSpecImports KB
 
-  fun addInferenceSchema KB isch s f =
-    {inferenceSchemas = Seq.insert isch (#inferenceSchemas KB) f,
+  exception Duplicate
+  fun iCmp (i,i') = (case Real.compare (#strength i', #strength i) of EQUAL => (case String.compare (#name i,#name i') of EQUAL => raise Duplicate | y => y) | x => x)
+  fun tCmp (t,t') = (case Real.compare (#strength t', #strength t) of EQUAL => (case String.compare (#name t,#name t') of EQUAL => raise Duplicate | y => y) | x => x)
+
+  fun addInferenceSchema KB isch s =
+    {inferenceSchemas = Seq.insert isch (#inferenceSchemas KB) iCmp,
      transferSchemas = #transferSchemas KB,
      conSpecImports = #conSpecImports KB}
 
-  fun addTransferSchema KB tsch s f =
+  fun addTransferSchema KB tsch s =
     {inferenceSchemas = #inferenceSchemas KB,
-     transferSchemas = Seq.insert tsch (#transferSchemas KB) f,
+     transferSchemas = Seq.insert tsch (#transferSchemas KB) tCmp,
      conSpecImports = #conSpecImports KB}
 
   fun addConSpecImports KB (n,L) =

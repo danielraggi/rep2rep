@@ -464,8 +464,8 @@ struct
               else ()
       val _ = Logging.write "...done\n"
 
-  in {typeSystemsData = updatedTSD :: List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc),
-      conSpecsData = updatedConSpec :: #conSpecsData dc,
+  in {typeSystemsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedTSD] (List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc)),
+      conSpecsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedConSpec] (#conSpecsData dc),
       knowledge = Knowledge.addConSpecImports (#knowledge dc) (name,importedConSpecNames),
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc}
@@ -535,10 +535,9 @@ struct
                       strength = strengthVal,
                       iSchema = isch}
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (#strength c', #strength c)
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal ff,
+      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal,
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc}
   end
@@ -619,10 +618,9 @@ struct
                       strength = strengthVal,
                       tSchema = tsch}
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (#strength c', #strength c)
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal ff,
+      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal,
       constructionsData = #constructionsData dc,
       transferRequests = #transferRequests dc}
   end
@@ -631,7 +629,7 @@ struct
        {typeSystemsData = #typeSystemsData DC,
         conSpecsData = #conSpecsData DC,
         knowledge = #knowledge DC,
-        constructionsData = ctRecord :: (#constructionsData DC),
+        constructionsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [ctRecord] (#constructionsData DC),
         transferRequests = #transferRequests DC}
 
   fun addConstruction (N, bs) dc =
