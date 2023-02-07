@@ -98,11 +98,13 @@ struct
   fun findTransferSchemaWithName KB name =
     Seq.findFirst (fn x => InterCSpace.nameOf x = name) (#transferSchemas KB)
 
+  fun cmpI (t1,t2) = List.compare String.compare ([#name t1,#idConSpecN t1],[#name t2,#idConSpecN t2])
+  fun cmpT (t1,t2) = List.compare String.compare ([#name t1,#interConSpecN t1],[#name t2,#interConSpecN t2])
 
   fun join k1 k2 =
-    {inferenceSchemas = Seq.append (#inferenceSchemas k1) (#inferenceSchemas k2),
-     transferSchemas = Seq.append (#transferSchemas k1) (#transferSchemas k2),
-     conSpecImports = (#conSpecImports k1) @ (#conSpecImports k2),
+    {inferenceSchemas = Seq.insertManyNoEQUAL (#inferenceSchemas k1) (#inferenceSchemas k2) cmpI,
+     transferSchemas = Seq.insertManyNoEQUAL (#transferSchemas k1) (#transferSchemas k2) cmpT,
+     conSpecImports = List.removeDuplicates ((#conSpecImports k1) @ (#conSpecImports k2)),
      strength = (fn cn => case (#strength k2) cn of SOME r => SOME r | NONE => (#strength k1) cn)}
 
   val empty =

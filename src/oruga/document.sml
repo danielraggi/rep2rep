@@ -860,10 +860,10 @@ struct
        constructionsData = cs',
        transferRequests = tr',
        strengths = st'} =>
-          {typeSystemsData = ts @ ts',
-           conSpecsData = sp @ sp',
+          {typeSystemsData = List.removeRepetition (fn x => fn y => #name x = #name y) (ts @ ts'),
+           conSpecsData = List.removeRepetition (fn x => fn y => #name x = #name y) (sp @ sp'),
            knowledge = Knowledge.join kb kb',
-           constructionsData = cs @ cs',
+           constructionsData = List.removeRepetition (fn x => fn y => #name x = #name y) (cs @ cs'),
            transferRequests = tr @ tr',
            strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
   | joinDocumentContents [] = emptyDocContent
