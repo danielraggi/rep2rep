@@ -134,16 +134,29 @@ struct
   fun parseTyp s = case String.breakOn ":" s of
                       (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
                     | _ => Type.fromString (normaliseString s)
-  fun parseToken s = case String.breakOn ":" s of
-                        (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
-                      | _ => raise ParseError ("no type for token: " ^ s)
+
+  fun parseToken s =
+        ((*case String.breakOn "<-" s of
+            (tt,"<-",cv) => if String.isPrefix "?" cv
+                            then (case String.breakOn ":" tt of
+                                      (ts,":",tys) => CSpace.makeToken (cv ^ "{" ^ (normaliseString ts) ^ "}") (parseTyp tys)
+                                    | _ => raise ParseError ("no type for token: " ^ s)
+                                 )
+                            else raise ParseError ("invalid construction: " ^ s ^ "... perhaps you meant to write ?" ^ cv ^ "  (construction variables must be prefixed with ?)")
+          | _ => *)
+                  (case String.breakOn ":" s of
+                      (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
+                    | _ => raise ParseError ("no type for token: " ^ s)
+                  )
+        )
+
   fun parseCTyp s = case Parser.list parseTyp s of
                       (ty::tys) => (tys,ty)
                     | _ => raise ParseError ("bad constructor sig: " ^ s)
+
   fun parseConstructor s = case String.breakOn ":" s of
                               (cs,":",ctys) => CSpace.makeConstructor (normaliseString cs, parseCTyp ctys)
                             | _ => raise ParseError ("no sig for constructor: " ^ s)
-
 
    fun findConstructorInConSpec s cspec =
      valOf (CSpace.findConstructorWithName s cspec)
@@ -155,18 +168,22 @@ struct
        |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
 
   fun parseConstruction cspec s =
-    let fun c s' =
+    let fun pc s' =
          case String.breakOn "[" s' of
-           (ts,"",_) => Construction.Source (parseToken ts)
+           (_,"",_) => (case String.breakOn "<-" s' of
+                            (tt,"<-",ctvar) => if String.isPrefix "?" ctvar
+                                               then Construction.TCPair ({constructor = CSpace.makeConstructor(ctvar,([],"")), token = parseToken tt},[])
+                                               else raise ParseError ("unexpected construction variable in: " ^ s')
+                          | _ => Construction.Source (parseToken s'))
          | (tcps,_,ss) =>
              let val tcp = parseTCPair tcps cspec
                  val tok = #token tcp
                  val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
                  val _ = if ys = [] then ()
                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-             in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
+             in Construction.TCPair (tcp, Parser.splitLevelApply (pc o String.removeParentheses) xs)
              end
-    in Construction.fixReferences (c s)
+    in Construction.fixReferences (pc s)
     end;
 
   val parseConstruction_rpc =
@@ -596,7 +613,7 @@ struct
       val consequent = getConsequent blocks
       val _ = if Construction.wellFormed sourceConSpec source
               then Logging.write "\n  source pattern is well formed"
-              else Logging.write "\n  WARNING: source pattern is not well formed"
+              else Logging.write ("\n  WARNING: source pattern is not well formed: " ^ Construction.toString source)
       val _ = if Construction.wellFormed targetConSpec target
               then Logging.write "\n  target pattern is well formed"
               else Logging.write "\n  WARNING: target pattern is not well formed"

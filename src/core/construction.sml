@@ -39,7 +39,7 @@ sig
   val attachConstructionAtToken : construction -> CSpace.token -> construction -> construction list;
 
   val minus : construction -> construction -> construction list;
-  val subConstructionsRaw : construction -> construction Seq.seq;
+  val foundationalSubConstructions : construction -> construction Seq.seq;
 
   val toString : construction -> string;
 
@@ -143,6 +143,10 @@ struct
                                     Set.elementOf (CSpace.typeOfToken t) (#Ty T),
                                   t::prev)
           | wf (Reference t) prev = (List.exists (fn x => x = t) prev, prev)
+          | wf (TCPair ({token,constructor}, [])) prev =
+            if String.isPrefix "?" (CSpace.nameOfConstructor constructor)
+            then (true,token::prev)
+            else (false,token::prev)
           | wf (TCPair ({token,constructor}, cs)) prev =
             let val ty = CSpace.typeOfToken token
                 val tys = map (CSpace.typeOfToken o constructOf) cs
@@ -422,10 +426,10 @@ struct
 
   fun minus ct ct' = minusTCPairs ct (collectTCPairs ct')
 
-  fun subConstructionsRaw (Source t) = Seq.single (Source t)
-    | subConstructionsRaw (Reference t) = Seq.single (Reference t)
-    | subConstructionsRaw (TCPair (tc,cs)) =
-        Seq.cons (TCPair (tc,cs)) (Seq.maps subConstructionsRaw (Seq.of_list cs))
+  fun foundationalSubConstructions (Source t) = Seq.single (Source t)
+    | foundationalSubConstructions (Reference t) = Seq.single (Reference t)
+    | foundationalSubConstructions (TCPair (tc,cs)) =
+        Seq.cons (TCPair (tc,cs)) (Seq.maps foundationalSubConstructions (Seq.of_list cs))
 
 
   structure R = struct

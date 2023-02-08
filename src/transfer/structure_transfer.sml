@@ -103,7 +103,7 @@ struct
 
       val (contextMap, matchingSubConstruction) =
             (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse T ct context consequentMap) of
-                SOME ((_,f,x),_) => (f,x)
+                SOME ((_,f,_,x),_) => (f,x)
               | _ => raise InferenceSchemaNotApplicable)
 
       val usedTokens = FiniteSet.union
@@ -214,10 +214,12 @@ struct
         then SOME newTargetConstruct
         else NONE
 
-      val (sourceMap, matchingSubConstruction) =
+      val (sourceMap, consVarMap, matchingSubConstruction) =
             (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse T ct source consequentMap) of
-                SOME ((_,f,x),_) => (f, x)
+                SOME ((_,f,cf,x),_) => (f,cf,x)
               | _ => raise TransferSchemaNotApplicable)
+
+      val target = Pattern.applyConsVarInstantiation consVarMap target
 
       val updatedConsequent = Pattern.applyMorphism consequentMap consequent
       val csMap = Pattern.funUnion CSpace.sameTokens [sourceMap, consequentMap]
@@ -226,7 +228,7 @@ struct
       fun getTargetEmbedding [] = NONE
         | getTargetEmbedding (tct::L) =
           (case Seq.pull (Pattern.findEmbeddingsOfSubConstructionWithCompatibleInverse tT tct target csMap) of
-              SOME ((_,f,x),_) => SOME (f, x)
+              SOME ((_,f,_,x),_) => SOME (f, x)
             | _ => getTargetEmbedding L)
       val targetConstructions = List.maps Composition.resultingConstructions patternComps
       val (targetReifiedByComposition,targetMap,updatedTarget) =

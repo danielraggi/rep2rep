@@ -22,46 +22,47 @@ sig
   val applyMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> pattern -> pattern;
   val applyTypeVarInstantiation : (Type.typ -> Type.typ option) -> pattern -> pattern;
+  val applyConsVarInstantiation : (CSpace.constructor -> pattern option) -> pattern -> pattern;
   val findEmbedding : Type.typeSystem
                         -> pattern
                         -> pattern
-                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
+                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * pattern option
   val findEmbeddingUpTo : Type.typeSystem
                             -> CSpace.token FiniteSet.set
                             -> pattern
                             -> pattern
-                            -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
+                            -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * pattern option
   val findEmbeddingMinimisingTypeUpTo : Type.typeSystemData
                                         -> CSpace.token FiniteSet.set
                                         -> pattern
                                         -> pattern
-                                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * (Type.typ -> Type.typ option) * construction option
+                                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * (Type.typ -> Type.typ option) * pattern option
   val findEmbeddingUpToConditionally : Type.typeSystem
                                         -> CSpace.token FiniteSet.set
                                         -> (pattern -> pattern -> bool)
                                         -> pattern
                                         -> pattern
-                                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option
+                                        -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * pattern option
   val matchToSubConstructionWithConstruct : Type.typeSystem
                                               -> pattern
                                               -> pattern
                                               -> CSpace.token
-                                              -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction option ;
+                                              -> (CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * (CSpace.constructor -> pattern option) * pattern option ;
   val findEmbeddingsOfSubConstructionWithCompatibleInverse : Type.typeSystem
                                                                -> pattern
                                                                -> pattern
                                                                -> (CSpace.token -> CSpace.token option)
-                                                               -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction) Seq.seq;
+                                                               -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * (CSpace.constructor -> pattern option) * pattern) Seq.seq;
   val findAlterableSubConstructionWithCompatibleInverse : Type.typeSystemData
                                                               -> pattern
                                                               -> pattern
                                                               -> (CSpace.token -> CSpace.token option)
-                                                              -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction) Seq.seq;
+                                                              -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * pattern) Seq.seq;
   val findUnificationOfSubConstructionConditionally : Type.typeSystemData
                                                        -> (pattern -> pattern -> bool)
                                                        -> pattern
                                                        -> pattern
-                                                       -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * construction) Seq.seq;
+                                                       -> ((CSpace.token -> CSpace.token option) * (CSpace.token -> CSpace.token option) * pattern) Seq.seq;
 
 end;
 
@@ -74,7 +75,7 @@ struct
 
   fun typeMatches T ty ty' =
     #subType T (ty,ty') orelse (Type.isTypeVar ty andalso
-                                #subType T (ty', (Type.parentOfDanglyType ty)))
+                                Type.equal (Type.parentOfDanglyType ty) (Type.parentOfDanglyType ty'))
     handle Type.badType => false
 
   fun tokenMatches T t t' =
@@ -199,15 +200,18 @@ struct
   (* NONE means nothing to say.
      IllDefined means there's an unresolvable clash, i.e., the variable gets
      instantiated to two different types which have no common subtype. *)
-  fun resolveInstantiationFunctions TSD [] ty = NONE
-    | resolveInstantiationFunctions TSD (f::fL) ty =
-      (case (f ty, resolveInstantiationFunctions TSD fL ty) of
+  fun resolveTypeInstantiations TSD [] ty = NONE
+    | resolveTypeInstantiations TSD (f::fL) ty =
+      (case (f ty, resolveTypeInstantiations TSD fL ty) of
           (NONE,NONE) => NONE
         | (SOME fty, NONE) => SOME fty
         | (NONE, SOME rty) => SOME rty
         | (SOME fty, SOME rty) => (case Type.greatestCommonSubType TSD fty rty of
                                       NONE => raise IllDefined
                                     | SOME sty => SOME sty))
+
+  fun isConsVar cv =
+    String.isPrefix "?" (CSpace.nameOfConstructor cv)
 
   (* if there exists an embedding ct -> ct' up to a set of tokens tks of ct,
      findEmbeddingMinimisingTypeUpTo yields maps f1, f2 and pattern g where:
@@ -244,7 +248,7 @@ struct
                     val (CHMaps,CHMaps',vCHMaps) = unzip3 (List.funZip fm cs cs')
                 in (funUnion CSpace.sameTokens (tMap :: CHMaps),
                     funUnion CSpace.sameTokens (tMap' :: CHMaps'),
-                    resolveInstantiationFunctions TSD (vMap :: vCHMaps))
+                    resolveTypeInstantiations TSD (vMap :: vCHMaps))
                 end
             else raise IllDefined
         | fm _ _ = raise IllDefined
@@ -419,43 +423,78 @@ struct
   (* *)
   fun findEmbedding T ct ct' = findEmbeddingUpTo T FiniteSet.empty ct ct'
 
+  fun applyConsVarInstantiation f (TCPair(tc,cs)) =
+      (case f (#constructor tc) of
+          SOME ct => (print ("mapping " ^ CSpace.nameOfConstructor (#constructor tc) ^ " to " ^ (Construction.toString ct) ^ "\n\n"); ct)
+        | NONE => TCPair(tc,map (applyConsVarInstantiation f) cs))
+    | applyConsVarInstantiation f ct = ct
 
   (* returns the maps between ct' and a generator of ct that matches ct' (if it exists) *)
   fun findEmbeddingOfGenerator T contextCT ct ct' =
   let fun mpg (Source t) (Source t') =
             if tokenMatches T t t'
             then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-                  fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-            else (fn _ => NONE,fn _ => NONE)
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+                  fn _ => NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (Reference t) (Reference t') =
             if tokenMatches T t t'
             then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-                  fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-            else (fn _ => NONE,fn _ => NONE)
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+                  fn _ => NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
+        | mpg (tcp as TCPair ({token = t, constructor = c},cs))
+              (tcp' as TCPair ({token = t', constructor = c'},[])) =
+            (if tokenMatches T t t' andalso isConsVar c'
+            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+                  fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
+                           then SOME (TCPair ({token = t', constructor = c},cs))
+                           else NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE))
+        | mpg (Source t)
+              (tcp' as TCPair ({token = t', constructor = c'},[])) =
+            (print ("em:  "^Construction.toString (Source t) ^ "\n" ^ Construction.toString tcp'^ "\n\n");if tokenMatches T t t' andalso isConsVar c'
+            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+                  fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
+                           then SOME (Source t)
+                           else NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE))
         | mpg (TCPair ({token = t, constructor = c},cs))
               (TCPair ({token = t', constructor = c'},cs')) =
             if CSpace.sameConstructors c c' andalso tokenMatches T t t'
             then
-              let val (CHfunctions1,CHfunctions2) = unzip (List.funZip mpg cs cs')
+              let val (CHfunctions1,CHfunctions2,consVarFuns) = unzip3 (List.funZip mpg cs cs')
                        fun nodeFunction1 x = if CSpace.sameTokens x t then SOME t' else NONE
                        fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME t else NONE
-              in (funUnion CSpace.sameTokens (nodeFunction1 :: CHfunctions1),funUnion CSpace.sameTokens (nodeFunction2 :: CHfunctions2))
+              in (funUnion CSpace.sameTokens (nodeFunction1 :: CHfunctions1),
+                  funUnion CSpace.sameTokens (nodeFunction2 :: CHfunctions2),
+                  funUnion same consVarFuns)
               end
-            else (fn _ => NONE,fn _ => NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (TCPair ({token = t, ...},_)) (Source t') =
             if tokenMatches T t t'
             then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-                  fn x => if CSpace.sameTokens x t' then SOME t else NONE)
-            else (fn _ => NONE,fn _ => NONE)
+                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+                  fn _ => NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (Reference t) xct' =
             if tokenMatches T t (constructOf xct')
             then mpg (largestSubConstructionWithConstruct contextCT t) xct'
-            else (fn _ => NONE,fn _ => NONE)
-        | mpg _ _ = (fn _ => NONE,fn _ => NONE)
-      val (f1,f2) = mpg ct ct'
-      val gt = applyMorphism f2 ct'
-  in (f1, f2, SOME gt)
-  end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
+        | mpg _ _ = (fn _ => NONE,fn _ => NONE,fn _ => NONE)
+      val (f1,f2,cf) = mpg ct ct'
+      val gt' = applyConsVarInstantiation cf ct'
+      val gt = applyPartialMorphism f2 gt'
+      val _ = print ("this\n")
+      val _ = print (Construction.toString ct ^ "\n")
+      val _ = print (Construction.toString ct' ^ "\n")
+      val _ = print (Construction.toString gt' ^ "\n")
+      val _ = print (Construction.toString gt ^ "\n\n")
+
+  in (f1, f2, cf, SOME gt)
+  end handle IllDefined => (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE)
 
   fun findAlterationOfGenerator TSD contextCT ct ct' =
   let val T = #typeSystem TSD
@@ -559,12 +598,12 @@ struct
                 TCPair (_, cs) =>
                   let fun fmg (x::xs) =
                             (case matchToSubConstructionWithConstruct' ctx x of
-                                (_,_,NONE) => fmg xs
+                                (_,_,_,NONE) => fmg xs
                               | P => P)
-                        | fmg [] = (fn _ => NONE,fn _ => NONE,NONE)
+                        | fmg [] = (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE)
                   in fmg cs
                   end
-              | _ => (fn _ => NONE,fn _ => NONE,NONE))
+              | _ => (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE))
     in matchToSubConstructionWithConstruct' ct ct
     end
 
@@ -574,19 +613,20 @@ struct
       f1 is the map from sct to pt,
       f2 is the inverse of f1*)
   fun findEmbeddingsOfSubConstructionWithCompatibleInverse T ct pt f =
-    let fun fescci ctx seq =
+    let fun fescci seq =
         Seq.make (fn () =>
             (case Seq.pull seq of
                 NONE => NONE
               | SOME (sct,seqL) =>
-                (case findEmbeddingOfGenerator T ctx sct pt of
-                    (f1,f2,SOME x) => (applyMorphism (funUnion CSpace.sameTokens [f,f2]) pt;
-                                       SOME ((f1,f2,x), fescci ctx seqL))
-                  | _ => Seq.pull (fescci ctx seqL))
-                 handle IllDefined => Seq.pull (fescci ctx seqL))
+                (case findEmbeddingOfGenerator T ct sct pt of
+                    (f1,f2,cf,SOME x) => (applyMorphism (funUnion CSpace.sameTokens [f,f2]) pt;
+                                       SOME ((f1,f2,cf,x), fescci seqL))
+                  | _ => Seq.pull (fescci seqL))
+                 handle IllDefined => Seq.pull (fescci seqL))
         )
-    in fescci ct (subConstructionsRaw ct)
+    in fescci (foundationalSubConstructions ct)
     end
+
   fun findAlterableSubConstructionWithCompatibleInverse TSD ct pt f =
     let fun fescci ctx seq =
         Seq.make (fn () =>
@@ -599,7 +639,7 @@ struct
                   | _ => Seq.pull (fescci ctx seqL))
                  handle IllDefined => Seq.pull (fescci ctx seqL))
         )
-    in fescci ct (subConstructionsRaw ct)
+    in fescci ct (foundationalSubConstructions ct)
     end
 
   fun findUnificationOfSubConstructionConditionally TSD cond ct pt =
@@ -612,44 +652,8 @@ struct
                     (f1,f2,SOME x) => SOME ((f1,f2,x), fuscci ctx seqL)
                   | _ => Seq.pull (fuscci ctx seqL)))
         )
-    in fuscci ct (subConstructionsRaw ct)
+    in fuscci ct (foundationalSubConstructions ct)
     end
-(*)
-    fun findEmbeddingsOfSubConstructionWithCompatibleInverse T ct pt f =
-      let fun fescci T ctx ct pt f =
-            let val (f1,f2,x) = findEmbeddingOfGenerator T ctx ct pt
-                fun w () =
-                  (case ct of
-                      TCPair (_, cs) =>
-                        let fun fmg [] = []
-                              | fmg (x::xs) =
-                                  (List.filterThenMap (fn (_,_,x) => isSome x) (fn (f1,f2,x) => (f1,f2,valOf x)) (fescci T ctx x pt f)) @ fmg xs
-                        in fmg cs
-                        end
-                    | _ => [])
-            in if isSome x
-               then (applyMorphism (funUnion [f,f2]) pt; (f1,f2,valOf x) :: w ()) handle IllDefined => w ()
-               else w ()
-            end
-      in fescci T ct ct pt f
-      end*)
-(*)
-    case findMatchToGenerator T (fixReferences ct) pt of
-      (h,SOME _) => (case applyMorphism (funUnion [f,h]) pt of
-                        y => (h,SOME y)) handle IllDefined =>
-    | _ => (case ct of
-              TCPair (_, cs) =>
-                let fun fmg (x::xs) =
-                          (case findEmbeddingsOfSubConstructionWithCompatibleInverse T x pt f of
-                              (_,NONE) => fmg xs
-                            | P => P)
-                      | fmg [] = (fn _ => NONE,NONE)
-                in fmg cs
-                end
-            | _ => (fn _ => NONE,NONE))*)
-
-      (*firstSome (List.map (fn x => matchToSubConstructionWithConstruct T x p t) cs)
-                                  | _ => (fn _ => NONE,NONE))*)
 
 
 end;
