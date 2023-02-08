@@ -2,11 +2,11 @@ import "core.interCSpace";
 
 signature TRANSFER_PROOF =
 sig
-  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern}
+  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern, strength : real}
   datatype tproof = Closed of Pattern.pattern * tApp * tproof list
                   | Open of Pattern.pattern;
   val ofPattern : Pattern.pattern -> tproof;
-  val dataOfTransferSchema : InterCSpace.tSchemaData -> {name : string, source : Pattern.pattern, target : Pattern.pattern}
+  val dataOfTransferSchema : InterCSpace.tSchemaData -> {name : string, source : Pattern.pattern, target : Pattern.pattern, strength : real}
   val ofTransferSchema : InterCSpace.tSchemaData -> tproof;
   val similar : tproof -> tproof -> bool
   val applyPartialMorphism : (CSpace.token -> CSpace.token option) -> tproof -> tproof
@@ -21,7 +21,7 @@ end;
 structure TransferProof : TRANSFER_PROOF =
 struct
 
-  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern}
+  type tApp = {name : string, source : Pattern.pattern, target : Pattern.pattern, strength : real}
   datatype tproof = Closed of Pattern.pattern * tApp * tproof list
                   | Open of Pattern.pattern;
 
@@ -31,16 +31,17 @@ struct
   fun dataOfTransferSchema tSchemaData =
     {name = #name tSchemaData,
      source = #source (#tSchema tSchemaData),
-     target = #target (#tSchema tSchemaData)}
+     target = #target (#tSchema tSchemaData),
+     strength = #strength tSchemaData}
 
   fun ofTransferSchema tSchemaData =
-    let val {tSchema,...} = tSchemaData
+    let val {tSchema,strength,...} = tSchemaData
     in Closed (#consequent tSchema, dataOfTransferSchema tSchemaData, map Open (#antecedent tSchema))
     end
 
   fun ofInferenceSchema iSchemaData =
-    let val {name,iSchema,...} = iSchemaData
-        val data = {name = name, source = #context iSchema, target = #context iSchema}
+    let val {name,iSchema,strength,...} = iSchemaData
+        val data = {name = name, source = #context iSchema, target = #context iSchema, strength = strength}
     in Closed (#consequent iSchema, data, map Open (#antecedent iSchema))
     end
 
@@ -78,7 +79,8 @@ struct
       then Closed (r',
                    {name = s,
                     source = Pattern.Source (CSpace.makeToken "" ""),
-                    target = Pattern.Source (CSpace.makeToken "" "")},
+                    target = Pattern.Source (CSpace.makeToken "" ""),
+                    strength = 0.0},
                    [])
       else Open r
 

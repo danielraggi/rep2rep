@@ -1,5 +1,5 @@
 typeSystem dotDiagrams =
-    types _:dot, _:line, _:rectangle, _:triangle, _:arr, _:manipulation, _:numeral
+    types _:dot, _:line, _:rectangle, _:triangle, _:arr, _:manipulation, _:nat10
     order dot < line, line < rectangle, dot < triangle, triangle < arr, rectangle < arr
 
 conSpec dotDiagramsG:dotDiagrams =
@@ -9,4 +9,4 @@ conSpec dotDiagramsG:dotDiagrams =
     remove : [arr,arr] -> arr,
     fillRectangle : [line,line] -> rectangle,
     intersect : [arr,arr] -> arr,
-    someLine : [numeral] -> line
+    someLine : [nat10] -> line

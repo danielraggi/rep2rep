@@ -35,7 +35,7 @@ tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
     consequent :metaTrue <- match[t:event,t':label]
     strength 1
 
-tSchema makeEvent:(bayesG,probTreeG,interBayesTree) =
+tSchema equationTree:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- makeEqn[t1:event,t2:numExp]
     target t':tree <- construct[t1':label,t2':numExp]
     antecedent :metaTrue <- match[t1:event,t1':label],

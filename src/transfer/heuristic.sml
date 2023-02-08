@@ -15,9 +15,9 @@ sig
   val zeroGoalsOtherwiseCompositionSize : State.T * State.T -> order
   val random : State.T * State.T -> order
   val zeroGoalsOtherwiseRandom : State.T * State.T -> order
-  val multiplicativeScore : (string -> real option) -> State.T -> real
-  val sumScore : (string -> real option) -> State.T -> real
-  val scoreMain : (string -> real option) -> State.T -> real
+  val multiplicativeScore : State.T -> real
+  val sumScore : State.T -> real
+  val scoreMain : State.T -> real
   val transferProofMain : State.T * State.T -> order
 end
 
@@ -118,39 +118,36 @@ fun hasLeavesInConstruction g ct =
                       (Construction.leavesOfConstruction g)
   end
 
-fun multiplicativeScore' strength ct (TransferProof.Closed (_,npp,L)) =
-      (case strength (#name npp) of
-          SOME s => s
-        | NONE => 1.0) * multProp (map (multiplicativeScore' strength ct) L)
-  | multiplicativeScore' _ ct (TransferProof.Open g) =
+fun multiplicativeScore' ct (TransferProof.Closed (_,npp,L)) =
+      (#strength npp) * multProp (map (multiplicativeScore' ct) L)
+  | multiplicativeScore' ct (TransferProof.Open g) =
       if hasLeavesInConstruction g ct
       then 0.1
       else 0.99
 
-fun multiplicativeScore strength st =
-    multiplicativeScore' strength (State.constructionOf st) (State.transferProofOf st)
+fun multiplicativeScore st =
+    multiplicativeScore' (State.constructionOf st) (State.transferProofOf st)
 
 
-fun sumScore' strength ct (TransferProof.Closed (_,npp,L)) =
-    (1.0 + Real.fromInt (length L)) * (case strength (#name npp) of SOME s => s | NONE => 0.0)
-      + (List.sumMap (sumScore' strength ct) L)
-  | sumScore' _ ct (TransferProof.Open g) =
+fun sumScore' ct (TransferProof.Closed (_,npp,L)) =
+    (1.0 + Real.fromInt (length L)) * (#strength npp)
+      + (List.sumMap (sumScore' ct) L)
+  | sumScore' ct (TransferProof.Open g) =
       if hasLeavesInConstruction g ct
       then ~8.0
       else ~1.0
 
 
-fun sumScore strength st =
-    sumScore' strength (State.constructionOf st) (State.transferProofOf st)
+fun sumScore st =
+    sumScore' (State.constructionOf st) (State.transferProofOf st)
 
 val scoreMain = sumScore
 
 fun transferProofMain (st,st') =
   let val gsn = length (State.goalsOf st)
     val gsn' = length (State.goalsOf st')
-    val strength = Knowledge.strengthOf (State.knowledgeOf st)
   in if (gsn = 0 andalso gsn' = 0) orelse (gsn > 0 andalso gsn' > 0)
-     then (case Real.compare (scoreMain strength st',scoreMain strength st) of
+     then (case Real.compare (scoreMain st',scoreMain st) of
               EQUAL => if similarStates (st,st') then EQUAL else LESS
             | X => X)
      else Int.compare (gsn,gsn')
