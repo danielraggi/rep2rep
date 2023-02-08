@@ -11,6 +11,7 @@ sig
                       sourceConSpecN : string,
                       targetConSpecN : string,
                       interConSpecN : string,
+                      strength : real,
                       tSchema : tSchema}
 
 
@@ -40,6 +41,7 @@ struct
                       sourceConSpecN : string,
                       targetConSpecN : string,
                       interConSpecN : string,
+                      strength : real,
                       tSchema : tSchema}
 
   val tSchema_rpc = Rpc.Datatype.convert
@@ -60,22 +62,25 @@ struct
 
   val tSchemaData_rpc = Rpc.Datatype.convert
                             "TransferSchema.tSchemaData"
-                            (Rpc.Datatype.tuple5
+                            (Rpc.Datatype.tuple6
                                  (String.string_rpc,
                                   String.string_rpc,
                                   String.string_rpc,
                                   String.string_rpc,
+                                  Real.real_rpc,
                                   tSchema_rpc))
-                            (fn (n, s, t, i, x) => {name = n,
-                                                    sourceConSpecN = s,
-                                                    targetConSpecN = t,
-                                                    interConSpecN = i,
-                                                    tSchema = x})
+                            (fn (n, s, t, i, r, x) => {name = n,
+                                                      sourceConSpecN = s,
+                                                      targetConSpecN = t,
+                                                      interConSpecN = i,
+                                                      strength = r,
+                                                      tSchema = x})
                             (fn {name = n,
                                  sourceConSpecN = s,
                                  targetConSpecN = t,
                                  interConSpecN = i,
-                                 tSchema = x} => (n, s, t, i, x));
+                                 strength = r,
+                                 tSchema = x} => (n, s, t, i, r, x));
 
   exception badForm
   fun wellFormedTransferSchema iCS {source,target,antecedent,consequent} =
@@ -88,8 +93,8 @@ struct
 
   fun inverse {source,target,antecedent,consequent} =
     {source = target, target = source, antecedent = antecedent, consequent = consequent}
-  fun inverseData {name,sourceConSpecN,targetConSpecN,interConSpecN,tSchema} =
-    {name = name, sourceConSpecN = targetConSpecN, targetConSpecN = sourceConSpecN, interConSpecN = interConSpecN, tSchema = inverse tSchema}
+  fun inverseData {name,sourceConSpecN,targetConSpecN,interConSpecN,strength,tSchema} =
+    {name = name, sourceConSpecN = targetConSpecN, targetConSpecN = sourceConSpecN, interConSpecN = interConSpecN, strength = strength, tSchema = inverse tSchema}
 
 
 end;

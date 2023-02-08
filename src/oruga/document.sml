@@ -14,12 +14,19 @@ sig
   type constructionData = {name : string, conSpecN : string, construction : Construction.construction}
   val constructionsDataOf : documentContent -> constructionData FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
-  val parseConstruction : CSpace.conSpecData -> string -> Construction.construction
-  val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
-  val findConSpecWithName : documentContent -> string -> CSpace.conSpecData
-  val findConstructionWithName : documentContent -> string -> constructionData
-  val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
   val normaliseString : string -> string
+  val parseConstruction : CSpace.conSpecData -> string -> Construction.construction
+
+  val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData option
+  val findConSpecWithName : documentContent -> string -> CSpace.conSpecData option
+  val findConstructionWithName : documentContent -> string -> constructionData option
+  val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData option
+  val findInferenceSchemaWithName : documentContent -> string -> Knowledge.iSchemaData option
+
+  val getTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
+  val getConSpecWithName : documentContent -> string -> CSpace.conSpecData
+  val getConstructionWithName : documentContent -> string -> constructionData
+  val getTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
 
   val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint
 
@@ -226,39 +233,52 @@ struct
         conSpecsData : CSpace.conSpecData list,
         knowledge : Knowledge.base,
         constructionsData : constructionData list,
-        transferRequests : (string list) list,
-        strengths : string -> real option}
+        transferRequests : (string list) list}
 
   val emptyDocContent =
       {typeSystemsData = [],
        conSpecsData = [],
        knowledge = Knowledge.empty,
        constructionsData = [],
-       transferRequests = [],
-       strengths = (fn _ => NONE)}
+       transferRequests = []}
 
   val typeSystemsDataOf = #typeSystemsData
   val conSpecsDataOf = #conSpecsData
   val knowledgeOf = #knowledge
   val constructionsDataOf = #constructionsData
   val transferRequestsOf = #transferRequests
-  val strengthsOf = #strengths
 
   fun findTypeSystemDataWithName DC n =
-    valOf (List.find (fn x => #name x = n) (typeSystemsDataOf DC))
-    handle Option => raise ParseError ("no type system with name " ^ n)
+    List.find (fn x => #name x = n) (typeSystemsDataOf DC)
 
   fun findConSpecWithName DC n =
-    valOf (List.find (fn x => #name x = n) (conSpecsDataOf DC))
-    handle Option => raise ParseError ("no constructor specification with name " ^ n)
+    List.find (fn x => #name x = n) (conSpecsDataOf DC)
 
   fun findConstructionWithName DC n =
-    valOf (FiniteSet.find (fn x => #name x = n) (constructionsDataOf DC))
-    handle Option => raise ParseError ("no construction with name " ^ n)
+    FiniteSet.find (fn x => #name x = n) (constructionsDataOf DC)
 
   fun findTransferSchemaWithName DC n =
-    valOf (Knowledge.findTransferSchemaWithName (knowledgeOf DC) n)
+    Knowledge.findTransferSchemaWithName (knowledgeOf DC) n
+
+  fun findInferenceSchemaWithName DC n =
+    Knowledge.findInferenceSchemaWithName (knowledgeOf DC) n
+
+  fun getTypeSystemDataWithName DC n =
+    valOf (findTypeSystemDataWithName DC n)
+    handle Option => raise ParseError ("no type system with name " ^ n)
+
+  fun getConSpecWithName DC n =
+    valOf (findConSpecWithName DC n)
+    handle Option => raise ParseError ("no constructor specification with name " ^ n)
+
+  fun getConstructionWithName DC n =
+    valOf (findConstructionWithName DC n)
+    handle Option => raise ParseError ("no construction with name " ^ n)
+
+  fun getTransferSchemaWithName DC n =
+    valOf (findTransferSchemaWithName DC n)
     handle Option => raise ParseError ("no tSchema with name " ^ n)
+
 
   fun inequality s =
     (case String.breakOn "<" s of
@@ -328,8 +348,7 @@ struct
   fun addTypeSystem (N, tss) dc =
   let val name = case N of [x] => x | _ => raise ParseError ("invalid name for type system : " ^ String.concat N)
       val _ = print ("\nAdding type system " ^ name ^ "...");
-      val _ = (findTypeSystemDataWithName dc name;Logging.write ("\nWARNING: type systems have same name. Overwriting!\n"))
-                handle ParseError => ()
+      val _ = case findTypeSystemDataWithName dc name of NONE => () | SOME _ => raise ParseError ("\nWARNING: type systems have same name. Overwriting!\n")
       val blocks = gatherMaterialByKeywords typeKeywords tss
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
@@ -348,10 +367,10 @@ struct
                                     (s1," as ",s2) => (String.stripSpaces s1,String.stripSpaces s2)
                                   | _ => raise ParseError ("no type mapping: expected syntax \"with t1 as t2\" in "^s))
                   val mapPairs = Parser.splitLevelWithSepFunApply getMap (fn x => x = #";") (String.explode mapString)
-                  val TS = findTypeSystemDataWithName dc (String.stripSpaces tsName)
+                  val TS = getTypeSystemDataWithName dc (String.stripSpaces tsName)
               in foldl (uncurry renameTypeInTypeSystemData) TS mapPairs
               end
-          | (tsName,_,_) => findTypeSystemDataWithName dc (String.stripSpaces tsName))
+          | (tsName,_,_) => getTypeSystemDataWithName dc (String.stripSpaces tsName))
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME typeImportsKW
@@ -385,8 +404,7 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc,
-      strengths = #strengths dc}
+      transferRequests = #transferRequests dc}
   end
 
   fun parseConstructor s =
@@ -402,6 +420,7 @@ struct
   fun addConSpec (R, tss) dc =
   let val r = case R of [x] => x | _ => raise ParseError ("invalid name or type system for constructor specification : " ^ String.concat R)
       val (name,x,typeSystemN) = String.breakOn ":" r
+      val _ = case findConSpecWithName dc name of NONE => () | SOME _ => raise ParseError ("duplicated constructor specification: " ^ name)
       (*val _ = if x = ":" then () else raise ParseError "no type system specified for conSpec"*)
       val _ = Logging.write ("\nAdding constructors for constructor specification " ^ name ^ " of type system " ^ typeSystemN ^ "...\n")
 
@@ -409,7 +428,7 @@ struct
       fun getImports [] = []
         | getImports ((x,c)::L) =
             if x = SOME conSpecImportsKW
-            then map (findConSpecWithName dc) (String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c)))
+            then map (getConSpecWithName dc) (String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c)))
             else getImports L
       fun getConstructors [] = []
         | getConstructors ((x,c)::L) =
@@ -430,7 +449,7 @@ struct
       val crs = map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") chars)*)
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
       val cspec = {name = name,
-                   typeSystemData = findTypeSystemDataWithName dc typeSystemN,
+                   typeSystemData = getTypeSystemDataWithName dc typeSystemN,
                    constructors = allConstructors}
       val updatedConSpec =
         case CSpace.wellDefinedConSpec cspec of
@@ -445,12 +464,11 @@ struct
               else ()
       val _ = Logging.write "...done\n"
 
-  in {typeSystemsData = updatedTSD :: List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc),
-      conSpecsData = updatedConSpec :: #conSpecsData dc,
+  in {typeSystemsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedTSD] (List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc)),
+      conSpecsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedConSpec] (#conSpecsData dc),
       knowledge = Knowledge.addConSpecImports (#knowledge dc) (name,importedConSpecNames),
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc,
-      strengths = #strengths dc}
+      transferRequests = #transferRequests dc}
   end
 
   fun addInferenceSchema (N,cs) dc =
@@ -459,9 +477,14 @@ struct
       val _ = if x = ":" then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (contextConSpecN,y,idConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
-      val contextConSpec = findConSpecWithName dc contextConSpecN
+      val _ = case findInferenceSchemaWithName dc name of
+                SOME knownSchema => if (#name knownSchema) = name andalso (#idConSpecN knownSchema) = idConSpecN
+                                    then raise ParseError ("duplciated name for tSchema " ^ name ^ " in space " ^ idConSpecN)
+                                    else ()
+              | NONE => ()
+      val contextConSpec = getConSpecWithName dc contextConSpecN
       val contextTySys = #typeSystem (#typeSystemData contextConSpec)
-      val idConSpec = findConSpecWithName dc idConSpecN
+      val idConSpec = getConSpecWithName dc idConSpecN
       val idTySys = #typeSystem (#typeSystemData idConSpec)
       val _ = Logging.write ("\nAdding inference schema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
@@ -493,6 +516,7 @@ struct
       val context = getPattern contextKW blocks
       val antecedent = getAntecedent blocks
       val consequent = getConsequent blocks
+      val strengthVal = getStrength blocks
       val _ = if Construction.wellFormed idConSpec context
               then Logging.write "\n  context pattern is well formed"
               else Logging.write "\n  WARNING: context pattern is not well formed"
@@ -508,17 +532,14 @@ struct
       val ischData = {name = name,
                       contextConSpecN = contextConSpecN,
                       idConSpecN = idConSpecN,
+                      strength = strengthVal,
                       iSchema = isch}
-      val strengthVal = getStrength blocks
-      fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (valOf (strengthsUpd (#name c')), valOf (strengthsUpd (#name c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal ff,
+      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc,
-      strengths = strengthsUpd}
+      transferRequests = #transferRequests dc}
   end
 
   fun addTransferSchema (N,cs) dc =
@@ -529,11 +550,16 @@ struct
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (targetConSpecN,y,interConSpecN) = String.breakOn "," (String.removeParentheses targetInterConSpecN)
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
-      val sourceConSpec = findConSpecWithName dc sourceConSpecN
+      val _ = case findTransferSchemaWithName dc name of
+                SOME knownSchema => if (#name knownSchema) = name andalso (#interConSpecN knownSchema) = interConSpecN
+                                    then raise ParseError ("duplciated name for tSchema " ^ name ^ " in space " ^ interConSpecN)
+                                    else ()
+              | NONE => ()
+      val sourceConSpec = getConSpecWithName dc sourceConSpecN
       val sourceTySys = #typeSystem (#typeSystemData sourceConSpec)
-      val targetConSpec = findConSpecWithName dc targetConSpecN
+      val targetConSpec = getConSpecWithName dc targetConSpecN
       val targetTySys = #typeSystem (#typeSystemData targetConSpec)
-      val interConSpec = findConSpecWithName dc interConSpecN
+      val interConSpec = getConSpecWithName dc interConSpecN
       val interTySys = #typeSystem (#typeSystemData interConSpec)
       val _ = Logging.write ("\nAdding transfer schema " ^ name ^ "...")
       fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
@@ -584,36 +610,36 @@ struct
                   target = target,
                   antecedent = antecedent,
                   consequent = consequent}
+      val strengthVal = getStrength blocks
       val tschData = {name = name,
                       sourceConSpecN = sourceConSpecN,
                       targetConSpecN = targetConSpecN,
                       interConSpecN = interConSpecN,
+                      strength = strengthVal,
                       tSchema = tsch}
-      val strengthVal = getStrength blocks
-      fun strengthsUpd c = if c = name then SOME strengthVal else (#strengths dc) c
       val _ = Logging.write ("done\n");
-      fun ff (c,c') = Real.compare (valOf (strengthsUpd (InterCSpace.nameOf c')), valOf (strengthsUpd (InterCSpace.nameOf c)))
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal ff,
+      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc,
-      strengths = strengthsUpd}
+      transferRequests = #transferRequests dc}
   end
 
   fun insertConstruction ctRecord DC =
        {typeSystemsData = #typeSystemsData DC,
         conSpecsData = #conSpecsData DC,
         knowledge = #knowledge DC,
-        constructionsData = ctRecord :: (#constructionsData DC),
-        transferRequests = #transferRequests DC,
-        strengths = #strengths DC}
+        constructionsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [ctRecord] (#constructionsData DC),
+        transferRequests = #transferRequests DC}
 
   fun addConstruction (N, bs) dc =
   let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for construction " ^ String.concat N)
       val (name,x,cspecN) = String.breakOn ":" nn
       val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
-      val cspec = findConSpecWithName dc cspecN
+      val _ = case findConstructionWithName dc name of
+                SOME knownSchema => raise ParseError ("duplciated name for construction: " ^ name)
+              | NONE => ()
+      val cspec = getConSpecWithName dc cspecN
       val ct = case removeOuterBrackets bs of
                   "liftString" :: ctL => Lift.string (deTokenise ctL)
                 | ctL => parseConstruction cspec (deTokenise ctL)
@@ -635,8 +661,7 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc @ [ws],
-      strengths = #strengths dc}
+      transferRequests = #transferRequests dc @ [ws]}
 
   exception BadGoal
   fun processTransferRequests ws DC =
@@ -647,24 +672,24 @@ struct
       fun getConstruction [] = raise ParseError "no construction to transfer"
         | getConstruction ((x,c)::L) =
             if x = SOME sourceConstructionKW
-            then findConstructionWithName DC (String.concat (removeOuterBrackets c))
+            then getConstructionWithName DC (String.concat (removeOuterBrackets c))
             else getConstruction L
 
       val constructionRecord = getConstruction C
       val construction = #construction constructionRecord
       val sourceConSpecN = #conSpecN constructionRecord
-      val sourceConSpecData = findConSpecWithName DC sourceConSpecN
+      val sourceConSpecData = getConSpecWithName DC sourceConSpecN
       val sourceTypeSystem = #typeSystem (#typeSystemData sourceConSpecData)
 
       fun getTargetConSpec [] = sourceConSpecData
         | getTargetConSpec ((x,c)::L) =
             if x = SOME targetConSpecKW
-            then findConSpecWithName DC (String.concat (removeOuterBrackets c))
+            then getConSpecWithName DC (String.concat (removeOuterBrackets c))
             else getTargetConSpec L
       fun getInterConSpec [] = raise ParseError "no inter-space specified"
         | getInterConSpec ((x,c)::L) =
             if x = SOME interConSpecKW
-            then findConSpecWithName DC (String.concat (removeOuterBrackets c))
+            then getConSpecWithName DC (String.concat (removeOuterBrackets c))
             else getInterConSpec L
             (*)
       fun getTargetTySys [] = sourceTypeSystem
@@ -766,7 +791,7 @@ struct
                          then "NO\\ OPEN\\ GOALS!"
                          else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goals)
             val originalGoalS = Latex.construction (0.0,0.0) goal ^ "\\\\ \n"
-            val IS = Heuristic.scoreMain (strengthsOf DC) res
+            val IS = Heuristic.scoreMain res
             val alignedGoals = "\n " ^ ("\\textbf{Original\\ goal}\\\\\n"
                                                                       ^ originalGoalS
                                                                       ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
@@ -811,10 +836,9 @@ struct
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
-      (*fun readTSchemaStrengths c = (strengthsOf DC) (CSpace.nameOfConstructor c)*)
       val (score,ngoals,constructionsToSave) =
             case Seq.pull results of
-              SOME (x,_) => (Heuristic.scoreMain (strengthsOf DC) x,
+              SOME (x,_) => (Heuristic.scoreMain x,
                              length (#goals x),
                              List.maps Composition.resultingConstructions (State.patternCompsOf x))
             | NONE => (0.0,~1,[])
@@ -847,25 +871,26 @@ struct
   in updDC
   end
 
+  fun tsdCmp (T,T') = String.compare (#name T, #name T')
+  fun csdCmp (C,C') = String.compare (#name C, #name C')
+  fun ctCmp (c,c') = String.compare (#name c, #name c')
+
   fun joinDocumentContents ({typeSystemsData = ts,
                              conSpecsData = sp,
                              knowledge = kb,
                              constructionsData = cs,
-                             transferRequests = tr,
-                             strengths = st} :: L) =
+                             transferRequests = tr} :: L) =
     (case joinDocumentContents L of
       {typeSystemsData = ts',
        conSpecsData = sp',
        knowledge = kb',
        constructionsData = cs',
-       transferRequests = tr',
-       strengths = st'} =>
-          {typeSystemsData = ts @ ts',
-           conSpecsData = sp @ sp',
+       transferRequests = tr'} =>
+          {typeSystemsData = List.mergeNoEQUAL tsdCmp ts ts',
+           conSpecsData = List.mergeNoEQUAL csdCmp sp sp',
            knowledge = Knowledge.join kb kb',
-           constructionsData = cs @ cs',
-           transferRequests = tr @ tr',
-           strengths = (fn c => case st c of SOME f => SOME f | NONE => st' c)})
+           constructionsData = List.mergeNoEQUAL ctCmp cs cs',
+           transferRequests = tr @ tr'})
   | joinDocumentContents [] = emptyDocContent
 
 
