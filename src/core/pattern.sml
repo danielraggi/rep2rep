@@ -386,32 +386,46 @@ struct
   (* *)
   fun findEmbedding T ct ct' = findEmbeddingUpTo T FiniteSet.empty ct ct'
 
-  fun applyConsVarInstantiation f (TCPair(tc,cs)) =
-      (case f (#constructor tc) of
-          SOME ct => (print ("mapping " ^ CSpace.nameOfConstructor (#constructor tc) ^ " to " ^ (Construction.toString ct) ^ "\n\n"); ct)
-        | NONE => TCPair(tc,map (applyConsVarInstantiation f) cs))
+  fun applyConsVarInstantiation f (TCPair({token,constructor},[])) =
+    (case f constructor of
+        SOME ct => replaceConstruct ct token
+      | NONE => raise IllDefined)
+    | applyConsVarInstantiation f (TCPair(tc,cs)) =
+        TCPair(tc,map (applyConsVarInstantiation f) cs)
     | applyConsVarInstantiation f ct = ct
 
-  fun renameConstruction (Source t) =
+  fun renameTokens (Source t) =
       let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken t) (CSpace.typeOfToken t)
       in (fn x => if CSpace.sameTokens x t then SOME renamedToken else NONE,
           fn x => if CSpace.sameTokens x renamedToken then SOME t else NONE,
           Source renamedToken)
       end
-    | renameConstruction (Reference t) =
+    | renameTokens (Reference t) =
       let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken t) (CSpace.typeOfToken t)
       in (fn x => if CSpace.sameTokens x t then SOME renamedToken else NONE,
           fn x => if CSpace.sameTokens x renamedToken then SOME t else NONE,
           Reference renamedToken)
       end
-    | renameConstruction (TCPair ({constructor,token},inputs)) =
+    | renameTokens (TCPair ({constructor,token},inputs)) =
       let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken token) (CSpace.typeOfToken token)
           val (nodeFun1,nodeFun2) = (fn x => if CSpace.sameTokens x token then SOME renamedToken else NONE,
                                      fn x => if CSpace.sameTokens x renamedToken then SOME token else NONE)
-          val (renameFunctions1,renameFunctions2,renamedInputs) = unzip3 (map renameConstruction inputs)
+          val (renameFunctions1,renameFunctions2,renamedInputs) = unzip3 (map renameTokens inputs)
       in (funUnion CSpace.sameTokens (nodeFun1 :: renameFunctions1),
           funUnion CSpace.sameTokens (nodeFun2 :: renameFunctions2),
           TCPair ({constructor = constructor,token = renamedToken},renamedInputs))
+      end
+
+  fun renameTokensFixingConstruct (Source t) t' =
+        (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
+         fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+         Source t')
+    | renameTokensFixingConstruct (Reference t) _ = raise IllDefined
+    | renameTokensFixingConstruct (TCPair ({constructor,...},inputs)) t' =
+      let val (renameFunctions1,renameFunctions2,renamedInputs) = unzip3 (map renameTokens inputs)
+      in (funUnion CSpace.sameTokens renameFunctions1,
+          funUnion CSpace.sameTokens renameFunctions2,
+          TCPair ({token = t', constructor = constructor},renamedInputs))
       end
 
   (* returns the maps between ct' and a generator of ct that matches ct' (if it exists) *)
@@ -428,23 +442,13 @@ struct
                   fn x => if CSpace.sameTokens x t' then SOME t else NONE,
                   fn _ => NONE)
             else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
-        | mpg (tcp as TCPair ({token = t, constructor = c},cs))
-              (tcp' as TCPair ({token = t', constructor = c'},[])) =
-            if tokenMatches T t t' andalso isConsVar c'
-            then (#2(renameConstruction tcp),
-                  #3(renameConstruction tcp),
-                  fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
-                           then SOME (#1(renameConstruction tcp))
-                           else NONE)
-            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
-        | mpg (Source t)
-              (tcp' as TCPair ({token = t', constructor = c'},[])) =
-            if tokenMatches T t t' andalso isConsVar c'
-            then let val (f1,f2,rct) = renameConstruction (Source t)
-                 in (fn x => if CSpace.sameTokens t x then SOME t' else NONE,
-                     fn x => if CSpace.sameTokens t' x then SOME t else NONE),
+        | mpg tcp (TCPair ({token = t', constructor = c'},[])) =
+            if tokenMatches T (Construction.constructOf tcp) t' andalso isConsVar c'
+            then let val (_,_,rct) = renameTokensFixingConstruct tcp t'
+                     val (f1,f2,_) = mpg tcp rct
+                 in (f1, f2,
                      fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
-                              then SOME (#1(renameConstruction (Source t)))
+                              then SOME rct
                               else NONE)
                  end
             else (fn _ => NONE,fn _ => NONE,fn _ => NONE)

@@ -4,12 +4,12 @@ import metaLogic
 import transferSchemas/arithArith
 
 typeSystem interBayesTreeT =
-    imports bayes, probTree, metaLogicT, interArithArithT, interEventEventT
+    imports bayes, probTree, metaLogicT, interArithArithT
     types
     order
 
 conSpec interBayesTree:interBayesTreeT =
-    imports probTreeG, bayesG, interArithArith, interEventEvent
+    imports probTreeG, bayesG, interArithArith
     constructors
         match : [events,label] -> metaBool,
         encode : [probSys,tree] -> metaBool
@@ -22,9 +22,9 @@ tSchema eventV:(bayesG,probTreeG,interBayesTree) =
     strength -1
 
 tSchema eventMatchSame:(bayesG,probTreeG,interBayesTree) =
-    source t:event <- makeEvent[t1:string]
-    target t':event <- makeEvent[t1':string]
-    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+    source t:event <- makeEvent[t1:string <- ?v]
+    target t':event <- makeEvent[t1':string <- ?v]
+    antecedent
     consequent :metaTrue <- match[t:event,t':event]
     strength 1
 
@@ -33,7 +33,7 @@ tSchema notEvent:(bayesG,probTreeG,interBayesTree) =
     target t':label <- notLabel[t1':label]
     antecedent :metaTrue <- match[t1:event,t1':label]
     consequent :metaTrue <- match[t:event,t':label]
-    strength 1
+    strength 2
 
 tSchema equationTree:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- makeEqn[t1:event,t2:numExp]
@@ -41,7 +41,7 @@ tSchema equationTree:(bayesG,probTreeG,interBayesTree) =
     antecedent :metaTrue <- match[t1:event,t1':label],
                :metaTrue <- equal[t2:numExp,t2':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
-    strength 1
+    strength 2
 
 tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
@@ -53,7 +53,7 @@ tSchema makeCond:(bayesG,probTreeG,interBayesTree) =
                :metaTrue <- match[t11:event,t2':label],
                :metaTrue <- equal[t2:numExp,t3':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
-    strength 4
+    strength 8
 
 tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
     source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
@@ -65,7 +65,7 @@ tSchema makeInter:(bayesG,probTreeG,interBayesTree) =
                :metaTrue <- match[t13:event,t2':label],
                :metaTrue <- equal[t2:numExp,t31':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':tree]
-    strength 2
+    strength 4
 
 tSchema resolveTree:(bayesG,probTreeG,interBayesTree) =
     source t:probSys <- addEqn[t1:probEqn,t2:probSys]
