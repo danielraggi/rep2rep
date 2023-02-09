@@ -354,43 +354,6 @@ struct
     end handle IllDefined => false
 
 
-(*)
-  (* if there exists an embedding ct -> ct' up to a set of tokens tks of ct,
-     findEmbeddingMinimisingTypeUpTo yields maps f1, f2 and pattern g where:
-        1. f: ct -> g
-        2. f': ct' -> g
-        3. g is isomorphic to ct and ct', with the token names of ct' but the
-            smaller type of either ct or ct' in pair of corresponding tokens.
-            (The smaller types will come from ct, except when they live in tks,
-            in which case they may come from either ct or ct'.)
-     otherwise it yields NONEs *)
-  fun findEmbeddingMinimisingTypeUpTo T tks ct ct'  =
-  let fun tMaps t t' =
-        if tokenMatches T t t' then
-            let val nt = CSpace.makeToken (CSpace.nameOfToken t') (CSpace.typeOfToken t)
-            in (fn x => if CSpace.sameTokens x t then SOME nt else NONE,
-                fn x => if CSpace.sameTokens x t' then SOME nt else NONE)
-            end
-        else if FiniteSet.elementOf t tks then
-            (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-             fn x => if CSpace.sameTokens x t' then SOME t' else NONE)
-        else raise IllDefined
-      fun fm (Source t) (Source t') = tMaps t t'
-        | fm (Reference t) (Reference t') = tMaps t t'
-        | fm (TCPair ({token = t, constructor = c},cs))
-             (TCPair ({token = t', constructor = c'},cs')) =
-            if CSpace.sameConstructors c c' then
-                let val (tMap, tMap') = tMaps t t'
-                    val (CHMaps,CHMaps',v) = unzip3 (List.funZip fm cs cs')
-                in (funUnion (tMap :: CHMaps),funUnion (tMap' :: CHMaps'))
-                end
-            else raise IllDefined
-        | fm _ _ = raise IllDefined
-    val (f,f') = fm ct ct'
-    val g = applyMorphism f ct
-  in (f, f', SOME g)
-  end handle IllDefined => (fn _ => NONE,fn _ => NONE,NONE)*)
-
   (* *)
   fun findEmbeddingUpToConditionally T tokens cond ct ct' =
   let fun fm (Source t) (Source t') =
@@ -429,6 +392,28 @@ struct
         | NONE => TCPair(tc,map (applyConsVarInstantiation f) cs))
     | applyConsVarInstantiation f ct = ct
 
+  fun renameConstruction (Source t) =
+      let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken t) (CSpace.typeOfToken t)
+      in (fn x => if CSpace.sameTokens x t then SOME renamedToken else NONE,
+          fn x => if CSpace.sameTokens x renamedToken then SOME t else NONE,
+          Source renamedToken)
+      end
+    | renameConstruction (Reference t) =
+      let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken t) (CSpace.typeOfToken t)
+      in (fn x => if CSpace.sameTokens x t then SOME renamedToken else NONE,
+          fn x => if CSpace.sameTokens x renamedToken then SOME t else NONE,
+          Reference renamedToken)
+      end
+    | renameConstruction (TCPair ({constructor,token},inputs)) =
+      let val renamedToken = CSpace.makeToken ("__" ^ CSpace.nameOfToken token) (CSpace.typeOfToken token)
+          val (nodeFun1,nodeFun2) = (fn x => if CSpace.sameTokens x token then SOME renamedToken else NONE,
+                                     fn x => if CSpace.sameTokens x renamedToken then SOME token else NONE)
+          val (renameFunctions1,renameFunctions2,renamedInputs) = unzip3 (map renameConstruction inputs)
+      in (funUnion CSpace.sameTokens (nodeFun1 :: renameFunctions1),
+          funUnion CSpace.sameTokens (nodeFun2 :: renameFunctions2),
+          TCPair ({constructor = constructor,token = renamedToken},renamedInputs))
+      end
+
   (* returns the maps between ct' and a generator of ct that matches ct' (if it exists) *)
   fun findEmbeddingOfGenerator T contextCT ct ct' =
   let fun mpg (Source t) (Source t') =
@@ -445,29 +430,31 @@ struct
             else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (tcp as TCPair ({token = t, constructor = c},cs))
               (tcp' as TCPair ({token = t', constructor = c'},[])) =
-            (if tokenMatches T t t' andalso isConsVar c'
-            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
+            if tokenMatches T t t' andalso isConsVar c'
+            then (#2(renameConstruction tcp),
+                  #3(renameConstruction tcp),
                   fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
-                           then SOME (TCPair ({token = t', constructor = c},cs))
+                           then SOME (#1(renameConstruction tcp))
                            else NONE)
-            else (fn _ => NONE,fn _ => NONE,fn _ => NONE))
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (Source t)
               (tcp' as TCPair ({token = t', constructor = c'},[])) =
-            (print ("em:  "^Construction.toString (Source t) ^ "\n" ^ Construction.toString tcp'^ "\n\n");if tokenMatches T t t' andalso isConsVar c'
-            then (fn x => if CSpace.sameTokens x t then SOME t' else NONE,
-                  fn x => if CSpace.sameTokens x t' then SOME t else NONE,
-                  fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
-                           then SOME (Source t)
-                           else NONE)
-            else (fn _ => NONE,fn _ => NONE,fn _ => NONE))
+            if tokenMatches T t t' andalso isConsVar c'
+            then let val (f1,f2,rct) = renameConstruction (Source t)
+                 in (fn x => if CSpace.sameTokens t x then SOME t' else NONE,
+                     fn x => if CSpace.sameTokens t' x then SOME t else NONE),
+                     fn cv => if CSpace.nameOfConstructor cv = CSpace.nameOfConstructor c'
+                              then SOME (#1(renameConstruction (Source t)))
+                              else NONE)
+                 end
+            else (fn _ => NONE,fn _ => NONE,fn _ => NONE)
         | mpg (TCPair ({token = t, constructor = c},cs))
               (TCPair ({token = t', constructor = c'},cs')) =
             if CSpace.sameConstructors c c' andalso tokenMatches T t t'
             then
               let val (CHfunctions1,CHfunctions2,consVarFuns) = unzip3 (List.funZip mpg cs cs')
-                       fun nodeFunction1 x = if CSpace.sameTokens x t then SOME t' else NONE
-                       fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME t else NONE
+                  fun nodeFunction1 x = if CSpace.sameTokens x t then SOME t' else NONE
+                  fun nodeFunction2 x = if CSpace.sameTokens x t' then SOME t else NONE
               in (funUnion CSpace.sameTokens (nodeFunction1 :: CHfunctions1),
                   funUnion CSpace.sameTokens (nodeFunction2 :: CHfunctions2),
                   funUnion same consVarFuns)
@@ -486,12 +473,7 @@ struct
         | mpg _ _ = (fn _ => NONE,fn _ => NONE,fn _ => NONE)
       val (f1,f2,cf) = mpg ct ct'
       val gt' = applyConsVarInstantiation cf ct'
-      val gt = applyPartialMorphism f2 gt'
-      val _ = print ("this\n")
-      val _ = print (Construction.toString ct ^ "\n")
-      val _ = print (Construction.toString ct' ^ "\n")
-      val _ = print (Construction.toString gt' ^ "\n")
-      val _ = print (Construction.toString gt ^ "\n\n")
+      val gt = applyMorphism f2 gt'
 
   in (f1, f2, cf, SOME gt)
   end handle IllDefined => (fn _ => NONE,fn _ => NONE,fn _ => NONE,NONE)

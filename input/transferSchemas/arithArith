@@ -12,11 +12,11 @@ conSpec interArithArith:interArithArithT =
         equal : [numExp,numExp] -> metaBool
 
 tSchema equalNumeral:(arithG,arithG,interArithArith) =
-    source t:?v:real10
-    target t':?v:real10
+    source t:real10 <- ?v
+    target t':real10 <- ?v
     antecedent
-    consequent :metaTrue <-equal[t:?v:real10,t':?v:real10]
-    strength 1
+    consequent :metaTrue <-equal[t:real10,t':real10]
+    strength 3
 
 tSchema equalReal:(arithG,arithG,interArithArith) =
     source t:real10 <- makeReal[t1:nat10, t2:nat10]
@@ -32,7 +32,7 @@ tSchema equalNat:(arithG,arithG,interArithArith) =
     antecedent :metaTrue <-equal[t1:digit,t1':digit],
                :metaTrue <-equal[t2:nat10,t2':nat10]
     consequent :metaTrue <-equal[t:nat10,t':nat10]
-    strength 1
+    strength 2
 
 tSchema equalDigit1:(arithG,arithG,interArithArith) =
     source t:1
