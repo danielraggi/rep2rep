@@ -3,6 +3,8 @@ import "util.set";
 signature TYPE =
 sig
   type typ
+  val compare : typ * typ -> order;
+
   type principalType = {typ : typ, subTypeable : bool}
   type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool}
   type typeSystemData = {name : string,
@@ -43,6 +45,9 @@ sig
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
 
+  val subTypes : typeSystem -> typ -> typ Set.set
+  val superTypes : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set} -> typ -> typ FiniteSet.set
+
   datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ
   val subTypeDAG : typeSystemData -> typ -> typeDAG
   val superTypeDAG : typeSystemData -> typ -> typeDAG
@@ -60,11 +65,16 @@ sig
                                 -> typ
                                 -> typ
                                 -> typ * {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set}
+
+  structure TypeDictionary : DICTIONARY
+  structure TypeSet : ISET
 end;
 
 structure Type : TYPE =
 struct
   type typ = string;
+  val compare = String.compare;
+
   type principalType = {typ : typ, subTypeable : bool}
   type typeSystem = {Ty : typ Set.set, subType : typ * typ -> bool};
   type finiteTypeSystem = {name : string, Ty : typ FiniteSet.set, subType : typ * typ -> bool};
@@ -177,15 +187,11 @@ struct
     (case String.breakOn ":" s of (_,":",y) => Set.elementOf y Ty | _ => false)
 
   (* assumes subType is an order for the principal types and extends it to
-    the ones hanging from subtypeable *)
+    the ones dangling from subtypeable *)
   fun fixForSubtypeable Tys subType (x,y) =
-  let
-    fun subTypeOf_y_FromWhich_x_Hangs w =
-      subType (w, y) andalso
-      String.isSuffix (":" ^ w) x
-  in
-    subType (x,y) orelse
-    FiniteSet.exists subTypeOf_y_FromWhich_x_Hangs Tys
+  let fun subTypeOf_y_FromWhich_x_dangles w =
+        String.isSuffix (":" ^ w) x andalso subType (w, y)
+  in subType (x,y) orelse FiniteSet.exists subTypeOf_y_FromWhich_x_dangles Tys
   end
 
   fun insertPrincipalType pt P =
@@ -195,7 +201,7 @@ struct
       if FiniteSet.exists (fn x => #typ x = #typ pt) P then P
       else FiniteSet.insert pt P
 
-  fun superTypes {typeSystem,principalTypes,...} ty =
+  fun superTypes {typeSystem,principalTypes} ty =
     let val {Ty,subType} = typeSystem
         val candidateTys =
              if isDanglyType (#Ty typeSystem) ty
@@ -337,4 +343,19 @@ struct
               else principalTypes
     in (lcspt,{typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes})
     end
+
+
+
+    structure TypeDictionary = Dictionary(struct
+                                            type k = typ;
+                                            val compare = compare;
+                                            val toString = nameOfType;
+                                          end);
+
+    structure TypeSet = FiniteSet(struct
+                                    type t = typ;
+                                    val compare = compare;
+                                    val toString = nameOfType;
+                                  end)
+
 end;

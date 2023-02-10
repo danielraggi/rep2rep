@@ -37,7 +37,6 @@ typeSystem charRichT =
           semicolon < nonB, semicolon < nonMid, semicolon < nonSpace,
           mid < nonB, mid < nonSpace, mid < nonSemicolon
 
-typeSystem stringRichT =
-    imports charRichT, stringT
+typeSystem stringRichT = imports charRichT, stringT
 
 conSpec stringRich:stringRichT = imports string
