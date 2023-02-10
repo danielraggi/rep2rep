@@ -10,6 +10,7 @@ sig
   val singleStepTransfer : State.T -> State.T Seq.seq
 
   val structureTransfer : int option * int option * int option -> bool -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
+  val quickTransfer : int option * int option * int option -> bool -> Pattern.pattern option -> State.T -> State.T Seq.seq
 (*)
   val iterativeStructureTransfer : bool -> Pattern.pattern option
                                         -> State.T -> State.T Seq.seq*)
@@ -351,6 +352,9 @@ struct
       (*Search.bestFirstIgnoreForget transferElseInfer h ign forget state*)
       Search.bestFirstAll transferElseInfer h ign forget stop state
 
+  fun quickTransferTac ign forget stop state =
+      Search.depthFirstIgnore transferElseInfer ign stop state
+
   exception Nope
 
   fun constructionOfComp st =
@@ -367,20 +371,39 @@ struct
 
 fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructured targetPattOption st =
   let val maxNumGoals = case goalLimit of SOME x => x | NONE => 15
-      val maxCompSize = case compositionLimit of SOME x => x | NONE => 300
-      val maxNumResults = case searchLimit of SOME x => x | NONE => 1000
+      val maxCompSize = case compositionLimit of SOME x => x | NONE => 400
+      val maxNumResults = case searchLimit of SOME x => x | NONE => 2000
       val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
       val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
       fun ignPT (x,L) = case targetPattOption of
                       SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
                     | NONE => ignT (x,L)
       fun fgtPT (x,L) = case targetPattOption of
-                      SOME tpt => not (matchesTarget targetTypeSystem tpt x) orelse Heuristic.forgetRelaxed (x,L)
-                    | NONE => Heuristic.forgetRelaxed (x,L)
+                      SOME tpt => not (matchesTarget targetTypeSystem tpt x) (*orelse
+                                  Heuristic.forgetRelaxed (x,L)*)
+                    | NONE => false (*Heuristic.forgetRelaxed (x,L)*)
       val stop = if eager then (fn x => null (State.goalsOf x)) else (fn _ => false)
       val tac = structureTransferTac Heuristic.transferProofMain ignPT fgtPT stop
   in tac st
   end
+
+  fun quickTransfer (goalLimit,compositionLimit,searchLimit) unistructured targetPattOption st =
+    let val maxNumGoals = case goalLimit of SOME x => x | NONE => 15
+        val maxCompSize = case compositionLimit of SOME x => x | NONE => 200
+        val maxNumResults = case searchLimit of SOME x => x | NONE => 1000
+        val ignT = Heuristic.ignore maxNumGoals maxNumResults maxCompSize unistructured
+        val targetTypeSystem = #typeSystem (State.targetTypeSystemOf st)
+        fun ignPT (x,L) = case targetPattOption of
+                        SOME tpt => not (withinTarget targetTypeSystem tpt x) orelse ignT (x,L)
+                      | NONE => ignT (x,L)
+        fun fgtPT (x,L) = case targetPattOption of
+                        SOME tpt => not (matchesTarget targetTypeSystem tpt x) (*orelse
+                                    Heuristic.forgetRelaxed (x,L)*)
+                      | NONE => false (*Heuristic.forgetRelaxed (x,L)*)
+        val stop = (fn x => null (State.goalsOf x))
+        val tac = quickTransferTac ignPT fgtPT stop
+    in tac st
+    end
 
   fun v2t t =
     let val tok = CSpace.nameOfToken t
@@ -391,40 +414,8 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructur
     end
 
 (*
-  fun iterativeStructureTransfer unistructured targetPatternOption initialState =
-    let
-      fun updateState (C as {composition,goals,...}) =
-        let val newConstruction = (case Composition.resultingConstructions composition of
-                                      [c] => Pattern.applyMorphism v2t c
-                                    | _ => raise Nope)
-            val newConstruct = Construction.constructOf newConstruction
-            val newGoal = Relation.makeRelationship ([newConstruct],y,R)
-            val _ = if length goals > 0 then raise Nope else ()
-        in State.make {sourceConSpecData = #sourceConSpecData initialState,
-                      targetConSpecData = #targetConSpecData initialState,
-                      interConSpecData = #interConSpecData initialState,
-                      transferProof = TransferProof.ofPattern newGoal,
-                      construction = newConstruction,
-                      originalGoal = newGoal,
-                      goals = [newGoal],
-                      compositions = [Composition.makePlaceholderComposition newConstruct],
-                      knowledge = KB} handle Nope => (print "nope!\n";C)
-        end
-      fun ign (st,L) = List.exists (fn x => Heuristic.similarGoalsAndComps (x, st)) L
-      val ignST = Heuristic.ignore 15 1999 45 unistructured
-      fun forget (st,L) = (case targetPatternOption of
-                              SOME targetPattern => not (matchesTarget typeSystem targetPattern st)
-                            | NONE => false)
-      fun forgetST (st,L) = Heuristic.forgetStrict (st,L)
-      fun orderResults s =
-        case Seq.pull s of
-          SOME (x,xq) => Seq.insertManyNoRepetition x (orderResults xq) Heuristic.transferProofMultStrengths Heuristic.similarGoalsAndComps
-        | NONE => Seq.empty
-      val ST = Seq.take 10 o (structureTransferTac Heuristic.transferProofMultStrengths ignST forgetST)
-      val results = Seq.map (Search.bestFirstSortIgnoreForget (ST o updateState) Heuristic.transferProofMultStrengths ign forget) (ST initialState)
-    in orderResults results
-    end*)
-
+   TODO : recoding an iterative structure transfer would be nice
+*)
 
   fun masterTransfer limits eager iterative unistructured targetPattOption st =
     structureTransfer limits eager unistructured targetPattOption st
@@ -448,7 +439,7 @@ fun structureTransfer (goalLimit,compositionLimit,searchLimit) eager unistructur
 
   fun applyTransfer sCSD tCSD iCSD KB ct goal =
       let val st = initState sCSD tCSD iCSD false KB ct goal
-          val stateSeq = structureTransfer (SOME 5,NONE,NONE) true false NONE st;
+          val stateSeq = structureTransfer (SOME 6,NONE,NONE) true false NONE st;
           fun getStructureGraph st =
               List.flatmap Composition.resultingConstructions (State.patternCompsOf st);
           fun makeDiagnostic goal =

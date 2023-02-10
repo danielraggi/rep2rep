@@ -60,7 +60,7 @@ tSchema treeify:(stringRich,btree,interStringBTree) =
     target t':btree
     antecedent :metaTrue <- LEVEL0[t:string,t':btree]
     consequent :metaTrue <- TREEIFY[t:string,t':btree]
-    strength 0
+    strength 1
 
 tSchema oBL0:(stringRich,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
@@ -277,8 +277,8 @@ tSchema restart':(btree,btree,interBTreeBTreeSPACE) =
 tSchema restart'':(btree,btree,interBTreeBTreeMID) =
     source t:btree <- branch[t1:mid,
                              t2:btree]
-    target t':btree
-    antecedent :metaTrue <- MID[t2:btree,t':btree]
+    target t':btree <- branch[t1':mid,t2':btree]
+    antecedent :metaTrue <- MID[t2:btree,t2':btree]
     consequent :metaTrue <- tailMID[t:btree,t':btree]
     strength 1
 
@@ -337,6 +337,7 @@ tSchema skipUntilTailSemicolon':(btree,btree,interBTreeBTreeSEMICOLON) =
     antecedent :metaTrue <- tailSEMICOLON[t2:btree,t':btree]
     consequent :metaTrue <- tailSEMICOLON[t:btree,t':btree]
     strength 5
+
 tSchema skipUntilTailSpace:(btree,btree,interBTreeBTreeSPACE) =
     source t:btree <- branch[t1:nonSpace,
                              t2:btree]
@@ -350,7 +351,8 @@ tSchema skipUntilTailSpace':(btree,btree,interBTreeBTreeSPACE) =
     target t':btree
     antecedent :metaTrue <- tailSPACE[t2:btree,t':btree]
     consequent :metaTrue <- tailSPACE[t:btree,t':btree]
-    strength 5
+    strength 6
+
 tSchema skipUntilTailMid:(btree,btree,interBTreeBTreeMID) =
     source t:btree <- branch[t1:nonMid,
                              t2:btree]

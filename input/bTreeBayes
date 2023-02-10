@@ -28,7 +28,7 @@ comment prob:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- PROB[t:btree,t':problem]
     strength 1
 
-tSchema evtsCond:(btree,bayesG,interBTreeBayes) =
+comment evtsCond:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:btree]
     target t':condEvent <- makeCond[t1':event,t2':event]
     antecedent :metaTrue <- EVT[t1:btree,t1':event],
@@ -73,19 +73,27 @@ tSchema dummsEqreal:(btree,bayesG,interBTreeBayes) =
     strength 1
 
 tSchema eventArbitrary:(btree,bayesG,interBTreeBayes) =
-    source t:btree
-    target t':event <- makeEvent[t1':string]
-    antecedent :metaTrue <- COPY[t:btree,t1':string]
-    consequent :metaTrue <- EVT[t:btree,t':event]
+    source t:?x:ordinary
+    target t':event <- makeEvent[t1':string <- cons[t11':?x:ordinary, t22':empty]]
+    antecedent
+    consequent :metaTrue <- EVT[t:?x:ordinary,t':event]
     strength 2
 
 tSchema copybranch:(btree,bayesG,interBTreeBayes) =
-    source t:btree <- branch[t1:char,t2:btree]
-    target t':string <- cons[t1':char,t2':string]
-    antecedent :metaTrue <- SAME[t1:char,t1':char],
+    source t:btree <- branch[t1:ordinary,t2:btree]
+    target t':event <- makeEvent[t1':string <- cons[t11':ordinary,t12':string]]
+    antecedent :metaTrue <- SAME[t1:ordinary,t11':ordinary],
+               :metaTrue <- COPY[t2:btree,t12':string]
+    consequent :metaTrue <- EVT[t:btree,t':event]
+    strength 4
+
+tSchema copybranch1:(btree,bayesG,interBTreeBayes) =
+    source t:btree <- branch[t1:ordinary,t2:btree]
+    target t':string <- cons[t1':ordinary,t2':string]
+    antecedent :metaTrue <- SAME[t1:ordinary,t1':ordinary],
                :metaTrue <- COPY[t2:btree,t2':string]
     consequent :metaTrue <- COPY[t:btree,t':string]
-    strength 1
+    strength 4
 
 comment copyEmpty:(btree,bayesG,interBTreeBayes) =
     source t:dummy:leaf
@@ -99,14 +107,14 @@ tSchema copyNonBChar:(btree,bayesG,interBTreeBayes) =
     target t':string <- cons[t1':?x:ordinary,t2':empty]
     antecedent
     consequent :metaTrue <- COPY[t:?x:ordinary,t':string]
-    strength 1
+    strength 2
 
 tSchema sameNonBChar:(btree,bayesG,interBTreeBayes) =
     source t:?x:ordinary
     target t':?x:ordinary
     antecedent
     consequent :metaTrue <- SAME[t:?x:ordinary,t':?x:ordinary]
-    strength 1
+    strength 2
 
 tSchema eqreal:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:=:ordinary,t2:btree]
@@ -149,7 +157,7 @@ tSchema evtBin:(btree,bayesG,interBTreeBayes) =
                :metaTrue <- BIN[t21:btree,t2':bin],
                :metaTrue <- EVT[t22:btree,t3':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 6
+    strength 2
 
 tSchema evtComp:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:-:ordinary,t2:btree]
@@ -158,12 +166,12 @@ tSchema evtComp:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- EVT[t:btree,t':event]
     strength 4
 
-comment evtCond:(btree,bayesG,interBTreeBayes) =
-    source t:btree <- branch[t1:btree,t2:btree]
+tSchema evtCond:(btree,bayesG,interBTreeBayes) =
+    source t:btree <- branch[t1:btree,t2:btree <- branch[t21:mid,t22:btree]]
     target t':condEvent <- makeCond[t1':event, t2':event]
     antecedent :metaTrue <- EVT[t1:btree,t1':event],
-               :metaTrue <- EVT[t2:btree,t2':event]
-    consequent :metaTrue <- COND[t:btree,t':condEvent]
+               :metaTrue <- EVT[t22:btree,t2':event]
+    consequent :metaTrue <- EVTS[t:btree,t':condEvent]
     strength 5
 
 
