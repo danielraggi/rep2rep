@@ -58,7 +58,7 @@ tSchema sys:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- SYS[t:btree,t':probSys]
     strength 3
 
-tSchema dummsBin:(btree,bayesG,interBTreeBayes) =
+comment dummsBin:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:dummy]
     target t':bin
     antecedent :metaTrue <- BIN[t1:btree,t':bin]
@@ -134,30 +134,39 @@ tSchema eqn:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- EQN[t:btree,t':probEqn]
     strength 5
 
-tSchema binAND:(btree,bayesG,interBTreeBayes) =
+comment binAND:(btree,bayesG,interBTreeBayes) =
     source t:&:ordinary
     target t':inter
     antecedent
     consequent :metaTrue <- BIN[t:&:ordinary,t':inter]
-    strength 4
+    strength 8
 
-tSchema binOR:(btree,bayesG,interBTreeBayes) =
+comment binOR:(btree,bayesG,interBTreeBayes) =
     source t:U:ordinary
     target t':union
     antecedent
     consequent :metaTrue <- BIN[t:U:ordinary,t':union]
-    strength 4
+    strength 8
 
-tSchema evtBin:(btree,bayesG,interBTreeBayes) =
+tSchema evtBinAnd:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
-                             t2:btree <- branch[t21:btree,
+                             t2:btree <- branch[t21:&:ordinary,
                                                 t22:btree]]
-    target t':event <- infix[t1':event, t2':bin, t3':event]
+    target t':event <- infix[t1':event, t2':inter, t3':event]
     antecedent :metaTrue <- EVT[t1:btree,t1':event],
-               :metaTrue <- BIN[t21:btree,t2':bin],
                :metaTrue <- EVT[t22:btree,t3':event]
     consequent :metaTrue <- EVT[t:btree,t':event]
-    strength 2
+    strength 8
+
+tSchema evtBinOr:(btree,bayesG,interBTreeBayes) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree <- branch[t21:U:ordinary,
+                                                t22:btree]]
+    target t':event <- infix[t1':event, t2':union, t3':event]
+    antecedent :metaTrue <- EVT[t1:btree,t1':event],
+               :metaTrue <- EVT[t22:btree,t3':event]
+    consequent :metaTrue <- EVT[t:btree,t':event]
+    strength 8
 
 tSchema evtComp:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:-:ordinary,t2:btree]
@@ -271,7 +280,7 @@ tSchema natural9:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- NAT[t:btree,t':nat10]
     strength 1
 
-    tSchema natural0':(btree,bayesG,interBTreeBayes) =
+    comment natural0':(btree,bayesG,interBTreeBayes) =
         source t:btree <- branch[t1:0:ordinary,
                                  t2:dummy]
         target t':0
