@@ -14,6 +14,8 @@ sig
   type constructionData = {name : string, conSpecN : string, construction : Construction.construction}
   val constructionsDataOf : documentContent -> constructionData FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
+  val tokenise : string -> string list
+  val deTokenise : string list -> string
   val normaliseString : string -> string
   val parseConstruction : CSpace.conSpecData -> string -> Construction.construction
 
