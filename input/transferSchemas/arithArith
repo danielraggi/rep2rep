@@ -11,7 +11,7 @@ conSpec interArithArith:interArithArithT =
     constructors
         equal : [numExp,numExp] -> metaBool
 
-tSchema equalNumeral:(arithG,arithG,interArithArith) =
+comment equalNumeral:(arithG,arithG,interArithArith) =
     source t:real10 <- ?v
     target t':real10 <- ?v
     antecedent

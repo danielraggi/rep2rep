@@ -25,12 +25,12 @@ sig
     val fromPairList : (k * 'v) list -> (k, 'v) dict;
     val toPairList : (k, 'v) dict -> (k * 'v) list;
 
-    val insert : (k, 'v) dict -> (k * 'v) ->  unit;
+    val insert : (k, 'v) dict -> (k * 'v) -> (k, 'v) dict;
     val remove : (k, 'v) dict -> k -> unit;
 
     val get : (k, 'v) dict -> k -> 'v option;
     val getExn : (k, 'v) dict -> k -> 'v;
-    val update : (k, 'v) dict -> k -> ('v -> 'v) -> 'v;
+    val update : (k, 'v) dict -> k -> ('v -> 'v) -> (k, 'v) dict;
     val has : (k, 'v) dict -> k -> bool;
 
     val keys : (k, 'v) dict -> k list;
@@ -161,12 +161,14 @@ fun insert' LEAF (x,y) = BRANCH ((x,y), LEAF, LEAF)
         EQUAL => BRANCH((x,y), l, r)
       | GREATER => BRANCH ((k, v), l, insert' r (x, y))
       | LESS => BRANCH ((k, v), insert' l (x, y), r);
+
 fun insert d (x,y) =
     let
         val d' = !d;
         val updated_d' = insert' d' (x, y);
+    in ref updated_d' end;(*)
         val _ = (d := updated_d')
-    in () end;
+    in () end;*)
 
 (*
 We can exploit the structure of a sorted list to build a balanced tree faster.
@@ -363,7 +365,7 @@ fun update t k f =
                     else raise KeyError
                   | _ => raise KeyError;
         val _ = (t := t'');
-    in v end;
+    in ref t'' end;
 
 fun keys t = map (fn (k, v) => k) (toPairList t);
 

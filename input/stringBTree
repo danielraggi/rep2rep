@@ -32,6 +32,12 @@ conSpec interStringBTree:interStringBTreeT =
 typeSystem interBTreeBTreeT =
     imports btreeT, metaLogicT
 
+conSpec interBTreeBTreeBIN:interBTreeBTreeT =
+    constructors
+        headBIN : [btree,btree] -> metaBool,
+        tailBIN : [btree,btree] -> metaBool,
+        BIN : [btree,btree] -> metaBool
+
 conSpec interBTreeBTreeMID:interBTreeBTreeT =
     constructors
         headMID : [btree,btree] -> metaBool,
@@ -60,7 +66,7 @@ tSchema treeify:(stringRich,btree,interStringBTree) =
     target t':btree
     antecedent :metaTrue <- LEVEL0[t:string,t':btree]
     consequent :metaTrue <- TREEIFY[t:string,t':btree]
-    strength 0
+    strength 1
 
 tSchema oBL0:(stringRich,btree,interStringBTree) =
     source t:string <- cons[t1:oB, t2:string]
@@ -240,25 +246,6 @@ tSchema tokeniseSpMid':(btree,btree,interBTreeBTreeSPACE) =
     consequent :metaTrue <- SPACE[t:mid,t':mid]
     strength 0
 
-tSchema tokeniseMidChar:(btree,btree,interBTreeBTreeMID) =
-    source t:?x:ordinary
-    target t':?x:ordinary
-    antecedent
-    consequent :metaTrue <- MID[t:?x:ordinary,t':?x:ordinary]
-    strength 1
-comment tokeniseMidSC:(btree,btree,interBTreeBTreeMID) =
-    source t:semicolon
-    target t':semicolon
-    antecedent
-    consequent :metaTrue <- MID[t:semicolon,t':semicolon]
-    strength 0
-comment tokeniseMidSp:(btree,btree,interBTreeBTreeMID) =
-    source t:space
-    target t':space
-    antecedent
-    consequent :metaTrue <- MID[t:space,t':space]
-    strength 0
-
 
 tSchema restart:(btree,btree,interBTreeBTreeSEMICOLON) =
     source t:btree <- branch[t1:semicolon,
@@ -274,13 +261,6 @@ tSchema restart':(btree,btree,interBTreeBTreeSPACE) =
     antecedent :metaTrue <- SPACE[t2:btree,t':btree]
     consequent :metaTrue <- tailSPACE[t:btree,t':btree]
     strength 1
-tSchema restart'':(btree,btree,interBTreeBTreeMID) =
-    source t:btree <- branch[t1:mid,
-                             t2:btree]
-    target t':btree
-    antecedent :metaTrue <- MID[t2:btree,t':btree]
-    consequent :metaTrue <- tailMID[t:btree,t':btree]
-    strength 1
 
 tSchema end:(btree,btree,interBTreeBTreeSEMICOLON) =
     source t:btree <- branch[t1:semicolon,
@@ -288,20 +268,6 @@ tSchema end:(btree,btree,interBTreeBTreeSEMICOLON) =
     target t':dummy
     antecedent
     consequent :metaTrue <- headSEMICOLON[t:btree,t':dummy]
-    strength 0
-tSchema end':(btree,btree,interBTreeBTreeSPACE) =
-    source t:btree <- branch[t1:space,
-                             t2:btree]
-    target t':dummy
-    antecedent
-    consequent :metaTrue <- headSPACE[t:btree,t':dummy]
-    strength 0
-tSchema end'':(btree,btree,interBTreeBTreeMID) =
-    source t:btree <- branch[t1:mid,
-                             t2:btree]
-    target t':dummy
-    antecedent
-    consequent :metaTrue <- headMID[t:btree,t':dummy]
     strength 0
 
 tSchema copyAtHead:(btree,btree,interBTreeBTreeSEMICOLON) =
@@ -315,12 +281,6 @@ tSchema copyAtHead':(btree,btree,interBTreeBTreeSPACE) =
     target t':?v:ordinary
     antecedent
     consequent :metaTrue <- headSPACE[t:?v:ordinary,t':?v:ordinary]
-    strength 4
-tSchema copyAtHead'':(btree,btree,interBTreeBTreeMID) =
-    source t:?v:ordinary
-    target t':?v:ordinary
-    antecedent
-    consequent :metaTrue <- headMID[t:?v:ordinary,t':?v:ordinary]
     strength 4
 
 tSchema skipUntilTailSemicolon:(btree,btree,interBTreeBTreeSEMICOLON) =
@@ -337,6 +297,7 @@ tSchema skipUntilTailSemicolon':(btree,btree,interBTreeBTreeSEMICOLON) =
     antecedent :metaTrue <- tailSEMICOLON[t2:btree,t':btree]
     consequent :metaTrue <- tailSEMICOLON[t:btree,t':btree]
     strength 5
+
 tSchema skipUntilTailSpace:(btree,btree,interBTreeBTreeSPACE) =
     source t:btree <- branch[t1:nonSpace,
                              t2:btree]
@@ -350,21 +311,16 @@ tSchema skipUntilTailSpace':(btree,btree,interBTreeBTreeSPACE) =
     target t':btree
     antecedent :metaTrue <- tailSPACE[t2:btree,t':btree]
     consequent :metaTrue <- tailSPACE[t:btree,t':btree]
-    strength 5
-tSchema skipUntilTailMid:(btree,btree,interBTreeBTreeMID) =
-    source t:btree <- branch[t1:nonMid,
+    strength 6
+
+
+tSchema end':(btree,btree,interBTreeBTreeSPACE) =
+    source t:btree <- branch[t1:space,
                              t2:btree]
-    target t':btree
-    antecedent :metaTrue <- tailMID[t2:btree,t':btree]
-    consequent :metaTrue <- tailMID[t:btree,t':btree]
-    strength 5
-tSchema skipUntilTailMid':(btree,btree,interBTreeBTreeMID) =
-    source t:btree <- branch[t1:btree <- branch[t11:btree,t12:btree],
-                             t2:btree]
-    target t':btree
-    antecedent :metaTrue <- tailMID[t2:btree,t':btree]
-    consequent :metaTrue <- tailMID[t:btree,t':btree]
-    strength 5
+    target t':dummy
+    antecedent
+    consequent :metaTrue <- headSPACE[t:btree,t':dummy]
+    strength 0
 
 
 tSchema dummTail:(btree,btree,interBTreeBTreeSPACE) =
@@ -379,14 +335,6 @@ tSchema dummsTail':(btree,btree,interBTreeBTreeSEMICOLON) =
     antecedent
     consequent :metaTrue <- tailSEMICOLON[t:ordinary,t':dummy]
     strength 0
-tSchema dummsTail'':(btree,btree,interBTreeBTreeMID) =
-    source t:ordinary
-    target t':dummy
-    antecedent
-    consequent :metaTrue <- tailMID[t:ordinary,t':dummy]
-    strength 0
-
-
 tSchema start:(btree,btree,interBTreeBTreeSEMICOLON) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
@@ -405,15 +353,7 @@ tSchema start':(btree,btree,interBTreeBTreeSPACE) =
                :metaTrue <- tailSPACE[t2:btree,t2':btree]
     consequent :metaTrue <- SPACE[t:btree,t':btree]
     strength 1
-tSchema start'':(btree,btree,interBTreeBTreeMID) =
-    source t:btree <- branch[t1:btree,
-                             t2:btree]
-    target t':btree <- branch[t1':btree,
-                              t2':btree]
-    antecedent :metaTrue <- headMID[t:btree,t1':btree],
-               :metaTrue <- tailMID[t2:btree,t2':btree]
-    consequent :metaTrue <- MID[t:btree,t':btree]
-    strength 1
+
 
 tSchema branchHead:(btree,btree,interBTreeBTreeSEMICOLON) =
     source t:btree <- branch[t1:btree,
@@ -433,6 +373,79 @@ tSchema branchHead':(btree,btree,interBTreeBTreeSPACE) =
                :metaTrue <- headSPACE[t2:btree,t2':btree]
     consequent :metaTrue <- headSPACE[t:btree,t':btree]
     strength 3
+
+
+tSchema tokeniseMidChar:(btree,btree,interBTreeBTreeMID) =
+    source t:?x:ordinary
+    target t':?x:ordinary
+    antecedent
+    consequent :metaTrue <- MID[t:?x:ordinary,t':?x:ordinary]
+    strength 1
+comment tokeniseMidSC:(btree,btree,interBTreeBTreeMID) =
+    source t:semicolon
+    target t':semicolon
+    antecedent
+    consequent :metaTrue <- MID[t:semicolon,t':semicolon]
+    strength 0
+comment tokeniseMidSp:(btree,btree,interBTreeBTreeMID) =
+    source t:space
+    target t':space
+    antecedent
+    consequent :metaTrue <- MID[t:space,t':space]
+    strength 0
+
+tSchema restart'':(btree,btree,interBTreeBTreeMID) =
+    source t:btree <- branch[t1:mid,
+                             t2:btree]
+    target t':btree <- branch[t1':mid,t2':btree]
+    antecedent :metaTrue <- MID[t2:btree,t2':btree]
+    consequent :metaTrue <- tailMID[t:btree,t':btree]
+    strength 1
+
+tSchema copyAtHead'':(btree,btree,interBTreeBTreeMID) =
+    source t:?v:ordinary
+    target t':?v:ordinary
+    antecedent
+    consequent :metaTrue <- headMID[t:?v:ordinary,t':?v:ordinary]
+    strength 4
+tSchema skipUntilTailMid:(btree,btree,interBTreeBTreeMID) =
+    source t:btree <- branch[t1:nonMid,
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- tailMID[t2:btree,t':btree]
+    consequent :metaTrue <- tailMID[t:btree,t':btree]
+    strength 5
+tSchema skipUntilTailMid':(btree,btree,interBTreeBTreeMID) =
+    source t:btree <- branch[t1:btree <- branch[t11:btree,t12:btree],
+                             t2:btree]
+    target t':btree
+    antecedent :metaTrue <- tailMID[t2:btree,t':btree]
+    consequent :metaTrue <- tailMID[t:btree,t':btree]
+    strength 5
+tSchema dummsTail'':(btree,btree,interBTreeBTreeMID) =
+    source t:ordinary
+    target t':dummy
+    antecedent
+    consequent :metaTrue <- tailMID[t:ordinary,t':dummy]
+    strength 0
+tSchema end'':(btree,btree,interBTreeBTreeMID) =
+    source t:btree <- branch[t1:mid,
+                             t2:btree]
+    target t':dummy
+    antecedent
+    consequent :metaTrue <- headMID[t:btree,t':dummy]
+    strength 0
+
+tSchema start'':(btree,btree,interBTreeBTreeMID) =
+    source t:btree <- branch[t1:btree,
+                             t2:btree]
+    target t':btree <- branch[t1':btree,
+                              t2':btree]
+    antecedent :metaTrue <- headMID[t:btree,t1':btree],
+               :metaTrue <- tailMID[t2:btree,t2':btree]
+    consequent :metaTrue <- MID[t:btree,t':btree]
+    strength 1
+
 tSchema branchHead'':(btree,btree,interBTreeBTreeMID) =
     source t:btree <- branch[t1:btree,
                              t2:btree]
