@@ -1,4 +1,5 @@
 import "oruga.CParsers";
+import "oruga.SMLCParsers";
 import "server.prob_renderers";
 (*)
 val ss = CParsers.parseProbSys "Pr(-x | y) = 0.63; Pr(s) = 0.5";
@@ -19,7 +20,8 @@ val interBayesTable = Document.getConSpecWithName DC "interBayesTable"
 val interBayesTree = Document.getConSpecWithName DC "interBayesTree"
 
 val startTime = Time.now();
-val ss1 = CParsers.parseProbSys "Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9";
+val ss1 = SMLCParsers.parseProbSys "Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9";
+val ss1 = SMLCParsers.parseProbSys "Pr(A & (B U C)) = 0.04; Pr(B | C) = 0.95"
 val construct = Construction.constructOf ss1
 val areaGoal = Document.parseConstruction interBayesArea (":metaTrue <- encode[" ^  CSpace.stringOfToken (construct) ^ ",t':area]")
 val tableGoal = Document.parseConstruction interBayesTable (":metaTrue <- encode[" ^  CSpace.stringOfToken (construct) ^ ",t':table]")

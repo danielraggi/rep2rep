@@ -3,6 +3,18 @@ import transferSchemas/bayesArea
 import transferSchemas/bayesTable
 import transferSchemas/bayesTree
 
+construction tt:bayesG = t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys <- addEqn[t_{00}:Pr(disease)=0.04:probEqn <- makeEqn[t_{000}:disease:event, t_{001}:0.04:real10], t_{01}:Pr(test | disease)=0.95;Pr(-test | -disease)=0.9:probSys <- addEqn[t_{010}:Pr(test | disease)=0.95:probEqn <- makeEqn[t_{0100}:test | disease:condEvent <- makeCond[t_{01000}:test:event, t_{01001}:disease:event], t_{0101}:0.95:real10], t_{011}:Pr(-test | -disease)=0.9:probEqn <- makeEqn[t_{0110}:-test | -disease:condEvent <- makeCond[t_{01100}:-test:event <- complement[t_{011000}:test:event], t_{01101}:-disease:event <- complement[t_{011010}:disease:event]], t_{0111}:0.9:real10]]]
+
+transfer
+    sourceConstruction tt
+    targetConSpec areaDiagramG
+    interConSpec interBayesArea
+    goal :metaTrue <- encode[t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys,t':area]
+    eager
+    output bayesAreaTest
+    save bayesAreaTest
+    limit 2
+
 construction prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
 construction prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
 construction prSystem1:stringRich = liftString Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1
