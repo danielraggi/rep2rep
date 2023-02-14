@@ -11,7 +11,7 @@ struct
   val addEqnConstructor = CSpace.makeConstructor ("addEqn",(["probEqn","probSys"],"probSys"))
   val makeEqnConstructor = CSpace.makeConstructor ("makeEqn",(["events","numExp"],"probEqn"))
   val makeCondConstructor = CSpace.makeConstructor ("makeCond",(["event","event"],"condEvent"))
-  val infixConstructor = CSpace.makeConstructor ("makeCond",(["event","bin","event"],"event"))
+  val infixConstructor = CSpace.makeConstructor ("infix",(["event","bin","event"],"event"))
   val complementConstructor = CSpace.makeConstructor ("complement",(["event"],"event"))
   val makeEventConstructor = CSpace.makeConstructor ("makeEvent",(["string"],"event"))
 
