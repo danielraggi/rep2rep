@@ -4,12 +4,12 @@ import metaLogic
 import transferSchemas/arithArith
 
 typeSystem interBayesAreaT =
-    imports bayes, areaDiagram, metaLogicT, interArithArithT, interEventEventT
+    imports bayes, areaDiagram, metaLogicT, interArithArithT
     types
     order
 
 conSpec interBayesArea:interBayesAreaT =
-    imports areaDiagramG, bayesG, interArithArith, interEventEvent
+    imports areaDiagramG, bayesG, interArithArith
     constructors
         match : [events,tag] -> metaBool,
         encode : [probSys,area] -> metaBool,
@@ -23,9 +23,9 @@ tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     strength -1
 
 tSchema eventMatchSame:(bayesG,areaDiagramG,interBayesArea) =
-    source t:event <- makeEvent[t1:string]
-    target t':event <- makeEvent[t1':string]
-    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+    source t:event <- makeEvent[t1:string <- ?v]
+    target t':event <- makeEvent[t1':string <- ?v]
+    antecedent
     consequent :metaTrue <- match[t:event,t':event]
     strength 1
 
@@ -34,7 +34,7 @@ tSchema notEvent:(bayesG,areaDiagramG,interBayesArea) =
     target t':tag <- reverseTag[t1':tag]
     antecedent :metaTrue <- match[t1:event,t1':tag]
     consequent :metaTrue <- match[t:event,t':tag]
-    strength 1
+    strength 4
 
 tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:events,t2:numExp]
@@ -46,7 +46,7 @@ tSchema constructEvent:(bayesG,areaDiagramG,interBayesArea) =
     antecedent :metaTrue <- match[t1:events,t3':tag],
                :metaTrue <- equal[t2:numExp,t221':numExp]
     consequent :metaTrue <- encode[t:probEqn,t':area]
-    strength 1
+    strength 4
 
 tSchema constructCond:(bayesG,areaDiagramG,interBayesArea) =
     source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],

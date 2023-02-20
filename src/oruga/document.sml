@@ -14,6 +14,8 @@ sig
   type constructionData = {name : string, conSpecN : string, construction : Construction.construction}
   val constructionsDataOf : documentContent -> constructionData FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
+  val tokenise : string -> string list
+  val deTokenise : string list -> string
   val normaliseString : string -> string
   val parseConstruction : CSpace.conSpecData -> string -> Construction.construction
 
@@ -134,16 +136,29 @@ struct
   fun parseTyp s = case String.breakOn ":" s of
                       (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
                     | _ => Type.fromString (normaliseString s)
-  fun parseToken s = case String.breakOn ":" s of
-                        (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
-                      | _ => raise ParseError ("no type for token: " ^ s)
+
+  fun parseToken s =
+        ((*case String.breakOn "<-" s of
+            (tt,"<-",cv) => if String.isPrefix "?" cv
+                            then (case String.breakOn ":" tt of
+                                      (ts,":",tys) => CSpace.makeToken (cv ^ "{" ^ (normaliseString ts) ^ "}") (parseTyp tys)
+                                    | _ => raise ParseError ("no type for token: " ^ s)
+                                 )
+                            else raise ParseError ("invalid construction: " ^ s ^ "... perhaps you meant to write ?" ^ cv ^ "  (construction variables must be prefixed with ?)")
+          | _ => *)
+                  (case String.breakOn ":" s of
+                      (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
+                    | _ => raise ParseError ("no type for token: " ^ s)
+                  )
+        )
+
   fun parseCTyp s = case Parser.list parseTyp s of
                       (ty::tys) => (tys,ty)
                     | _ => raise ParseError ("bad constructor sig: " ^ s)
+
   fun parseConstructor s = case String.breakOn ":" s of
                               (cs,":",ctys) => CSpace.makeConstructor (normaliseString cs, parseCTyp ctys)
                             | _ => raise ParseError ("no sig for constructor: " ^ s)
-
 
    fun findConstructorInConSpec s cspec =
      valOf (CSpace.findConstructorWithName s cspec)
@@ -155,18 +170,22 @@ struct
        |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
 
   fun parseConstruction cspec s =
-    let fun c s' =
+    let fun pc s' =
          case String.breakOn "[" s' of
-           (ts,"",_) => Construction.Source (parseToken ts)
+           (_,"",_) => (case String.breakOn "<-" s' of
+                            (tt,"<-",ctvar) => if String.isPrefix "?" ctvar
+                                               then Construction.TCPair ({constructor = CSpace.makeConstructor(ctvar,([],"")), token = parseToken tt},[])
+                                               else raise ParseError ("unexpected construction variable in: " ^ s')
+                          | _ => Construction.Source (parseToken s'))
          | (tcps,_,ss) =>
              let val tcp = parseTCPair tcps cspec
                  val tok = #token tcp
                  val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
                  val _ = if ys = [] then ()
                          else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-             in Construction.TCPair (tcp, Parser.splitLevelApply (c o String.removeParentheses) xs)
+             in Construction.TCPair (tcp, Parser.splitLevelApply (pc o String.removeParentheses) xs)
              end
-    in Construction.fixReferences (c s)
+    in Construction.fixReferences (pc s)
     end;
 
   val parseConstruction_rpc =
@@ -294,62 +313,61 @@ struct
                              {typ = Type.fromString superTyp, subTypeable = true})
     | _ => (fn x => x = Type.fromString s, {typ = Type.fromString s, subTypeable = false})
 
-(*
-  fun insertPrincipalTypes (pt::L) P =
-      Type.insertPrincipalType pt (insertPrincipalTypes L P)
-    | insertPrincipalTypes [] P = P*)
 
-  fun joinTypeSystemsData name TSDs =
-    let fun joinData [] = {typeSystem = {Ty = Set.empty, subType = fn (x,y) => Type.equal x y},
-                           principalTypes = FiniteSet.empty}
-          | joinData (tsd::L) =
-              let val tsd_rec = joinData L
-                  val TS_rec = #typeSystem tsd_rec
-                  val TS = #typeSystem tsd
-                  val jointTys = Set.union (#Ty TS) (#Ty TS_rec)
-                  val jointPTys = foldl (uncurry Type.insertPrincipalType) (#principalTypes tsd_rec) (FiniteSet.listOf (#principalTypes tsd))
-                  (*val jointPTys = insertPrincipalTypes (FiniteSet.listOf (#principalTypes tsd)) (#principalTypes tsd_rec)*)
-                  val jointSubType = (fn (x,y) => #subType TS (x,y) orelse #subType TS_rec (x,y))
-                  val jointTS = {Ty = jointTys, subType = jointSubType}
-              in {typeSystem = jointTS, principalTypes = jointPTys}
-              end
-        val {typeSystem,principalTypes} = joinData TSDs
-        val _ = print "\n";
-        val strippedPrincipalTypes = map #typ principalTypes
-        val _ = map (fn x => print ("  " ^ x)) strippedPrincipalTypes
-        val _ = print "\n"
-        val principalSubType = Type.closureOverFiniteSet strippedPrincipalTypes (#subType typeSystem)
-        val subTypeableTypes = List.filterThenMap #subTypeable #typ principalTypes
-        val subType = Type.fixForSubtypeable subTypeableTypes principalSubType
-        val typeSystem = {Ty = #Ty typeSystem, subType = subType}
-    in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
-    end
-
-  fun renameTypeInTypeSystemData (t1,t2) {name,typeSystem,principalTypes} =
-    let val {Ty,subType} = typeSystem
-        val _ = if Set.elementOf t2 Ty
-                then raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t2 ^ " already exists")
-                else ()
-        val _ = if Set.elementOf t1 Ty
-                then ()
-                else raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t1 ^ " doesn't exist")
-        val updatedTy = Set.union (Set.minus Ty (Set.singleton t1)) (Set.singleton t2)
-        fun m x = if x = t2 then t1 else x
-        fun updatedSubType (x,y) = if x = t1 orelse y = t1 then false else subType (m x, m y)
-        val updatedTypeSystem = {Ty = updatedTy, subType = updatedSubType}
-        val (pt,npt) = (case FiniteSet.find (fn x => #typ x = t1) principalTypes of
-                      SOME {typ,subTypeable} => (FiniteSet.singleton {typ = t1, subTypeable = subTypeable},
-                                                  FiniteSet.singleton {typ = t2, subTypeable = subTypeable})
-                    | _ => (FiniteSet.empty,FiniteSet.empty))
-        val updatedPrincipalTypes = FiniteSet.union (FiniteSet.minus principalTypes pt) npt
-    in {name = name,typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes}
-    end
-
+  structure TSet = Type.TypeSet;
+  structure TDict = Type.TypeDictionary;
   fun addTypeSystem (N, tss) dc =
   let val name = case N of [x] => x | _ => raise ParseError ("invalid name for type system : " ^ String.concat N)
       val _ = print ("\nAdding type system " ^ name ^ "...");
-      val _ = case findTypeSystemDataWithName dc name of NONE => () | SOME _ => raise ParseError ("\nWARNING: type systems have same name. Overwriting!\n")
+      val _ = case findTypeSystemDataWithName dc name of NONE => () | SOME _ => raise ParseError ("\nWARNING: type systems have same name!\n")
       val blocks = gatherMaterialByKeywords typeKeywords tss
+
+      fun joinTypeSystemsData name TSDs =
+        let fun joinData [] = {typeSystem = {Ty = Set.empty, subType = fn (x,y) => Type.equal x y},
+                               principalTypes = FiniteSet.empty}
+              | joinData (tsd::L) =
+                  let val tsd_rec = joinData L
+                      val TS_rec = #typeSystem tsd_rec
+                      val TS = #typeSystem tsd
+                      val jointTys = Set.union (#Ty TS) (#Ty TS_rec)
+                      val jointPTys = foldl (uncurry Type.insertPrincipalType) (#principalTypes tsd_rec) (FiniteSet.listOf (#principalTypes tsd))
+                      (*val jointPTys = insertPrincipalTypes (FiniteSet.listOf (#principalTypes tsd)) (#principalTypes tsd_rec)*)
+                      val jointSubType = (fn (x,y) => #subType TS (x,y) orelse #subType TS_rec (x,y))
+                      val jointTS = {Ty = jointTys, subType = jointSubType}
+                  in {typeSystem = jointTS, principalTypes = jointPTys}
+                  end
+            val {typeSystem,principalTypes} = joinData TSDs
+            val _ = print "\n";
+            val strippedPrincipalTypes = map #typ principalTypes
+            val _ = map (fn x => print ("  " ^ x)) strippedPrincipalTypes
+            val _ = print "\n"
+            val principalSubType = Type.transitiveClosure strippedPrincipalTypes (#subType typeSystem)(*)
+            val subTypeableTypes = List.filterThenMap #subTypeable #typ principalTypes
+            val subType = Type.fixForSubtypeable subTypeableTypes principalSubType*)
+            val typeSystem = {Ty = #Ty typeSystem, subType = principalSubType}
+        in {name = name, typeSystem = typeSystem, principalTypes = principalTypes}
+        end
+
+      fun renameTypeInTypeSystemData (t1,t2) {name,typeSystem,principalTypes} =
+        let val {Ty,subType} = typeSystem
+            val _ = if Set.elementOf t2 Ty
+                    then raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t2 ^ " already exists")
+                    else ()
+            val _ = if Set.elementOf t1 Ty
+                    then ()
+                    else raise ParseError ("cannot rename " ^ t1 ^ " to " ^ t2 ^ " in " ^ name ^ " as " ^ t1 ^ " doesn't exist")
+            val updatedTy = Set.union (Set.minus Ty (Set.singleton t1)) (Set.singleton t2)
+            fun m x = if x = t2 then t1 else x
+            fun updatedSubType (x,y) = if x = t1 orelse y = t1 then false else subType (m x, m y)
+            val updatedTypeSystem = {Ty = updatedTy, subType = updatedSubType}
+            val (pt,npt) = (case FiniteSet.find (fn x => #typ x = t1) principalTypes of
+                          SOME {typ,subTypeable} => (FiniteSet.singleton {typ = t1, subTypeable = subTypeable},
+                                                      FiniteSet.singleton {typ = t2, subTypeable = subTypeable})
+                        | _ => (FiniteSet.empty,FiniteSet.empty))
+            val updatedPrincipalTypes = FiniteSet.union (FiniteSet.minus principalTypes pt) npt
+        in {name = name,typeSystem = updatedTypeSystem, principalTypes = updatedPrincipalTypes}
+        end
+
       fun getTyps [] = []
         | getTyps ((x,c)::L) =
             if x = SOME typesKW
@@ -384,23 +402,67 @@ struct
           )
         | processTys [] = (Set.empty, FiniteSet.empty)
 
+
       val (newTys,newPrincipalTyps) = processTys (getTyps blocks)
       val strippedPrincipalTypes = map #typ newPrincipalTyps
 
+      fun typeStoreFromPairList TySt [] = TySt
+        | typeStoreFromPairList TySt ((x,y)::L) =
+        let fun updateX {subTypes,superTypes} = {subTypes = subTypes, superTypes = TSet.fromList (y::TSet.toList superTypes)}
+            fun updateY {subTypes,superTypes} = {subTypes = TSet.fromList (x::TSet.toList superTypes), superTypes = superTypes}
+            val empty = TSet.empty ()
+            val TyStX = if TDict.has TySt x
+                        then TDict.update TySt x updateX
+                        else TDict.fromPairList ((x,{subTypes = empty,superTypes = TSet.fromList [y]})::TDict.toPairList TySt)
+            val TyStXY = if TDict.has TyStX y
+                         then TDict.update TyStX y updateY
+                         else TDict.fromPairList ((y,{subTypes = TSet.fromList [x],superTypes = empty})::TDict.toPairList TyStX)
+        in typeStoreFromPairList TyStXY L
+        end
       val ordList = getOrder blocks
-      fun eq (x,y) (x',y') = Type.equal x x' andalso Type.equal y y'
-      fun subType_raw (x,y) = List.exists (eq (x,y)) ordList
+      val ordStore = typeStoreFromPairList (TDict.empty ()) ordList
+
+    fun superTypeStoreFromTSD TSD =
+      let val {typeSystem,principalTypes,...} = TSD
+          val TP = {typeSystem = typeSystem, principalTypes = principalTypes}
+          fun makeTypeStore TySt [] = TySt
+            | makeTypeStore TySt (pty::L) =
+            let val superTypesOfPT = FiniteSet.listOf (Type.superTypes TP pty)
+                val TySt_upd = TDict.fromPairList ((pty, TSet.fromList superTypesOfPT) :: TDict.toPairList TySt)
+            in makeTypeStore TySt_upd L
+            end
+          val pTys = map #typ (FiniteSet.listOf principalTypes)
+      in makeTypeStore (TDict.empty ()) pTys
+      end
+
+      fun subType_raw (x,y) = case TDict.get ordStore x of NONE => false | SOME {superTypes,...} => TSet.contains superTypes y
+
       val typeSystemData_raw = {typeSystem = {Ty = newTys, subType = subType_raw},
                                 principalTypes = newPrincipalTyps,
                                 name = "__tmp"}
 
       val importsTSDs = getImports blocks
-      val typeSystemData = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
+      val typeSystemData' = joinTypeSystemsData name (importsTSDs @ [typeSystemData_raw])
+      val ordStore = superTypeStoreFromTSD typeSystemData'
+
+      fun tyDataToString superTypes = TSet.toString superTypes
+      val _ = if name = "nat10T" then print ("\n type system "^name ^ ": " ^ TDict.toString tyDataToString ordStore ^ "\n") else ()
+
+      val principalTypes = #principalTypes typeSystemData'
+      val slowSubType = #subType (#typeSystem typeSystemData')
+      val fastSubType = Type.reflexiveClosure
+                            (Type.fixForSubtypeable (List.filterThenMap #subTypeable #typ principalTypes)
+                                                    (fn (x,y) => (case TDict.get ordStore x of
+                                                                    NONE => false
+                                                                  | SOME superTypes => TSet.contains superTypes y)))
+      val typeSystemData = {typeSystem = {Ty = #Ty (#typeSystem typeSystemData'), subType = fastSubType},
+                            principalTypes = principalTypes,
+                            name = name}
       val _ = if Type.wellDefined typeSystemData
               then print ("...done\n")
               else print ("\n  WARNING: Type System " ^ name ^ " is not well defined (probably a cycle, unless the there's a bug in oruga!)\n")
 
-  in {typeSystemsData = typeSystemData :: List.filter (fn x => #name x <> name) (#typeSystemsData dc),
+  in {typeSystemsData = typeSystemData :: #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
@@ -596,7 +658,7 @@ struct
       val consequent = getConsequent blocks
       val _ = if Construction.wellFormed sourceConSpec source
               then Logging.write "\n  source pattern is well formed"
-              else Logging.write "\n  WARNING: source pattern is not well formed"
+              else Logging.write ("\n  WARNING: source pattern is not well formed: " ^ Construction.toString source)
       val _ = if Construction.wellFormed targetConSpec target
               then Logging.write "\n  target pattern is well formed"
               else Logging.write "\n  WARNING: target pattern is not well formed"

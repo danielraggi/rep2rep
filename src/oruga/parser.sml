@@ -17,6 +17,7 @@ sig
   val splitLevel : char list -> string list
   val splitListWhen : ('a -> bool) -> 'a list -> ('a list * 'a list)
   val deTokenise : string -> string list -> string
+  val removeOuterBrackets : string list -> string list
 end;
 
 structure Parser : PARSER =
@@ -124,5 +125,16 @@ struct
 
   fun boolfun eq f s x = (List.exists (eq x) o splitLevelApply f o String.explode o String.removeBraces) s
 
+  fun removeOuterBrackets wL =
+    let fun removeOuterJunk (L,L') =
+            (case (L,L') of
+                ("("::xL,")"::xL') => removeOuterJunk (xL,xL')
+              | ("{"::xL,"}"::xL') => removeOuterJunk (xL,xL')
+              | ("["::xL,"]"::xL') => removeOuterJunk (xL,xL')
+              | _ => (L,L'))
+        val (wL1,wL2) = List.split (wL, (List.length wL) div 2)
+        val (wL1',wL2') = removeOuterJunk (wL1, rev wL2)
+    in wL1' @ rev wL2'
+    end
 
 end;

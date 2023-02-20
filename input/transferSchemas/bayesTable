@@ -4,12 +4,12 @@ import metaLogic
 import transferSchemas/arithArith
 
 typeSystem interBayesTableT =
-    imports bayes, contTable, metaLogicT, interArithArithT, interEventEventT
+    imports bayes, contTable, metaLogicT, interArithArithT
     types
     order
 
 conSpec interBayesTable:interBayesTableT =
-    imports contTableG, bayesG, interArithArith, interEventEvent
+    imports contTableG, bayesG, interArithArith
     constructors
         match : [events,name] -> metaBool,
         encode : [probSys,table] -> metaBool
@@ -22,9 +22,9 @@ tSchema eventV:(bayesG,contTableG,interBayesTable) =
     strength -1
 
 tSchema eventMatchSame:(bayesG,contTableG,interBayesTable) =
-    source t:event <- makeEvent[t1:string]
-    target t':event <- makeEvent[t1':string]
-    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+    source t:event <- makeEvent[t1:string <- ?v]
+    target t':event <- makeEvent[t1':string <- ?v]
+    antecedent
     consequent :metaTrue <- match[t:event,t':event]
     strength 1
 
@@ -33,7 +33,7 @@ tSchema complEvent:(bayesG,contTableG,interBayesTable) =
     target t':name <- notName[t1':name]
     antecedent :metaTrue <- match[t1:event,t1':name]
     consequent :metaTrue <- match[t:event,t':name]
-    strength 8
+    strength 4
 
 tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
     source t:probEqn <- makeEqn[t1:events,t2:numExp]

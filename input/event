@@ -11,24 +11,24 @@ conSpec event:eventT =
         makeEvent : [string] -> event
 
 
-typeSystem interEventEventT =
+comment #typeSystem interEventEventT =
     imports metaLogicT, eventT
 
-conSpec interEventEvent:interEventEventT =
+comment #conSpec interEventEvent:interEventEventT =
     imports metaLogic
     constructors
         sameEvents : [event,event] -> metaBool,
         sameStrings : [string,string] -> metaBool,
         sameChars : [char,char] -> metaBool
 
-tSchema makeEvent:(event,event,interEventEvent) =
-    source t:event <- makeEvent[t1:string]
-    target t':event <- makeEvent[t1':string]
-    antecedent :metaTrue <- sameStrings[t1:string,t1':string]
+comment makeEvent:(event,event,interEventEvent) =
+    source t:event <- makeEvent[t1:string <- ?v]
+    target t':event <- makeEvent[t1':string <- ?v]
+    antecedent
     consequent :metaTrue <- sameEvents[t:event,t':event]
     strength 1
 
-tSchema consString:(event,event,interEventEvent) =
+comment consString:(event,event,interEventEvent) =
     source t:string <- cons[t1:ordinary,t2:string]
     target t':string <- cons[t1':ordinary,t2':string]
     antecedent :metaTrue <- sameChars[t1:ordinary,t1':ordinary],
@@ -36,14 +36,14 @@ tSchema consString:(event,event,interEventEvent) =
     consequent :metaTrue <- sameStrings[t:string,t':string]
     strength 2
 
-tSchema sameEmpty:(event,event,interEventEvent) =
+comment sameEmpty:(event,event,interEventEvent) =
     source t:empty
     target t':empty
     antecedent
     consequent :metaTrue <- sameStrings[t:empty,t':empty]
     strength 0
 
-tSchema sameChar:(event,event,interEventEvent) =
+comment sameChar:(event,event,interEventEvent) =
     source t:?c:ordinary
     target t':?c:ordinary
     antecedent
