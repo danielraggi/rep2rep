@@ -22,7 +22,7 @@ tSchema eventV:(bayesG,areaDiagramG,interBayesArea) =
     consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength -1
 
-tSchema eventMatchSame:(bayesG,areaDiagramG,interBayesArea) =
+comment eventMatchSame:(bayesG,areaDiagramG,interBayesArea) =
     source t:event <- makeEvent[t1:string <- ?v]
     target t':event <- makeEvent[t1':string <- ?v]
     antecedent
