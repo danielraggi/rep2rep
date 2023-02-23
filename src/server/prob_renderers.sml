@@ -1973,7 +1973,7 @@ fun drawArea c =
                                    (text (mid w0 30, "10") event1), "\n",
                                    (text (mid w0 30, "25") (numToString w0)), "\n",
                                    (text ("15", mid w2 22) event2), "\n",
-                                   (text ("15", mid w2 22) (numToString w2)), "\n",
+                                   (text ("15", mid w2 38) (numToString w2)), "\n",
                                    (text ("245", mid w4 22) event2), "\n",
                                    (text ("245", mid w4 38) (numToString w4)), "\n"
                                ] end
@@ -2211,7 +2211,7 @@ fun drawTree x =
                         val s1 = eventToString (hd x2);
                         val s2 = eventToString (hd x3);
                         val (z, z') = (VAR  "z", MINUS(NUM 1, VAR "z"));
-                        val (y, y') = (VAR  "y", MINUS(NUM 1, VAR "y"));
+                        val (y, y') = (VAR  "x", MINUS(NUM 1, VAR "x"));
                     in if l1 = l2
                        then (if s1 = s2
                              then (x2, y2, y3)
@@ -2281,7 +2281,7 @@ fun drawTree x =
                           svg ("110", "350"),
                           text ("Pr(" ^ x1 ^ ")") ("85", "27") false NONE,
                           text ("Pr(" ^ (overline x1) ^ ")") ("85", "83") false NONE,
-                          text ("Pr(" ^ x1 ^ inter ^ x2 ^ ") " ^ y6) ("225", "10") false NONE,
+                          text ("Pr(" ^ x1 ^ inter ^ x2 ^ ") " ^ y6) ("225", "13") false NONE,
                           text ("Pr(" ^ x1 ^ inter ^ (overline x2) ^ ") " ^ y7) ("225", "38") false NONE,
                           text ("Pr(" ^ (overline x1) ^ inter ^ x2 ^ ") " ^ y8) ("225", "70") false NONE,
                           text ("Pr(" ^ (overline x1) ^ inter ^ (overline x2) ^ ") " ^ y9) ("225", "98") false NONE,
