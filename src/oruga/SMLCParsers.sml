@@ -71,6 +71,6 @@ struct
             | _ => (case Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") (String.explode ns) of
                         (s1::s2::L) => Construction.TCPair ({token = CSpace.makeToken dummyName (ns ^ ":probSys"), constructor = addEqnConstructor},
                                                             [parseEquation s1, parseProbSys (String.concatWith "," (s2::L))])
-                      | _ => parseEquation s))
+                      | _ => parseEquation ns))
     end
 end
