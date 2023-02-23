@@ -21,7 +21,7 @@ tSchema eventV:(bayesG,probTreeG,interBayesTree) =
     consequent :metaTrue <- match[t:?v:event,t':?v:event]
     strength -1
 
-tSchema eventMatchSame:(bayesG,probTreeG,interBayesTree) =
+comment eventMatchSame:(bayesG,probTreeG,interBayesTree) =
     source t:event <- makeEvent[t1:string <- ?v]
     target t':event <- makeEvent[t1':string <- ?v]
     antecedent
