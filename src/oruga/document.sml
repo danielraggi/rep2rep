@@ -110,7 +110,7 @@ struct
   fun tokenise s =
     let fun commentChar x = (x = #"#")
         fun lineBreak x = (x = #"\n")
-        fun separator x = (x = #"\n" orelse x = #" ")
+        fun separator x = (x = #"\n" orelse x = #" " orelse x = #"\t")
         fun standAlone x = List.exists (fn y => y = x) standAloneChars
         fun t [] = (true,[])
           | t (x::xs) =
@@ -131,26 +131,19 @@ struct
     then s1 ^ deTokenise (s2::L)
     else s1 ^ " " ^ deTokenise (s2::L)
 
-  fun normaliseString s = if List.all (fn x => x = #" ") (String.explode s) then " " else (deTokenise o tokenise) s
+  fun normaliseString s =
+    if List.all (fn x => x = #" ") (String.explode s) then " "
+    else (deTokenise o tokenise) s
 
-  fun parseTyp s = case String.breakOn ":" s of
-                      (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
-                    | _ => Type.fromString (normaliseString s)
+  fun parseTyp s =
+      (case String.breakOn ":" s of
+          (s1,":",s2) => Type.fromString (normaliseString s1 ^ ":" ^ normaliseString s2)
+        | _ => Type.fromString (normaliseString s))
 
   fun parseToken s =
-        ((*case String.breakOn "<-" s of
-            (tt,"<-",cv) => if String.isPrefix "?" cv
-                            then (case String.breakOn ":" tt of
-                                      (ts,":",tys) => CSpace.makeToken (cv ^ "{" ^ (normaliseString ts) ^ "}") (parseTyp tys)
-                                    | _ => raise ParseError ("no type for token: " ^ s)
-                                 )
-                            else raise ParseError ("invalid construction: " ^ s ^ "... perhaps you meant to write ?" ^ cv ^ "  (construction variables must be prefixed with ?)")
-          | _ => *)
-                  (case String.breakOn ":" s of
-                      (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
-                    | _ => raise ParseError ("no type for token: " ^ s)
-                  )
-        )
+      (case String.breakOn ":" s of
+          (ts,":",tys) => CSpace.makeToken (normaliseString ts) (parseTyp tys)
+        | _ => raise ParseError ("no type for token: " ^ s))
 
   fun parseCTyp s = case Parser.list parseTyp s of
                       (ty::tys) => (tys,ty)

@@ -21,7 +21,7 @@ val interBayesTree = Document.getConSpecWithName DC "interBayesTree"
 
 val startTime = Time.now();
 val bayesConstruction = SMLCParsers.parseProbSys "Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9";
-(*val bayesConstruction = SMLCParsers.parseProbSys "Pr(A) = 0.2; Pr(A) = 0.5"*)
+(*val bayesConstruction = SMLCParsers.parseProbSys "Pr(A) = 0.2"*)
 val construct = Construction.constructOf bayesConstruction
 val areaGoal = Document.parseConstruction interBayesArea (":metaTrue <- encode[" ^ CSpace.stringOfToken (construct) ^ ",t':area]")
 val tableGoal = Document.parseConstruction interBayesTable (":metaTrue <- encode[" ^ CSpace.stringOfToken (construct) ^ ",t':table]")
