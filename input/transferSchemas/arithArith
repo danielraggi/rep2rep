@@ -23,7 +23,7 @@ tSchema equalNumeral':(arithG,arithG,interArithArith) =
     target t':?v:real10
     antecedent
     consequent :metaTrue <-equal[t:?v:real10,t':?v:real10]
-    strength 0
+    strength -1
 
 comment equalReal:(arithG,arithG,interArithArith) =
     source t:real10 <- makeReal[t1:nat10, t2:nat10]
