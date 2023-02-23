@@ -3,4 +3,6 @@ dist
 test/prob_renderers
 *.log
 *.repl
-output/
+output/*
+output/latex/*
+!output/latex/commands.tex
