@@ -50,10 +50,9 @@ fun parse x =
       fun parse_var x n =
         (case String.breakOn ")" (String.substring(x,n,(String.size x) - n)) of
           (a,")",_) => if Char.isAlpha(String.sub(a,0)) then (n+(String.size a),ProbNum.VAR(a))
-                       else if String.substring(a,0,2) = "0." then (n+(String.size a),ProbNum.DEC(a))
-                       else (case Int.fromString a of
+                       else (case Real.fromString a of
                               NONE => raise ParseError
-                              |SOME x => (n+(String.size a),ProbNum.NUM x))
+                              |SOME _ => (n+(String.size a),ProbNum.DEC a))
           |_ => raise ParseError)
       and parse_plus x n =
         let val (j,e) = parse_var x n in

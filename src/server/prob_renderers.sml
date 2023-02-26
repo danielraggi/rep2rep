@@ -76,6 +76,7 @@ exception TreeError;
 
 exception BayesError;
 exception StringError;
+exception InvalidProbError;
 
 val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
 val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
@@ -151,11 +152,8 @@ local
             val subTypeLen = Real.fromInt (String.size subType);
         in if Char.isAlpha (String.sub(subType, 0))
            then (VAR(subType), [(id, subType, subTypeLen + 0.5)])
-           else
-               if String.isPrefix "0." subType
-               then (DEC(subType), [(id, subType, subTypeLen - 0.5)])
-               else case Int.fromString subType of
-                        SOME x => (NUM(x), [(id, subType, subTypeLen + 0.5)])
+           else case Real.fromString subType of
+                        SOME x => (DEC(subType), [(id, subType, subTypeLen - 0.5)])
                       | NONE => raise NumError
         end;
         fun parseWithValAndLength parse c =
@@ -211,66 +209,73 @@ fun onlyNum U = false
   | onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
 
-fun allNum [] = true
+  fun allNum [] = true
   | allNum (x::xs) = onlyNum x andalso allNum xs
 
+fun round n = Real.roundDecimal n 4;
+
+fun convertNum (PLUS(x,y)) =
+    (case (convertNum x, convertNum y) of
+        (R a, R b) => R (a + b)
+      | (R a, V b) => if Real.== (a, 0.0) then V b
+                      else
+                          if String.sub(b, 0) = #"~"
+                          then V ((Real.toString (round a)) ^ "-" ^ (String.extract (b, 1, NONE)))
+                          else V ((Real.toString (round a)) ^ "+" ^ b)
+      | (V a, R b) => if Real.== (b, 0.0) then V a
+                      else
+                          if b < 0.0
+                          then V (a ^ "-" ^ Real.toString (round (~b)))
+                          else V (a ^ "+" ^ Real.toString (round b))
+      | (V a, V b) => if String.sub (b, 0) = #"~"
+                      then V (a ^ "-" ^ (String.extract (b, 1, NONE)))
+                      else V (a ^ "+" ^ b))
+  | convertNum (MINUS(x,y)) =
+    (case (convertNum x, convertNum y) of
+        (R a, R b) => R (a - b)
+      | (R a, V b) => if Real.== (a,0.0) andalso String.sub(b,0) = #"~"
+                      then V (String.extract (b, 1, NONE))
+                      else
+                          if Real.== (a, 0.0) then V ("~" ^ b)
+                          else
+                              if String.sub(b,0) = #"~"
+                              then V ((Real.toString (round a)) ^ "+" ^ (String.extract (b, 1, NONE)))
+                              else V ((Real.toString (round a)) ^ "-" ^ b)
+      | (V a, R b) => if b < 0.0 then V (a ^ "+" ^ (Real.toString (round (~b))))
+                      else
+                          if Real.== (b, 0.0) then (V a)
+                          else V (a ^ "-" ^ (Real.toString (round b)))
+      | (V a, V b) => if String.sub(b,0) = #"~"
+                      then V (a ^ "+" ^ (String.extract (b, 1, NONE)))
+                      else V (a ^ "-" ^ b))
+  | convertNum (MULT(x,y)) =
+    (case (convertNum x, convertNum y) of
+        (R a, R b) => R (a * b)
+      | (R a, V b) => if Real.== (a, 1.0) then V b
+                      else if Real.== (a, ~1.0) then V ("~" ^ b)
+                      else V ((Real.toString (round a)) ^ "*" ^ b)
+      |(V a, R b) => V (a ^ "*" ^ (Real.toString (round b)))
+      |(V a, V b) => V (a ^ "*" ^ b))
+  | convertNum (FRAC(x,y)) =
+    (case (convertNum x, convertNum y) of
+        (R a, R b) => R (a / b)
+      | (R a, V b) => V ((Real.toString (round a)) ^ "/" ^ b)
+      | (V a, R b) => if Real.== (b,1.0) then V a else V (a ^ "/" ^ (Real.toString (round b)))
+      | (V a, V b) => V (a ^ "/" ^ b))
+  | convertNum (VAR(x)) = V x
+  | convertNum (U) = V " "
+  | convertNum (DEC(x)) = (case (Real.fromString x) of
+                              NONE => raise NumError
+                            | SOME z => R z)
+  | convertNum (NUM(x)) = R (Real.fromInt x)
+
+fun isValidProb p = 
+    case convertNum p of
+        V _ => true
+      | R n => n >= 0.0 andalso n <= 1.0;
+
 fun numToString x =
-    let fun round n = Real.roundDecimal n 4;
-        fun convertNum (PLUS(x,y)) =
-            (case (convertNum x, convertNum y) of
-                 (R a, R b) => R (a + b)
-               | (R a, V b) => if Real.== (a, 0.0) then V b
-                               else
-                                   if String.sub(b, 0) = #"~"
-                                   then V ((Real.toString (round a)) ^ "-" ^ (String.extract (b, 1, NONE)))
-                                   else V ((Real.toString (round a)) ^ "+" ^ b)
-               | (V a, R b) => if Real.== (b, 0.0) then V a
-                               else
-                                   if b < 0.0
-                                   then V (a ^ "-" ^ Real.toString (round (~b)))
-                                   else V (a ^ "+" ^ Real.toString (round b))
-               | (V a, V b) => if String.sub (b, 0) = #"~"
-                               then V (a ^ "-" ^ (String.extract (b, 1, NONE)))
-                               else V (a ^ "+" ^ b))
-          | convertNum (MINUS(x,y)) =
-            (case (convertNum x, convertNum y) of
-                 (R a, R b) => R (a - b)
-               | (R a, V b) => if Real.== (a,0.0) andalso String.sub(b,0) = #"~"
-                               then V (String.extract (b, 1, NONE))
-                               else
-                                   if Real.== (a, 0.0) then V ("~" ^ b)
-                                   else
-                                       if String.sub(b,0) = #"~"
-                                       then V ((Real.toString (round a)) ^ "+" ^ (String.extract (b, 1, NONE)))
-                                       else V ((Real.toString (round a)) ^ "-" ^ b)
-               | (V a, R b) => if b < 0.0 then V (a ^ "+" ^ (Real.toString (round (~b))))
-                               else
-                                   if Real.== (b, 0.0) then (V a)
-                                   else V (a ^ "-" ^ (Real.toString (round b)))
-               | (V a, V b) => if String.sub(b,0) = #"~"
-                               then V (a ^ "+" ^ (String.extract (b, 1, NONE)))
-                               else V (a ^ "-" ^ b))
-          | convertNum (MULT(x,y)) =
-             (case (convertNum x, convertNum y) of
-                  (R a, R b) => R (a * b)
-                | (R a, V b) => if Real.== (a, 1.0) then V b
-                                else if Real.== (a, ~1.0) then V ("~" ^ b)
-                                else V ((Real.toString (round a)) ^ "*" ^ b)
-                |(V a, R b) => V (a ^ "*" ^ (Real.toString (round b)))
-                |(V a, V b) => V (a ^ "*" ^ b))
-          | convertNum (FRAC(x,y)) =
-            (case (convertNum x, convertNum y) of
-                 (R a, R b) => R (a / b)
-               | (R a, V b) => V ((Real.toString (round a)) ^ "/" ^ b)
-               | (V a, R b) => if Real.== (b,1.0) then V a else V (a ^ "/" ^ (Real.toString (round b)))
-               | (V a, V b) => V (a ^ "/" ^ b))
-          | convertNum (VAR(x)) = V x
-          | convertNum (U) = V " "
-          | convertNum (DEC(x)) = (case (Real.fromString x) of
-                                       NONE => raise NumError
-                                     | SOME z => R z)
-          | convertNum (NUM(x)) = R (Real.fromInt x)
-        val str = case convertNum (simplify x) of
+    let val str = case convertNum (simplify x) of
                       V x => x
                     | R x => Real.toString (round x);
         in if String.size str > 40 then " " else str end
@@ -1705,7 +1710,10 @@ fun drawArea c =
         fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
           | convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
           | convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
-          | convertArea (POINT(x,y)) = (([],[x,y],[],[]),[])
+          | convertArea (POINT(x,y)) = 
+            let val _ = if (isValidProb x) then () else raise InvalidProbError;
+                val _ = if (isValidProb y) then () else raise InvalidProbError;
+            in (([],[x,y],[],[]),[]) end
           | convertArea (RECT(p1, p2)) =
             let val ((_,pts1,_,_),_) = convertArea p1;
                 val ((_,pts2,_,_),_) = convertArea p2;
@@ -2027,6 +2035,7 @@ fun drawTable c =
           | convertTable (NNAME(x)) = (([NEVENT(x)],[]), [])
           | convertTable (ONEWAY(id, var, prob)) =
             let val ((v, _), _) = convertTable var;
+                val _ = if (isValidProb prob) then () else raise InvalidProbError;
                 val probs = case v of
                             [SEVENT(_)] => [prob, MINUS(NUM(1), prob)]
                           | [NEVENT(_)] => [MINUS(NUM(1), prob), prob]
@@ -2036,6 +2045,7 @@ fun drawTable c =
             let val ((v1, probs1), tabs1) = convertTable t1;
                 val ((v2, probs2), tabs2) = convertTable t2;
                 val vs = v1 @ v2;
+                val _ = if (isValidProb conj) then () else raise InvalidProbError;
                 val conjs = case (v1, v2, probs1, probs2) of
                             ([SEVENT _], [SEVENT _], [p1, _], [p2, _])
                             => [conj, MINUS(p1, conj), MINUS(p2, conj),
@@ -2155,6 +2165,7 @@ fun drawTree x =
           | convertTree (NBRANCH(x)) = (([NEVENT(x)], []), [])
           | convertTree (TREE(id, label, prob)) =
             let val ((vars, _), _) = convertTree label;
+                val _ = if (isValidProb prob) then () else raise InvalidProbError;
                 val prob' = MINUS(NUM 1, prob);
             in case vars of
                    [NEVENT _] => ((vars, [prob', prob]), [(id, vars, [prob', prob])])
@@ -2165,6 +2176,7 @@ fun drawTree x =
             let val ((v1, ps), tHTML) = convertTree tree;
                 val ((v2, _), _) = convertTree label;
                 val vars = v1 @ v2;
+                val _ = if (isValidProb prob) then () else raise InvalidProbError;
                 val prob' = MINUS(NUM 1, prob);
             in case (v1, v2) of
                    ([SEVENT _], [SEVENT _]) => let val ps = ps @ [prob, prob', U, U];
@@ -2348,7 +2360,8 @@ fun drawBayes c =
             (case (cname, cons) of
                  ("makeEqn", [events, value]) =>
                  let val html1 = parseEvent events;
-                     val (_, html2) = parseNum value;
+                     val (prob, html2) = parseNum value;
+                     val _ = if (isValidProb prob) then () else raise InvalidProbError;
                  in case (html1, html2) of
                         ((_, ev, w1)::_, (_, pr, w2)::_) =>
                         let val eqn = "Pr(" ^ ev ^ ") = " ^ pr;
