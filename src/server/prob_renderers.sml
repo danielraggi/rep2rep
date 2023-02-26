@@ -77,6 +77,7 @@ exception TreeError;
 exception BayesError;
 exception StringError;
 exception InvalidProbError;
+exception EqnContradictionError;
 
 val inter = "<tspan style=\"font-size:1.4em;\">&cap;</tspan>";
 val union = "<tspan style=\"font-size:1.4em;\">&cup;</tspan>";
@@ -208,9 +209,6 @@ fun onlyNum U = false
   | onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (MULT(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (FRAC(x,y)) = (onlyNum x) andalso (onlyNum y)
-
-  fun allNum [] = true
-  | allNum (x::xs) = onlyNum x andalso allNum xs
 
 fun round n = Real.roundDecimal n 4;
 
@@ -814,6 +812,8 @@ fun resolve a b (n:int) =
           | contains n (MULT(a,b)) = contains n a orelse contains n b
           | contains n (FRAC(a,b)) = contains n a orelse contains n b
           | contains n x = n = x;
+        fun allNum [] = true
+          | allNum (x::xs) = onlyNum x andalso allNum xs
         fun replace x y (PLUS(a,b)) = let val c = replace x y a;
                                           val d = replace x y b;
                                       in PLUS(c,d) end
@@ -889,12 +889,18 @@ fun resolve a b (n:int) =
                   | filterNum' ans [] ys = (List.rev ans)@ys
                   | filterNum' ans xs [] = (List.rev ans)@xs
                   | filterNum' ans (x::xs) (y::ys) =
-                    if onlyNum x then filterNum' (x::ans) xs ys
-                    else if onlyNum y then filterNum' (y::ans) xs ys
-                    else if x = U then filterNum' (y::ans) xs ys
-                    else if y = U then filterNum' (x::ans) xs ys
-                    else if nx > ny then filterNum' (y::ans) xs ys
-                    else filterNum' (x::ans) xs ys;
+                    let val xn = convertNum x
+                        val yn = convertNum y
+                    in case (xn, yn) of
+                        (R xn, R yn) => if Real.== (xn,yn) 
+                                        then filterNum' (x::ans) xs ys 
+                                        else raise ContradictingSystemError
+                      | (R _, V _)   => filterNum' (x::ans) xs ys
+                      | (V _, R _)   => filterNum' (y::ans) xs ys
+                      | (V xn, V yn) => if xn = "" then filterNum' (y::ans) xs ys
+                                        else if yn = "" then filterNum' (x::ans) xs ys
+                                        else if nx > ny then filterNum' (y::ans) xs ys
+                                        else filterNum' (x::ans) xs ys end;
             in filterNum' [] xs ys end;
         fun tResolve a b c d 0 = (List.revAppend (c, a), List.revAppend (d, b))
           | tResolve [] [] c d _ = (List.rev c, List.rev d)
