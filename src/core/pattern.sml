@@ -75,7 +75,7 @@ struct
 
   fun typeMatches T ty ty' =
     #subType T (ty,ty') orelse (Type.isTypeVar ty andalso
-                                Type.equal (Type.parentOfDanglyType ty) (Type.parentOfDanglyType ty'))
+                                #subType T (ty',Type.parentOfDanglyType ty) andalso not (Type.equal ty' (Type.parentOfDanglyType ty)))
     handle Type.badType => false
 
   fun tokenMatches T t t' =
