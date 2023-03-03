@@ -897,7 +897,7 @@ fun resolve a b (n:int) =
                     let val xn = convertNum x
                         val yn = convertNum y
                     in case (xn, yn) of
-                        (R xn, R yn) => if Real.== (xn,yn) 
+                        (R xn, R yn) => if numToString x = numToString y
                                         then filterNum' (x::ans) xs ys 
                                         else raise EqnContradictionError
                       | (R _, V _)   => filterNum' (x::ans) xs ys
@@ -921,7 +921,7 @@ fun resolve a b (n:int) =
                  then tResolve xs ys (y::c) (y::d) (e-1)
                  else if y = U
                  then tResolve xs ys (x::c) (x::d) (e-1)
-                 else if (x = y orelse (numToString x) = (numToString y)) andalso String.size (numToString x) > 1
+                 else if ((x = y) orelse (numToString x = numToString y) orelse (onlyNum x andalso onlyNum y)) andalso String.size (numToString x) > 1
                  then tResolve xs ys (x::c) (y::d) (e-1)
                  else if onlyNum y
                  then (case (x,y) of
