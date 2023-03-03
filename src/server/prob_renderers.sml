@@ -378,8 +378,8 @@ and simplify (PLUS(x,y)) =
          | (MINUS(m, VAR(k)), VAR(l)) (* (m-k) + k = m *)
            => if k = l then m
               else PLUS(a,b)
-         | (MINUS(m, MULT(n, VAR(k))), VAR(l)) (* (m-nk) + k = m - (1+n)k *)
-           => if k = l then simplify (MINUS(m, MULT(PLUS(ONE, n), VAR(k))))
+         | (MINUS(m, MULT(n, VAR(k))), VAR(l)) (* (m-nk) + k = m + (1-n)k *)
+           => if k = l then simplify (PLUS(m, MULT(MINUS(ONE, n), VAR(k))))
               else PLUS(a,b)
          | (MINUS(m, MULT(n, VAR(k))), MULT(c, VAR(l))) (* (m-nk) + ck = m + (c-n)k *)
            => if k = l then simplify (PLUS(m, MULT(MINUS(c, n), VAR(k))))
@@ -460,6 +460,8 @@ and simplify (PLUS(x,y)) =
         val b = simplify y
     in case (a,b) of
            (a, ZERO) => a
+         | (ZERO, MULT(m, VAR(k)))
+           => simplify (MULT(MINUS(ZERO,m), VAR(k)))            
          | (VAR(n), MULT(m, VAR(k))) (* n - mn = (1-m)n *)
            => if k = n then simplify (MULT(MINUS(ONE, m), VAR(n)))
               else MINUS(a,b)
