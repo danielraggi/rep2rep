@@ -15,9 +15,10 @@ signature PROBNUM = sig
     include PROBRENDER
 
     datatype numExp =
-             U
-             | NUM of int
-             | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+               U
+             | ZERO
+             | ONE
+             | NUM of string  (* String, to be converted to real later; makes numExp eqtype *)
              | VAR of string
              | PLUS of numExp * numExp
              | MINUS of numExp * numExp
@@ -33,8 +34,9 @@ type renderer = Construction.construction list
 
 datatype numExp =
            U
-         | NUM of int
-         | DEC of string  (* String, to be converted to real later; makes numExp eqtype *)
+         | ZERO
+         | ONE
+         | NUM of string  (* String, to be converted to real later; makes numExp eqtype *)
          | VAR of string
          | PLUS of numExp * numExp
          | MINUS of numExp * numExp
@@ -128,8 +130,8 @@ fun getDigitList(Construction.Source d) = [(CSpace.typeOfToken d)]
     (case constructor of ("addDigit", _) => List.maps getDigitList inputs
                 | _ => raise NumError)
 
-fun parseReal(Construction.Source d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
-  | parseReal(Construction.Reference d) = (DEC(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+fun parseReal(Construction.Source d) = (NUM(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
+  | parseReal(Construction.Reference d) = (NUM(CSpace.typeOfToken d), [(CSpace.nameOfToken d,CSpace.typeOfToken d,1.5)])
   | parseReal(tcp as (Construction.TCPair({constructor,token}, inputs))) =
     (case (constructor,inputs) of
         (("makeReal",_),[a,b]) =>
@@ -138,12 +140,12 @@ fun parseReal(Construction.Source d) = (DEC(CSpace.typeOfToken d), [(CSpace.name
                 val intPart = String.concat aDL
                 val decPart = String.concat bDL
                 val x = intPart ^ "." ^ decPart
-            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) - 0.5)])
+            in (NUM(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) - 0.5)])
             end
       | (("addDigit",_),_) =>
             let val dL = getDigitList tcp
                 val x = String.concat dL
-            in (DEC(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) + 0.5)])
+            in (NUM(x),[(CSpace.nameOfToken token, x, Real.fromInt (String.size x) + 0.5)])
             end
       | _ => raise NumError)
 
@@ -154,7 +156,7 @@ local
         in if Char.isAlpha (String.sub(subType, 0))
            then (VAR(subType), [(id, subType, subTypeLen + 0.5)])
            else case Real.fromString subType of
-                        SOME x => (DEC(subType), [(id, subType, subTypeLen - 0.5)])
+                        SOME x => (NUM(subType), [(id, subType, subTypeLen - 0.5)])
                       | NONE => raise NumError
         end;
         fun parseWithValAndLength parse c =
@@ -202,8 +204,9 @@ fun parseNum (Construction.Source(tok)) = parseSource tok
 end;
 
 fun onlyNum U = false
+  | onlyNum ZERO = true
+  | onlyNum ONE = true
   | onlyNum (NUM(x)) = true
-  | onlyNum (DEC(x)) = true
   | onlyNum (VAR(x)) = false
   | onlyNum (PLUS(x,y)) = (onlyNum x) andalso (onlyNum y)
   | onlyNum (MINUS(x,y)) = (onlyNum x) andalso (onlyNum y)
@@ -262,10 +265,11 @@ fun convertNum (PLUS(x,y)) =
       | (V a, V b) => V (a ^ "/" ^ b))
   | convertNum (VAR(x)) = V x
   | convertNum (U) = V " "
-  | convertNum (DEC(x)) = (case (Real.fromString x) of
+  | convertNum (NUM(x)) = (case (Real.fromString x) of
                               NONE => raise NumError
                             | SOME z => R z)
-  | convertNum (NUM(x)) = R (Real.fromInt x)
+  | convertNum ZERO = R 0.0
+  | convertNum ONE = R 1.0
 
 fun isValidProb p = 
     case convertNum p of
@@ -284,87 +288,86 @@ and simplify (PLUS(x,y)) =
        and we could add in a few simplifiers such as NEG(NEG(x)) => x,
        then change the stringifier to look for PLUS(a,NEG(b)).
        This would probably also require that we convert to a normal
-       form, which is probably a good thing! I also suggest collapsing
-       NUM and DEC into a single NUM variant (containing a numerical string?).
+       form, which is probably a good thing!
      *)
     let val a = simplify x;
         val b = simplify y;
     in case (a,b) of
-           (NUM(0), b) => b (* 0 + b = b *)
-         | (a, NUM(0)) => a (* a + 0 = a *)
+           (ZERO, b) => b (* 0 + b = b *)
+         | (a, ZERO) => a (* a + 0 = a *)
          | (VAR(k), MULT(c, VAR(l))) (* k + ck = (c+1)k *)
-           => if k = l then simplify (MULT(PLUS(NUM(1), c), VAR(k)))
+           => if k = l then simplify (MULT(PLUS(ONE, c), VAR(k)))
               else PLUS(a,b)
          | (MULT(n, VAR(m)), VAR(l)) (* nm + m = (n+1)m *)
-           => if m = l then simplify (MULT(PLUS(NUM(1), n), VAR(m)))
+           => if m = l then simplify (MULT(PLUS(ONE, n), VAR(m)))
               else PLUS(a,b)
          | (MULT(n,VAR(m)),MULT(k,VAR(l))) (* nm + km = (n+k)m *)
            => if m = l then simplify (MULT(PLUS(n,k),VAR(m)))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), PLUS(n, VAR(l))) (* mk + n + k = n + (m+1)k *)
-           => if k = l then simplify (PLUS(n, MULT(PLUS(NUM(1), m), VAR(k))))
+           => if k = l then simplify (PLUS(n, MULT(PLUS(ONE, m), VAR(k))))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), PLUS(n, MULT(c, VAR(l)))) (* mk + n + ck = n + (m+c)k *)
            => if k = l then simplify (PLUS(n, MULT(PLUS(m, c),VAR(k))))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), MINUS(n, VAR(l))) (* mk + (n-k) = n + (m-1)*k *)
-           => if k = l then simplify (PLUS(n, MULT(MINUS(m, NUM(1)), VAR(k))))
+           => if k = l then simplify (PLUS(n, MULT(MINUS(m, ONE), VAR(k))))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), MINUS(VAR(l), n)) (* mk + (k-n) = (0-n) + (m+1)k *)
-           => if k = l then simplify (PLUS(MINUS(NUM(0), n), MULT(PLUS(NUM(1), m), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(ZERO, n), MULT(PLUS(ONE, m), VAR(k))))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), MINUS(n, MULT(c, VAR(l)))) (* mk + (n-ck) = n + (m-c)k *)
            => if k = l then simplify (PLUS(n, MULT(MINUS(m, c), VAR(k))))
               else PLUS(a,b)
          | (MULT(m, VAR(k)), MINUS(MULT(c, VAR(l)), n)) (* mk + (ck - n) = (0-n) + (c+m)k *)
-           => if k = l then simplify (PLUS(MINUS(NUM(0), n), MULT(PLUS(c, m), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(ZERO, n), MULT(PLUS(c, m), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), VAR(l)) (* (m+k) + k = m + 2k *)
-           => if k = l then simplify (PLUS(m, MULT(NUM(2), VAR(k))))
+           => if k = l then simplify (PLUS(m, MULT(NUM("2"), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), MULT(n, VAR(l))) (* (m+k) + nk = m + (1+n)k *)
-           => if k = l then simplify (PLUS(m, MULT(PLUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (PLUS(m, MULT(PLUS(ONE, n), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), PLUS(n, VAR(l))) (* (m+k) + (n+k) = (m+n) + 2k *)
-           => if k = l then simplify (PLUS(PLUS(m, n), MULT(NUM(2), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(m, n), MULT(NUM("2"), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), PLUS(c, MULT(n, VAR(l)))) (* (m+k) + (c+nk) = (m+c)+((n+1)*k) *)
-           => if k = l then simplify (PLUS(PLUS(m, c), MULT(PLUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(m, c), MULT(PLUS(ONE, n), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), MINUS(n, VAR(l))) (* (m+k) + (n-k) = m + n *)
            => if k = l then simplify (PLUS(m, n))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), MINUS(VAR(l), n)) (* (m+k) + (k-n) = (m-n) + 2k *)
-           => if k = l then simplify (PLUS(MINUS(m, n), MULT(NUM(2), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(m, n), MULT(NUM("2"), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, VAR(k)), MINUS(n, MULT(c, VAR(l)))) (* (m+k) + (n-ck) = (m+n) + (1-c)k *)
-           => if k = l then simplify (PLUS(PLUS(m, n), MULT(MINUS(NUM(1), c), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(m, n), MULT(MINUS(ONE, c), VAR(k))))
               else PLUS(a, b)
          | (PLUS(m, VAR(k)), MINUS(MULT(c, VAR(l)), n)) (* (m+k) + (ck-n) = (m-n) + (c+1)k *)
-           => if k = l then simplify (PLUS(MINUS(m, n), MULT(PLUS(NUM(1), c), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(m, n), MULT(PLUS(ONE, c), VAR(k))))
               else PLUS(a,b)
          (* FROM HERE WE HAVE THE COMMUTED VERSIONS OF THE ABOVE RULES... mostly?
                 E.g., if above we simplified (x + y) + z, now we simplify z + (x + y)
           *)
          | (PLUS(n, MULT(c, VAR(l))), VAR(k)) (* (n+ck) + k = n + (c+1)k *)
-           => if k = l then simplify (PLUS(n, MULT(PLUS(NUM(1), c), VAR(k))))
+           => if k = l then simplify (PLUS(n, MULT(PLUS(ONE, c), VAR(k))))
               else PLUS(a,b)
          | (PLUS(n, MULT(c, VAR(l))), MULT(m, VAR(k))) (* (n+ck) + mk = n + (m+c)k *)
            => if k = l then simplify (PLUS(n, MULT(PLUS(m, c), VAR(k))))
               else PLUS(a,b)
          | (PLUS(m, MULT(n, VAR(k))), PLUS(c, VAR(l))) (* (m+nk) + (c+k) = (m+c) + (1+n)k *)
-           => if k = l then simplify (PLUS(PLUS(m, c), MULT(PLUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(m, c), MULT(PLUS(ONE, n), VAR(k))))
               else PLUS(a,b)
          | (PLUS(n, MULT(c, VAR(l))), PLUS(d, MULT(m, VAR(k)))) (* (n+ck) + (d+mk) = (n+d) + (c+m)k *)
            => if k = l then simplify (PLUS(PLUS(n, d), MULT(PLUS(c, m), VAR(k))))
               else PLUS(a,b)
          | (PLUS(n, MULT(c, VAR(l))), MINUS(d, VAR(k))) (* (n+ck) + (d-k) = (n+d) + (c-1)k *)
-           => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(c, NUM(1)), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(c, ONE), VAR(k))))
                                      (* (n-cl) + (d-k) = ((n+d)-cl) - k *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH PLUS(a,b) *)
               else simplify (MINUS(PLUS(PLUS(n, d),MULT(c, VAR(l))), VAR(k)))
          | (PLUS(n, MULT(c, VAR(l))), MINUS(VAR(k), d)) (* (n+ck) + (k-d) = (n-d) + (1+c)k *)
-           => if k = l then simplify (PLUS(MINUS(n, d), MULT(PLUS(NUM(1), c), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(n, d), MULT(PLUS(ONE, c), VAR(k))))
               else PLUS(a,b)
          | (PLUS(n, MULT(c, VAR(l))), MINUS(d, MULT(m, VAR(k)))) (* (n+ck) + (d-mk) = (n+d) + (c-m)k *)
            => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(c, m), VAR(k))))
@@ -376,7 +379,7 @@ and simplify (PLUS(x,y)) =
            => if k = l then m
               else PLUS(a,b)
          | (MINUS(m, MULT(n, VAR(k))), VAR(l)) (* (m-nk) + k = m - (1+n)k *)
-           => if k = l then simplify (MINUS(m, MULT(PLUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (MINUS(m, MULT(PLUS(ONE, n), VAR(k))))
               else PLUS(a,b)
          | (MINUS(m, MULT(n, VAR(k))), MULT(c, VAR(l))) (* (m-nk) + ck = m + (c-n)k *)
            => if k = l then simplify (PLUS(m, MULT(MINUS(c, n), VAR(k))))
@@ -385,7 +388,7 @@ and simplify (PLUS(x,y)) =
            => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(m, c), VAR(k))))
               else PLUS(a,b)
          | (MINUS(n, MULT(c, VAR(l))), PLUS(d, VAR(k))) (* (n-ck) + (d+k) = (n+d) + (1-c)k *)
-           => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(NUM(1), c), VAR(k))))
+           => if k = l then simplify (PLUS(PLUS(n, d), MULT(MINUS(ONE, c), VAR(k))))
               else PLUS(a,b)
          | (MINUS(n, MULT(c, VAR(l))), MINUS(d, MULT(m, VAR(k)))) (* (n-ck) + (d-mk) = (n+d) - (m+c)k *)
            => if k = l then simplify (MINUS(PLUS(n, d), MULT(PLUS(m, c), VAR(k))))
@@ -456,20 +459,20 @@ and simplify (PLUS(x,y)) =
     let val a = simplify x
         val b = simplify y
     in case (a,b) of
-           (a, NUM(0)) => a
+           (a, ZERO) => a
          | (VAR(n), MULT(m, VAR(k))) (* n - mn = (1-m)n *)
-           => if k = n then simplify (MULT(MINUS(NUM(1), m), VAR(n)))
+           => if k = n then simplify (MULT(MINUS(ONE, m), VAR(n)))
               else MINUS(a,b)
          | (VAR(n), MINUS(k, MULT(d, VAR(l)))) (* n - (k - dn) = (1+d)n - k *)
-           => if n = l then simplify (MINUS(MULT(PLUS(NUM(1), d), VAR(n)), k))
+           => if n = l then simplify (MINUS(MULT(PLUS(ONE, d), VAR(n)), k))
                                      (* n - (k - dl) = ((0-k) + dl) + n *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
-              else simplify (PLUS(PLUS(MINUS(NUM(0), k), MULT(d, VAR(l))), VAR(n)))
+              else simplify (PLUS(PLUS(MINUS(ZERO, k), MULT(d, VAR(l))), VAR(n)))
          | (VAR(n), PLUS(k, MULT(d, VAR(l)))) (* n - (k+dn) = (0-k) + (1-d)n *)
-           => if n = l then simplify (PLUS(MINUS(NUM(0), k), MULT(MINUS(NUM(1), d), VAR(n))))
+           => if n = l then simplify (PLUS(MINUS(ZERO, k), MULT(MINUS(ONE, d), VAR(n))))
               else MINUS(a,b)
          | (MULT(m, VAR(k)), VAR(n)) (* mn - n = (m-1)n *)
-           => if k = n then simplify (MULT(MINUS(m, NUM(1)), VAR(n)))
+           => if k = n then simplify (MULT(MINUS(m, ONE), VAR(n)))
               else MINUS(a,b)
          | (MULT(n, VAR(m)), MULT(k, VAR(l))) (* nm - km = (n-k)m *)
            => if m = l then simplify (MULT(MINUS(n, k), VAR(m)))
@@ -478,18 +481,18 @@ and simplify (PLUS(x,y)) =
            => if m = l then simplify (MINUS(MULT(PLUS(n, d),VAR(m)), k))
                                      (* nm - (k-dl) = ((0-k)+nm) + dl *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
-              else simplify (PLUS(PLUS(MINUS(NUM(0),k),MULT(n,VAR(m))),MULT(d,VAR(l))))
+              else simplify (PLUS(PLUS(MINUS(ZERO,k),MULT(n,VAR(m))),MULT(d,VAR(l))))
          | (MULT(n, VAR(m)), PLUS(k, VAR(l))) (* nm - (k+m) = (0-k) + (n-1)m *)
-           => if m = l then simplify (PLUS(MINUS(NUM(0), k), MULT(MINUS(n, NUM(1)), VAR(m))))
+           => if m = l then simplify (PLUS(MINUS(ZERO, k), MULT(MINUS(n, ONE), VAR(m))))
               else MINUS(a,b)
          | (MULT(n, VAR(m)), PLUS(k, MULT(d, VAR(l)))) (* nm - (k +dm) = (0-k) + (n-d)m *)
-           => if m = l then simplify (PLUS(MINUS(NUM(0), k), MULT(MINUS(n, d), VAR(m))))
+           => if m = l then simplify (PLUS(MINUS(ZERO, k), MULT(MINUS(n, d), VAR(m))))
               else MINUS(a,b)
          | (MINUS(VAR(n), m), PLUS(k, MULT(d, VAR(l)))) (* (n-m) - (k-dn) = (0-(m+k)) + (1-d)n *)
-           => if n = l then simplify (PLUS(MINUS(NUM(0), PLUS(m, k)), MULT(MINUS(NUM(1), d), VAR(n))))
+           => if n = l then simplify (PLUS(MINUS(ZERO, PLUS(m, k)), MULT(MINUS(ONE, d), VAR(n))))
               else MINUS(a,b)
          | (MINUS(m, VAR(n)), MULT(d, VAR(l))) (* (m-n) - dn = m - (1+d)n *)
-           => if n = l then simplify (MINUS(m, MULT(PLUS(NUM(1), d), VAR(n))))
+           => if n = l then simplify (MINUS(m, MULT(PLUS(ONE, d), VAR(n))))
               else MINUS(a,b)
          | (MINUS(m, VAR(n)), MINUS(d, VAR(l))) (* (m-n) - (d-n) = m - d *)
            => if n = l then simplify (MINUS(m, d))
@@ -497,12 +500,12 @@ and simplify (PLUS(x,y)) =
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (PLUS(MINUS(MINUS(m, d), VAR(n)), VAR(l)))
          | (MINUS(m, VAR(n)), MINUS(k, MULT(d, VAR(l)))) (* (m-n) - (k-dn) = (m-k) - (1-d)n *)
-           => if n = l then simplify (MINUS(MINUS(m, k), MULT(MINUS(NUM(1), d), VAR(n))))
+           => if n = l then simplify (MINUS(MINUS(m, k), MULT(MINUS(ONE, d), VAR(n))))
                                      (* (m-n) - (k - dl) = ((m-k) + dl) - n *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (MINUS(PLUS(MINUS(m, k), MULT(d, VAR(l))), VAR(n)))
          | (MINUS(m, MULT(c, VAR(n))), VAR(l)) (* (m-cn) - n = m - (1+c)n *)
-           => if n = l then simplify (MINUS(m, MULT(PLUS(NUM(1), c), VAR(n))))
+           => if n = l then simplify (MINUS(m, MULT(PLUS(ONE, c), VAR(n))))
               else MINUS(a,b)
          | (MINUS(m, MULT(c, VAR(n))), MINUS(k, MULT(d, VAR(l)))) (* (m-cn) - (k-dn) = (m-k) - (c-d)n *)
            => if n = l then simplify (MINUS(MINUS(m, k), MULT(MINUS(c, d), VAR(n))))
@@ -510,24 +513,24 @@ and simplify (PLUS(x,y)) =
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (PLUS(MINUS(MINUS(m, k), MULT(c, VAR(n))), MULT(d, VAR(l))))
          | (MINUS(m, MULT(c, VAR(n))), MINUS(d, VAR(l))) (* (m-cn) - (d-n) = (m-d) - (c-1)n *)
-           => if n = l then simplify (MINUS(MINUS(m, d), MULT(MINUS(c, NUM(1)), VAR(n))))
+           => if n = l then simplify (MINUS(MINUS(m, d), MULT(MINUS(c, ONE), VAR(n))))
                                      (* (m-cn) - (d-l) = ((m-d)-cn) + l *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (PLUS(MINUS(MINUS(m, d), MULT(c, VAR(n))), VAR(l)))
          | (MINUS(m, MULT(c, VAR(n))), MINUS(VAR(l), d)) (* (m-cn) - (n-d) = (m+d) - (1+c)n *)
-           => if n = l then simplify (MINUS(PLUS(m, d), MULT(PLUS(NUM(1), c), VAR(n))))
+           => if n = l then simplify (MINUS(PLUS(m, d), MULT(PLUS(ONE, c), VAR(n))))
               else MINUS(a,b)
          | (MINUS(m, MULT(c, VAR(n))), PLUS(k, MULT(d, VAR(l)))) (* (m-cn) - (k+dn) = (m-k) - (c+d)n *)
            => if n = l then simplify (MINUS(MINUS(m, k), MULT(PLUS(c, d), VAR(n))))
               else MINUS(a,b)
          | (PLUS(c, MULT(n, VAR(l))), VAR(k)) (* (c+nk) - k = c + (n-1)k *)
-           => if k = l then simplify (PLUS(c, MULT(MINUS(n, NUM(1)), VAR(k))))
+           => if k = l then simplify (PLUS(c, MULT(MINUS(n, ONE), VAR(k))))
               else MINUS(a,b)
          | (PLUS(c, MULT(n, VAR(l))), MULT(m, VAR(k))) (* (c+nk) - mk = c + (n-m)k *)
            => if k = l then simplify (PLUS(c, MULT(MINUS(n, m), VAR(k))))
               else MINUS(a,b)
          | (PLUS(c, MULT(n, VAR(l))), MINUS(d, VAR(k))) (* (c+nl) - (d-l) = (c-d) + (1+n)l *)
-           => if k = l then simplify (PLUS(MINUS(c, d), MULT(PLUS(NUM(1), n), VAR(l))))
+           => if k = l then simplify (PLUS(MINUS(c, d), MULT(PLUS(ONE, n), VAR(l))))
                                      (* (c+nl) - (d-k) = ((c-d) + nl) + k *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (PLUS(PLUS(MINUS(c, d), MULT(n, VAR(l))), VAR(k)))
@@ -538,13 +541,13 @@ and simplify (PLUS(x,y)) =
            => if k = l then simplify (PLUS(MINUS(m, c), MULT(MINUS(d, n), VAR(k))))
               else MINUS(a,b)
          | (PLUS(m, VAR(k)), PLUS(c, MULT(n, VAR(l)))) (* (m+k) - (c + nk) = (m-c) + (1-n)k *)
-           => if k = l then simplify (PLUS(MINUS(m, c), MULT(MINUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(m, c), MULT(MINUS(ONE, n), VAR(k))))
               else MINUS(a,b)
          | (PLUS(m, VAR(k)), MULT(n, VAR(l))) (* (m+k) - nk = m + (1-n)k *)
-           => if k = l then simplify (PLUS(m, MULT(MINUS(NUM(1), n), VAR(k))))
+           => if k = l then simplify (PLUS(m, MULT(MINUS(ONE, n), VAR(k))))
               else MINUS(a,b)
          | (PLUS(m, VAR(k)), MINUS(c, VAR(l))) (* (m+k) - (c-k) = (m-c) + 2k *)
-           => if k = l then simplify (PLUS(MINUS(m,c),MULT(NUM(2),VAR(k))))
+           => if k = l then simplify (PLUS(MINUS(m,c),MULT(NUM("2"),VAR(k))))
                                      (* (m+k) - (c-l) = ((m-c) + k) + l *)
                                      (* WHY IS THIS DIFFERENT? EVERYTHING ELSE ENDS WITH MINUS(a,b) *)
               else simplify (PLUS(PLUS(MINUS(m,c),VAR(k)),VAR(l)))
@@ -599,23 +602,23 @@ and simplify (PLUS(x,y)) =
               else if d = b then c (* (c+d) - d = c *)
               else MINUS(a,b)
          | (a, PLUS(c, d))
-           => if a = c then simplify (MINUS(NUM(0),d)) (* a - (a+d) = 0 - d *)
-              else if a = d then simplify (MINUS(NUM(0),c)) (* a - (c+a) = 0 - c *)
+           => if a = c then simplify (MINUS(ZERO,d)) (* a - (a+d) = 0 - d *)
+              else if a = d then simplify (MINUS(ZERO,c)) (* a - (c+a) = 0 - c *)
               else MINUS(a,b)
          | (a, b)
-           => if a = b then NUM(0) (* a - a = 0 *)
+           => if a = b then ZERO (* a - a = 0 *)
               else MINUS(a,b)
     end
   | simplify (MULT(x,y)) =
     let val a = simplify x;
         val b = simplify y;
     in case (a, b) of
-           (NUM(0), b) => NUM(0)
-         | (a, NUM(0)) => NUM(0)
-         | (NUM(1), b) => b
-         | (a, NUM(1)) => a
-         | (NUM(~1), b) => MINUS(NUM(0), b)
-         | (a, NUM(~1)) => MINUS(NUM(0), a)
+           (ZERO, b) => ZERO
+         | (a, ZERO) => ZERO
+         | (ONE, b) => b
+         | (a, ONE) => a
+         | (NUM("~1"), b) => MINUS(ZERO, b)
+         | (a, NUM("~1")) => MINUS(ZERO, a)
          | (VAR(k), MINUS(c, FRAC(n, VAR(l)))) (* k(c - n/k) = ck - n *)
            => if k = l then simplify (MINUS(MULT(c, VAR(k)), n))
               else MULT(a,b)
@@ -686,7 +689,7 @@ and simplify (PLUS(x,y)) =
               else MULT(a,b)
          | (MINUS(c, FRAC(k, l)), MINUS(d, VAR(n)))
            => if l = b (* (c - k/(d-n))(d - n) = (0-k) + c(d-n) *)
-              then simplify (PLUS(MINUS(NUM(0), k), MULT(c, l)))
+              then simplify (PLUS(MINUS(ZERO, k), MULT(c, l)))
               else MULT(a,b)
          | (FRAC(c, k), MINUS(m, VAR(n))) (* c/(m-n) * (m-n) = c *)
            => if k = b orelse numToString k = numToString b then c else MULT(a,b)
@@ -739,12 +742,12 @@ and simplify (PLUS(x,y)) =
   | simplify (FRAC(x,y)) =
     let val a = simplify x;
         val b = simplify y;
-    in if numToString a = numToString b then NUM(1)
-       else if numToString b = numToString (NUM(0)) then raise NumError
-       else if numToString a = numToString (NUM(0)) then NUM(0)
+    in if numToString a = numToString b then ONE
+       else if numToString b = numToString (ZERO) then raise NumError
+       else if numToString a = numToString (ZERO) then ZERO
        else case (a, b) of
-                (NUM(0), _) => NUM(0)
-              | (a, NUM(1)) => a
+                (ZERO, _) => ZERO
+              | (a, ONE) => a
               | (MULT(c, VAR(k)), b)
                 => if c = b then VAR(k) (* ck/c = k *)
                    else if b = (VAR(k)) then c (* ck/k = c *)
@@ -762,10 +765,10 @@ and simplify (PLUS(x,y)) =
                    else if b = k then c (* ck/k = c *)
                    else FRAC(a,b)
               | (PLUS(c, VAR(k)), VAR(l)) (* (c+l)/l = 1 + c/l *)
-                => if k = l then simplify (PLUS(NUM(1), FRAC(c, VAR(l))))
+                => if k = l then simplify (PLUS(ONE, FRAC(c, VAR(l))))
                    else FRAC(a,b)
               | (MINUS(c, MULT(d, VAR(k))), VAR(l)) (* (c - dk)/k = (0-d) + c/k *)
-                => if k = l then simplify (PLUS(MINUS(NUM(0), d), FRAC(c, VAR(k))))
+                => if k = l then simplify (PLUS(MINUS(ZERO, d), FRAC(c, VAR(k))))
                    else FRAC(a,b)
               | (MINUS(MULT(d, VAR(k)), c), VAR(l)) (* (dk - c)/k = d - c/k *)
                 => if k = l then simplify (MINUS(d, FRAC(c, VAR(k))))
@@ -775,15 +778,15 @@ and simplify (PLUS(x,y)) =
                    else FRAC(a,b)
               | (MINUS(VAR(k), c), b)
                 => if onlyNum b andalso onlyNum c (* (k - c)/b = (1/b)k - c/b *)
-                   then simplify (MINUS(MULT(FRAC(NUM(1), b), VAR(k)), FRAC(c, b)))
+                   then simplify (MINUS(MULT(FRAC(ONE, b), VAR(k)), FRAC(c, b)))
                    else FRAC(a,b)
               | (MINUS(c, VAR(k)), b)
                 => if onlyNum b andalso onlyNum c (* (c-k)/b = c/b - (1/b)k *)
-                   then simplify (MINUS(FRAC(c, b), MULT(FRAC(NUM(1), b), VAR(k))))
+                   then simplify (MINUS(FRAC(c, b), MULT(FRAC(ONE, b), VAR(k))))
                    else FRAC(a,b)
               | (PLUS(c, VAR(k)), b)
                 => if onlyNum b andalso onlyNum c (* (c+k)/b = c/b + (1/b)k *)
-                   then simplify (PLUS(FRAC(c, b), MULT(FRAC(NUM(1), b), VAR(k))))
+                   then simplify (PLUS(FRAC(c, b), MULT(FRAC(ONE, b), VAR(k))))
                    else FRAC(a,b)
               | (MINUS(c, MULT(d, VAR(k))), b)
                 => if onlyNum b andalso onlyNum c andalso onlyNum d (* (c - dk)/b = (c/b) - (d/b)k *)
@@ -894,7 +897,7 @@ fun resolve a b (n:int) =
                     in case (xn, yn) of
                         (R xn, R yn) => if Real.== (xn,yn) 
                                         then filterNum' (x::ans) xs ys 
-                                        else raise ContradictingSystemError
+                                        else raise EqnContradictionError
                       | (R _, V _)   => filterNum' (x::ans) xs ys
                       | (V _, R _)   => filterNum' (y::ans) xs ys
                       | (V xn, V yn) => if xn = "" then filterNum' (y::ans) xs ys
@@ -1224,33 +1227,33 @@ fun resolve a b (n:int) =
                              val zy = List.map fy ys;
                              val wy = List.map fy d;
                          in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
-                       | (VAR(n), MINUS(NUM(1), VAR(m))) =>
+                       | (VAR(n), MINUS(ONE, VAR(m))) =>
                          let val fx = replace (VAR(n^m)) (VAR(n));
-                             val fy = replace (MINUS(NUM(1),VAR(n^m))) (VAR(m));
+                             val fy = replace (MINUS(ONE,VAR(n^m))) (VAR(m));
                              val zx = List.map fx xs;
                              val wx = List.map fx c;
                              val zy = List.map fy ys;
                              val wy = List.map fy d;
                          in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
-                       | (MINUS(NUM(1), VAR(n)), VAR(m)) =>
-                         let val fx = replace (MINUS(NUM(1),VAR(n^m))) (VAR(n));
+                       | (MINUS(ONE, VAR(n)), VAR(m)) =>
+                         let val fx = replace (MINUS(ONE,VAR(n^m))) (VAR(n));
                              val fy = replace (VAR(n^m)) (VAR(m));
                              val zx = List.map fx xs;
                              val wx = List.map fx c;
                              val zy = List.map fy ys;
                              val wy = List.map fy d;
                          in tResolve zx zy ((VAR(n^m))::wx) ((VAR(n^m))::wy) (e-1) end
-                       | (MINUS(NUM(1), VAR(n)), MINUS(NUM(1), VAR(m))) =>
+                       | (MINUS(ONE, VAR(n)), MINUS(ONE, VAR(m))) =>
                          let val fx = replace (VAR(n^m)) (VAR(n));
                              val fy = replace (VAR(n^m)) (VAR(m));
                              val zx = List.map fx xs;
                              val wx = List.map fx c;
                              val zy = List.map fy ys;
                              val wy = List.map fy d;
-                         in tResolve zx zy ((MINUS(NUM(1),VAR(n^m)))::wx) ((MINUS(NUM(1),VAR(n^m)))::wy) (e-1) end
+                         in tResolve zx zy ((MINUS(ONE,VAR(n^m)))::wx) ((MINUS(ONE,VAR(n^m)))::wy) (e-1) end
                        | (PLUS(PLUS(k ,MULT(m, VAR(n))), VAR(l)), y) =>
                          if not (contains (VAR(n)) y)
-                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l)),m)) (VAR(n));
+                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(ZERO,k),y),VAR(l)),m)) (VAR(n));
                                   val zs = List.map f xs;
                                   val ws = List.map f c;
                               in tResolve zs ys (y::ws) (y::d) (e-1) end
@@ -1262,7 +1265,7 @@ fun resolve a b (n:int) =
                          else tResolve xs ys (x::c) (y::d) (e-1)
                        | (x, PLUS(PLUS(k, MULT(m, VAR(n))), VAR(l))) =>
                          if not (contains (VAR(n)) x)
-                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l)),m)) (VAR(n));
+                         then let val f = replace (FRAC(MINUS(PLUS(MINUS(ZERO,k),x),VAR(l)),m)) (VAR(n));
                                   val zs = List.map f ys;
                                   val ws = List.map f d;
                               in tResolve xs zs (x::c) (x::ws) (e-1) end
@@ -1346,7 +1349,7 @@ fun resolve a b (n:int) =
                          else tResolve xs ys (x::c) (y::d) (e-1)
                        | (PLUS(PLUS(k, VAR(n)), VAR(l)), y) =>
                          if not (contains (VAR(n)) y)
-                         then let val f = replace (MINUS(PLUS(MINUS(NUM(0),k),y),VAR(l))) (VAR(n));
+                         then let val f = replace (MINUS(PLUS(MINUS(ZERO,k),y),VAR(l))) (VAR(n));
                                   val zs = List.map f xs;
                                   val ws = List.map f c;
                               in tResolve zs ys (y::ws) (y::d) (e-1) end
@@ -1358,7 +1361,7 @@ fun resolve a b (n:int) =
                          else tResolve xs ys (x::c) (y::d) (e-1)
                        | (x, PLUS(PLUS(k, VAR(n)), VAR(l))) =>
                          if not (contains (VAR(n)) x)
-                         then let val f = replace (MINUS(PLUS(MINUS(NUM(0),k),x),VAR(l))) (VAR(n));
+                         then let val f = replace (MINUS(PLUS(MINUS(ZERO,k),x),VAR(l))) (VAR(n));
                                   val zs = List.map f ys;
                                   val ws = List.map f d;
                               in tResolve xs zs (x::c) (x::ws) (e-1) end
@@ -1462,7 +1465,7 @@ fun resolve a b (n:int) =
                               in tResolve zs zy (y::ws) (x::wy) (e-1) end
                        | (MINUS(VAR(n), m), MULT(l, VAR(k))) =>
                          if n = k
-                         then let val f = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n));
+                         then let val f = replace (FRAC(m,MINUS(ONE,l))) (VAR(n));
                                   val zs = List.map f xs;
                                   val zy = List.map f ys;
                                   val ws = List.map f (x::c);
@@ -1474,7 +1477,7 @@ fun resolve a b (n:int) =
                               in tResolve zs ys (y::ws) (y::d) (e-1) end
                        | (MULT(l, VAR(k)), MINUS(VAR(n), m)) =>
                          if n = k
-                         then let val f = replace (FRAC(m,MINUS(NUM(1),l))) (VAR(n));
+                         then let val f = replace (FRAC(m,MINUS(ONE,l))) (VAR(n));
                                   val zs = List.map f xs;
                                   val zy = List.map f ys;
                                   val ws = List.map f (x::c);
@@ -1736,15 +1739,15 @@ fun drawArea c =
                    then case (hd v3) of
                             SEVENT _ => let val shading = [shading];
                                             val probs = case p2 of
-                                                            (_::_::p::_) => [p, MINUS(NUM 1, p)]
+                                                            (_::_::p::_) => [p, MINUS(ONE, p)]
                                                           | _ => raise AreaError;
                                         in ((    v3, p2, shading, probs),
                                             (id, v3, p2, shading, probs) :: html)
                                         end
                           | NEVENT _ => let val (points, probs) =
                                                 case p2 of
-                                                    (_::_::p::_) => ([MINUS(NUM 1, p), NUM 0, NUM 1, NUM 1],
-                                                                     [MINUS(NUM 1, p), p])
+                                                    (_::_::p::_) => ([MINUS(ONE, p), ZERO, ONE, ONE],
+                                                                     [MINUS(ONE, p), p])
                                                   | _ => raise AreaError;
                                           val shading = [flipShading shading];
                                       in ((    v3, points, shading, probs),
@@ -1756,7 +1759,7 @@ fun drawArea c =
                                 val points = p1 @ p2;
                                 val shading = s1 @ [shading];
                                 val probs = case p2 of
-                                                (_::_::_::p::_) => w1 @ [p, MINUS(NUM 1, p)]
+                                                (_::_::_::p::_) => w1 @ [p, MINUS(ONE, p)]
                                               | _ => raise AreaError;
                             in ((    events, points, shading, probs),
                                 (id, events, points, shading, probs) :: html)
@@ -1765,8 +1768,8 @@ fun drawArea c =
                             let val events = v1 @ v3;
                                 val (points, probs) =
                                     case p2 of
-                                        (p::_::_::q::_) => (p1 @ [p, MINUS(NUM 1, q), q, NUM 1],
-                                                            w1 @ [MINUS(NUM 1, q), q])
+                                        (p::_::_::q::_) => (p1 @ [p, MINUS(ONE, q), q, ONE],
+                                                            w1 @ [MINUS(ONE, q), q])
                                      | _ => raise AreaError;
                                 val shading = s1 @ [flipShading shading];
                             in ((    events, points, shading, probs),
@@ -1776,23 +1779,23 @@ fun drawArea c =
                             let val events = v1 @ v3;
                                 val points = p1 @ [List.nth(p1,0),List.nth(p2,1),List.nth(p1,2),List.nth(p2,3)];
                                 val shading = s1 @ [shading];
-                                val probs = w1 @ [List.nth(p2,3),MINUS(NUM(1),List.nth(p2,3))];
+                                val probs = w1 @ [List.nth(p2,3),MINUS(ONE,List.nth(p2,3))];
                             in ((    events, points, shading, probs),
                                 (id, events, points, shading, probs) :: html)
                             end
                           | (NEVENT _, NEVENT _) =>
                             let val events = v1 @ v3;
-                                val points = p1 @ [List.nth(p1,0),MINUS(NUM(1),List.nth(p2,3)),List.nth(p1,2),NUM(1)];
+                                val points = p1 @ [List.nth(p1,0),MINUS(ONE,List.nth(p2,3)),List.nth(p1,2),ONE];
                                 val shading = s1 @ [flipShading shading];
-                                val probs = w1 @ [MINUS(NUM(1),List.nth(p2,3)), List.nth(p2,3)];
+                                val probs = w1 @ [MINUS(ONE,List.nth(p2,3)), List.nth(p2,3)];
                             in ((    events, points, shading, probs),
                                 (id, events, points, shading, probs) :: html)
                             end
                 end
             | convertArea (COMBAREA(id, x, y)) =
               let fun toRects [w0, _, w2, _, w4, _] =
-                      let val z = NUM 0;
-                          val i = NUM 1;
+                      let val z = ZERO;
+                          val i = ONE;
                       in [z, z, w0, i,
                           z, z, w0, w2,
                           w0, z, i, w4] end
@@ -1812,20 +1815,20 @@ fun drawArea c =
                   fun areaMerge x2 y2 a x3 y3 b =
                       let fun ff (b0::b1::b2::b3::b4::b5::_) =
                               let val z = VAR("z");
-                                  val z' = MINUS(NUM(1), z);
+                                  val z' = MINUS(ONE, z);
                                   fun mktree xs = let val xs' = List.map simplify xs;
                                                   in (xs, (toRects xs)) end;
                               in case (b2, b4) of
                                      (U, _) => mktree [z, z',
-                                                       MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                       MINUS(ONE, FRAC(MULT(b4, b1), z)),
                                                        FRAC(MULT(b4, b1), z),
-                                                       MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                       MINUS(ONE, FRAC(MULT(b5, b1), z')),
                                                        FRAC(MULT(b5, b1), z')]
                                    | (_, U) => mktree [z, z',
                                                        FRAC(MULT(b2, b0), z),
-                                                       MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                       MINUS(ONE, FRAC(MULT(b2, b0), z)),
                                                        FRAC(MULT(b3, b0), z'),
-                                                       MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                                       MINUS(ONE, FRAC(MULT(b3, b0), z'))]
                                    | (_, _) => let val y1 = PLUS(MULT(b2, b0), MULT(b4, b1));
                                                    val y2 = PLUS(MULT(b3, b0), MULT(b5, b1));
                                                in mktree [y1, y2,
@@ -1861,12 +1864,12 @@ fun drawArea c =
                              in (x, c, d, e, f) end
                          else if List.length x2 = List.length x3 andalso List.length x2 = 1
                          then let val z = VAR("z");
-                                  val z' = MINUS(NUM(1), z);
+                                  val z' = MINUS(ONE, z);
                                   val x = VAR("x");
-                                  val x' = MINUS(NUM(1), x);
+                                  val x' = MINUS(ONE, x);
                                   val xss = [z, z', x, x',
                                              FRAC(MINUS(hd(b),MULT(z, x)), z'),
-                                             MINUS(NUM(1), FRAC(MINUS(hd(b), MULT(z, x)), z'))];
+                                             MINUS(ONE, FRAC(MINUS(hd(b), MULT(z, x)), z'))];
                               in (x2@x3, a, xss, y2@[U,U,U,U,U,U,U,U], (toRects xss)) end
                          else if List.length x2 = List.length x3 andalso List.length y2 = 8 then
                              let val (xss,yss) = ff b in (x2, a, xss, (y2@[U,U,U,U]), yss) end
@@ -1895,19 +1898,19 @@ fun drawArea c =
               end;
         fun areaToHTML (id, events, b, fills, d) =
             let fun toNum x = if onlyNum x
-                              then numToString (PLUS(NUM(30),MULT(NUM(200),x)))
-                              else numToString (NUM(80));
+                              then numToString (PLUS(NUM("30"),MULT(NUM("200"),x)))
+                              else numToString (NUM("80"));
                 fun calcLen x y k n = if onlyNum x andalso onlyNum y
-                                      then numToString (MULT(NUM(200),MINUS(x,y)))
-                                      else if numToString k = numToString (NUM(0))
-                                      then numToString (NUM(50))
-                                      else numToString (MULT(n,NUM(50)));
+                                      then numToString (MULT(NUM("200"),MINUS(x,y)))
+                                      else if numToString k = numToString (ZERO)
+                                      then numToString (NUM("50"))
+                                      else numToString (MULT(n,NUM("50")));
                 fun calcMid x n = if onlyNum x
-                                  then numToString (PLUS(n,MULT(NUM(100),x)))
-                                  else numToString (PLUS(NUM(25),n));
-                fun calcLab n = if numToString n = numToString (NUM(0))
-                                then numToString (NUM(15))
-                                else numToString (NUM(245));
+                                  then numToString (PLUS(n,MULT(NUM("100"),x)))
+                                  else numToString (PLUS(NUM("25"),n));
+                fun calcLab n = if numToString n = numToString (ZERO)
+                                then numToString (NUM("15"))
+                                else numToString (NUM("245"));
                 fun shadeToString x = case x of
                                           BLUE => "#4d79ff"
                                         | RED => "#ff4d4d"
@@ -1930,10 +1933,10 @@ fun drawArea c =
                         val bg = rect ("200", "200") ("30", "30") "white";
                     in case (events, y, fills, w) of
                            ([event1], y0::y1::y2::y3::_, fill::_, w0::_) =>
-                           let val width = calcLen y2 y0 y0 (NUM 3);
-                               val height = calcLen y3 y1 y3 (NUM 1);
+                           let val width = calcLen y2 y0 y0 (NUM("3"));
+                               val height = calcLen y3 y1 y3 (ONE);
                                val translate = (toNum y0, toNum y1);
-                               val mid = calcMid w0 (NUM 30);
+                               val mid = calcMid w0 (NUM("30"));
                            in String.concat [
                                    bg, "\n",
                                    (rect (width, height) translate fill), "\n",
@@ -1945,15 +1948,15 @@ fun drawArea c =
                             y0::y1::y2::y3::y4::y5::y6::y7::_,
                             fill1::fill2::_,
                             [w0, w1, w2, w3]) =>
-                           let val width1 = calcLen y2 y0 y0 (NUM 3);
-                               val height1 = calcLen y3 y1 y2 (NUM 3);
+                           let val width1 = calcLen y2 y0 y0 (NUM("3"));
+                               val height1 = calcLen y3 y1 y2 (NUM("3"));
                                val translate1 = (toNum y0, toNum y1);
-                               val width2 = calcLen y6 y4 y4 (NUM 3);
-                               val height2 = calcLen y7 y5 y7 (NUM 3);
+                               val width2 = calcLen y6 y4 y4 (NUM("3"));
+                               val height2 = calcLen y7 y5 y7 (NUM("3"));
                                val translate2 = (toNum y4, toNum y5);
-                               val mid = calcMid w0 (NUM 30);
+                               val mid = calcMid w0 (NUM("30"));
                                val lab = calcLab y4;
-                               fun mid2 v = calcMid w2 (NUM v);
+                               fun mid2 v = calcMid w2 (NUM(Int.toString v));
                            in String.concat [
                                    bg, "\n",
                                    (rect (width1, height1) translate1 fill1), "\n",
@@ -1968,16 +1971,16 @@ fun drawArea c =
                             y0::y1::y2::y3::y4::y5::y6::y7::y8::y9::y10::y11::_,
                             fill1::fill2::fill3::_,
                             w0::w1::w2::w3::w4::_) =>
-                           let val width1 = calcLen y2 y0 y0 (NUM 1);
-                               val height1 = calcLen y3 y1 y3 (NUM 1);
+                           let val width1 = calcLen y2 y0 y0 (ONE);
+                               val height1 = calcLen y3 y1 y3 (ONE);
                                val translate1 = (toNum y4, toNum y5);
-                               val width2 = calcLen y6 y4 y4 (NUM 1);
-                               val height2 = calcLen y7 y5 y7 (NUM 1);
+                               val width2 = calcLen y6 y4 y4 (ONE);
+                               val height2 = calcLen y7 y5 y7 (ONE);
                                val translate2 = (toNum y4, toNum y5);
-                               val width3 = calcLen y10 y8 y8 (NUM 3);
-                               val height3 = calcLen y11 y9 y11 (NUM 2);
+                               val width3 = calcLen y10 y8 y8 (NUM("3"));
+                               val height3 = calcLen y11 y9 y11 (NUM("2"));
                                val translate3 = (toNum y8, toNum y9);
-                               fun mid wi v = calcMid wi (NUM v);
+                               fun mid wi v = calcMid wi (NUM(Int.toString v));
                            in String.concat [
                                    bg, "\n",
                                    (rect (width1, height1) translate1 fill1), "\n",
@@ -2043,8 +2046,8 @@ fun drawTable c =
             let val ((v, _), _) = convertTable var;
                 val _ = if (isValidProb prob) then () else raise InvalidProbError;
                 val probs = case v of
-                            [SEVENT(_)] => [prob, MINUS(NUM(1), prob)]
-                          | [NEVENT(_)] => [MINUS(NUM(1), prob), prob]
+                            [SEVENT(_)] => [prob, MINUS(ONE, prob)]
+                          | [NEVENT(_)] => [MINUS(ONE, prob), prob]
                           | _ => raise TableError;
             in ((v, probs), [(id, v, probs)]) end
           | convertTable (TWOWAY(id, t1, t2, conj)) =
@@ -2055,15 +2058,15 @@ fun drawTable c =
                 val conjs = case (v1, v2, probs1, probs2) of
                             ([SEVENT _], [SEVENT _], [p1, _], [p2, _])
                             => [conj, MINUS(p1, conj), MINUS(p2, conj),
-                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1)]
+                                MINUS(PLUS(ONE, MINUS(conj, p2)), p1)]
                           | ([SEVENT _], [NEVENT _], [p1, _], [_, p2])
                             => [MINUS(p1, conj), conj,
-                                MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj)]
+                                MINUS(PLUS(ONE, MINUS(conj, p2)), p1), MINUS(p2, conj)]
                           | ([NEVENT _], [SEVENT _], [_, p1], [p2, _])
-                            => [MINUS(p2, conj), MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1),
+                            => [MINUS(p2, conj), MINUS(PLUS(ONE, MINUS(conj, p2)), p1),
                                 conj, MINUS(p1, conj)]
                           | ([NEVENT _], [NEVENT _], [_, p1], [_, p2])
-                            => [MINUS(PLUS(NUM(1), MINUS(conj, p2)), p1), MINUS(p2, conj),
+                            => [MINUS(PLUS(ONE, MINUS(conj, p2)), p1), MINUS(p2, conj),
                                 MINUS(p1, conj), conj]
                           | _ => raise TableError;
                 val probs = probs1 @ probs2 @ conjs;
@@ -2172,7 +2175,7 @@ fun drawTree x =
           | convertTree (TREE(id, label, prob)) =
             let val ((vars, _), _) = convertTree label;
                 val _ = if (isValidProb prob) then () else raise InvalidProbError;
-                val prob' = MINUS(NUM 1, prob);
+                val prob' = MINUS(ONE, prob);
             in case vars of
                    [NEVENT _] => ((vars, [prob', prob]), [(id, vars, [prob', prob])])
                  | [SEVENT _] => ((vars, [prob, prob']), [(id, vars, [prob, prob'])])
@@ -2183,7 +2186,7 @@ fun drawTree x =
                 val ((v2, _), _) = convertTree label;
                 val vars = v1 @ v2;
                 val _ = if (isValidProb prob) then () else raise InvalidProbError;
-                val prob' = MINUS(NUM 1, prob);
+                val prob' = MINUS(ONE, prob);
             in case (v1, v2) of
                    ([SEVENT _], [SEVENT _]) => let val ps = ps @ [prob, prob', U, U];
                                                in ((vars, ps), (id, vars, ps)::tHTML) end
@@ -2199,18 +2202,18 @@ fun drawTree x =
             let fun treeMerge x2 y2 x3 y3 =
                     let fun f (b0::b1::b2::b3::b4::b5::_) =
                             let val z = VAR "z";
-                                val z' = MINUS(NUM 1, z);
+                                val z' = MINUS(ONE, z);
                             in case (b2, b4) of
                                    (U, _) => List.map simplify [
-                                                z, z', MINUS(NUM(1), FRAC(MULT(b4, b1), z)),
+                                                z, z', MINUS(ONE, FRAC(MULT(b4, b1), z)),
                                                 FRAC(MULT(b4, b1), z),
-                                                MINUS(NUM(1), FRAC(MULT(b5, b1), z')),
+                                                MINUS(ONE, FRAC(MULT(b5, b1), z')),
                                                 FRAC(MULT(b5, b1), z')]
                                  | (_, U) => List.map simplify [
                                                 z, z', FRAC(MULT(b2, b0), z),
-                                                MINUS(NUM(1), FRAC(MULT(b2, b0), z)),
+                                                MINUS(ONE, FRAC(MULT(b2, b0), z)),
                                                 FRAC(MULT(b3, b0), z'),
-                                                MINUS(NUM(1), FRAC(MULT(b3, b0), z'))]
+                                                MINUS(ONE, FRAC(MULT(b3, b0), z'))]
                                  | (_, _) => List.map simplify [
                                                 PLUS(MULT(b2, b0), MULT(b4, b1)),
                                                 PLUS(MULT(b3, b0), MULT(b5, b1)),
@@ -2228,15 +2231,15 @@ fun drawTree x =
                         val l2 = List.length x3;
                         val s1 = eventToString (hd x2);
                         val s2 = eventToString (hd x3);
-                        val (z, z') = (VAR  "z", MINUS(NUM 1, VAR "z"));
-                        val (y, y') = (VAR  "x", MINUS(NUM 1, VAR "x"));
+                        val (z, z') = (VAR  "z", MINUS(ONE, VAR "z"));
+                        val (y, y') = (VAR  "x", MINUS(ONE, VAR "x"));
                     in if l1 = l2
                        then (if s1 = s2
                              then (x2, y2, y3)
                              else (if l1 = 1
                                    then let val probs = [z, z', y, y',
                                                          FRAC(MINUS(hd y3, MULT(z, y)), z'),
-                                                         MINUS(NUM 1, FRAC(MINUS(hd y3, MULT(z, y)), z'))];
+                                                         MINUS(ONE, FRAC(MINUS(hd y3, MULT(z, y)), z'))];
                                         in (x2 @ x3, y2 @ [U, U, U, U], probs) end
                                    else (if (countNum y2) > (countNum y3)
                                          then (x2, y2, f y3)
