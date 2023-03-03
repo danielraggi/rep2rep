@@ -1768,8 +1768,8 @@ fun drawArea c =
                             let val events = v1 @ v3;
                                 val (points, probs) =
                                     case p2 of
-                                        (p::_::_::q::_) => (p1 @ [p, MINUS(ONE, q), q, ONE],
-                                                            w1 @ [MINUS(ONE, q), q])
+                                        (p::_::q::r::_) => (p1 @ [p, MINUS(ONE, r), q, ONE],
+                                                            w1 @ [MINUS(ONE, r), r])
                                      | _ => raise AreaError;
                                 val shading = s1 @ [flipShading shading];
                             in ((    events, points, shading, probs),
@@ -1777,7 +1777,7 @@ fun drawArea c =
                             end
                           | (NEVENT _, SEVENT _) =>
                             let val events = v1 @ v3;
-                                val points = p1 @ [List.nth(p1,0),List.nth(p2,1),List.nth(p1,2),List.nth(p2,3)];
+                                val points = p1 @ [List.nth(p1,0),List.nth(p1,1),List.nth(p1,2),List.nth(p2,3)];
                                 val shading = s1 @ [shading];
                                 val probs = w1 @ [List.nth(p2,3),MINUS(ONE,List.nth(p2,3))];
                             in ((    events, points, shading, probs),
@@ -1785,7 +1785,7 @@ fun drawArea c =
                             end
                           | (NEVENT _, NEVENT _) =>
                             let val events = v1 @ v3;
-                                val points = p1 @ [List.nth(p1,0),MINUS(ONE,List.nth(p2,3)),List.nth(p1,2),ONE];
+                                val points = p1 @ [List.nth(p1,0),MINUS(ONE,List.nth(p2,3)),List.nth(p1,2),List.nth(p1,3)];
                                 val shading = s1 @ [flipShading shading];
                                 val probs = w1 @ [MINUS(ONE,List.nth(p2,3)), List.nth(p2,3)];
                             in ((    events, points, shading, probs),
@@ -1804,8 +1804,8 @@ fun drawArea c =
                     | mergeShading x PATTERN = x
                     | mergeShading WHITE y = y
                     | mergeShading x _ = x
-                  fun extractNum [] y w = if List.length w = 6 then w else raise AreaError (*remove y*)
-                    | extractNum (x::xs) y w =
+                  fun extractNum [] w = if List.length w = 6 then w else raise AreaError
+                    | extractNum (x::xs) w =
                       if xs = [] then w@[U, U, U, U]
                       else if List.length w = 6 then w
                       else case x of
@@ -1881,9 +1881,15 @@ fun drawArea c =
                       end;
                   val ((x2,y2,z2,w2),n1) = convertArea x;
                   val ((x3,y3,z3,w3),n2) = convertArea y;
-                  val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 y2 w2) x3 y3 (extractNum x3 y3 w3);
+                  val (x, c, d, e, f) = areaMerge x2 y2 (extractNum x2 w2) x3 y3 (extractNum x3 w3);
                   val g = resolve (c@e) (d@f) (List.length c);
-              in if List.length g = 12
+              in if List.length g = 6
+                 then let val (pre, post) = List.split (g, 2);
+                          val shading = mergeShading (hd z2) (hd z3);
+                      in ((    x, post, [shading], pre),
+                          (id, x, post, [shading], pre) :: n1 @ n2)
+                      end
+                 else if List.length g = 12
                  then let val (pre, post) = List.split (g, 4);
                           val shading = mergeShading (hd z2) (hd z3);
                       in ((    x, post, [shading, PATTERN], pre),
