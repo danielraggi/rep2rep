@@ -103,13 +103,12 @@ struct
                    ";"]
 
 
-  val normalScale = 0.16
-  val scriptScale = normalScale * 0.65
-  val nodeConstant = 1.0 * normalScale
+  val normalScale = 0.17
+  val scriptScale = normalScale * 0.7
+  val nodeConstant = 2.0 * normalScale
 
-  fun displaySize (#"_"::S') = 0.8 * displaySize S'
-    | displaySize (#"{"::S') = displaySize S'
-    | displaySize (#"}"::S') = 1.25 * displaySize S'
+  fun displaySize (#"_"::(#"{"::S')) = (9.0/10.0) * displaySize S'
+    | displaySize (#"}"::S') = (10.0/9.0) * displaySize S'
     | displaySize (#":"::S') = 2.0 + displaySize S'
     | displaySize (#"+"::S') = 3.0 + displaySize S'
     | displaySize (#"-"::S') = 3.0 + displaySize S'
@@ -146,7 +145,7 @@ struct
     | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
       let val widthMatrix = map rowWidthEstimates cs
           val halfTokenSize = sizeOfToken token / 2.0
-          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + 1.0*nodeConstant
+          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + nodeConstant
       in tNodeSize :: sizeOfConstructor constructor :: getWidthPerRow widthMatrix
       end
 
@@ -156,16 +155,18 @@ struct
 
   fun mkIntervals M =
     let val redC = ~1.0*nodeConstant
-        fun intervalNeeded (x1::L1) (x2::L2) LL = (case intervalNeeded L1 L2 (#2 (pullFirstRow LL)) of (x,excessL,excessR) => (Real.max(x1+x2,x) + nodeConstant,excessL,excessR))
-          | intervalNeeded (x1::L1) [] (L3::LL) = (case intervalNeeded (x1::L1) L3 LL of (x,_,_) => (x, 0.0, x / 2.0))
-          | intervalNeeded (x1::L1) [] [] = (x1,0.0,0.0)
-          | intervalNeeded [] (x2::L2) _ = (x2, x2 / 2.0, 0.0)
-          | intervalNeeded [] [] _ = (0.0,0.0,0.0)
+        fun intervalNeeded (x1::L1) (x2::L2) LL = (case intervalNeeded L1 L2 (#2 (pullFirstRow LL)) of (x,excess) => (Real.max(x1+x2,x), excess))
+          | intervalNeeded (x1::L1) [] (L3::LL) = (case intervalNeeded (x1::L1) L3 LL of (x,excess) => (x/2.0, excess))
+          | intervalNeeded (x1::_) [] [] = (0.0, x1/2.0)
+          | intervalNeeded [] (x2::_) _ = (x2, 0.0)
+          | intervalNeeded [] [] _ = (0.0,0.0)
         fun positionsPerRow _ [] = []
           | positionsPerRow _ [_] = []
           | positionsPerRow p (L1::(L2::LL)) =
             (case intervalNeeded L1 L2 LL of
-              (x,excessL,excessR) => p + x + redC + excessL :: positionsPerRow (p + x + redC + excessR) (L2::LL))
+              (x,excess) => let val point = p + x + redC + excess
+                             in point :: positionsPerRow point (L2::LL)
+                             end)
     in 0.0 :: positionsPerRow redC M
     end
 
