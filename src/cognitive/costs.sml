@@ -12,11 +12,15 @@ sig
   val aggregate : State.T * userProfile -> real;
 end
 
+structure CognitiveCosts : COGNITIVECOSTS =
+struct
+  type userProfile = real
+
 (* subRS-variety *)
   fun heterogeneity (st,u) =
     let val tCS = State.targetConSpecDataOf st
         val cognitiveData = #cognitiveData tCS
-    in FiniteSet.size (#modes cognitiveData)
+    in real (FiniteSet.size (#modes cognitiveData))
     end
 
 (* registration *)
@@ -56,10 +60,10 @@ end
                       else if x = "search" then 5.0
                       else (print "unknown token reg"; raise Match)
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
-        fun reg (Construction.TCPair ({constructor,...},cs)) =
-               (tokenRegVal (tokenReg constructor)) * (1.0 + (1.0-u/2.0) * (List.sumMap reg cs))
-          | reg _ = 1.0
-    in modeVal * List.sumMap (fn x => reg x) cts
+        fun reg w (Construction.TCPair ({constructor,...},cs)) =
+               (tokenRegVal (tokenReg constructor)) * (w + (1.0-u/2.0) * (List.sumMap (reg ((w + 1.0) / 2.0)) cs))
+          | reg _ _ = 1.0
+    in List.sumMap (fn x => reg modeVal x) cts
     end
 
 (* semantic encoding *)
@@ -71,32 +75,50 @@ end
         val tCS = State.targetConSpecDataOf st
         val iCS = State.targetConSpecDataOf st
         (*val goal = Document.parseConstruction interBTreeBayesConSpecData (":metaTrue <- SYS[" ^ (CSpace.stringOfToken (hd cts)) ^ ",t':probSys]")*)
-
-    in 1.0
+    in (1.0-u/2.0)
     end
 
   (* ER-semantic process *)
   (* IR-semantic process *)
   fun semanticProcess (st,u) =
     let
-    in 1.0
+    in (1.0-u/2.0) * real (varietyOfSymbols st)
     end
 
 (* quantity scale *)
 fun quantityScale (st,u) =
   let
-  in 1.0
+  in (1.0-u/2.0)
   end
 
 (* expression complexity *)
 fun expressionComplexity (st,u) =
   let val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
-      fun graphSize (Construction.Source _) = 1
-        | graphSize (Construction.Reference _) = 0
-        | graphSize (Construction.TCPair (_,cs)) = 3 + length cs + List.sumMapInt graphSize cs
-  in List.sumMapInt graphSize cts
+      val discount = 1.0 - u/2.0
+      fun graphSize w (Construction.Source _) = 1.0
+        | graphSize w (Construction.Reference _) = 0.0
+        | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + List.sumMap (graphSize (w * discount)) cs
+  in List.sumMap (graphSize 1.0) cts
   end
 
 
 (* infernce type *)
 (* solution stuff *)
+
+fun aggregate (st,u) =
+  let val h = heterogeneity (st,u)
+      val r = registration (st,u)
+      val cm = conceptMapping (st,u)
+      val sp = semanticProcess (st,u)
+      val qs = quantityScale (st,u)
+      val ec = expressionComplexity (st,u)
+      val userDepWeight = 2.0 / (u + 1.0)
+  in (2.0 + userDepWeight) * h +
+     (1.0 + userDepWeight) * r +
+     (2.0 + userDepWeight) * cm +
+     (2.0 + userDepWeight) * sp +
+     (1.0 + userDepWeight) * qs +
+     (2.0 + userDepWeight) * ec
+  end
+
+end
