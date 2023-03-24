@@ -60,7 +60,8 @@ struct
 
   val constructorsKW = "constructors"
   val conSpecImportsKW = "imports"
-  val conSpecKeywords = [constructorsKW,conSpecImportsKW]
+  val modeKW = "mode"
+  val conSpecKeywords = [constructorsKW,conSpecImportsKW,modeKW]
 
   val contextKW = "context"
   val antecedentKW = "antecedent"
@@ -148,10 +149,6 @@ struct
   fun parseCTyp s = case Parser.list parseTyp s of
                       (ty::tys) => (tys,ty)
                     | _ => raise ParseError ("bad constructor sig: " ^ s)
-
-  fun parseConstructor s = case String.breakOn ":" s of
-                              (cs,":",ctys) => CSpace.makeConstructor (normaliseString cs, parseCTyp ctys)
-                            | _ => raise ParseError ("no sig for constructor: " ^ s)
 
    fun findConstructorInConSpec s cspec =
      valOf (CSpace.findConstructorWithName s cspec)
@@ -463,13 +460,16 @@ struct
   end
 
   fun parseConstructor s =
-    case String.breakOn ":" s of
-      (cname,":",csig) =>
-        (case String.breakOn "->" csig of
-            (inTyps,"->",outTyp) => CSpace.makeConstructor (cname, CSpace.makeCTyp (Parser.list Type.fromString inTyps, Type.fromString outTyp))
-          | _ => raise ParseError ("bad signature for constructor: " ^ s)
-        )
-    | _ => raise ParseError ("badly specified constructor: " ^ s)
+    case String.breakOn "--" s of
+      (cstring,_,rstring) =>
+          (case String.breakOn ":" cstring of
+            (cname,":",csig) =>
+              ((case String.breakOn "->" csig of
+                  (inTyps,"->",outTyp) => CSpace.makeConstructor (cname, CSpace.makeCTyp (Parser.list Type.fromString inTyps, Type.fromString outTyp))
+                | _ => raise ParseError ("bad signature for constructor: " ^ s)
+              ),rstring)
+          | _ => raise ParseError ("badly specified constructor: " ^ s))
+
 
 
   fun addConSpec (R, tss) dc =
@@ -493,19 +493,41 @@ struct
                  in map parseConstructor cL
                  end
             else getConstructors L
+      fun getModes [] = []
+        | getModes ((x,c)::L) =
+            if x = SOME modeKW
+            then String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c))
+            else getModes L
 
-      val newConstructors = FiniteSet.ofList (getConstructors blocks)
+      fun processConstructorData [] = ([], fn _ => "")
+        | processConstructorData ((c,r)::cL) =
+        let val (cs,f) = processConstructorData cL
+            fun updf x = if CSpace.sameConstructors x c then r else f x
+        in (c::cs,updf)
+        end
+
+      val (newConstructors,newRegFun) = (case processConstructorData (getConstructors blocks) of (x,y) => (FiniteSet.ofList x,y))
       val importBlocks = getImports blocks
       val importedConSpecNames = map #name importBlocks
       val importedConstructorSets = map #constructors importBlocks
+      val importedCognitiveData = map #cognitiveData importBlocks
       val allConstructors = foldl (uncurry FiniteSet.union) FiniteSet.empty (newConstructors :: importedConstructorSets)
 
-      (*val chars = List.concat (map String.explode tss)
-      val crs = map parseConstructor (Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") chars)*)
+      fun joinCognitiveData [] = {modes = getModes blocks, tokenRegistration = newRegFun}
+        | joinCognitiveData ({modes,tokenRegistration}::L) =
+          let val CDrec = joinCognitiveData L
+              val updModes = FiniteSet.union (#modes CDrec) modes
+              fun updTokReg x = (case tokenRegistration x of "" => (#tokenRegistration CDrec) x | y => y)
+          in {modes = updModes, tokenRegistration = updTokReg}
+          end
+
+      val cognitiveData = joinCognitiveData importedCognitiveData
+
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
       val cspec = {name = name,
                    typeSystemData = getTypeSystemDataWithName dc typeSystemN,
-                   constructors = allConstructors}
+                   constructors = allConstructors,
+                   cognitiveData = cognitiveData}
       val updatedConSpec =
         case CSpace.wellDefinedConSpec cspec of
           (true,true) => cspec

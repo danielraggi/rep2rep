@@ -14,6 +14,7 @@ struct
   val infixConstructor = CSpace.makeConstructor ("infix",(["event","bin","event"],"event"))
   val complementConstructor = CSpace.makeConstructor ("complement",(["event"],"event"))
   val makeEventConstructor = CSpace.makeConstructor ("makeEvent",(["string"],"event"))
+  val makeProblemConstructor = CSpace.makeConstructor ("makeProblem",(["probSys","event"],"problem"))
 
   val dummyName = "dummy"
   val interToken = CSpace.makeToken dummyName "inter"
@@ -53,7 +54,6 @@ struct
                             (s1,"=",s2) => Construction.TCPair ({token = CSpace.makeToken dummyName (s ^ ":probEqn"), constructor = makeEqnConstructor},[parsePrExpr s1, parseNum s2])
                           | _ => (print "oops2"; raise Match))
 
-
   fun parseProbSys s =
     let val ns = Document.normaliseString s
         fun differentiateTokenNames ct =
@@ -73,4 +73,9 @@ struct
                                                             [parseEquation s1, parseProbSys (String.concatWith "," (s2::L))])
                       | _ => parseEquation ns))
     end
+
+  fun parseProblemPair (s,q) =
+    Construction.TCPair ({token = CSpace.makeToken dummyName (s ^ "," ^ q ^ "= ?"), constructor = makeProblemConstructor},
+                          parseProbSys s, parsePrExpr q])
+
 end
