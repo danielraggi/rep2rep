@@ -50,10 +50,9 @@ fun parse x =
       fun parse_var x n =
         (case String.breakOn ")" (String.substring(x,n,(String.size x) - n)) of
           (a,")",_) => if Char.isAlpha(String.sub(a,0)) then (n+(String.size a),ProbNum.VAR(a))
-                       else if String.substring(a,0,2) = "0." then (n+(String.size a),ProbNum.DEC(a))
-                       else (case Int.fromString a of
+                       else (case Real.fromString a of
                               NONE => raise ParseError
-                              |SOME x => (n+(String.size a),ProbNum.NUM x))
+                              |SOME _ => (n+(String.size a),ProbNum.NUM a))
           |_ => raise ParseError)
       and parse_plus x n =
         let val (j,e) = parse_var x n in
@@ -121,8 +120,9 @@ fun produce_construction e =
             end
           |constructEvent n E = raise ParseError
       fun constructNum n (ProbNum.U) = (Construction.Source("t"^n, "numExp"), "")
-          |constructNum n (ProbNum.NUM(x)) = (Construction.Source("t"^n, (Int.toString x)^":real10"), (Int.toString x))
-          |constructNum n (ProbNum.DEC(x)) = (Construction.Source("t"^n, x^":real10"), x)
+          |constructNum n (ProbNum.ZERO) = (Construction.Source("t"^n, "0:real10"), "0")
+          |constructNum n (ProbNum.ONE) = (Construction.Source("t"^n, "1:real10"), "1")
+          |constructNum n (ProbNum.NUM(x)) = (Construction.Source("t"^n, x^":real10"), x)
           |constructNum n (ProbNum.VAR(x)) = (Construction.Source("t"^n, x^":var"), x)
           |constructNum n (ProbNum.PLUS(x,y)) =
             let val (x2, x3) = constructNum (n^"1") x
