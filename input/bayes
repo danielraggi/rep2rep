@@ -7,11 +7,12 @@ typeSystem bayes =
   order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
 
 conSpec bayesG:bayes =
+  modes sentential
   imports arithG, event
   constructors
-    makeEqn : [events,numExp] -> probEqn,
-    complement : [event] -> event,
-    infix : [event,bin,event] -> event,
-    makeCond : [event,event] -> condEvent,
-    addEqn : [probEqn,probSys] -> probSys,
-    calculate : [probSys,events] -> probSys
+    makeEqn : [events,numExp] -> probEqn -- emergent,
+    complement : [event] -> event -- emergent,
+    infix : [event,bin,event] -> event -- emergent,
+    makeCond : [event,event] -> condEvent -- emergent,
+    addEqn : [probEqn,probSys] -> probSys -- emergent,
+    calculate : [probSys,events] -> probSys -- emergent

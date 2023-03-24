@@ -60,7 +60,7 @@ struct
 
   val constructorsKW = "constructors"
   val conSpecImportsKW = "imports"
-  val modeKW = "mode"
+  val modeKW = "modes"
   val conSpecKeywords = [constructorsKW,conSpecImportsKW,modeKW]
 
   val contextKW = "context"
