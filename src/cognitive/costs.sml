@@ -44,24 +44,27 @@ struct
     let val tCS = State.targetConSpecDataOf st
         val cognitiveData = #cognitiveData tCS
         val modes = #modes cognitiveData
-        fun modesVal x = if x = "grid" then 1.0
-                     else if x = "containment" then 1.0
-                     else if x = "axial" then 2.0
-                     else if x = "sentential" then 2.0
-                     else if x = "connection" then 3.0
-                     else if x = "proportional" then 3.0
+        fun modesVal x = if x = "grid" then 0.33
+                     else if x = "containment" then 0.33
+                     else if x = "axial" then 0.67
+                     else if x = "sentential" then 0.67
+                     else if x = "connection" then 1.0
+                     else if x = "proportional" then 1.0
                      else (print "unknown mode"; raise Match)
         val modeVal = List.avgIndexed modesVal modes
         val tokenReg = #tokenRegistration cognitiveData
-        fun tokenRegVal x = if x = "icon" then 1.0
-                      else if x = "emergent" then 2.0
-                      else if x = "spatial-index" then 3.0
-                      else if x = "notational-index" then 4.0
-                      else if x = "search" then 5.0
+        fun tokenRegVal x = if x = "icon" then 0.2
+                      else if x = "emergent" then 0.4
+                      else if x = "spatial-index" then 0.6
+                      else if x = "notational-index" then 0.8
+                      else if x = "search" then 1.0
                       else (print "unknown token reg"; raise Match)
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
-               (tokenRegVal (tokenReg constructor)) * (w + (1.0-u/2.0) * (List.sumMap (reg ((w + 1.0) / 2.0)) cs))
+            let val updWeight = (w + 1.0) / 2.0
+                val discount = 1.0 - u/2.0
+            in w * (tokenRegVal (tokenReg constructor)) + discount * (List.sumMap (reg updWeight) cs)
+            end
           | reg _ _ = 1.0
     in List.sumMap (fn x => reg modeVal x) cts
     end
@@ -73,7 +76,7 @@ struct
         val ctBayes = State.constructionOf st
         val sCS = State.sourceConSpecDataOf st
         val tCS = State.targetConSpecDataOf st
-        val iCS = State.targetConSpecDataOf st
+        val iCS = State.interConSpecDataOf st
         (*val goal = Document.parseConstruction interBTreeBayesConSpecData (":metaTrue <- SYS[" ^ (CSpace.stringOfToken (hd cts)) ^ ",t':probSys]")*)
     in (1.0-u/2.0)
     end

@@ -9,7 +9,8 @@ sig
   type ctyp = Type.typ list * Type.typ
   type constructor
   type token
-  type cognitiveData = {modes : string FiniteSet.set, tokenRegistration : constructor -> string}
+  type cognitiveData = {modes : string FiniteSet.set,
+                        tokenRegistration : constructor -> string}
   type conSpecData = {name : string,
                       typeSystemData : Type.typeSystemData,
                       constructors : constructor FiniteSet.set,
