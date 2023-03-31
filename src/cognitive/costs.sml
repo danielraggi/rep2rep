@@ -16,12 +16,6 @@ structure CognitiveCosts : COGNITIVECOSTS =
 struct
   type userProfile = real
 
-(* subRS-variety *)
-  fun heterogeneity (st,u) =
-    let val tCS = State.targetConSpecDataOf st
-        val cognitiveData = #cognitiveData tCS
-    in real (FiniteSet.size (#modes cognitiveData))
-    end
 
 (* registration *)
   (* number of symbols *)
@@ -43,15 +37,6 @@ struct
   fun registration (st,u) =
     let val tCS = State.targetConSpecDataOf st
         val cognitiveData = #cognitiveData tCS
-        val modes = #modes cognitiveData
-        fun modesVal x = if x = "grid" then 0.33
-                     else if x = "containment" then 0.33
-                     else if x = "axial" then 0.67
-                     else if x = "sentential" then 0.67
-                     else if x = "connection" then 1.0
-                     else if x = "proportional" then 1.0
-                     else (print "unknown mode"; raise Match)
-        val modeVal = List.avgIndexed modesVal modes
         val tokenReg = #tokenRegistration cognitiveData
         fun tokenRegVal x = if x = "icon" then 0.2
                       else if x = "emergent" then 0.4
@@ -61,32 +46,19 @@ struct
                       else (print "unknown token reg"; raise Match)
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
-            let val updWeight = (w + 1.0) / 2.0
-                val discount = 1.0 - u/2.0
-            in w * (tokenRegVal (tokenReg constructor)) + discount * (List.sumMap (reg updWeight) cs)
+            let val discount = 1.0 - u/2.0
+                val updWeight = discount * (w + 1.0) / 2.0
+            in w * (tokenRegVal (tokenReg constructor)) * (List.sumMap (reg updWeight) cs)
             end
           | reg _ _ = 1.0
-    in List.sumMap (fn x => reg modeVal x) cts
+    in List.sumMap (reg 1.0) cts
     end
 
 (* semantic encoding *)
   (* Concept-mapping (assumes transfer happend from Bayes into the target space) *)
-  fun conceptMapping (st,u) =
-    let val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
-        val ctBayes = State.constructionOf st
-        val sCS = State.sourceConSpecDataOf st
-        val tCS = State.targetConSpecDataOf st
-        val iCS = State.interConSpecDataOf st
-        (*val goal = Document.parseConstruction interBTreeBayesConSpecData (":metaTrue <- SYS[" ^ (CSpace.stringOfToken (hd cts)) ^ ",t':probSys]")*)
-    in (1.0-u/2.0)
-    end
 
   (* ER-semantic process *)
   (* IR-semantic process *)
-  fun semanticProcess (st,u) =
-    let
-    in (1.0-u/2.0) * real (varietyOfSymbols st)
-    end
 
 (* quantity scale *)
 fun quantityScale (st,u) =
@@ -104,24 +76,26 @@ fun expressionComplexity (st,u) =
   in List.sumMap (graphSize 1.0) cts
   end
 
+(* Heterogeneity: don't use modes. Exploit types *)
+  fun heterogeneity (st,u) =
+    let val tCS = State.targetConSpecDataOf st
+        val cognitiveData = #cognitiveData tCS
+    in real (FiniteSet.size (#modes cognitiveData))
+    end
 
 (* infernce type *)
 (* solution stuff *)
 
 fun aggregate (st,u) =
-  let val h = heterogeneity (st,u)
-      val r = registration (st,u)
-      val cm = conceptMapping (st,u)
-      val sp = semanticProcess (st,u)
-      val qs = quantityScale (st,u)
-      val ec = expressionComplexity (st,u)
-      val userDepWeight = 2.0 / (u + 1.0)
-  in (2.0 + userDepWeight) * h +
-     (1.0 + userDepWeight) * r +
-     (2.0 + userDepWeight) * cm +
-     (2.0 + userDepWeight) * sp +
-     (1.0 + userDepWeight) * qs +
-     (2.0 + userDepWeight) * ec
+  let val r = registration (st,u) (* lightest *)
+      val qs = quantityScale (st,u) (* 3rd heaviest *)
+      val ec = expressionComplexity (st,u) (* 2nd heaviest *)
+      val h = heterogeneity (st,u) (* heaviest *)
+      val userDepWeight = 8.0 / (7.0 * u + 1.0)
+  in (1.0 * userDepWeight) * r +
+     (2.0 * userDepWeight) * qs +
+     (4.0 * userDepWeight) * ec +
+     (8.0 * userDepWeight) * h
   end
 
 end
