@@ -60,8 +60,7 @@ struct
 
   val constructorsKW = "constructors"
   val conSpecImportsKW = "imports"
-  val modeKW = "modes"
-  val conSpecKeywords = [constructorsKW,conSpecImportsKW,modeKW]
+  val conSpecKeywords = [constructorsKW,conSpecImportsKW]
 
   val contextKW = "context"
   val antecedentKW = "antecedent"
@@ -242,14 +241,18 @@ struct
         conSpecsData : CSpace.conSpecData list,
         knowledge : Knowledge.base,
         constructionsData : constructionData list,
-        transferRequests : (string list) list}
+        transferRequests : (string list) list,
+        cognitiveData : {tokenRegistration : string * CSpace.constructor -> string option,
+                         quantityScale : string * Type.typ -> string option}}
 
   val emptyDocContent =
       {typeSystemsData = [],
        conSpecsData = [],
        knowledge = Knowledge.empty,
        constructionsData = [],
-       transferRequests = []}
+       transferRequests = [],
+       cognitiveData = {tokenRegistration = fn _ => NONE,
+                        quantityScale = fn _ => NONE}}
 
   val typeSystemsDataOf = #typeSystemsData
   val conSpecsDataOf = #conSpecsData
@@ -456,7 +459,8 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc}
+      transferRequests = #transferRequests dc,
+      cognitiveData = #cognitiveData dc}
   end
 
   fun parseConstructor s =
@@ -493,11 +497,6 @@ struct
                  in map parseConstructor cL
                  end
             else getConstructors L
-      fun getModes [] = []
-        | getModes ((x,c)::L) =
-            if x = SOME modeKW
-            then String.tokens (fn k => k = #",") (String.concat (removeOuterBrackets c))
-            else getModes L
 
       fun processConstructorData [] = ([], fn _ => "")
         | processConstructorData ((c,r)::cL) =
@@ -510,24 +509,12 @@ struct
       val importBlocks = getImports blocks
       val importedConSpecNames = map #name importBlocks
       val importedConstructorSets = map #constructors importBlocks
-      val importedCognitiveData = map #cognitiveData importBlocks
       val allConstructors = foldl (uncurry FiniteSet.union) FiniteSet.empty (newConstructors :: importedConstructorSets)
-
-      fun joinCognitiveData [] = {modes = getModes blocks, tokenRegistration = newRegFun}
-        | joinCognitiveData ({modes,tokenRegistration}::L) =
-          let val CDrec = joinCognitiveData L
-              val updModes = FiniteSet.union (#modes CDrec) modes
-              fun updTokReg x = (case tokenRegistration x of "" => (#tokenRegistration CDrec) x | y => y)
-          in {modes = updModes, tokenRegistration = updTokReg}
-          end
-
-      val cognitiveData = joinCognitiveData importedCognitiveData
 
       val _ = FiniteSet.map ((fn x => Logging.write ("  " ^ x ^ "\n")) o CSpace.stringOfConstructor) allConstructors
       val cspec = {name = name,
                    typeSystemData = getTypeSystemDataWithName dc typeSystemN,
-                   constructors = allConstructors,
-                   cognitiveData = cognitiveData}
+                   constructors = allConstructors}
       val updatedConSpec =
         case CSpace.wellDefinedConSpec cspec of
           (true,true) => cspec
@@ -545,7 +532,8 @@ struct
       conSpecsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedConSpec] (#conSpecsData dc),
       knowledge = Knowledge.addConSpecImports (#knowledge dc) (name,importedConSpecNames),
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc}
+      transferRequests = #transferRequests dc,
+      cognitiveData = #cognitiveData dc}
   end
 
   fun addInferenceSchema (N,cs) dc =
@@ -616,7 +604,8 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc}
+      transferRequests = #transferRequests dc,
+      cognitiveData = #cognitiveData dc}
   end
 
   fun addTransferSchema (N,cs) dc =
@@ -699,7 +688,8 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc}
+      transferRequests = #transferRequests dc,
+      cognitiveData = #cognitiveData dc}
   end
 
   fun insertConstruction ctRecord DC =
@@ -707,7 +697,8 @@ struct
         conSpecsData = #conSpecsData DC,
         knowledge = #knowledge DC,
         constructionsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [ctRecord] (#constructionsData DC),
-        transferRequests = #transferRequests DC}
+        transferRequests = #transferRequests DC,
+        cognitiveData = #cognitiveData DC}
 
   fun addConstruction (N, bs) dc =
   let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for construction " ^ String.concat N)
@@ -738,7 +729,8 @@ struct
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
       constructionsData = #constructionsData dc,
-      transferRequests = #transferRequests dc @ [ws]}
+      transferRequests = #transferRequests dc @ [ws],
+      cognitiveData = #cognitiveData dc}
 
   exception BadGoal
   fun processTransferRequests ws DC =
@@ -952,22 +944,36 @@ struct
   fun csdCmp (C,C') = String.compare (#name C, #name C')
   fun ctCmp (c,c') = String.compare (#name c, #name c')
 
+  fun joinCognitiveData {tokenRegistration = tr, quantityScale = qs}
+                        {tokenRegistration = tr', quantityScale = qs'} =
+    let fun TR x = (case (tr x, tr' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise ParseError ("inconsisten token reg " ^ y ^ " and " ^ y' ^ " for " ^ CSpace.nameOfConstructor (#2 x))
+                                        | (res,_) => res)
+        fun QS x = (case (qs x, qs' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise ParseError ("inconsisten quantity scales " ^ y ^ " and " ^ y' ^ " for " ^ Type.nameOfType (#2 x))
+                                        | (res,_) => res)
+    in {tokenRegistration = TR, quantityScale = QS}
+    end
+
   fun joinDocumentContents ({typeSystemsData = ts,
                              conSpecsData = sp,
                              knowledge = kb,
                              constructionsData = cs,
-                             transferRequests = tr} :: L) =
+                             transferRequests = tr,
+                             cognitiveData = cd} :: L) =
     (case joinDocumentContents L of
       {typeSystemsData = ts',
        conSpecsData = sp',
        knowledge = kb',
        constructionsData = cs',
-       transferRequests = tr'} =>
+       transferRequests = tr',
+       cognitiveData = cd'} =>
           {typeSystemsData = List.mergeNoEQUAL tsdCmp ts ts',
            conSpecsData = List.mergeNoEQUAL csdCmp sp sp',
            knowledge = Knowledge.join kb kb',
            constructionsData = List.mergeNoEQUAL ctCmp cs cs',
-           transferRequests = tr @ tr'})
+           transferRequests = tr @ tr',
+           cognitiveData = joinCognitiveData cd cd'})
   | joinDocumentContents [] = emptyDocContent
 
 

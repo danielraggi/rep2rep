@@ -8,9 +8,14 @@ typeSystem contTable =
 
 conSpec contTableG:contTable =
     imports arithG, event
-    modes sentential, grid
     constructors
-        notName : [name] -> name -- iconic,
-        buildOne : [name,numExp] -> oneDim -- spatial-index,
-        buildTwo : [oneDim,oneDim,numExp] -> twoDim -- spatial-index,
-        combine : [table,table] -> table -- notational-index
+        notName : [name] -> name,
+        buildOne : [name,numExp] -> oneDim,
+        buildTwo : [oneDim,oneDim,numExp] -> twoDim,
+        combine : [table,table] -> table
+
+registration contTableG =
+    notName : iconic,
+    buildOne : spatial-index,
+    buildTwo : spatial-index,
+    combine : notational-index

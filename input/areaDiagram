@@ -9,12 +9,20 @@ typeSystem areaDiagram =
 
 conSpec areaDiagramG:areaDiagram =
   imports arithG, event
-  modes proportional
   constructors
-    reverseTag: [tag] -> tag -- emergent,
-    cPoint:[numExp, numExp] -> point -- iconic,
-    cRect: [point, point] -> rect -- iconic,
-    overlayRect: [area, rect, tag, shading] -> area -- spatial-index,
-    colour: [coloured, tag, shading] -> coloured -- iconic,
-    addColour: [area, coloured] -> area -- emergent,
-    combine: [area, area] -> area -- spatial-index
+    reverseTag: [tag] -> tag,
+    cPoint:[numExp, numExp] -> point,
+    cRect: [point, point] -> rect,
+    overlayRect: [area, rect, tag, shading] -> area,
+    colour: [coloured, tag, shading] -> coloured,
+    addColour: [area, coloured] -> area,
+    combine: [area, area] -> area
+
+registration areaDiagramG =
+    reverseTag : emergent,
+    cPoint : iconic,
+    cRect : iconic,
+    overlayRect : spatial-index,
+    colour : iconic,
+    addColour : emergent,
+    combine : spatial-index

@@ -8,9 +8,14 @@ typeSystem probTree =
 
 conSpec probTreeG:probTree =
   imports arithG, event
-  modes connection
   constructors
-    notLabel: [label] -> label -- iconic,
-    construct: [label, numExp] -> tree -- emergent,
-    addBranch: [tree, label, numExp] -> tree -- spatial-index,
-    resolve: [tree, tree] -> tree -- search
+    notLabel : [label] -> label,
+    construct : [label, numExp] -> tree,
+    addBranch : [tree, label, numExp] -> tree,
+    resolve : [tree, tree] -> tree
+
+registration probTreeG =
+    notLabel : iconic,
+    construct : emergent,
+    addBranch : notational-index,
+    resolve : notational-index

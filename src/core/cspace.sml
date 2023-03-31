@@ -9,12 +9,9 @@ sig
   type ctyp = Type.typ list * Type.typ
   type constructor
   type token
-  type cognitiveData = {modes : string FiniteSet.set,
-                        tokenRegistration : constructor -> string}
   type conSpecData = {name : string,
                       typeSystemData : Type.typeSystemData,
-                      constructors : constructor FiniteSet.set,
-                      cognitiveData : cognitiveData}
+                      constructors : constructor FiniteSet.set}
 
   val ctyp_rpc : ctyp Rpc.Datatype.t;
   val constructor_rpc : constructor Rpc.Datatype.t;
@@ -45,13 +42,10 @@ structure CSpace : CSPACE =
 struct
   type ctyp = Type.typ list * Type.typ
   type constructor = string * ctyp
-  (*datatype atom = Token of string | Variable of string;*)
-  type cognitiveData = {modes : string FiniteSet.set, tokenRegistration : constructor -> string}
   type token = string * Type.typ
   type conSpecData = {name : string,
                       typeSystemData : Type.typeSystemData,
-                      constructors : constructor FiniteSet.set,
-                      cognitiveData : cognitiveData}
+                      constructors : constructor FiniteSet.set}
 
   val ctyp_rpc = Rpc.Datatype.alias
                      "CSpace.ctyp"
@@ -71,16 +65,14 @@ struct
   exception ConversionError
   val conSpecData_rpc = Rpc.Datatype.convert
                         "CSpace.conSpecData"
-                        (Rpc.Datatype.tuple4
+                        (Rpc.Datatype.tuple3
                              (String.string_rpc,
                               String.string_rpc,
-                              FiniteSet.set_rpc constructor_rpc,
-                              String.string_rpc))
-                        (fn (n, tsn, cs, cd) => raise ConversionError)
+                              FiniteSet.set_rpc constructor_rpc))
+                        (fn (n, tsn, cs) => raise ConversionError)
                         (fn {name = n,
                              typeSystemData = tsd,
-                             constructors = cs,
-                             cognitiveData = cd} => (n, #name tsd, cs, ""));
+                             constructors = cs} => (n, #name tsd, cs));
 
 
   fun makeCTyp x = x
@@ -139,7 +131,7 @@ struct
     | extendWithManyLCSuperTypes X [] [] = ([],X)
     | extendWithManyLCSuperTypes _ _ _ = raise ImpossibleOverload
 
-  fun fixClashesInConSpec {name,typeSystemData,constructors,cognitiveData} =
+  fun fixClashesInConSpec {name,typeSystemData,constructors} =
     let
       fun clash (s,(inTyps,outTyp)) (s',(inTyps',outTyp')) =
         s = s' andalso (inTyps,outTyp) <> (inTyps',outTyp')
@@ -188,6 +180,6 @@ struct
       val _ = map ((fn x => Logging.write ("  " ^ x ^ "\n")) o stringOfConstructor) newConstructors
 
       val _ = findClashes
-    in {name = name, typeSystemData = updatedTSD, constructors = updatedConstructors,cognitiveData = cognitiveData}
+    in {name = name, typeSystemData = updatedTSD, constructors = updatedConstructors}
     end handle ImpossibleOverload => (Logging.write "ERROR: Impossible to fix clash in constructor specification :-( \n"; raise ImpossibleOverload)
 end;
