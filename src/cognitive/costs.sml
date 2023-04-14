@@ -78,15 +78,17 @@ fun quantityScale cognitiveData st u =
   let val conSpecName = #name (State.targetConSpecDataOf st)
       val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
       val tokens = List.flatmap (Construction.tokensOfConstruction) cts
+      val types = List.map CSpace.typeOfToken tokens
       fun qs x = (#quantityScale cognitiveData) (conSpecName,x)
-      val qsL = List.map (qs o CSpace.typeOfToken) tokens
-      fun qsVal x = if x = SOME "nominal" then 0.25
-               else if x = SOME "ordinal" then 0.5
-               else if x = SOME "interval" then 0.75
-               else if x = SOME "ratio" then 1.0
-               else if x = NONE then 0.25
-               else (print "unknown quantity scale"; raise Match)
-  in List.avgIndexed qsVal qsL
+      fun qsVal x =
+        (case qs x of
+           SOME "nominal" => 0.25
+         | SOME "ordinal" => 0.5
+         | SOME "interval" => 0.75
+         | SOME "ratio" => 1.0
+         | NONE => (qsVal (Type.parentOfDanglyType x) handle Type.badType => 0.25)
+         | _ => (print "unknown quantity scale"; raise Match))
+  in List.avgIndexed qsVal types
   end
 
 (* expression complexity *)

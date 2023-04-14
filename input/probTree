@@ -14,8 +14,25 @@ conSpec probTreeG:probTree =
     addBranch : [tree, label, numExp] -> tree,
     resolve : [tree, tree] -> tree
 
-registration probTreeG =
-    notLabel : iconic,
-    construct : emergent,
-    addBranch : notational-index,
-    resolve : notational-index
+
+cognitiveData probTreeG =
+    registration
+        notLabel : iconic,
+        construct : iconic,
+        addBranch : emergent,
+        resolve : search,
+        infixOp : emergent,
+        infixRel : emergent,
+        addParentheses : emergent,
+        multiply : emergent
+    quantityScale
+        label : nominal,
+        tree : ordinal,
+        real10 : ratio,
+        nat10 : ratio,
+        plus : interval,
+        minus : interval,
+        times : ratio,
+        div : ratio,
+        leq : ordinal,
+        equals : nominal

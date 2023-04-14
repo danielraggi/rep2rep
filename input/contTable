@@ -14,8 +14,27 @@ conSpec contTableG:contTable =
         buildTwo : [oneDim,oneDim,numExp] -> twoDim,
         combine : [table,table] -> table
 
-registration contTableG =
-    notName : iconic,
-    buildOne : spatial-index,
-    buildTwo : spatial-index,
-    combine : notational-index
+
+cognitiveData probTreeG =
+    registration
+        notName : iconic,
+        buildOne : spatial-index,
+        buildTwo : spatial-index,
+        combine : notational-index,
+        infixOp : emergent,
+        infixRel : emergent,
+        addParentheses : emergent,
+        multiply : emergent
+    quantityScale
+        name : nominal,
+        oneDim : ordinal,
+        twoDim : ordinal,
+        table : ordinal,
+        real10 : ratio,
+        nat10 : ratio,
+        plus : interval,
+        minus : interval,
+        times : ratio,
+        div : ratio,
+        leq : ordinal,
+        equals : nominal

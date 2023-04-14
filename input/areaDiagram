@@ -18,11 +18,31 @@ conSpec areaDiagramG:areaDiagram =
     addColour: [area, coloured] -> area,
     combine: [area, area] -> area
 
-registration areaDiagramG =
-    reverseTag : emergent,
-    cPoint : iconic,
-    cRect : iconic,
-    overlayRect : spatial-index,
-    colour : iconic,
-    addColour : emergent,
-    combine : spatial-index
+cognitiveData areaDiagramG =
+    registration
+        reverseTag : emergent,
+        cPoint : iconic,
+        cRect : iconic,
+        overlayRect : spatial-index,
+        colour : iconic,
+        addColour : emergent,
+        combine : spatial-index,
+        infixOp : emergent,
+        infixRel : emergent,
+        addParentheses : emergent,
+        multiply : emergent
+    quantityScale
+        tag : nominal,
+        area : nominal,
+        rect : nominal,
+        point : nominal,
+        empty : nominal,
+        coloured : nominal,
+        real10 : ratio,
+        nat10 : ratio,
+        plus : interval,
+        minus : interval,
+        times : ratio,
+        div : ratio,
+        leq : ordinal,
+        equals : nominal

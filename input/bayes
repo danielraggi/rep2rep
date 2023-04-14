@@ -16,10 +16,30 @@ conSpec bayesG:bayes =
     addEqn : [probEqn,probSys] -> probSys,
     calculate : [probSys,events] -> probSys
 
-registration bayesG =
-    makeEqn : emergent,
-    complement : emergent,
-    infix : emergent,
-    makeCond : emergent,
-    addEqn : emergent,
-    calculate : emergent
+cognitiveData bayesG =
+    registration
+        makeEqn : emergent,
+        complement : emergent,
+        infix : emergent,
+        makeCond : emergent,
+        addEqn : emergent,
+        calculate : emergent,
+        infixOp : emergent,
+        infixRel : emergent,
+        addParentheses : emergent,
+        multiply : emergent
+    quantityScale
+        event : nominal,
+        inter : ordinal,
+        union : ordinal,
+        condEvent : ratio,
+        probEqn : ratio,
+        probSys : ratio,
+        real10 : ratio,
+        nat10 : ratio,
+        plus : interval,
+        minus : interval,
+        times : ratio,
+        div : ratio,
+        leq : ordinal,
+        equals : nominal
