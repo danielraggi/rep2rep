@@ -1,6 +1,7 @@
 import "oruga.parser";
 import "oruga.lift";
 import "latex.latex";
+import "cognitive.costs";
 
 signature DOCUMENT =
 sig
@@ -242,8 +243,7 @@ struct
         knowledge : Knowledge.base,
         constructionsData : constructionData list,
         transferRequests : (string list) list,
-        cognitiveData : {tokenRegistration : string * CSpace.constructor -> string option,
-                         quantityScale : string * Type.typ -> string option}}
+        cognitiveData : CognitiveCosts.data}
 
   val emptyDocContent =
       {typeSystemsData = [],
@@ -251,8 +251,7 @@ struct
        knowledge = Knowledge.empty,
        constructionsData = [],
        transferRequests = [],
-       cognitiveData = {tokenRegistration = fn _ => NONE,
-                        quantityScale = fn _ => NONE}}
+       cognitiveData = CognitiveCosts.empty}
 
   val typeSystemsDataOf = #typeSystemsData
   val conSpecsDataOf = #conSpecsData
@@ -973,7 +972,7 @@ struct
            knowledge = Knowledge.join kb kb',
            constructionsData = List.mergeNoEQUAL ctCmp cs cs',
            transferRequests = tr @ tr',
-           cognitiveData = joinCognitiveData cd cd'})
+           cognitiveData = CognitiveCosts.joinCognitiveData cd cd'})
   | joinDocumentContents [] = emptyDocContent
 
 

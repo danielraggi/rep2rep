@@ -1,21 +1,36 @@
-import "oruga.document";
+import "transfer.structure_transfer";
 
 signature COGNITIVECOSTS =
 sig
   type userProfile
-  val heterogeneity : State.T * userProfile -> real;
-  val registration : State.T * userProfile -> real;
-  val quantityScale : State.T * userProfile -> real;
-  val conceptMapping : State.T * userProfile -> real;
-  val expressionComplexity : State.T * userProfile -> real;
-  val semanticProcess : State.T * userProfile -> real;
-  val aggregate : State.T * userProfile -> real;
+  type data
+  val empty : data;
+  val joinCognitiveData : data -> data -> data;
+  val registration : data -> State.T -> userProfile -> real;
+  val quantityScale : data -> State.T -> userProfile -> real;
+  val expressionComplexity : data -> State.T -> userProfile -> real;
+  val heterogeneity : data -> State.T -> userProfile -> real;
+  val aggregate : data -> State.T -> userProfile -> real;
 end
 
 structure CognitiveCosts : COGNITIVECOSTS =
 struct
   type userProfile = real
+  type data = {tokenRegistration : string * CSpace.constructor -> string option,
+               quantityScale : string * Type.typ -> string option}
+  val empty = {tokenRegistration = fn _ => NONE, quantityScale = fn _ => NONE}
 
+  exception IllDefined of string
+  fun joinCognitiveData {tokenRegistration = tr, quantityScale = qs}
+                        {tokenRegistration = tr', quantityScale = qs'} =
+    let fun TR x = (case (tr x, tr' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsisten token reg " ^ y ^ " and " ^ y' ^ " for " ^ CSpace.nameOfConstructor (#2 x))
+                                        | (res,_) => res)
+        fun QS x = (case (qs x, qs' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsisten quantity scales " ^ y ^ " and " ^ y' ^ " for " ^ Type.nameOfType (#2 x))
+                                        | (res,_) => res)
+    in {tokenRegistration = TR, quantityScale = QS}
+    end
 
 (* registration *)
   (* number of symbols *)
@@ -26,24 +41,22 @@ struct
     end
 
   (* variety of symbols *)
-  fun varietyOfSymbols st =
-    let val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
-        val tokens = List.flatmap (Construction.tokensOfConstruction) cts
+  fun varietyOfSymbols cts =
+    let val tokens = List.flatmap (Construction.tokensOfConstruction) cts
         val types = FiniteSet.ofList (List.map CSpace.typeOfToken tokens)
     in FiniteSet.size types
     end
 
   (* registration: there's a disount of (1.0-u/2.0) every step down the tree. Uncertain what this means if there's a loop *)
-  fun registration (st,u) =
-    let val tCS = State.targetConSpecDataOf st
-        val cognitiveData = #cognitiveData tCS
-        val tokenReg = #tokenRegistration cognitiveData
-        fun tokenRegVal x = if x = "icon" then 0.2
-                      else if x = "emergent" then 0.4
-                      else if x = "spatial-index" then 0.6
-                      else if x = "notational-index" then 0.8
-                      else if x = "search" then 1.0
-                      else (print "unknown token reg"; raise Match)
+  fun registration cognitiveData st u =
+    let val conSpecName = #name (State.targetConSpecDataOf st)
+        fun tokenReg x = (#tokenRegistration cognitiveData) (conSpecName,x)
+        fun tokenRegVal x = if x = SOME "icon" then 0.2
+                       else if x = SOME "emergent" then 0.4
+                       else if x = SOME "spatial-index" then 0.6
+                       else if x = SOME "notational-index" then 0.8
+                       else if x = SOME "search" then 1.0
+                       else (print "unknown token reg"; raise Match)
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
             let val discount = 1.0 - u/2.0
@@ -61,13 +74,23 @@ struct
   (* IR-semantic process *)
 
 (* quantity scale *)
-fun quantityScale (st,u) =
-  let
-  in (1.0-u/2.0)
+fun quantityScale cognitiveData st u =
+  let val conSpecName = #name (State.targetConSpecDataOf st)
+      val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
+      val tokens = List.flatmap (Construction.tokensOfConstruction) cts
+      fun qs x = (#quantityScale cognitiveData) (conSpecName,x)
+      val qsL = List.map (qs o CSpace.typeOfToken) tokens
+      fun qsVal x = if x = SOME "nominal" then 0.25
+               else if x = SOME "ordinal" then 0.5
+               else if x = SOME "interval" then 0.75
+               else if x = SOME "ratio" then 1.0
+               else if x = NONE then 0.25
+               else (print "unknown quantity scale"; raise Match)
+  in List.avgIndexed qsVal qsL
   end
 
 (* expression complexity *)
-fun expressionComplexity (st,u) =
+fun expressionComplexity cognitiveData st u =
   let val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
       val discount = 1.0 - u/2.0
       fun graphSize w (Construction.Source _) = 1.0
@@ -76,26 +99,26 @@ fun expressionComplexity (st,u) =
   in List.sumMap (graphSize 1.0) cts
   end
 
-(* Heterogeneity: don't use modes. Exploit types *)
-  fun heterogeneity (st,u) =
+(* Heterogeneity *)
+  fun heterogeneity cognitiveData st u =
     let val tCS = State.targetConSpecDataOf st
-        val cognitiveData = #cognitiveData tCS
-    in real (FiniteSet.size (#modes cognitiveData))
+        val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
+    in real (varietyOfSymbols cts)
     end
 
 (* infernce type *)
 (* solution stuff *)
 
-fun aggregate (st,u) =
-  let val r = registration (st,u) (* lightest *)
-      val qs = quantityScale (st,u) (* 3rd heaviest *)
-      val ec = expressionComplexity (st,u) (* 2nd heaviest *)
-      val h = heterogeneity (st,u) (* heaviest *)
+fun aggregate cognitiveData st u =
+  let val reg = registration cognitiveData st u (* lightest *)
+      val qs = quantityScale cognitiveData st u (* 3rd heaviest *)
+      val ec = expressionComplexity cognitiveData st u (* 2nd heaviest *)
+      val het = heterogeneity cognitiveData st u (* heaviest *)
       val userDepWeight = 8.0 / (7.0 * u + 1.0)
-  in (1.0 * userDepWeight) * r +
+  in (1.0 * userDepWeight) * reg +
      (2.0 * userDepWeight) * qs +
      (4.0 * userDepWeight) * ec +
-     (8.0 * userDepWeight) * h
+     (8.0 * userDepWeight) * het
   end
 
 end
