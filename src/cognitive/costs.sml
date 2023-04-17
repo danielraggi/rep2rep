@@ -32,6 +32,9 @@ struct
     in {tokenRegistration = TR, quantityScale = QS}
     end
 
+  fun userDepWeight u = 8.0 / (7.0 * u + 1.0)
+  fun logistic L k x0 x = L / (1.0 + Math.exp (~k * (x-x0)))
+
 (* registration *)
   (* number of symbols *)
   fun numberOfSymbols st =
@@ -65,7 +68,8 @@ struct
             in w * (tokenRegVal (tokenReg constructor)) * (List.sumMap (reg updWeight) cs)
             end
           | reg _ _ = 1.0
-    in List.sumMap (reg 1.0) cts
+        val rawVal = List.sumMap (reg 1.0) cts
+    in userDepWeight u * logistic 100.0 1.0 6.0 rawVal
     end
 
 (* semantic encoding *)
@@ -89,7 +93,7 @@ fun quantityScale cognitiveData st u =
          | SOME "ratio" => 1.0
          | NONE => (qsVal (Type.parentOfDanglyType x) handle Type.badType => 0.25)
          | _ => (print "unknown quantity scale"; raise Match))
-  in List.avgIndexed qsVal types
+  in 100.0 * userDepWeight u * (List.avgIndexed qsVal types)
   end
 
 (* expression complexity *)
@@ -99,14 +103,16 @@ fun expressionComplexity cognitiveData st u =
       fun graphSize w (Construction.Source _) = 1.0
         | graphSize w (Construction.Reference _) = 0.0
         | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
-  in List.sumMap (graphSize 1.0) cts
+      val rawVal = List.sumMap (graphSize 1.0) cts
+  in userDepWeight u * logistic 100.0 0.1 100.0 rawVal 
   end
 
 (* Heterogeneity *)
   fun heterogeneity cognitiveData st u =
     let val tCS = State.targetConSpecDataOf st
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
-    in real (varietyOfSymbols cts)
+        val rawVal = real (varietyOfSymbols cts)
+    in userDepWeight u * logistic 100.0 0.2 15.0 rawVal
     end
 
 (* infernce type *)
@@ -117,11 +123,7 @@ fun aggregate cognitiveData st u =
       val qs = quantityScale cognitiveData st u (* 3rd heaviest *)
       val ec = expressionComplexity cognitiveData st u (* 2nd heaviest *)
       val het = heterogeneity cognitiveData st u (* heaviest *)
-      val userDepWeight = 8.0 / (7.0 * u + 1.0)
-  in (1.0 * userDepWeight) * reg +
-     (2.0 * userDepWeight) * qs +
-     (4.0 * userDepWeight) * ec +
-     (8.0 * userDepWeight) * het
+  in reg + qs + ec + het
   end
 
 end
