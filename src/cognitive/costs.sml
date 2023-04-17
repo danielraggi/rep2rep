@@ -1,4 +1,4 @@
-import "transfer.structure_transfer";
+import "transfer.state";
 
 signature COGNITIVECOSTS =
 sig
@@ -51,12 +51,13 @@ struct
   fun registration cognitiveData st u =
     let val conSpecName = #name (State.targetConSpecDataOf st)
         fun tokenReg x = (#tokenRegistration cognitiveData) (conSpecName,x)
-        fun tokenRegVal x = if x = SOME "icon" then 0.2
-                       else if x = SOME "emergent" then 0.4
-                       else if x = SOME "spatial-index" then 0.6
-                       else if x = SOME "notational-index" then 0.8
-                       else if x = SOME "search" then 1.0
-                       else (print "unknown token reg"; raise Match)
+        fun tokenRegVal x = case x of SOME "icon" => 0.2
+                       | SOME "emergent" => 0.4
+                       | SOME "spatial-index" => 0.6
+                       | SOME "notational-index" => 0.8
+                       | SOME "search" => 1.0
+                       | NONE => 0.5
+                       | SOME y => (print ("unknown token reg" ^ y ^ " ") ; raise Match)
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
             let val discount = 1.0 - u/2.0
@@ -97,7 +98,7 @@ fun expressionComplexity cognitiveData st u =
       val discount = 1.0 - u/2.0
       fun graphSize w (Construction.Source _) = 1.0
         | graphSize w (Construction.Reference _) = 0.0
-        | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + List.sumMap (graphSize (w * discount)) cs
+        | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
   in List.sumMap (graphSize 1.0) cts
   end
 

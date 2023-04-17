@@ -21,10 +21,10 @@ conSpec areaDiagramG:areaDiagram =
 cognitiveData areaDiagramG =
     registration
         reverseTag : emergent,
-        cPoint : iconic,
-        cRect : iconic,
+        cPoint : icon,
+        cRect : icon,
         overlayRect : spatial-index,
-        colour : iconic,
+        colour : icon,
         addColour : emergent,
         combine : spatial-index,
         infixOp : emergent,

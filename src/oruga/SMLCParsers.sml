@@ -76,6 +76,6 @@ struct
 
   fun parseProblemPair (s,q) =
     Construction.TCPair ({token = CSpace.makeToken dummyName (s ^ "," ^ q ^ "= ?"), constructor = makeProblemConstructor},
-                          parseProbSys s, parsePrExpr q])
+                          [parseProbSys s, parsePrExpr q])
 
 end
