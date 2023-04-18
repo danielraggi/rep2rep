@@ -32,7 +32,7 @@ struct
     in {tokenRegistration = TR, quantityScale = QS}
     end
 
-  fun userDepWeight u = 8.0 / (7.0 * u + 1.0)
+  fun userDepWeight u = Math.pow(2.0,3.0*(1.0-u))
   fun logistic L k x0 x = L / (1.0 + Math.exp (~k * (x-x0)))
 
 (* registration *)
@@ -54,22 +54,23 @@ struct
   fun registration cognitiveData st u =
     let val conSpecName = #name (State.targetConSpecDataOf st)
         fun tokenReg x = (#tokenRegistration cognitiveData) (conSpecName,x)
-        fun tokenRegVal x = case x of SOME "icon" => 0.2
-                       | SOME "emergent" => 0.4
-                       | SOME "spatial-index" => 0.6
-                       | SOME "notational-index" => 0.8
-                       | SOME "search" => 1.0
-                       | NONE => 0.5
-                       | SOME y => (print ("unknown token reg" ^ y ^ " ") ; raise Match)
+        fun tokenRegVal x =
+          (case x of SOME "icon" => 0.2
+                   | SOME "emergent" => 0.4
+                   | SOME "spatial-index" => 0.6
+                   | SOME "notational-index" => 0.8
+                   | SOME "search" => 1.0
+                   | NONE => 0.5
+                   | SOME y => (print ("unknown token reg" ^ y ^ " ") ; raise Match))
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
-            let val discount = 1.0 - u/2.0
-                val updWeight = discount * (w + 1.0) / 2.0
-            in w * (tokenRegVal (tokenReg constructor)) * (List.sumMap (reg updWeight) cs)
+            let val discount = 1.0 - u/3.0
+                val updWeight = discount * w
+            in w * (tokenRegVal (tokenReg constructor)) * real(length cs) + (List.sumMap (reg updWeight) cs)
             end
           | reg _ _ = 1.0
         val rawVal = List.sumMap (reg 1.0) cts
-    in userDepWeight u * logistic 100.0 1.0 6.0 rawVal
+    in userDepWeight u * logistic 100.0 0.05 80.0 rawVal
     end
 
 (* semantic encoding *)
@@ -92,8 +93,8 @@ fun quantityScale cognitiveData st u =
          | SOME "interval" => 0.75
          | SOME "ratio" => 1.0
          | NONE => (qsVal (Type.parentOfDanglyType x) handle Type.badType => 0.25)
-         | _ => (print "unknown quantity scale"; raise Match))
-  in 100.0 * userDepWeight u * (List.avgIndexed qsVal types)
+         | SOME s => (print ("unknown quantity scale " ^ s ^ " "); raise Match))
+  in 200.0 * userDepWeight u * (List.avgIndexed qsVal types)
   end
 
 (* expression complexity *)
@@ -104,7 +105,7 @@ fun expressionComplexity cognitiveData st u =
         | graphSize w (Construction.Reference _) = 0.0
         | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
       val rawVal = List.sumMap (graphSize 1.0) cts
-  in userDepWeight u * logistic 100.0 0.1 100.0 rawVal 
+  in userDepWeight u * logistic 400.0 0.075 60.0 rawVal
   end
 
 (* Heterogeneity *)
@@ -112,7 +113,7 @@ fun expressionComplexity cognitiveData st u =
     let val tCS = State.targetConSpecDataOf st
         val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf st)
         val rawVal = real (varietyOfSymbols cts)
-    in userDepWeight u * logistic 100.0 0.2 15.0 rawVal
+    in userDepWeight u * logistic 800.0 0.3 15.0 rawVal
     end
 
 (* infernce type *)
