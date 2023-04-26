@@ -38,12 +38,14 @@ fun transferProbabilityMeta sCSD tCSD iCSD KB ct goal =
                     ids
             end;
         val firstState = Seq.hd stateSeq;
+        val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf firstState)
+
         (* start cog costs *)
-        val reg = CognitiveCosts.registration cogData firstState
-        val qs = CognitiveCosts.quantityScale cogData firstState
-        val ec = CognitiveCosts.expressionComplexity cogData firstState
-        val het = CognitiveCosts.heterogeneity cogData firstState
-        val agg = CognitiveCosts.aggregate cogData firstState
+        val reg = CognitiveCosts.registration cogData tCSD cts
+        val qs = CognitiveCosts.quantityScale cogData tCSD cts
+        val ec = CognitiveCosts.expressionComplexity cogData tCSD cts
+        val het = CognitiveCosts.heterogeneity cogData tCSD cts
+        val agg = CognitiveCosts.aggregate cogData tCSD cts
         val users = [0.1,0.3,0.5,0.7,0.9]
         val usersS = ["user","ultraNovice","novice","intermediate","expert","ultraExpert"]
         val regS = "registration" :: map (realToString o reg) users
