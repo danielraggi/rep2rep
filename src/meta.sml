@@ -71,6 +71,10 @@ val interBayesTree = Document.getConSpecWithName probDoc "interBayesTree";
 val interBayesTable = Document.getConSpecWithName probDoc "interBayesTable";
 
 val ct = SMLCParsers.parseProbSys "Pr(A|B) = 0.95; Pr(B) = 0.1; Pr(-A|-B) = 0.9";
-val goal = Document.parseConstruction interBayesArea "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':area]";
+val goalArea = Document.parseConstruction interBayesArea "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':area]";
+val goalTable = Document.parseConstruction interBayesTable "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':table]";
+val goalTree = Document.parseConstruction interBayesTree "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':tree]";
 
-transferProbabilityMeta bayesConSpecData areaConSpecData interBayesArea KB ct goal
+transferProbabilityMeta bayesConSpecData areaConSpecData interBayesArea KB ct goalArea;
+transferProbabilityMeta bayesConSpecData tableConSpecData interBayesTable KB ct goalTable;
+transferProbabilityMeta bayesConSpecData treeConSpecData interBayesTree KB ct goalTree;

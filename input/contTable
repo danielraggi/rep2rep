@@ -17,7 +17,7 @@ conSpec contTableG:contTable =
 
 cognitiveData probTreeG =
     registration
-        notName : iconic,
+        notName : icon,
         buildOne : spatial-index,
         buildTwo : spatial-index,
         combine : notational-index,

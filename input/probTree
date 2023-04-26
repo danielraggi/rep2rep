@@ -17,8 +17,8 @@ conSpec probTreeG:probTree =
 
 cognitiveData probTreeG =
     registration
-        notLabel : iconic,
-        construct : iconic,
+        notLabel : icon,
+        construct : icon,
         addBranch : emergent,
         resolve : search,
         infixOp : emergent,
