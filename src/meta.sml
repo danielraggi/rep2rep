@@ -38,7 +38,7 @@ fun transferProbabilityMeta sCSD tCSD iCSD KB ct goal =
                     ids
             end;
         val firstState = Seq.hd stateSeq;
-        val cts = List.flatmap Composition.resultingConstructions (State.patternCompsOf firstState)
+        val cts = getStructureGraph firstState
 
         (* start cog costs *)
         val reg = CognitiveCosts.registration cogData tCSD cts
@@ -53,10 +53,9 @@ fun transferProbabilityMeta sCSD tCSD iCSD KB ct goal =
         val ecS = "expressionComplexity" :: map (realToString o ec) users
         val hetS = "heterogeneity" :: map (realToString o het) users
         val aggS = "aggregate" :: map (realToString o agg) users
-        val _ = print (matrixToString [usersS,regS,qsS,ecS,hetS,aggS])
         val goals = State.goalsOf firstState;
     in case goals of
-            [] => Result.ok (getStructureGraph firstState)
+            [] => (print (matrixToString [usersS,regS,qsS,ecS,hetS,aggS]); Result.ok cts)
         | _ => Result.error (List.map makeDiagnostic goals)
     end
 
