@@ -62,10 +62,10 @@ struct
     let val conSpecName = #name conSpecData
         fun tokenReg x = (#tokenRegistration cognitiveData) (conSpecName,x)
         fun tokenRegVal x =
-          (case x of SOME "icon" => 0.2
-                   | SOME "emergent" => 0.4
-                   | SOME "spatial-index" => 0.6
-                   | SOME "notational-index" => 0.8
+          (case x of SOME "icon" => 0.0625
+                   | SOME "emergent" => 0.125
+                   | SOME "spatial-index" => 0.25
+                   | SOME "notational-index" => 0.5
                    | SOME "search" => 1.0
                    | NONE => 0.5
                    | SOME y => (print ("unknown token reg" ^ y ^ " ") ; raise Match))
@@ -76,7 +76,7 @@ struct
             end
           | reg _ _ = 1.0
         val rawVal = List.sumMap (reg 1.0) cts
-    in userDepWeight u * logistic 100.0 0.05 80.0 rawVal
+    in userDepWeight u * logistic 1.0 0.05 80.0 rawVal
     end
 
 (* semantic encoding *)
@@ -99,7 +99,7 @@ fun quantityScale cognitiveData conSpecData cts u =
          | SOME "ratio" => 1.0
          | NONE => (qsVal (Type.parentOfDanglyType x) handle Type.badType => 0.25)
          | SOME s => (print ("unknown quantity scale " ^ s ^ " "); raise Match))
-  in 200.0 * userDepWeight u * (List.avgIndexed qsVal types)
+  in 2.0 * userDepWeight u * (List.avgIndexed qsVal types)
   end
 
 (* expression complexity *)
@@ -107,15 +107,15 @@ fun expressionComplexity cognitiveData conSpecData cts u =
   let val discount = 1.0 - u/2.0
       fun graphSize w (Construction.Source _) = 1.0
         | graphSize w (Construction.Reference _) = 0.0
-        | graphSize w (Construction.TCPair (_,cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
+        | graphSize w (Construction.TCPair ({constructor,...},cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
       val rawVal = List.sumMap (graphSize 1.0) cts
-  in userDepWeight u * logistic 400.0 0.075 60.0 rawVal
+  in userDepWeight u * logistic 4.0 0.075 60.0 rawVal
   end
 
 (* Heterogeneity *)
   fun heterogeneity cognitiveData conSpecData cts u =
     let val rawVal = real (typeVariety cts)
-    in userDepWeight u * logistic 800.0 0.3 15.0 rawVal
+    in userDepWeight u * logistic 8.0 0.3 15.0 rawVal
     end
 
 (* infernce type *)

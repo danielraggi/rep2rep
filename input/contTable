@@ -17,14 +17,14 @@ conSpec contTableG:contTable =
 
 cognitiveData probTreeG =
     registration
-        notName : icon,
+        notName : emergent,
         buildOne : spatial-index,
         buildTwo : spatial-index,
         combine : notational-index,
-        infixOp : emergent,
-        infixRel : emergent,
+        infixOp : notational-index,
+        infixRel : notational-index,
         addParentheses : emergent,
-        multiply : emergent
+        multiply : notational-index
     quantityScale
         name : nominal,
         oneDim : ordinal,

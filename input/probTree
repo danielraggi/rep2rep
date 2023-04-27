@@ -17,14 +17,14 @@ conSpec probTreeG:probTree =
 
 cognitiveData probTreeG =
     registration
-        notLabel : icon,
-        construct : icon,
+        notLabel : emergent,
+        construct : emergent,
         addBranch : emergent,
-        resolve : search,
-        infixOp : emergent,
-        infixRel : emergent,
+        resolve : notational-index,
+        infixOp : notational-index,
+        infixRel : notational-index,
         addParentheses : emergent,
-        multiply : emergent
+        multiply : notational-index
     quantityScale
         label : nominal,
         tree : ordinal,

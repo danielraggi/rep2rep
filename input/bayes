@@ -18,16 +18,16 @@ conSpec bayesG:bayes =
 
 cognitiveData bayesG =
     registration
-        makeEqn : emergent,
+        makeEqn : notational-index,
         complement : emergent,
-        infix : emergent,
-        makeCond : emergent,
-        addEqn : emergent,
-        calculate : emergent,
-        infixOp : emergent,
-        infixRel : emergent,
+        infix : notational-index,
+        makeCond : notational-index,
+        addEqn : search,
+        calculate : search,
+        infixOp : notational-index,
+        infixRel : notational-index,
         addParentheses : emergent,
-        multiply : emergent
+        multiply : notational-index
     quantityScale
         event : nominal,
         inter : ordinal,
