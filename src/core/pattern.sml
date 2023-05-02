@@ -75,7 +75,8 @@ struct
 
   fun typeMatches T ty ty' =
     #subType T (ty,ty') orelse (Type.isTypeVar ty andalso
-                                Type.equal (Type.parentOfDanglyType ty) (Type.parentOfDanglyType ty'))
+                                not (Type.equal ty' (Type.parentOfDanglyType ty)) andalso
+                                #subType T (ty',Type.parentOfDanglyType ty))
     handle Type.badType => false
 
   fun tokenMatches T t t' =
@@ -257,8 +258,8 @@ struct
         | checkValidTypeVarInst (tk::tks) =
           let val typ = CSpace.typeOfToken tk
           in (case (vf typ) of NONE => checkValidTypeVarInst tks
-                             | SOME xtyp => if Type.equal (Type.parentOfDanglyType typ) (Type.parentOfDanglyType xtyp)
-                                            then (checkValidTypeVarInst tks)
+                             | SOME xtyp => if not (Type.equal xtyp (Type.parentOfDanglyType typ)) andalso #subType T (xtyp, (Type.parentOfDanglyType typ))
+                                            then checkValidTypeVarInst tks
                                             else raise IllDefined)
           end handle Type.badType => raise IllDefined
       val _ = checkValidTypeVarInst (tokensOfConstruction ct)
@@ -313,7 +314,7 @@ struct
       val (f,f') = fm ct ct'
       val _ = applyMorphism f ct
   in (f, f', true)
-  end handle IllDefined => (fn _ => NONE,fn _ => NONE, false)
+  end handle IllDefined => (fn _ => NONE, fn _ => NONE, false)
 
   fun similarityMap [] [] = (fn _ => NONE)
     | similarityMap (ct::L) (ct'::L') =
