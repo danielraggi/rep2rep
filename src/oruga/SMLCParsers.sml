@@ -47,11 +47,11 @@ struct
                         (_,".",_) => Construction.Source (CSpace.makeToken dummyName (s ^ ":real10"))
                       | ("1",_,_) => Construction.Source (CSpace.makeToken dummyName "1")
                       | ("0",_,_) => Construction.Source (CSpace.makeToken dummyName "0")
-                    | _ => (print "oops1"; raise Match))
+                    | _ => (print "bad real number"; raise Match))
 
   fun parseEquation s = (case String.breakOn "=" s of
                             (s1,"=",s2) => Construction.TCPair ({token = CSpace.makeToken dummyName (s ^ ":probEqn"), constructor = makeEqnConstructor},[parsePrExpr s1, parseNum s2])
-                          | _ => (print "oops2"; raise Match))
+                          | _ => (print "bad equation"; raise Match))
 
 
   fun parseProbSys s =
