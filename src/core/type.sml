@@ -46,6 +46,7 @@ sig
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
 
   val subTypes : typeSystem -> typ -> typ Set.set
+  val immediateSuperTypes : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set} -> typ -> typ FiniteSet.set
   val superTypes : {typeSystem : typeSystem, principalTypes : principalType FiniteSet.set} -> typ -> typ FiniteSet.set
 
   datatype typeDAG = Node of typ * typeDAG FiniteSet.set | Leaf of typ | Ref of typ

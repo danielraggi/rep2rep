@@ -19,10 +19,10 @@ conSpec bayesG:bayes =
 cognitiveData bayesG =
     registration
         makeEqn : notational-index,
-        complement : emergent,
+        complement : notational-index,
         infix : notational-index,
         makeCond : notational-index,
-        addEqn : search,
+        addEqn : notational-index,
         calculate : search,
         infixOp : notational-index,
         infixRel : notational-index,
@@ -43,3 +43,7 @@ cognitiveData bayesG =
         div : ratio,
         leq : ordinal,
         equals : nominal
+    complexity
+        makeEqn : 18,
+        makeCond : 1,
+        addEqn : 1

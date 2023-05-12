@@ -21,7 +21,7 @@ cognitiveData areaDiagramG =
         reverseTag : emergent,
         cPoint : icon,
         cRect : icon,
-        overlayRect : spatial-index,
+        overlayRect : emergent,
         colour : icon,
         addColour : emergent,
         combine : spatial-index,
@@ -44,3 +44,7 @@ cognitiveData areaDiagramG =
         div : ratio,
         leq : ordinal,
         equals : nominal
+    complexity
+        cPoint : -6,
+        overlayRect : -1,
+        combine : -6

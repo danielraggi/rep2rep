@@ -36,3 +36,7 @@ cognitiveData probTreeG =
         div : ratio,
         leq : ordinal,
         equals : nominal
+    complexity
+        construct : 8,
+        addBranch : 4,
+        resolve : -6

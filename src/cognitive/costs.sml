@@ -16,20 +16,26 @@ end
 structure CognitiveCosts : COGNITIVECOSTS =
 struct
   type userProfile = real
-  type data = {tokenRegistration : string * CSpace.constructor -> string option,
-               quantityScale : string * Type.typ -> string option}
-  val empty = {tokenRegistration = fn _ => NONE, quantityScale = fn _ => NONE}
+  type data = {registration : string * CSpace.constructor -> string option,
+               quantityScale : string * Type.typ -> string option,
+               complexity : string * CSpace.constructor -> real option}
+  val empty = {registration = fn _ => NONE,
+               quantityScale = fn _ => NONE,
+               complexity = fn _ => NONE}
 
   exception IllDefined of string
-  fun joinCognitiveData {tokenRegistration = tr, quantityScale = qs}
-                        {tokenRegistration = tr', quantityScale = qs'} =
-    let fun TR x = (case (tr x, tr' x) of (NONE, res) => res
-                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsisten token reg " ^ y ^ " and " ^ y' ^ " for " ^ CSpace.nameOfConstructor (#2 x))
+  fun joinCognitiveData {registration = tr, quantityScale = qs, complexity = cx}
+                        {registration = tr', quantityScale = qs', complexity = cx'} =
+    let fun CX x = (case (cx x, cx' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if Real.==(y, y') then SOME y else raise IllDefined ("inconsistent exp complexity " ^ Real.toString y ^ " and " ^ Real.toString y' ^ " for " ^ CSpace.nameOfConstructor (#2 x))
+                                        | (res,_) => res)
+        fun TR x = (case (tr x, tr' x) of (NONE, res) => res
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsistent token reg " ^ y ^ " and " ^ y' ^ " for " ^ CSpace.nameOfConstructor (#2 x))
                                         | (res,_) => res)
         fun QS x = (case (qs x, qs' x) of (NONE, res) => res
-                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsisten quantity scales " ^ y ^ " and " ^ y' ^ " for " ^ Type.nameOfType (#2 x))
+                                        | (SOME y,SOME y') => if y = y' then SOME y else raise IllDefined ("inconsistent quantity scales " ^ y ^ " and " ^ y' ^ " for " ^ Type.nameOfType (#2 x))
                                         | (res,_) => res)
-    in {tokenRegistration = TR, quantityScale = QS}
+    in {registration = TR, quantityScale = QS, complexity = CX}
     end
 
   fun userDepWeight u = Math.pow(2.0,3.0*(1.0-u))
@@ -49,18 +55,21 @@ struct
     in FiniteSet.size types
     end
 
-  (* variety of types and parent types *)
-  fun typeVariety cts =
-    let fun addParent ty = [ty,Type.parentOfDanglyType ty] handle Type.badType => [ty]
-        val tokens = List.flatmap (Construction.tokensOfConstruction) cts
-        val types = FiniteSet.ofList (List.flatmap (addParent o CSpace.typeOfToken) tokens)
-    in FiniteSet.size types
+  (* variety of types *)
+  fun types cts =
+    let val tokens = List.flatmap (Construction.tokensOfConstruction) cts
+    in FiniteSet.ofList (List.map CSpace.typeOfToken tokens)
+    end
+  (* variety of parent types *)
+  fun parentTypes TSD tys =
+    let fun parents ty = [Type.parentOfDanglyType ty] handle Type.badType => Type.immediateSuperTypes TSD ty
+    in FiniteSet.ofList (List.flatmap parents (FiniteSet.listOf tys))
     end
 
   (* registration: there's a disount of (1.0-u/2.0) every step down the tree. Uncertain what this means if there's a loop *)
   fun registration cognitiveData conSpecData cts u =
     let val conSpecName = #name conSpecData
-        fun tokenReg x = (#tokenRegistration cognitiveData) (conSpecName,x)
+        fun tokenReg x = (#registration cognitiveData) (conSpecName,x)
         fun tokenRegVal x =
           (case x of SOME "icon" => 0.0625
                    | SOME "emergent" => 0.125
@@ -72,11 +81,12 @@ struct
         fun reg w (Construction.TCPair ({constructor,...},cs)) =
             let val discount = 1.0 - u/3.0
                 val updWeight = discount * w
-            in w * (tokenRegVal (tokenReg constructor)) * real(length cs) + (List.sumMap (reg updWeight) cs)
+            in (w, w * tokenRegVal (tokenReg constructor)) (** real(length cs)*) :: List.flatmap (reg updWeight) cs
             end
-          | reg _ _ = 1.0
-        val rawVal = List.sumMap (reg 1.0) cts
-    in userDepWeight u * logistic 1.0 0.05 80.0 rawVal
+          | reg w _ = [(0.0,0.0)]
+        val rawVals = List.flatmap (reg 1.0) cts
+        val rawVal = (List.sumMap #2 rawVals) / (List.sumMap #1 rawVals)
+    in userDepWeight u * logistic 1.0 9.0 0.4 rawVal
     end
 
 (* semantic encoding *)
@@ -104,18 +114,30 @@ fun quantityScale cognitiveData conSpecData cts u =
 
 (* expression complexity *)
 fun expressionComplexity cognitiveData conSpecData cts u =
-  let val discount = 1.0 - u/2.0
+  let val conSpecName = #name conSpecData
+      fun complexity x = case (#complexity cognitiveData) (conSpecName,x) of NONE => 0.0 | SOME r => r
+      val discount = 1.0 - u/2.0
       fun graphSize w (Construction.Source _) = 1.0
         | graphSize w (Construction.Reference _) = 0.0
-        | graphSize w (Construction.TCPair ({constructor,...},cs)) = 3.0 + real(length cs) + w * (List.sumMap (graphSize (w * discount)) cs)
+        | graphSize w (Construction.TCPair ({constructor,...},cs)) = w * (3.0 + complexity constructor + real(length cs)) + (List.sumMap (graphSize (w * discount)) cs)
       val rawVal = List.sumMap (graphSize 1.0) cts
-  in userDepWeight u * logistic 4.0 0.075 60.0 rawVal
+  in userDepWeight u * logistic 4.0 0.07 70.0 rawVal
   end
 
 (* Heterogeneity *)
   fun heterogeneity cognitiveData conSpecData cts u =
-    let val rawVal = real (typeVariety cts)
-    in userDepWeight u * logistic 8.0 0.3 15.0 rawVal
+    let val TSD = #typeSystemData conSpecData
+        val T = {typeSystem = #typeSystem TSD, principalTypes = #principalTypes TSD}
+        val typs = types cts
+        val parentTyps = parentTypes T typs
+        val grandparentTyps = parentTypes T parentTyps
+        val greatgrandparentTyps = parentTypes T grandparentTyps
+        val l0 = greatgrandparentTyps
+        val l1 = FiniteSet.union l0 grandparentTyps
+        val l2 = FiniteSet.union l1 parentTyps
+        val l3 = FiniteSet.union l2 typs
+        val rawVal = real (length l0 + length l1 + length l2 + length l3)
+    in userDepWeight u * logistic 8.0 0.1 30.0 rawVal
     end
 
 (* infernce type *)

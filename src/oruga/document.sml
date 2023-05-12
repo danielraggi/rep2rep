@@ -100,7 +100,8 @@ struct
 
   val registrationKW = "registration"
   val quantityScaleKW = "quantityScale"
-  val cognitiveDataKeywords = [registrationKW,quantityScaleKW]
+  val complexityKW = "complexity"
+  val cognitiveDataKeywords = [registrationKW,quantityScaleKW,complexityKW]
 
   fun breakListOn s [] = ([],"",[])
     | breakListOn s (w::ws) =
@@ -955,6 +956,13 @@ struct
               (case String.breakOn ":" x of
                   (t,":",s) => (fn (w,y) => if w = conSpecN andalso Type.nameOfType y = t then SOME s else parseQS L (w,y))
                 | _ => raise ParseError ("t : s expected to denote quantity scale s for type t for conSpec "^ conSpecN ^": " ^ x))
+        fun parseComplexity [] = (fn _ => NONE)
+          | parseComplexity (x::L) =
+              (case String.breakOn ":" x of
+                  (c,":",cx) => (case Real.fromString cx of
+                                    SOME r => (fn (w,y) => if w = conSpecN andalso CSpace.nameOfConstructor y = c then SOME r else parseComplexity L (w,y))
+                                  | NONE => raise ParseError ("real number expected for expression complexity: " ^ x))
+                | _ => raise ParseError ("c : x expected to denote compexity x for constructor c for conSpec "^ conSpecN ^": " ^ x))
         fun getRegistration [] = (fn _ => NONE)
           | getRegistration ((x,r)::L) =
               if x = SOME registrationKW
@@ -971,8 +979,17 @@ struct
                    in parseQS sL
                    end
               else getQS L
-        val cognitiveData = {tokenRegistration = getRegistration blocks,
-                             quantityScale = getQS blocks}
+        fun getComplexity [] = (fn _ => NONE)
+          | getComplexity ((x,s)::L) =
+              if x = SOME complexityKW
+              then let val sChars = String.explode (String.concat (removeOuterBrackets s))
+                       val sL = Parser.splitLevelWithSepFunApply (fn x => x) (fn x => x = #",") sChars
+                   in parseComplexity sL
+                   end
+              else getComplexity L
+        val cognitiveData = {registration = getRegistration blocks,
+                             quantityScale = getQS blocks,
+                             complexity = getComplexity blocks}
     in {typeSystemsData = #typeSystemsData dc,
         conSpecsData = #conSpecsData dc,
         knowledge = #knowledge dc,
