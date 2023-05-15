@@ -30,6 +30,7 @@ cognitiveData probTreeG =
         oneDim : ordinal,
         twoDim : ordinal,
         table : ordinal,
+        numExp : ratio,
         real10 : ratio,
         nat10 : ratio,
         plus : interval,
@@ -39,6 +40,6 @@ cognitiveData probTreeG =
         leq : ordinal,
         equals : nominal
     complexity
-        buildOne : 9,
-        buildTwo : 16,
-        combine : -6
+        buildOne : 12,
+        buildTwo : 8,
+        combine : -4

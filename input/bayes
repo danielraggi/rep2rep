@@ -35,6 +35,7 @@ cognitiveData bayesG =
         condEvent : ratio,
         probEqn : ratio,
         probSys : ratio,
+        numExp : ratio,
         real10 : ratio,
         nat10 : ratio,
         plus : interval,

@@ -36,6 +36,7 @@ cognitiveData areaDiagramG =
         point : nominal,
         empty : nominal,
         coloured : nominal,
+        numExp : ratio,
         real10 : ratio,
         nat10 : ratio,
         plus : interval,
@@ -45,6 +46,6 @@ cognitiveData areaDiagramG =
         leq : ordinal,
         equals : nominal
     complexity
-        cPoint : -6,
+        cPoint : -3,
         overlayRect : -1,
-        combine : -6
+        combine : -4

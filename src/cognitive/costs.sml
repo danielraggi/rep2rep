@@ -38,8 +38,16 @@ struct
     in {registration = TR, quantityScale = QS, complexity = CX}
     end
 
-  fun userDepWeight u = Math.pow(2.0,3.0*(1.0-u))
-  fun logistic L k x0 x = L / (1.0 + Math.exp (~k * (x-x0)))
+  fun userWeight u = Math.pow(2.0,3.0*(1.0-u))
+  fun propUserWeight s u =
+    case s of
+        "registration" => Math.pow(2.0-u, 2.0-u)
+      | "quantityScale" => Math.pow(2.67-u, 2.0-u)
+      | "complexity" => Math.pow(3.33-u, 2.0-u)
+      | "heterogeneity" => Math.pow(4.0-u, 2.0-u)
+      | _ => raise Match
+
+  fun logisticNorm x0 x = 1.0 / (1.0 + Math.exp (~(4.0/x0) * (x-x0)))
 
 (* registration *)
   (* number of symbols *)
@@ -85,8 +93,8 @@ struct
             end
           | reg w _ = [(0.0,0.0)]
         val rawVals = List.flatmap (reg 1.0) cts
-        val rawVal = (List.sumMap #2 rawVals) / (List.sumMap #1 rawVals)
-    in userDepWeight u * logistic 1.0 9.0 0.4 rawVal
+        val rawVal = (List.sumMap #2 rawVals) (*)/ (List.sumMap #1 rawVals)*)
+    in propUserWeight "registration" u * logisticNorm 4.0 rawVal
     end
 
 (* semantic encoding *)
@@ -103,13 +111,14 @@ fun quantityScale cognitiveData conSpecData cts u =
       fun qs x = (#quantityScale cognitiveData) (conSpecName,x)
       fun qsVal x =
         (case qs x of
-           SOME "nominal" => 0.25
-         | SOME "ordinal" => 0.5
-         | SOME "interval" => 0.75
+           SOME "nominal" => 0.0
+         | SOME "ordinal" => 1.0/3.0
+         | SOME "interval" => 2.0/3.0
          | SOME "ratio" => 1.0
          | NONE => (qsVal (Type.parentOfDanglyType x) handle Type.badType => 0.25)
          | SOME s => (print ("unknown quantity scale " ^ s ^ " "); raise Match))
-  in 2.0 * userDepWeight u * (List.avgIndexed qsVal types)
+      val rawVal = List.avgIndexed qsVal types
+  in propUserWeight "quantityScale" u * logisticNorm 0.5 rawVal
   end
 
 (* expression complexity *)
@@ -117,11 +126,11 @@ fun expressionComplexity cognitiveData conSpecData cts u =
   let val conSpecName = #name conSpecData
       fun complexity x = case (#complexity cognitiveData) (conSpecName,x) of NONE => 0.0 | SOME r => r
       val discount = 1.0 - u/2.0
-      fun graphSize w (Construction.Source _) = 1.0
-        | graphSize w (Construction.Reference _) = 0.0
-        | graphSize w (Construction.TCPair ({constructor,...},cs)) = w * (3.0 + complexity constructor + real(length cs)) + (List.sumMap (graphSize (w * discount)) cs)
-      val rawVal = List.sumMap (graphSize 1.0) cts
-  in userDepWeight u * logistic 4.0 0.07 70.0 rawVal
+      fun weightedSize w (Construction.Source _) = 0.0
+        | weightedSize w (Construction.Reference _) = 0.0
+        | weightedSize w (Construction.TCPair ({constructor,...},cs)) = w * (complexity constructor + 1.0 + real(length cs)) + (List.sumMap (weightedSize (w * discount)) cs)
+      val rawVal = List.sumMap (weightedSize 1.0) cts
+  in propUserWeight "complexity" u * logisticNorm 45.0 rawVal
   end
 
 (* Heterogeneity *)
@@ -133,11 +142,17 @@ fun expressionComplexity cognitiveData conSpecData cts u =
         val grandparentTyps = parentTypes T parentTyps
         val greatgrandparentTyps = parentTypes T grandparentTyps
         val l0 = greatgrandparentTyps
-        val l1 = FiniteSet.union l0 grandparentTyps
-        val l2 = FiniteSet.union l1 parentTyps
-        val l3 = FiniteSet.union l2 typs
-        val rawVal = real (length l0 + length l1 + length l2 + length l3)
-    in userDepWeight u * logistic 8.0 0.1 30.0 rawVal
+        val l1 = FiniteSet.minus grandparentTyps l0
+        val l2 = FiniteSet.minus parentTyps (FiniteSet.union l1 l0)
+        val l3 = FiniteSet.minus typs (FiniteSet.union l2 (FiniteSet.union l1 l0))
+        fun discount n = Math.pow(1.0 - u/2.0,n)
+        fun realLength L = real (length L)
+        val rawVal = realLength l0 +
+                      discount 1.0 * realLength l1 +
+                      discount 2.0 * realLength l2 +
+                      discount 3.0 * realLength l3
+                      val _ = print ("\n\n" ^ Real.toString rawVal ^ "\n\n")
+    in propUserWeight "heterogeneity" u * logisticNorm 8.0 rawVal
     end
 
 (* infernce type *)
@@ -148,7 +163,11 @@ fun aggregate cognitiveData conSpecData cts u =
       val qs = quantityScale cognitiveData conSpecData cts u
       val ec = expressionComplexity cognitiveData conSpecData cts u
       val het = heterogeneity cognitiveData conSpecData cts u
-  in reg + qs + ec + het
+      (*val W = propUserWeight "registration" u +
+              propUserWeight "quantityScale" u +
+              propUserWeight "complexity" u +
+              propUserWeight "heterogeneity" u*)
+  in (*100.0 * logisticNorm (W / 2.0)*) (reg + qs + ec + het)
   end
 
 end

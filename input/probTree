@@ -28,6 +28,7 @@ cognitiveData probTreeG =
     quantityScale
         label : nominal,
         tree : ordinal,
+        numExp : ratio,
         real10 : ratio,
         nat10 : ratio,
         plus : interval,
@@ -38,5 +39,5 @@ cognitiveData probTreeG =
         equals : nominal
     complexity
         construct : 8,
-        addBranch : 4,
-        resolve : -6
+        addBranch : 6,
+        resolve : -4
