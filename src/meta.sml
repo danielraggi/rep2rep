@@ -2,7 +2,7 @@ import "oruga.document";
 import "oruga.SMLCParsers";
 
  fun realToString z =
-    let val zs = Real.fmt (StringCvt.FIX (SOME 2)) z
+    let val zs = Real.fmt (StringCvt.FIX (SOME 3)) z
     in case (String.explode zs) of
           (#"~"::n) => ("-" ^ String.implode n)
         | n => zs
@@ -10,7 +10,7 @@ import "oruga.SMLCParsers";
 
 fun nSpaces n = if n <= 0 then "" else " " ^ nSpaces (n-1)
 fun matrixToString ([h1]::LL) = h1 ^ "\n" ^ matrixToString LL
-  | matrixToString ((h1::L1)::LL) = h1 ^ nSpaces(6 - size h1) ^ " " ^ matrixToString (L1::LL)
+  | matrixToString ((h1::L1)::LL) = h1 ^ nSpaces(8 - size h1) ^ " " ^ matrixToString (L1::LL)
   | matrixToString ([]::LL) = raise Match
   | matrixToString [] = ""
 
@@ -61,6 +61,11 @@ fun transferProbabilityMeta sCSD tCSD iCSD KB ct goal =
     end
 
 
+    fun quickSkim ((a::A)::AA) = (case quickSkim AA of (B, BB) => (a :: B, A :: BB))
+    | quickSkim [] = ([],[])
+    | quickSkim ([]::_) = ([],[])
+    fun transpose M = (case quickSkim M of ([],_) => [] | (B, BB) => B :: transpose BB)
+
   fun makeCognitiveMatrix cogData tCSD cts =
     let val reg = CognitiveCosts.registration cogData tCSD cts
         val qs = CognitiveCosts.quantityScale cogData tCSD cts
@@ -68,12 +73,17 @@ fun transferProbabilityMeta sCSD tCSD iCSD KB ct goal =
         val het = CognitiveCosts.heterogeneity cogData tCSD cts
         val agg = CognitiveCosts.aggregate cogData tCSD cts
         val users = [0.0,0.25,0.5,0.75,1.0]
-        val usersS = ["user                ","nov  ","beg  ","inter","adv  ","expert"]
-        val regS = "registration        " :: map (realToString o reg) users
-        val qsS = "quantityScale       " :: map (realToString o qs) users
-        val ecS = "expressionComplexity" :: map (realToString o ec) users
-        val hetS = "heterogeneity       " :: map (realToString o het) users
-        val aggS = "aggregate           " :: map (realToString o agg) users
+        val usersS = ["             ",
+                      "novice       ",
+                      "beginner     ",
+                      "intermediate ",
+                      "advanced     ",
+                      "expert       "]
+        val regS = "REG    " :: map (realToString o reg) users
+        val qsS  = "QS     " :: map (realToString o qs) users
+        val ecS  = "ECX    " :: map (realToString o ec) users
+        val hetS = "HET    " :: map (realToString o het) users
+        val aggS = "TOT    " :: map (realToString o agg) users
     in [usersS,regS,qsS,ecS,hetS,aggS]
     end
 
@@ -118,10 +128,10 @@ val interBayesArea = Document.getConSpecWithName probDoc "interBayesArea";
 val interBayesTree = Document.getConSpecWithName probDoc "interBayesTree";
 val interBayesTable = Document.getConSpecWithName probDoc "interBayesTable";
 
-val ct = SMLCParsers.parseProbSys "Pr(A|B) = 0.95; Pr(B) = 0.1; Pr(-A|-B) = 0.9";
-val goalArea = Document.parseConstruction interBayesArea "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':area]";
-val goalTable = Document.parseConstruction interBayesTable "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':table]";
-val goalTree = Document.parseConstruction interBayesTree "x:metaTrue <- encode[t_{0}:Pr(A|B)=0.95; Pr(B)=0.1; Pr(-A|-B)=0.9:probSys,t':tree]";
+val ct = SMLCParsers.parseProbSys "Pr(D) = 0.04; Pr(T|D) = 0.95; Pr(-T|-D) = 0.9";
+val goalArea = Document.parseConstruction interBayesArea "x:metaTrue <- encode[t_{0}:Pr(D) = 0.04; Pr(T|D) = 0.95; Pr(-T|-D) = 0.9:probSys,t':area]";
+val goalTable = Document.parseConstruction interBayesTable "x:metaTrue <- encode[t_{0}:Pr(D) = 0.04; Pr(T|D) = 0.95; Pr(-T|-D) = 0.9:probSys,t':table]";
+val goalTree = Document.parseConstruction interBayesTree "x:metaTrue <- encode[t_{0}:Pr(D) = 0.04; Pr(T|D) = 0.95; Pr(-T|-D) = 0.9:probSys,t':tree]";
 
 val areasResults = transfer bayesConSpecData areaConSpecData interBayesArea KB ct goalArea;
 val tableResults = transfer bayesConSpecData tableConSpecData interBayesTable KB ct goalTable;
@@ -132,9 +142,9 @@ val areaCogMatrix = makeCognitiveMatrix cogData areaConSpecData areasResults
 val tableCogMatrix = makeCognitiveMatrix cogData tableConSpecData tableResults
 val treeCogMatrix = makeCognitiveMatrix cogData treeConSpecData treeResults
 
-val m0 = "**** Bayes ****\n" ^ matrixToString bayesCogMatrix
-val m1 = "**** Area ****\n" ^ matrixToString areaCogMatrix
-val m2 = "**** Table ****\n" ^ matrixToString tableCogMatrix
-val m3 = "**** Tree ****\n" ^ matrixToString treeCogMatrix;
+val m0 = "**** Bayes ****\n" ^ matrixToString (transpose bayesCogMatrix)
+val m1 = "**** Area ****\n" ^ matrixToString (transpose areaCogMatrix)
+val m2 = "**** Table ****\n" ^ matrixToString (transpose tableCogMatrix)
+val m3 = "**** Tree ****\n" ^ matrixToString (transpose treeCogMatrix);
 
 print ("\n" ^ m0 ^ "\n" ^ m1 ^ "\n" ^ m2 ^ "\n" ^ m3 ^ "\n");

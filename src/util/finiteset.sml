@@ -57,8 +57,8 @@ struct
   val all = List.all
   val exists = List.exists
   val find = List.find
-  val map = List.map
-  val maps = List.maps
+  fun map f = ofList o (List.map f)
+  fun maps f = ofList o (List.maps f)
   val toSeq = Seq.of_list
 
   fun pull x = (hd x, tl x)

@@ -70,8 +70,8 @@ struct
     end
   (* variety of parent types *)
   fun parentTypes TSD tys =
-    let fun parents ty = [Type.parentOfDanglyType ty] handle Type.badType => Type.immediateSuperTypes TSD ty
-    in FiniteSet.ofList (List.flatmap parents (FiniteSet.listOf tys))
+    let fun parents ty = Type.immediateSuperTypes TSD ty
+    in FiniteSet.maps parents tys
     end
 
   (* registration: there's a disount of (1.0-u/2.0) every step down the tree. Uncertain what this means if there's a loop *)
