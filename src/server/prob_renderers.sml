@@ -280,7 +280,7 @@ fun numToString x =
     let val str = case convertNum (simplify x) of
                       V x => x
                     | R x => Real.toString (round x);
-        in if String.size str > 40 then " " else str end
+    in if String.size str > 40 then " " else str end
 and simplify (PLUS(x,y)) =
     (* NOTE FROM AARON: This looks like it could be simplified by
        changing the internal representation. If we had a NEG variant
@@ -898,7 +898,7 @@ fun resolve a b (n:int) =
                     let val xn = convertNum x
                         val yn = convertNum y
                     in case (xn, yn) of
-                        (R xn, R yn) => if numToString x = numToString y
+                        (R xn, R yn) => if x = y orelse numToString x = numToString y
                                         then filterNum' (x::ans) xs ys (n-1)
                                         else raise EqnContradictionError
                       | (R _, V _)   => filterNum' (x::ans) xs ys (n-1)
