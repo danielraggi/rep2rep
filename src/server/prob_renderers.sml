@@ -271,7 +271,7 @@ fun convertNum (PLUS(x,y)) =
   | convertNum ZERO = R 0.0
   | convertNum ONE = R 1.0
 
-fun isValidProb p = 
+fun isValidProb p =
     case convertNum p of
         V _ => true
       | R n => n >= 0.0 andalso n <= 1.0;
@@ -461,7 +461,7 @@ and simplify (PLUS(x,y)) =
     in case (a,b) of
            (a, ZERO) => a
          | (ZERO, MULT(m, VAR(k)))
-           => simplify (MULT(MINUS(ZERO,m), VAR(k)))            
+           => simplify (MULT(MINUS(ZERO,m), VAR(k)))
          | (VAR(n), MULT(m, VAR(k))) (* n - mn = (1-m)n *)
            => if k = n then simplify (MULT(MINUS(ONE, m), VAR(n)))
               else MINUS(a,b)
@@ -898,9 +898,9 @@ fun resolve a b (n:int) =
                     let val xn = convertNum x
                         val yn = convertNum y
                     in case (xn, yn) of
-                        (R xn, R yn) => if x = y orelse numToString x = numToString y
-                                        then filterNum' (x::ans) xs ys (n-1)
-                                        else raise EqnContradictionError
+                        (R _, R _) => if x = y
+                                      then filterNum' (x::ans) xs ys (n-1)
+                                      else raise EqnContradictionError
                       | (R _, V _)   => filterNum' (x::ans) xs ys (n-1)
                       | (V _, R _)   => filterNum' (y::ans) xs ys (n-1)
                       | (V xn, V yn) => if xn = "" then filterNum' (y::ans) xs ys (n-1)
@@ -1722,7 +1722,7 @@ fun drawArea c =
         fun convertArea EMPTY = (([],[],[],[]),[]) (* ((Events, points, shading, probs), HTML) *)
           | convertArea (LABEL(x)) = (([SEVENT(x)],[],[],[]),[])
           | convertArea (NLABEL(x)) = (([NEVENT(x)],[],[],[]),[])
-          | convertArea (POINT(x,y)) = 
+          | convertArea (POINT(x,y)) =
             let val _ = if (isValidProb x) then () else raise InvalidProbError;
                 val _ = if (isValidProb y) then () else raise InvalidProbError;
             in (([],[x,y],[],[]),[]) end
