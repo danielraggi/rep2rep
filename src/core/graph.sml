@@ -147,6 +147,8 @@ struct
   fun findReificationsUpTo T f g1 g2 tks =
     findMonomorphisms f (fn (t1,t2) => tokenSpecialises T t2 t1 orelse tokenInSet t1 tks) g1 g2
 
+  fun findLooseningsUpTo T f g1 g2 tks = Seq.map invertMap (findReificationsUpTo T f g2 g1 tks)
+
   fun findLPMonomorphismsUpTo T f g1 g2 tks = 
     findMonomorphisms f (fn (t1,t2) => equivalentTokens t1 t2 orelse tokenInSet t1 tks) g1 g2
 
@@ -157,7 +159,5 @@ struct
   (* The following actually allows extra constructor vertices to exist on g2 as long as we can inject g1 into g2 and tokens are in bijection *)
   fun findLPIsomorphismsUpTo T f g1 g2 tks = 
     Seq.filter (fn (_,f2) => isTotalOver f2 g2) (findLPMonomorphismsUpTo T f g1 g2 tks)
-
-  fun findLooseningsUpTo T f g1 g2 tks = Seq.map invertMap (findReificationsUpTo T f g2 g1 tks)
 
 end
