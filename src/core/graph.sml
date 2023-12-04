@@ -29,8 +29,8 @@ sig
   *)
   val findMonomorphisms : (token * token -> bool) -> map -> graph -> graph -> map Seq.seq;
 
-  val findReificationsUpTo : Type.typeSystem -> token list -> map -> graph -> graph -> map Seq.seq;
-  val findLooseningsUpTo : Type.typeSystem -> token list -> map -> graph -> graph -> map Seq.seq;
+  val findReificationsUpTo : Type.typeSystem -> token list * token list -> map -> graph -> graph -> map Seq.seq;
+  val findLooseningsUpTo : Type.typeSystem -> token list * token list -> map -> graph -> graph -> map Seq.seq;
 
 end
 
@@ -174,13 +174,13 @@ struct
 
   fun tokenInSet t tks = List.exists (fn x => CSpace.sameTokens t x) tks
 
-  fun findReificationsUpTo T tks f g1 g2 =
-    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1 orelse tokenInSet t1 tks) f g1 g2
+  fun findReificationsUpTo T (tks1,tks2) f g1 g2 =
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
 
-  fun findLooseningsUpTo T tks f g1 g2 = Seq.map invertMap (findReificationsUpTo T tks f g2 g1)
+  fun findLooseningsUpTo T (tks1,tks2) f g1 g2 = Seq.map invertMap (findReificationsUpTo T (tks2,tks1) f g2 g1)
 
-  fun findLPMonomorphismsUpTo T tks f g1 g2 = 
-    findMonomorphisms (fn (t1,t2) => equivalentTokens t1 t2 orelse tokenInSet t1 tks) f g1 g2
+  fun findLPMonomorphismsUpTo T (tks1,tks2) f g1 g2 = 
+    findMonomorphisms (fn (t1,t2) => equivalentTokens t1 t2 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
 
   (* The following actually allows extra constructor vertices to exist on g2 as long as we can inject g1 into g2 and tokens are in bijection *)
   fun findLPIsomorphismsUpTo T tks f g1 g2 = 
@@ -200,8 +200,8 @@ sig
   
   val findMonomorphisms : (token * token -> bool) -> map -> mgraph -> mgraph -> map Seq.seq;
 
-  val findReificationsUpTo : Type.typeSystem -> token list -> map -> mgraph -> mgraph-> map Seq.seq;
-  val findLooseningsUpTo : Type.typeSystem -> token list -> map -> mgraph -> mgraph -> map Seq.seq;
+  val findReificationsUpTo : Type.typeSystem -> token list * token list -> map -> mgraph -> mgraph-> map Seq.seq;
+  val findLooseningsUpTo : Type.typeSystem -> token list * token list -> map -> mgraph -> mgraph -> map Seq.seq;
 end
 
 structure MGraph : MGRAPH =

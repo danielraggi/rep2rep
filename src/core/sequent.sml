@@ -33,3 +33,12 @@ sig
   val applyForward : sequent -> sequent -> sequent Seq.seq
 
 end
+
+
+structure Sequent : SEQUENT =
+struct
+  type mgraph = MGraph.mgraph
+  type map = MGraph.map
+  type sequent = mgraph * mgraph
+  
+end
