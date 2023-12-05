@@ -18,9 +18,12 @@ sig
   (*
   val normal : graph -> bool;
   *)
+  val empty : graph;
   val makeFromTokens : token list -> graph;
   val join : graph -> graph -> graph;
   val normalise : graph -> graph;
+
+  val findSubgraphs : graph -> graph Seq.seq;
 
   (* 
   findMonomorphisms f p g1 g2 finds every extension of f that is a monomorphism 
@@ -29,8 +32,23 @@ sig
   *)
   val findMonomorphisms : (token * token -> bool) -> map -> graph -> graph -> map Seq.seq;
 
+  (*
+    A reification is a monomorphism f : g -> g' where f[g] is a specialisation of g
+  *)
   val findReificationsUpTo : Type.typeSystem -> token list * token list -> map -> graph -> graph -> map Seq.seq;
+  val findReifications : Type.typeSystem -> map -> graph -> graph -> map Seq.seq;
+
+  (*
+    A loosening is a partial function f : g -> g' where f^{-1} is a reification
+  *)
   val findLooseningsUpTo : Type.typeSystem -> token list * token list -> map -> graph -> graph -> map Seq.seq;
+  val findLoosenings : Type.typeSystem -> map -> graph -> graph -> map Seq.seq;
+
+  (*
+    An embedding is a is a monomorphism f : g -> g' where f[g] is a generalisation of g
+  *)
+  val findEmbeddingsUpTo : Type.typeSystem -> token list * token list -> map -> graph -> graph -> map Seq.seq;
+  val findEmbeddings : Type.typeSystem -> map -> graph -> graph -> map Seq.seq;
 
 end
 
@@ -84,15 +102,33 @@ struct
     noDuplicatedTokens g andalso 
     wellTyped CSD g handle Malformed _ => false
 
+  exception Mismatch
+
+  fun allPairs f [] [] = true
+    | allPairs f (x::X) (y::Y) = f x y andalso allPairs f X Y
+    | allPairs _ _ _ = raise Mismatch
+
+  fun sameINPs inp inp' = 
+    (#constructor inp) = (#constructor inp') andalso 
+    allPairs CSpace.sameTokens (#inputTokens inp) (#inputTokens inp')
+
+  fun insertINP inp [] = [inp]
+    | insertINP inp (inp'::INP') = if sameINPs inp inp' then inp'::INP' else inp' :: insertINP inp INP' 
+
+  fun joinInputs [] INP' = INP'
+    | joinInputs (inp::INP) INP' = insertINP inp (joinInputs INP INP')
+
   fun insertTIN tin [] = [tin]
     | insertTIN tin (tin'::g) =
       if CSpace.sameTokens (#token tin) (#token tin') then
-        {token = #token tin, inputs = (#inputs tin) @ (#inputs tin')} :: g
+        {token = #token tin, inputs = joinInputs (#inputs tin) (#inputs tin')} :: g
       else
         tin' :: insertTIN tin g
 
   fun join [] g = g
     | join (tin::g) g' = insertTIN tin (join g g')
+
+  val empty = [];
 
   fun makeFromTokens [] = []
     | makeFromTokens (t::ts) = insertTIN {token = t, inputs = []} (makeFromTokens ts)
@@ -103,6 +139,20 @@ struct
 
   fun normalise g = join g (makeFromTokens (tokensOfGraph g))
 
+  fun expand [] = []
+    | expand (tin::g) = 
+      (case #inputs tin of 
+          [] => tin :: expand g 
+        | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
+
+  fun findSubgraphs g =
+    let fun fsg [] = Seq.single empty
+          | fsg (tin::g') = 
+          let val S = fsg g' 
+          in Seq.append (Seq.map (fn g'' => tin :: g'') S) S 
+          end
+    in Seq.map normalise (fsg (expand g))
+    end
 
   exception Fail
 
@@ -176,8 +226,16 @@ struct
 
   fun findReificationsUpTo T (tks1,tks2) f g1 g2 =
     findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
+  fun findReifications T f g1 g2 =
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1) f g1 g2
+
+  fun findEmbeddingsUpTo T (tks1,tks2) f g1 g2 =
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
+  fun findEmbeddings T f g1 g2 =
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2) f g1 g2
 
   fun findLooseningsUpTo T (tks1,tks2) f g1 g2 = Seq.map invertMap (findReificationsUpTo T (tks2,tks1) f g2 g1)
+  fun findLoosenings T f g1 g2 = Seq.map invertMap (findReifications T f g2 g1)
 
   fun findLPMonomorphismsUpTo T (tks1,tks2) f g1 g2 = 
     findMonomorphisms (fn (t1,t2) => equivalentTokens t1 t2 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
@@ -197,11 +255,19 @@ sig
 
   val wellTyped : CSpace.conSpecData list -> mgraph -> bool;
   val wellFormed : CSpace.conSpecData list -> mgraph -> bool;
+
+  val empty : int -> mgraph;
+
+  val findSubgraphs : mgraph -> mgraph Seq.seq;
   
   val findMonomorphisms : (token * token -> bool) -> map -> mgraph -> mgraph -> map Seq.seq;
 
   val findReificationsUpTo : Type.typeSystem -> token list * token list -> map -> mgraph -> mgraph-> map Seq.seq;
+  val findReifications : Type.typeSystem -> map -> mgraph -> mgraph-> map Seq.seq;
+  val findEmbeddingsUpTo : Type.typeSystem -> token list * token list -> map -> mgraph -> mgraph-> map Seq.seq;
+  val findEmbeddings : Type.typeSystem -> map -> mgraph -> mgraph-> map Seq.seq;
   val findLooseningsUpTo : Type.typeSystem -> token list * token list -> map -> mgraph -> mgraph -> map Seq.seq;
+  val findLoosenings : Type.typeSystem -> map -> mgraph -> mgraph -> map Seq.seq;
 end
 
 structure MGraph : MGRAPH =
@@ -220,11 +286,24 @@ struct
   fun wellTyped CSDs g = allPairs Graph.wellTyped CSDs g
   fun wellFormed CSDs g = allPairs Graph.wellFormed CSDs g
 
-  fun foldUpdateMap h f [] [] = Seq.single f
-    | foldUpdateMap h f (x::X) (y::Y) = Seq.maps (fn f' => foldUpdateMap h f' X Y) (h f x y)
-    | foldUpdateMap _ _ _ _ = raise Mismatch
+  fun empty 0 = []
+    | empty i = Graph.empty :: empty (i-1)
 
-  fun findMonomorphisms p f g1 g2 = foldUpdateMap (Graph.findMonomorphisms p) f g1 g2 
-  fun findReificationsUpTo T tks f g1 g2 = foldUpdateMap (Graph.findReificationsUpTo T tks) f g1 g2 
-  fun findLooseningsUpTo T tks f g1 g2 = foldUpdateMap (Graph.findLooseningsUpTo T tks) f g1 g2 
+  fun mapProduct f [] = Seq.single []
+    | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)
+        
+  fun findSubgraphs g = mapProduct Graph.findSubgraphs g
+ 
+  fun foldMaps h f [] [] = Seq.single f
+    | foldMaps h f (x::X) (y::Y) = Seq.maps (fn f' => foldMaps h f' X Y) (h f x y)
+    | foldMaps _ _ _ _ = raise Mismatch
+
+  fun findMonomorphisms p f g1 g2 = foldMaps (Graph.findMonomorphisms p) f g1 g2 
+
+  fun findReificationsUpTo T tks f g1 g2 = foldMaps (Graph.findReificationsUpTo T tks) f g1 g2 
+  fun findReifications T f g1 g2 = foldMaps (Graph.findReifications T) f g1 g2 
+  fun findEmbeddingsUpTo T tks f g1 g2 = foldMaps (Graph.findEmbeddingsUpTo T tks) f g1 g2 
+  fun findEmbeddings T f g1 g2 = foldMaps (Graph.findEmbeddings T) f g1 g2 
+  fun findLooseningsUpTo T tks f g1 g2 = foldMaps (Graph.findLooseningsUpTo T tks) f g1 g2 
+  fun findLoosenings T f g1 g2 = foldMaps (Graph.findLoosenings T) f g1 g2 
 end
