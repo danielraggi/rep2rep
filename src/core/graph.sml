@@ -9,6 +9,10 @@ sig
   type TIN; (* token's incoming neighbourhood *)
   type graph;
   type map;
+  
+  val image : map -> graph -> graph;
+  val preImage : map -> graph -> graph;
+  val extendMap : map -> graph -> string list -> map * string list;
 
   val wellTyped : CSpace.conSpecData -> graph -> bool;
   val wellFormed : CSpace.conSpecData -> graph -> bool;
@@ -21,6 +25,7 @@ sig
   val empty : graph;
   val makeFromTokens : token list -> graph;
   val join : graph -> graph -> graph;
+  val remove : graph -> graph -> graph;
   val normalise : graph -> graph;
 
   val findSubgraphs : graph -> graph Seq.seq;
@@ -64,7 +69,6 @@ struct
   type graph = TIN set
   type map = (token -> token option) * (token -> token option)
 
-  fun invertMap (f1,f2) = (f2,f1)
 
   exception Malformed of string;
 
@@ -115,13 +119,28 @@ struct
   fun insertINP inp [] = [inp]
     | insertINP inp (inp'::INP') = if sameINPs inp inp' then inp'::INP' else inp' :: insertINP inp INP' 
 
+  fun removeINP inp [] = []
+    | removeINP inp (inp'::INP') = if sameINPs inp inp' then INP' else inp' :: removeINP inp INP' 
+
   fun joinInputs [] INP' = INP'
     | joinInputs (inp::INP) INP' = insertINP inp (joinInputs INP INP')
+
+  fun removeInputs [] INP' = INP'
+    | removeInputs (inp::INP) INP' = removeINP inp (removeInputs INP INP')
 
   fun insertTIN tin [] = [tin]
     | insertTIN tin (tin'::g) =
       if CSpace.sameTokens (#token tin) (#token tin') then
         {token = #token tin, inputs = joinInputs (#inputs tin) (#inputs tin')} :: g
+      else
+        tin' :: insertTIN tin g
+
+  fun removeTIN tin [] = []
+    | removeTIN tin (tin'::g) =
+      if CSpace.sameTokens (#token tin) (#token tin') then
+        case removeInputs (#inputs tin) (#inputs tin') of 
+            [] => g 
+          | inps => {token = #token tin, inputs = inps} :: g
       else
         tin' :: insertTIN tin g
 
@@ -138,6 +157,14 @@ struct
   fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraph g)
 
   fun normalise g = join g (makeFromTokens (tokensOfGraph g))
+
+  fun remove g g' =
+    let 
+      fun rem [] g = g
+        | rem (tin::g) g' = rem g (removeTIN tin g')
+    in 
+      normalise (rem g g')
+    end
 
   fun expand [] = []
     | expand (tin::g) = 
@@ -156,6 +183,32 @@ struct
 
   exception Fail
 
+
+  (*
+    functions for building and operating with maps
+  *)
+  fun invertMap (f1,f2) = (f2,f1)
+
+  exception Undefined
+
+  fun image (f1,_) g =
+    let
+      fun im (tin::gx) = 
+        let 
+          val mappedToken = case f1 (#token tin) of SOME t' => t' | _ => raise Undefined
+          val inputs = #inputs tin
+          fun inputImage inp = {constructor = #constructor inp, inputTokens = List.map (valOf o f1) (#inputTokens inp)}
+          val mappedInputs = List.map inputImage inputs
+        in 
+          {token = mappedToken, inputs = mappedInputs} :: im gx
+        end
+    in normalise (im g)
+    end
+
+  fun preImage f g = image (invertMap f) g
+
+  (* updates a monomorphism so that fl(x) = y and fr(y) = x. 
+     Fails if map is already defined on that pair with different value. *)
   fun addPair (x,y) (fl,fr) = 
       (case fl x of 
           SOME z => if CSpace.sameTokens y z then fl else raise Fail
@@ -163,6 +216,29 @@ struct
       case fr y of 
           SOME z => if CSpace.sameTokens x z then fr else raise Fail
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
+
+  fun firstUnusedName Ns =
+    let fun mkFun n =
+          let val vcandidate = "v_{"^(Int.toString n)^"}"
+          in if FiniteSet.exists (fn x => x = vcandidate) Ns
+              then mkFun (n+1)
+              else vcandidate
+          end
+    in mkFun 0
+    end
+
+  (* assuming f : g' -> h' is a label-preserving monomorphism where g' is a subgraph of g, 
+     it returns a label-preserving monomorphism f' such that f' : g -> h is a monomorphism that extends f, 
+     and f(x) is not in tks (e.g., it avoids clashes) *)
+  fun extendMap f [] tks = (f,tks)
+    | extendMap f (tin::g) tokenIDs = 
+    let 
+      val tokenOfTIN = #token tin
+      val mappedToken = CSpace.makeToken (firstUnusedName tokenIDs) (CSpace.typeOfToken tokenOfTIN)
+      val updatedMap = addPair (tokenOfTIN,mappedToken) f
+    in 
+      extendMap updatedMap g (CSpace.nameOfToken tokenOfTIN :: tokenIDs)
+    end
 
   fun matchAllPairs p f (x::X) (y::Y) = if p(x,y) then matchAllPairs p (addPair (x,y) f) X Y else raise Fail
     | matchAllPairs _ f [] [] = f
@@ -253,10 +329,18 @@ sig
   type constructor
   type map
 
+  val image : map -> mgraph -> mgraph;
+  val preImage : map -> mgraph -> mgraph;
+  val extendMap : map -> mgraph -> string list -> map * string list;
+
   val wellTyped : CSpace.conSpecData list -> mgraph -> bool;
   val wellFormed : CSpace.conSpecData list -> mgraph -> bool;
 
   val empty : int -> mgraph;
+  val tokensOfGraph : mgraph -> token list;
+  
+  val join : mgraph -> mgraph -> mgraph;
+  val remove : mgraph -> mgraph -> mgraph;
 
   val findSubgraphs : mgraph -> mgraph Seq.seq;
   
@@ -277,6 +361,16 @@ struct
   type constructor = Graph.constructor
   type map = Graph.map
 
+  fun image f g = List.map (Graph.image f) g
+  fun preImage f g = List.map (Graph.preImage f) g
+  fun extendMap f [] tks = (f,tks)
+    | extendMap f (x::X) tks = 
+      let 
+        val (updatedMap,updatedTks) = Graph.extendMap f x tks
+      in
+        extendMap updatedMap X updatedTks
+      end
+
   exception Mismatch;
 
   fun allPairs f [] [] = true
@@ -289,9 +383,18 @@ struct
   fun empty 0 = []
     | empty i = Graph.empty :: empty (i-1)
 
+  val tokensOfGraph = List.foldl (fn (gx,tks) => Graph.tokensOfGraph gx @ tks) []
+
+  fun mapPairs f [] [] = []
+    | mapPairs f (x::X) (y::Y) = f x y :: mapPairs f X Y
+    | mapPairs _ _ _ = raise Mismatch
+
+  fun join g g' = mapPairs Graph.join g g'
+  fun remove g g' = mapPairs Graph.remove g g'
+
   fun mapProduct f [] = Seq.single []
     | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)
-        
+
   fun findSubgraphs g = mapProduct Graph.findSubgraphs g
  
   fun foldMaps h f [] [] = Seq.single f
