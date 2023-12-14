@@ -66,7 +66,7 @@ struct
             in Seq.map mapWithDelta (MGraph.findReifications T f sA A')
             end
         in 
-          Seq.maps findPerSubgraph (MGraph.findSubgraphs A)
+          Seq.maps findPerSubgraph (MGraph.subgraphs A)
         end
     in
       Seq.maps findDeltasForReification consequentMaps 

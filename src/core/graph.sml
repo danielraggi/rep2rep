@@ -28,7 +28,7 @@ sig
   val remove : graph -> graph -> graph;
   val normalise : graph -> graph;
 
-  val findSubgraphs : graph -> graph Seq.seq;
+  val subgraphs : graph -> graph Seq.seq;
 
   (* 
   findMonomorphisms f p g1 g2 finds every extension of f that is a monomorphism 
@@ -172,7 +172,7 @@ struct
           [] => tin :: expand g 
         | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
 
-  fun findSubgraphs g =
+  fun subgraphs g =
     let fun fsg [] = Seq.single empty
           | fsg (tin::g') = 
           let val S = fsg g' 
@@ -342,7 +342,7 @@ sig
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
 
-  val findSubgraphs : mgraph -> mgraph Seq.seq;
+  val subgraphs : mgraph -> mgraph Seq.seq;
   
   val findMonomorphisms : (token * token -> bool) -> map -> mgraph -> mgraph -> map Seq.seq;
 
@@ -395,7 +395,7 @@ struct
   fun mapProduct f [] = Seq.single []
     | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)
 
-  fun findSubgraphs g = mapProduct Graph.findSubgraphs g
+  fun subgraphs g = mapProduct Graph.subgraphs g
  
   fun foldMaps h f [] [] = Seq.single f
     | foldMaps h f (x::X) (y::Y) = Seq.maps (fn f' => foldMaps h f' X Y) (h f x y)
