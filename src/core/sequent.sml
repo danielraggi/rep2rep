@@ -43,10 +43,10 @@ struct
 
 
   (* 
-    findDeltasForReification finds values d such that g can be reified into g' \cup d.
+    provided that C can be embedded in C', refineForBackwardApp finds value d such that A can be reified into A' \cup d.
     There are infinitely many, so here we only find minimal ones.
-    The idea is: for every subgraph, s, of g, find a reification of s into g'.
-    Then take the complement of s in g and create a copy, d, of it so that g reifies into g' cup d. 
+    The idea is: for each subgraph, sA, of A, find a reification of sA into A'.
+    Then take the complement of sA in A and create a copy, d, of it so that A reifies into A' cup d. 
   *)
   fun refineForBackwardApp T (A,C) (A',C') =
     let
