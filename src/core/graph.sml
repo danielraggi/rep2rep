@@ -9,15 +9,23 @@ sig
   type TIN; (* token's incoming neighbourhood *)
   type graph;
   type map;
+
+  val addPair : token * token -> map -> map;
+  val updatePair : token * token -> map -> map;
   
+  val applyMap : map -> token -> token option;
+  val applyInvMap : map -> token -> token option;
   val image : map -> graph -> graph;
   val preImage : map -> graph -> graph;
-  val extendMap : map -> graph -> string list -> map * string list;
+  val extendMap : map -> token list -> string list -> map * string list;
 
   val wellTyped : CSpace.conSpecData -> graph -> bool;
   val wellFormed : CSpace.conSpecData -> graph -> bool;
-  val tokensOfTIN : TIN -> token list;
-  val tokensOfGraph : graph -> token list;
+  val tokenInGraphQuick : token -> graph -> bool;
+  val insertTokens : token list -> token list -> token list;
+  val tokensOfGraphFull : graph -> token list;
+  (* the quick version assumes the graph representation is already in normal form *)
+  val tokensOfGraphQuick : graph -> token list;
 
   (*
   val normal : graph -> bool;
@@ -106,6 +114,9 @@ struct
     noDuplicatedTokens g andalso 
     wellTyped CSD g handle Malformed _ => false
 
+  fun tokenInGraphQuick _ [] = false
+    | tokenInGraphQuick t (tin::g) = CSpace.sameTokens t (#token tin) orelse tokenInGraphQuick t g
+
   exception Mismatch
 
   fun allPairs f [] [] = true
@@ -152,11 +163,15 @@ struct
   fun makeFromTokens [] = []
     | makeFromTokens (t::ts) = insertTIN {token = t, inputs = []} (makeFromTokens ts)
 
-  fun tokensOfTIN tin = #token tin :: List.flatmap #inputTokens (#inputs tin)
-  fun tokensOfGraph g = List.flatmap tokensOfTIN g
-  fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraph g)
+  fun insertToken t [] = [t]
+    | insertToken t (t'::tks) = if CSpace.sameTokens t t' then t' :: tks else t' :: insertToken t tks
+  fun insertTokens tks tks' = List.foldl (fn (t,L) => insertToken t L) tks' tks
+  val tokensOfGraphFull = List.foldl (fn (tin,L) => insertTokens (#token tin :: List.maps #inputTokens (#inputs tin)) L) []
+  val tokensOfGraphQuick = List.foldl (fn (tin,L) => insertToken (#token tin) L) []
 
-  fun normalise g = join g (makeFromTokens (tokensOfGraph g))
+  fun normalise g = join g (makeFromTokens (tokensOfGraphFull g))
+
+  fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraphQuick g)
 
   fun remove g g' =
     let 
@@ -190,6 +205,8 @@ struct
   fun invertMap (f1,f2) = (f2,f1)
 
   exception Undefined
+  fun applyMap (f1,_) = f1
+  fun applyInvMap (_,f2) = f2
 
   fun image (f1,_) g =
     let
@@ -217,6 +234,12 @@ struct
           SOME z => if CSpace.sameTokens x z then fr else raise Fail
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
 
+  (* updates a monomorphism so that fl(x) = y and fr(y) = x. 
+     Forces new value. *)
+  fun updatePair (x,y) (fl,fr) =
+      ((fn t => if CSpace.sameTokens t x then SOME y else fl t),
+       (fn t => if CSpace.sameTokens t y then SOME x else fr t))
+
   fun firstUnusedName Ns =
     let fun mkFun n =
           let val vcandidate = "v_{"^(Int.toString n)^"}"
@@ -227,17 +250,22 @@ struct
     in mkFun 0
     end
 
-  (* assuming f : g' -> h' is a label-preserving monomorphism where g' is a subgraph of g, 
-     it returns a label-preserving monomorphism f' such that f' : g -> h is a monomorphism that extends f, 
-     and f(x) is not in tks (e.g., it avoids clashes) *)
-  fun extendMap f [] tks = (f,tks)
-    | extendMap f (tin::g) tokenIDs = 
+  (* 
+    assuming f : g -> h is a label-preserving monomorphism, it extends f to another label-preserving monomorphism f' such
+    the domain of f' contains tokensToExtend, taking care that f(x) avoids tokens in tokenNamesToAvoid 
+    *)
+  fun extendMap f [] tokenNamesToAvoid = (f,tokenNamesToAvoid)
+    | extendMap f (t::tokensToExtend) tokenNamesToAvoid = 
     let 
-      val tokenOfTIN = #token tin
-      val mappedToken = CSpace.makeToken (firstUnusedName tokenIDs) (CSpace.typeOfToken tokenOfTIN)
-      val updatedMap = addPair (tokenOfTIN,mappedToken) f
+      val (updatedMap,updatedTks) = 
+        case applyMap f t of 
+            SOME t' => (f, tokenNamesToAvoid)
+          | NONE => 
+              let val newTokenName = firstUnusedName tokenNamesToAvoid
+              in (addPair (t,CSpace.makeToken newTokenName (CSpace.typeOfToken t)) f, newTokenName :: tokenNamesToAvoid)
+              end
     in 
-      extendMap updatedMap g (CSpace.nameOfToken tokenOfTIN :: tokenIDs)
+      extendMap updatedMap tokensToExtend updatedTks
     end
 
   fun matchAllPairs p f (x::X) (y::Y) = if p(x,y) then matchAllPairs p (addPair (x,y) f) X Y else raise Fail
@@ -329,20 +357,25 @@ sig
   type constructor
   type map
 
+  val applyMap : map -> token -> token option;  
+  val applyInvMap : map -> token -> token option;
   val image : map -> mgraph -> mgraph;
   val preImage : map -> mgraph -> mgraph;
-  val extendMap : map -> mgraph -> string list -> map * string list;
+  val extendMap : map -> token list -> string list -> map * string list;
 
   val wellTyped : CSpace.conSpecData list -> mgraph -> bool;
   val wellFormed : CSpace.conSpecData list -> mgraph -> bool;
+  val tokenInGraphQuick : token -> mgraph -> bool;
 
   val empty : int -> mgraph;
-  val tokensOfGraph : mgraph -> token list;
+  val tokensOfGraphFull : mgraph -> token list;
+  val tokensOfGraphQuick : mgraph -> token list;
   
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
 
   val subgraphs : mgraph -> mgraph Seq.seq;
+  val subgraphsRestricted : (int -> bool) -> mgraph -> mgraph Seq.seq;
   
   val findMonomorphisms : (token * token -> bool) -> map -> mgraph -> mgraph -> map Seq.seq;
 
@@ -361,15 +394,11 @@ struct
   type constructor = Graph.constructor
   type map = Graph.map
 
+  val applyMap = Graph.applyMap  
+  val applyInvMap = Graph.applyInvMap
   fun image f g = List.map (Graph.image f) g
   fun preImage f g = List.map (Graph.preImage f) g
-  fun extendMap f [] tks = (f,tks)
-    | extendMap f (x::X) tks = 
-      let 
-        val (updatedMap,updatedTks) = Graph.extendMap f x tks
-      in
-        extendMap updatedMap X updatedTks
-      end
+  val extendMap = Graph.extendMap
 
   exception Mismatch;
 
@@ -380,10 +409,14 @@ struct
   fun wellTyped CSDs g = allPairs Graph.wellTyped CSDs g
   fun wellFormed CSDs g = allPairs Graph.wellFormed CSDs g
 
+  fun tokenInGraphQuick _ [] = false
+    | tokenInGraphQuick t (x::X) = Graph.tokenInGraphQuick t x orelse tokenInGraphQuick t X
+
   fun empty 0 = []
     | empty i = Graph.empty :: empty (i-1)
 
-  val tokensOfGraph = List.foldl (fn (gx,tks) => Graph.tokensOfGraph gx @ tks) []
+  val tokensOfGraphFull = List.foldl (fn (gx,tks) => Graph.insertTokens (Graph.tokensOfGraphFull gx) tks) []
+  val tokensOfGraphQuick = List.foldl (fn (gx,tks) => Graph.insertTokens (Graph.tokensOfGraphQuick gx) tks) []
 
   fun mapPairs f [] [] = []
     | mapPairs f (x::X) (y::Y) = f x y :: mapPairs f X Y
@@ -392,10 +425,21 @@ struct
   fun join g g' = mapPairs Graph.join g g'
   fun remove g g' = mapPairs Graph.remove g g'
 
-  fun mapProduct f [] = Seq.single []
+  fun mapProduct _ [] = Seq.single []
     | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)
 
   fun subgraphs g = mapProduct Graph.subgraphs g
+  
+  fun subgraphsRestricted I g = 
+    let
+      fun sgod _ [] = Seq.single []
+        | sgod i (x::X) = 
+            Seq.maps (fn h => (Seq.map (fn x => h :: x) (sgod (i+1) X)))
+                     (if I i then Seq.single x else Graph.subgraphs x)
+    in
+      sgod 1 g
+    end
+
  
   fun foldMaps h f [] [] = Seq.single f
     | foldMaps h f (x::X) (y::Y) = Seq.maps (fn f' => foldMaps h f' X Y) (h f x y)
