@@ -50,7 +50,8 @@ struct
   (* 
     The assumption for findDeltasForBackwardApp is that (A,C) is a schema and (A',C') is a sequent.
     It aims to find a d such that (A,C) can be refined into (A' \cup d, C'). 
-    The first thing is to check that C can be embedded in C'.
+    The first thing is to check that C can be embedded in C' (a more complete version would find loosenings rather than embeddings, 
+    but practically this may add too many useless cases).
     If so, then we proceed to find d such that A can be reified into A' \cup d.
     There are infinitely many, so we restrict it to find 'minimal' ones.
     The idea is: for each subgraph, sA, of A, find a reification of sA into A'.

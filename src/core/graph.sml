@@ -7,7 +7,11 @@ sig
   type constructor;
 
   type TIN; (* token's incoming neighbourhood *)
-  type graph;
+
+  (* the graph type encodes structure graphs (directed bipartite graphs with tokens and constructor vertices). 
+    Tokens are differenciated but constructor vertices are not. This restrictrs us to token-functional graphs. *)
+  type graph; 
+
   type map; (* these maps are one-to-one relations between tokens. Useful as we use monomorphisms a lot. *)
 
   val emptyMap : map;
@@ -69,10 +73,9 @@ end
 
 structure Graph:GRAPH =
 struct
-  (*type typ = Type.typ*)
-  (*type sig = {input : typ list, output : typ}*)
-  type token = CSpace.token (*{id : string, type : typ}*)
-  type constructor = CSpace.constructor (*{id : string, sig : sig}*)
+
+  type token = CSpace.token
+  type constructor = CSpace.constructor
   type 'a set = 'a list
 
   type TIN = {token : token, inputs : {constructor : string, inputTokens : token list} set}
@@ -177,7 +180,8 @@ struct
 
   fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraphQuick g)
 
-  (* removes g from g'. If there is a configuration in g' that is not in g then the whole *)
+  (* removes g from g'. This is not a trivially intuitive operation: after removing parts of g', 
+    it re-adds any tokens that are still attached to existing arrows (the normalisation step does this). *)
   fun remove g g' =
     let 
       fun rem [] g = g
@@ -192,6 +196,7 @@ struct
           [] => tin :: expand g 
         | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
 
+  (* larger subgraphs come first *)
   fun subgraphs g =
     let fun fsg [] = Seq.single empty
           | fsg (tin::g') = 
@@ -235,20 +240,20 @@ struct
       (case fl x of 
           SOME z => if CSpace.sameTokens y z then fl else raise Fail
         | NONE => (fn t => if CSpace.sameTokens t x then SOME y else fl t),
-      case fr y of 
+       case fr y of 
           SOME z => if CSpace.sameTokens x z then fr else raise Fail
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
 
   (* updates a monomorphism so that fl(x) = y and fr(y) = x. 
      Forces new value. *)
   fun updatePair (x,y) (fl,fr) =
-      ((fn t => if CSpace.sameTokens t x then SOME y else fl t),
-       (fn t => if CSpace.sameTokens t y then SOME x else fr t))
+      (fn t => if CSpace.sameTokens t x then SOME y else fl t,
+       fn t => if CSpace.sameTokens t y then SOME x else fr t)
 
   fun firstUnusedName Ns =
     let fun mkFun n =
           let val vcandidate = "v_{"^(Int.toString n)^"}"
-          in if FiniteSet.exists (fn x => x = vcandidate) Ns
+          in if List.exists (fn x => x = vcandidate) Ns
               then mkFun (n+1)
               else vcandidate
           end
@@ -256,8 +261,9 @@ struct
     end
 
   (* 
-    assuming f : g -> h is a label-preserving monomorphism, it extends f to another label-preserving monomorphism f' such
-    the domain of f' contains tokensToExtend, taking care that f(x) avoids tokens in tokenNamesToAvoid 
+    assuming f : g -> h is a monomorphism, it extends f to another monomorphism f', so that
+    the domain of f' contains tokensToExtend and f' preserves their labels, 
+    taking care that f(x) avoids tokens in tokenNamesToAvoid 
     *)
   fun extendMap f [] tokenNamesToAvoid = (f,tokenNamesToAvoid)
     | extendMap f (t::tokensToExtend) tokenNamesToAvoid = 
