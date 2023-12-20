@@ -46,10 +46,6 @@ struct
   type map = MGraph.map
   type sequent = mgraph * mgraph
 
-  fun chooseMinType T f t = 
-    valOf (Type.min (#subType T) (CSpace.typeOfToken t, CSpace.typeOfToken (valOf (Graph.applyInvMap f t))))
-
-  fun specialiseTypeOfToken T f t = CSpace.makeToken (CSpace.nameOfToken t) (chooseMinType T f t)
 
   (* 
     The assumption for findDeltasForBackwardApp is that (A,C) is a schema and (A',C') is a sequent.
@@ -63,7 +59,12 @@ struct
   *)
   fun findDeltasForBackwardApp T I (A,C) (A',C') =
     let
-      val consequentMaps = MGraph.findEmbeddingsUpTo T (MGraph.tokensOfGraphQuick A,[]) (fn _ => NONE,fn _ => NONE) C C'
+      val consequentMaps = 
+        MGraph.findEmbeddingsUpTo T (MGraph.tokensOfGraphQuick A,[]) Graph.emptyMap C C'
+      fun chooseMinType T f t = 
+        valOf (Type.min (#subType T) (CSpace.typeOfToken t, CSpace.typeOfToken (valOf (Graph.applyInvMap f t))))
+      fun specialiseTypeOfToken T f t = 
+        CSpace.makeToken (CSpace.nameOfToken t) (chooseMinType T f t)
       fun findDeltasPerConsequentMap f = 
         let 
           val consequentEmbedding = MGraph.image f C
@@ -71,7 +72,7 @@ struct
           val tokensThatMayBeSpecialisedInConsequentDelta = 
             List.filter (fn t => not (MGraph.tokenInGraphQuick t A')) (MGraph.tokensOfGraphQuick consequentDelta')
           val sequentUpdateMap = 
-            List.foldl (fn (t,f') => Graph.updatePair (t,specialiseTypeOfToken T f t) f') (fn t => SOME t, fn t => SOME t) tokensThatMayBeSpecialisedInConsequentDelta
+            List.foldl (fn (t,f') => Graph.updatePair (t,specialiseTypeOfToken T f t) f') Graph.identityMap tokensThatMayBeSpecialisedInConsequentDelta
           val consequentDelta = MGraph.image sequentUpdateMap consequentDelta'
           val newF =
             (fn t => case Graph.applyMap f t of 
@@ -104,7 +105,8 @@ struct
 
   fun applyBackwardFree T (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T (fn _ => false) (A,C) (A',C'))
 
-  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T (fn i => i < length C') (A,C) (A',C'))
+  fun metaSpaceSelector M i = i < length M
+  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') (A,C) (A',C'))
 
   fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T I (A,C) (A',C'))
 

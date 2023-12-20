@@ -8,8 +8,10 @@ sig
 
   type TIN; (* token's incoming neighbourhood *)
   type graph;
-  type map;
+  type map; (* these maps are one-to-one relations between tokens. Useful as we use monomorphisms a lot. *)
 
+  val emptyMap : map;
+  val identityMap : map;
   val addPair : token * token -> map -> map;
   val updatePair : token * token -> map -> map;
   
@@ -77,6 +79,8 @@ struct
   type graph = TIN set
   type map = (token -> token option) * (token -> token option)
 
+  val emptyMap = (fn _ => NONE, fn _ => NONE)
+  val identityMap = (fn t => SOME t, fn t => SOME t)
 
   exception Malformed of string;
 
@@ -153,7 +157,7 @@ struct
             [] => g 
           | inps => {token = #token tin, inputs = inps} :: g
       else
-        tin' :: insertTIN tin g
+        tin' :: removeTIN tin g
 
   fun join [] g = g
     | join (tin::g) g' = insertTIN tin (join g g')
@@ -173,6 +177,7 @@ struct
 
   fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraphQuick g)
 
+  (* removes g from g'. If there is a configuration in g' that is not in g then the whole *)
   fun remove g g' =
     let 
       fun rem [] g = g
