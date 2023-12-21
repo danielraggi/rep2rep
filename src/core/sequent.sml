@@ -3,6 +3,7 @@ import "transfer.search";
 
 signature SEQUENT =
 sig
+  type mTypeSystem
   type mgraph
   type map
   type sequent = mgraph * mgraph
@@ -16,11 +17,11 @@ sig
     <a1',...,an' ||- d1,...,dn> is an application of <a1,...,an ||- c1,...,cn> to
     <a1',...,an' ||- c1',...,cn'>.
   *)
-  val findDeltasForBackwardApp : Type.typeSystem -> (int -> bool) -> sequent -> sequent -> (map * mgraph) Seq.seq
+  val findDeltasForBackwardApp : mTypeSystem -> (int -> bool) -> string list -> sequent -> sequent -> (map * map * mgraph) Seq.seq
 
-  val applyBackwardFree : Type.typeSystem -> sequent -> sequent -> sequent Seq.seq
-  val applyBackwardRestricted : Type.typeSystem -> sequent -> sequent -> sequent Seq.seq
-  val applyBackwardTargetting : Type.typeSystem -> (int -> bool) -> sequent -> sequent -> sequent Seq.seq
+  val applyBackwardFree : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
+  val applyBackwardRestricted : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
+  val applyBackwardTargetting : mTypeSystem -> (int -> bool) -> sequent -> sequent -> sequent Seq.seq
 
   (* 
     findDeltasForForwardApp takes a pair of sequents <a1,...,an ||- c1,...,cn> and 
@@ -31,21 +32,24 @@ sig
     <a1' \cup d1, ..., an' \cup dn ||- c1',...,cn'> is an application of 
     <a1,...,an ||- c1,...,cn> to <a1',...,an' ||- c1',...,cn'>.
   
-  val findDeltasForForwardApp : Type.typeSystem -> sequent -> sequent -> (map * mgraph) Seq.seq
+  val findDeltasForForwardApp : mTypeSystem -> sequent -> sequent -> (map * mgraph) Seq.seq
 
-  val applyForward : Type.typeSystem -> sequent -> sequent -> sequent Seq.seq
+  val applyForward : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
 *)
-  type state = {sequent : sequent, discharged : mgraph}
-  val applyBackwardToState : Type.typeSystem -> (int -> bool) -> sequent -> state -> state Seq.seq
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list}
+  val applyBackwardToState : mTypeSystem -> (int -> bool) -> sequent -> state -> state Seq.seq
 end
 
 
 structure Sequent : SEQUENT =
 struct
+  type mTypeSystem = MGraph.mTypeSystem
   type mgraph = MGraph.mgraph
   type map = MGraph.map
   type sequent = mgraph * mgraph
 
+  open TokenMap
+  infix 6 oo
 
   (* 
     The assumption for findDeltasForBackwardApp is that (A,C) is a schema and (A',C') is a sequent.
@@ -56,46 +60,38 @@ struct
     There are infinitely many, so we restrict it to find 'minimal' ones.
     The idea is: for each subgraph, sA, of A, find a reification of sA into A'.
     Then take the complement of sA in A and create a copy, d, disjoint from A', of it so that A reifies into A' cup d.
-    I is a list of integers that indicates the dimensions on which we DO NOT want non-trivial deltas, i.e., where (#i sA) = (#i A)
+    I is a list of integers that indicates the dimensions on which we DO NOT want non-trivial deltas, i.e., where (#i sA) = (#i A).
+    It returns (f,gf,d) where f maps 
   *)
-  fun findDeltasForBackwardApp T I (A,C) (A',C') =
+  fun findDeltasForBackwardApp T I tns (A,C) (A',C') =
     let
       val consequentMaps = 
-        MGraph.findEmbeddingsUpTo T (MGraph.tokensOfGraphQuick A,[]) Graph.emptyMap C C'
-      fun chooseMinType T f t = 
-        valOf (Type.min (#subType T) (CSpace.typeOfToken t, CSpace.typeOfToken (valOf (Graph.applyInvMap f t))))
-      fun specialiseTypeOfToken T f t = 
-        CSpace.makeToken (CSpace.nameOfToken t) (chooseMinType T f t)
+        MGraph.findEmbeddingsUpTo T (MGraph.tokensOfGraphQuick A,[]) emptyMap C C'
+
+      val tokensOfAC = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick A) (MGraph.tokenNamesOfGraphQuick C)
+      val tokensOfAC' = Graph.insertStrings (Graph.insertStrings (MGraph.tokenNamesOfGraphQuick A') (MGraph.tokenNamesOfGraphQuick C')) tns
+
       fun findDeltasPerConsequentMap f = 
         let 
-          val consequentEmbedding = MGraph.image f C
-          val consequentDelta' = MGraph.remove consequentEmbedding C'
-          val tokensThatMayBeSpecialisedInConsequentDelta = 
-            List.filter (fn t => not (MGraph.tokenInGraphQuick t A')) (MGraph.tokensOfGraphQuick consequentDelta')
-          val sequentUpdateMap = 
-            List.foldl (fn (t,f') => Graph.updatePair (t,specialiseTypeOfToken T f t) f') Graph.identityMap tokensThatMayBeSpecialisedInConsequentDelta
-          val consequentDelta = MGraph.image sequentUpdateMap consequentDelta'
-          val newF =
-            (fn t => case Graph.applyMap f t of 
-                        SOME t' => (case Graph.applyMap sequentUpdateMap t' of SOME t'' => SOME t'' | NONE => SOME t')
-                      | NONE => NONE,
-             fn t => case Graph.applyInvMap f t of 
-                        SOME t' => (case Graph.applyInvMap sequentUpdateMap t' of SOME t'' => SOME t'' | NONE => SOME t')
-                      | NONE => NONE)
-            
+          val extendedInverseConsequentMap = #1 (extendDomain (invertMap f) (MGraph.tokensOfGraphQuick C') tokensOfAC)
+          val extendedC = MGraph.image extendedInverseConsequentMap C'
+          val restrictedConsequentMap = restrictDomain (invertMap extendedInverseConsequentMap) (MGraph.tokensOfGraphQuick A)
+          val (extendedConsequentMap,newTokensUsed') = extendDomain restrictedConsequentMap (MGraph.tokensOfGraphQuick extendedC) tokensOfAC'
+          val consequentDelta = MGraph.image extendedConsequentMap (MGraph.remove C extendedC)
+          val goalMap = extendedConsequentMap oo extendedInverseConsequentMap
+
           fun findPerSubgraph sA = 
             let 
               fun findPerReificationOfsA f' = 
                 let 
-                  val tokenNamesToAvoid = List.map CSpace.nameOfToken (MGraph.tokensOfGraphQuick A' @ MGraph.tokensOfGraphQuick C')
                   val complementOfsA = MGraph.remove sA A
-                  val extendedMap = #1 (MGraph.extendMap f' (MGraph.tokensOfGraphQuick complementOfsA) tokenNamesToAvoid) (* extend domain of f' : sA -> A' from sA to A avoiding clashing with A' union C' *)
+                  val extendedMap = #1 (extendDomain f' (MGraph.tokensOfGraphQuick complementOfsA) (tokensOfAC' @ newTokensUsed')) (* extend domain of f' : sA -> A' from sA to A avoiding clashing with A' union C' *)
                   val antecedentDelta = MGraph.image extendedMap complementOfsA
                 in 
-                  (extendedMap, MGraph.join consequentDelta antecedentDelta)
+                  (extendedMap, goalMap, MGraph.join consequentDelta antecedentDelta)
                 end
             in 
-              Seq.map findPerReificationOfsA (MGraph.findReifications T newF sA A')
+              Seq.map findPerReificationOfsA (MGraph.findReifications T extendedConsequentMap sA A')
             end
         in 
           Seq.maps findPerSubgraph (MGraph.subgraphsRestricted I A)
@@ -104,27 +100,35 @@ struct
       Seq.maps findDeltasPerConsequentMap consequentMaps 
     end
 
-  fun applyBackwardFree T (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T (fn _ => false) (A,C) (A',C'))
+  fun applyBackwardFree T (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T (fn _ => false) [] (A,C) (A',C'))
 
   fun metaSpaceSelector M i = i < length M
-  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') (A,C) (A',C'))
+  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') [] (A,C) (A',C'))
 
-  fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #2 x)) (findDeltasForBackwardApp T I (A,C) (A',C'))
+  fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T I [] (A,C) (A',C'))
 
-  type state = {sequent : sequent, discharged : mgraph}
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list}
 
   fun applyBackwardToState T I (A,C) st =
     let
       val (A',C') = #sequent st
-      val deltas = findDeltasForBackwardApp T I (A,C) (A',C')
-      fun makeResult (f,D) = 
+      val discharged = #discharged st
+      val tokenNamesUsed = #tokenNamesUsed st
+      val deltas = findDeltasForBackwardApp T I tokenNamesUsed (A,C) (A',C')
+      fun makeResult (f,gf,D) = 
         let
-          val newDischarged = MGraph.image f C
+          val freshlyDischarged = MGraph.image f C
+          val dischargedUpdated = MGraph.image gf discharged
+          val discharged = MGraph.join freshlyDischarged dischargedUpdated
+          val newTokenNamesUsed = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick D) (MGraph.tokenNamesOfGraphQuick discharged)
         in
-          {sequent = (A',D), discharged = MGraph.join newDischarged (#discharged st)}
+          {sequent = (A',D), discharged = discharged, tokenNamesUsed = newTokenNamesUsed}
         end
     in
       Seq.map makeResult deltas
     end
+
+  fun applyBackwardAllToState T I SC st =
+      Seq.maps (fn sc => applyBackwardToState T I sc st) SC
 
 end
