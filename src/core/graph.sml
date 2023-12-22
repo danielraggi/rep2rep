@@ -117,13 +117,23 @@ sig
   val tokensOfGraphQuick : graph -> token list;
   val tokenNamesOfGraphQuick : graph -> string list;
 
-  (*
-  val normal : graph -> bool;
-  *)
   val empty : graph;
+
+  (* a graph with only tokens *)
   val makeFromTokens : token list -> graph;
+
   val join : graph -> graph -> graph;
   val remove : graph -> graph -> graph;
+
+  (* factorising makes exactly one tin (token's incoming neighbourhood) for every token *)
+  val factorise : graph -> graph;
+  
+  (* expanding separates the configurations of each token into individual tins. 
+    Also adds a tin for each token without inputs. factorise(expand(g)) = g *)
+  val expand : graph -> graph;
+
+  (* normalising adds all tokens that appear in the graph and factorises their 
+  configurations into a tin for each token *)
   val normalise : graph -> graph;
 
   val subgraphs : graph -> graph Seq.seq;
@@ -246,7 +256,7 @@ struct
         tin' :: removeTIN tin g
 
   fun join [] g = g
-    | join (tin::g) g' = insertTIN tin (join g g')
+    | join (tin::g) g' = join g (insertTIN tin g')
 
   val empty = [];
 
@@ -267,6 +277,7 @@ struct
   val tokensOfGraphQuick = List.foldl (fn (tin,L) => insertToken (#token tin) L) []
   val tokenNamesOfGraphQuick = List.foldl (fn (tin,L) => insertString (CSpace.nameOfToken (#token tin)) L) []
 
+  fun factorise g = join g []
   fun normalise g = join g (makeFromTokens (tokensOfGraphFull g))
 
   fun isTotalOver f g = List.all (fn x => isSome (f x)) (tokensOfGraphQuick g)
@@ -287,32 +298,32 @@ struct
           [] => tin :: expand g 
         | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
 
-  (* larger subgraphs come first *)
+  (* larger subgraphs appear first *)
   fun subgraphs g =
-    let fun fsg [] = Seq.single empty
-          | fsg (tin::g') = 
+    let 
+      fun fsg [] = Seq.single empty
+        | fsg (tin::g') = 
           let val S = fsg g' 
-          in Seq.append (Seq.map (fn g'' => tin :: g'') S) S 
+          in Seq.append (Seq.map (fn g'' => insertTIN tin g'') S) S 
           end
-    in Seq.map normalise (fsg (expand g))
+    in 
+      fsg (expand g)
     end
 
-
-
-  exception Undefined
 
   fun image (f1,_) g =
     let
       fun im (tin::gx) = 
         let 
-          val mappedToken = case f1 (#token tin) of SOME t' => t' | _ => raise Undefined
+          val mappedToken = valOf (f1 (#token tin))
           val inputs = #inputs tin
           fun inputImage inp = {constructor = #constructor inp, inputTokens = List.map (valOf o f1) (#inputTokens inp)}
           val mappedInputs = List.map inputImage inputs
         in 
           {token = mappedToken, inputs = mappedInputs} :: im gx
         end
-    in normalise (im g)
+    in 
+      im g
     end
 
   fun preImage f g = image (invertMap f) g
