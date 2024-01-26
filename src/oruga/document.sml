@@ -2,6 +2,7 @@ import "oruga.parser";
 import "oruga.lift";
 import "latex.latex";
 import "cognitive.costs";
+import "core.scaffolding";
 
 signature DOCUMENT =
 sig
@@ -856,7 +857,7 @@ struct
       val unistructured = getUnistructured C
       val targetPattern = getMatchTarget C
       val save = getSave C
-      fun mkLatexGoals res =
+      (*fun mkLatexGoals res =
         let val goal = State.originalGoalOf res
             val goals = State.goalsOf res
             val goalsS = if List.null goals
@@ -871,6 +872,18 @@ struct
                                                                       ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
                                                                       ^ Latex.realToString IS)
         in alignedGoals
+        end*)
+      fun mkLatexGoals res =
+        let val goalGraph = List.nth(#2(#sequent res),2)
+            val goalConstructions = Scaffolding.oldConstructionsOfGraph interConSpecData goalGraph
+            val goalsS = if Graph.isEmpty goalGraph
+                         then "NO\\ OPEN\\ GOALS!"
+                         else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goalConstructions)
+            val alignedGoals = "\n " ^ "\\textbf{Open\\ goals}\\\\\n"
+                                    ^ goalsS ^ "\\\\"
+                                    ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
+                                    ^ Latex.realToString (#score res)
+        in alignedGoals
         end
       fun mkLatexProof tproof =
         let val ct = TransferProof.toConstruction tproof;
@@ -879,20 +892,15 @@ struct
       fun mkLatexConstructions comps =
         List.maps (fn x => map (Latex.construction (0.0,0.0)) (Composition.resultingConstructions x)) comps
       fun mkLatexConstructionsAndGoals res =
-        let val comps = State.patternCompsOf res
-            val tproof = State.transferProofOf res
-            val goal = State.originalGoalOf res
-            val goals = State.goalsOf res
-            val latexConstructions = mkLatexConstructions comps
-            val _ = if List.all (Composition.wellFormedComposition targetConSpecData) comps
-                    then ()
-                    else print ("\nWARNING! some composition at the target is not well formed!")
+        let val dischargedGraph = List.nth(#discharged res,1)
+            val targetGraph = List.nth(#2(#sequent res),1)
+            val targetGraphFull = Graph.join targetGraph dischargedGraph
+            val targetConstructions = Scaffolding.oldConstructionsOfGraph targetConSpecData targetGraphFull
+            val latexConstructions = map (Latex.construction (0.0,0.0)) targetConstructions
             val latexLeft = Latex.environment "minipage" "[t]{0.68\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
             val latexGoals = mkLatexGoals res
             val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
-            val latexProof = mkLatexProof tproof
-            (*val CSize = List.sumMapInt Composition.size comps*)
-        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight(*Int.toString CSize,*)]))
+        in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
       val startTime = Time.now();
@@ -900,26 +908,33 @@ struct
                              (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
                              (Construction.leavesOfConstruction goal)
                           handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
+
+      (*
       val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
       val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured targetPattern state;
+      *)
+      val state = Scaffolding.initState sourceConSpecData targetConSpecData interConSpecData construction goal
+      val TTT = [#typeSystem (#typeSystemData sourceConSpecData), #typeSystem (#typeSystemData targetConSpecData), #typeSystem (#typeSystemData interConSpecData)]
+      val SC = Seq.map Scaffolding.schemaOfOldTransferSchema (#transferSchemas KB)
+      val results = Scaffolding.transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured TTT SC state;
+
       val nres = length (Seq.list_of results);
       val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
-      val (score,ngoals,constructionsToSave) =
+      val (score,ngoals) =
             case Seq.pull results of
-              SOME (x,_) => (Heuristic.scoreMain x,
-                             length (#goals x),
-                             List.maps Composition.resultingConstructions (State.patternCompsOf x))
-            | NONE => (0.0,~1,[])
-      fun resultingConstructionData _ [] = raise ParseError ""
+              SOME (x,_) => (#score x,
+                             Graph.numberOfConstructors (List.nth(#2(#sequent x),2)))
+            | NONE => (0.0,~1)
+      (*fun resultingConstructionData _ [] = raise ParseError ""
         | resultingConstructionData s [rct] = [{name = s, conSpecN = #name targetConSpecData, construction = rct}]
         | resultingConstructionData s L = let fun assignNames n (rct::rctL) = {name = s ^ "_" ^ Int.toString n, conSpecN = #name targetConSpecData, construction = rct} :: assignNames (n+1) rctL
                                                 | assignNames _ [] = []
-                                          in assignNames 0 L end
-      val updDC = case save of SOME s => foldl (uncurry insertConstruction) DC (resultingConstructionData s constructionsToSave) | NONE => DC
+                                          in assignNames 0 L end*)
+      (*val updDC = case save of SOME s => foldl (uncurry insertConstruction) DC (resultingConstructionData s constructionsToSave) | NONE => DC*)
       (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
       val _ = print (Construction.toString  (hd tproofConstruction))*)
       val _ = print ("  number of open goals (top result): " ^ Int.toString ngoals ^ "\n")
@@ -940,7 +955,7 @@ struct
                                  in print ("done!\n" ^ "  output file: " ^ filePath ^ "\n\n")
                                  end
               | NONE => ()
-  in updDC
+  in DC
   end
 
   fun addCognitiveData (N,cs) dc =

@@ -104,8 +104,11 @@ sig
     Tokens are differenciated but constructor vertices are not. This restrictrs us to token-functional graphs. *)
   type graph; 
 
+  val toString : graph -> string;
+
   val image : map -> graph -> graph;
   val preImage : map -> graph -> graph;
+  val imageWeak : map -> graph -> graph;
 
   val wellTyped : CSpace.conSpecData -> graph -> bool;
   val wellFormed : CSpace.conSpecData -> graph -> bool;
@@ -119,13 +122,14 @@ sig
 
   val empty : graph;
 
+
   (* a graph with only tokens *)
   val makeFromTokens : token list -> graph;
 
   val join : graph -> graph -> graph;
   val remove : graph -> graph -> graph;
 
-  (* factorising makes exactly one tin (token's incoming neighbourhood) for every token *)
+  (* factorising makes no more than one tin (token's incoming neighbourhood) for every token *)
   val factorise : graph -> graph;
   
   (* expanding separates the configurations of each token into individual tins. 
@@ -135,6 +139,13 @@ sig
   (* normalising adds all tokens that appear in the graph and factorises their 
   configurations into a tin for each token *)
   val normalise : graph -> graph;
+
+  val isEmpty : graph -> bool;
+  val size : graph -> int;
+  val numberOfTokens : graph -> int;
+  val numberOfConstructors : graph -> int;
+  val contained : graph -> graph -> bool;
+  val equal : graph -> graph -> bool;
 
   val subgraphs : graph -> graph Seq.seq;
 
@@ -174,6 +185,15 @@ struct
 
   type TIN = {token : token, inputs : {constructor : string, inputTokens : token list} set}
   type graph = TIN set
+
+  fun stringOfInputs [] = ""
+    | stringOfInputs [{constructor,inputTokens}] = constructor ^  List.toString CSpace.stringOfToken inputTokens
+    | stringOfInputs ({constructor,inputTokens}::inps) = constructor ^  List.toString CSpace.stringOfToken inputTokens ^ "|" ^ stringOfInputs inps
+  fun stringOfTIN {token,inputs = []} = CSpace.stringOfToken token
+    | stringOfTIN {token,inputs} = CSpace.stringOfToken token ^ "<-" ^ stringOfInputs inputs
+  fun toString [] = "EMPTY"
+    | toString [tin] = stringOfTIN tin
+    | toString (tin::g) = stringOfTIN tin ^ "  " ^ toString g
   
   open TokenMap
   infix 6 oo
@@ -259,6 +279,12 @@ struct
     | join (tin::g) g' = join g (insertTIN tin g')
 
   val empty = [];
+  val isEmpty = null;
+
+  val numberOfTokens = length
+  fun numberOfConstructors [] = 0
+    | numberOfConstructors (tin::g) = length (#inputs tin) + numberOfConstructors g
+  fun size g = numberOfTokens g + numberOfConstructors g
 
   fun makeFromTokens [] = []
     | makeFromTokens (t::ts) = insertTIN {token = t, inputs = []} (makeFromTokens ts)
@@ -292,6 +318,23 @@ struct
       normalise (rem g g')
     end
 
+  fun inputContained inp [] = false
+    | inputContained inp (inp'::inps') = 
+    (#constructor inp = #constructor inp' andalso allPairs CSpace.sameTokens (#inputTokens inp) (#inputTokens inp')) orelse 
+    inputContained inp inps'
+
+  fun inputsContained [] inps' = true
+    | inputsContained (inp::inps) inps' = inputContained inp inps' andalso inputsContained inps inps'
+
+  fun tinContained _ [] = false
+    | tinContained tin (tin'::g') =
+      (CSpace.sameTokens (#token tin) (#token tin') andalso inputsContained (#inputs tin) (#inputs tin')) orelse tinContained tin g'
+
+  fun contained [] g' = true
+    | contained (tin::g) g' = tinContained tin g' andalso contained g g'
+
+  fun equal g g' = contained g g' andalso contained g' g
+
   fun expand [] = []
     | expand (tin::g) = 
       (case #inputs tin of 
@@ -304,20 +347,42 @@ struct
       fun fsg [] = Seq.single empty
         | fsg (tin::g') = 
           let val S = fsg g' 
-          in Seq.append (Seq.map (fn g'' => insertTIN tin g'') S) S 
+          in Seq.insertManyNoRepetition S (Seq.map (fn g'' => insertTIN tin g'') S) (fn _ => EQUAL) (fn (x,y) => equal x y)
           end
+      (*fun fsg g = Seq.cons empty (Seq.single g)*)
+      val sgs = fsg (expand g)
     in 
-      fsg (expand g)
+      sgs
     end
 
+  fun mymap f [] = []
+    | mymap f (h::t) = (f h handle Option => (print ("\n\n token: "^CSpace.stringOfToken h^"\n\n"); raise Option)) :: mymap f t
 
   fun image (f1,_) g =
     let
-      fun im (tin::gx) = 
+      fun im [] = []
+        | im (tin::gx) = 
         let 
           val mappedToken = valOf (f1 (#token tin))
           val inputs = #inputs tin
-          fun inputImage inp = {constructor = #constructor inp, inputTokens = List.map (valOf o f1) (#inputTokens inp)}
+          fun inputImage inp = {constructor = #constructor inp, inputTokens = mymap (valOf o f1) (#inputTokens inp)} 
+          val mappedInputs = List.map inputImage inputs handle Option => (print ("\n\n graph: "^ toString g ^"\n\n"); raise Option)
+        in 
+          {token = mappedToken, inputs = mappedInputs} :: im gx
+        end
+    in 
+      im g handle Option => raise Fail
+    end
+
+  fun imageWeak (f1,_) g =
+    let
+      fun mapWeak t = case f1 t of NONE => t | SOME t' => t' 
+      fun im [] = []
+        | im (tin::gx) = 
+        let 
+          val mappedToken = mapWeak (#token tin)
+          val inputs = #inputs tin
+          fun inputImage inp = {constructor = #constructor inp, inputTokens = List.map mapWeak (#inputTokens inp)}
           val mappedInputs = List.map inputImage inputs
         in 
           {token = mappedToken, inputs = mappedInputs} :: im gx
@@ -417,20 +482,27 @@ sig
   include TOKEN_MAP
   type constructor
 
+  val toString : mgraph -> string;
+
   val image : map -> mgraph -> mgraph;
   val preImage : map -> mgraph -> mgraph;
+  val imageWeak : map -> mgraph -> mgraph;
 
   val wellTyped : CSpace.conSpecData list -> mgraph -> bool;
   val wellFormed : CSpace.conSpecData list -> mgraph -> bool;
   val tokenInGraphQuick : token -> mgraph -> bool;
 
   val empty : int -> mgraph;
+  val isEmpty : mgraph -> bool;
   val tokensOfGraphFull : mgraph -> token list;
   val tokensOfGraphQuick : mgraph -> token list;
   val tokenNamesOfGraphQuick : mgraph -> string list;
   
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
+
+  val contained : mgraph -> mgraph -> bool;
+  val equal : mgraph -> mgraph -> bool;
 
   val subgraphs : mgraph -> mgraph Seq.seq;
   val subgraphsRestricted : (int -> bool) -> mgraph -> mgraph Seq.seq;
@@ -453,8 +525,13 @@ struct
   infix 6 oo
   type constructor = Graph.constructor
 
+  fun toString [] = ""
+    | toString [g] = Graph.toString g
+    | toString (g::gs) = Graph.toString g  ^ " ;; " ^ toString gs 
+
   fun image f g = List.map (Graph.image f) g
   fun preImage f g = List.map (Graph.preImage f) g
+  fun imageWeak f g = List.map (Graph.imageWeak f) g
 
   exception Mismatch;
 
@@ -470,6 +547,7 @@ struct
 
   fun empty 0 = []
     | empty i = Graph.empty :: empty (i-1)
+  val isEmpty = List.all Graph.isEmpty
 
   val tokensOfGraphFull = List.foldl (fn (gx,tks) => Graph.insertTokens (Graph.tokensOfGraphFull gx) tks) []
   val tokensOfGraphQuick = List.foldl (fn (gx,tks) => Graph.insertTokens (Graph.tokensOfGraphQuick gx) tks) []
@@ -482,6 +560,9 @@ struct
   fun join g g' = mapPairs Graph.join g g'
   fun remove g g' = mapPairs Graph.remove g g'
 
+  fun contained g g' = allPairs Graph.contained g g'
+  fun equal g g' = allPairs Graph.equal g g'
+
   fun mapProduct _ [] = Seq.single []
     | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)
 
@@ -492,9 +573,10 @@ struct
       fun sgod _ [] = Seq.single []
         | sgod i (x::X) = 
             Seq.maps (fn h => (Seq.map (fn x => h :: x) (sgod (i+1) X)))
-                     (if I i then Seq.single x else Graph.subgraphs x)
+                     (if I i then Seq.single x else Seq.cons x (Seq.single Graph.empty))
+      val sgrs = sgod 1 g
     in
-      sgod 1 g
+      sgrs
     end
 
  
@@ -505,7 +587,7 @@ struct
   fun findMonomorphisms p f g1 g2 = foldMaps (fn i => Graph.findMonomorphisms (p i)) 0 f g1 g2 
 
   fun findReificationsUpTo T tks f g1 g2 = foldMaps (fn i => Graph.findReificationsUpTo (List.nth(T,i)) tks) 0 f g1 g2 
-  fun findReifications T f g1 g2 = foldMaps (fn i => Graph.findReifications (List.nth(T,i))) 0 f g1 g2 
+  fun findReifications T f g1 g2 = foldMaps (fn i => Graph.findReifications (List.nth(T,i))) 0 f g1 g2
   fun findEmbeddingsUpTo T tks f g1 g2 = foldMaps (fn i => Graph.findEmbeddingsUpTo (List.nth(T,i)) tks) 0 f g1 g2 
   fun findEmbeddings T f g1 g2 = foldMaps (fn i => Graph.findEmbeddings (List.nth(T,i))) 0 f g1 g2 
   fun findLooseningsUpTo T tks f g1 g2 = foldMaps (fn i => Graph.findLooseningsUpTo (List.nth(T,i)) tks) 0 f g1 g2 

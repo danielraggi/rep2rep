@@ -1,11 +1,22 @@
 import "core.graph";
-import "transfer.search";
 
-signature SEQUENT =
+signature MSPACE =
 sig
   type mTypeSystem
   type mgraph
   type map
+end
+
+structure MSpace : MSPACE =
+struct
+  type mTypeSystem = MGraph.mTypeSystem
+  type mgraph = MGraph.mgraph
+  type map = MGraph.map
+end
+
+signature SEQUENT =
+sig
+  include MSPACE
   type sequent = mgraph * mgraph
 
   (* 
@@ -37,17 +48,16 @@ sig
   val applyForward : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
 *)
 
-  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list}
-  val applyBackwardToState : mTypeSystem -> (int -> bool) -> sequent -> state -> state Seq.seq
-  val applyBackwardAllToState : mTypeSystem -> (int -> bool) -> sequent Seq.seq -> state -> state Seq.seq
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
+  type schemaData = {schema : sequent, strength : real}
+  val applyBackwardToState : mTypeSystem -> (int -> bool) -> schemaData -> state -> state Seq.seq
+  val applyBackwardAllToState : mTypeSystem -> (int -> bool) -> schemaData Seq.seq -> state -> state Seq.seq
 end
 
 
 structure Sequent : SEQUENT =
 struct
-  type mTypeSystem = MGraph.mTypeSystem
-  type mgraph = MGraph.mgraph
-  type map = MGraph.map
+  open MSpace
   type sequent = mgraph * mgraph
 
   open TokenMap
@@ -79,25 +89,27 @@ struct
       fun findDeltasPerConsequentEmbedding consequentEmbedding = 
         let 
           val extendedInverseConsequentEmbedding = #1 (extendDomain (invertMap consequentEmbedding) (MGraph.tokensOfGraphQuick C') tokensOfAC)
-          val extendedC = MGraph.image extendedInverseConsequentEmbedding C' (* extension of C that mimics the structure of C' *)
+          val extendedC = MGraph.image extendedInverseConsequentEmbedding C'  (* extension of C that mimics the structure of C' *)
           val restrictedConsequentEmbedding = restrictDomain (invertMap extendedInverseConsequentEmbedding) (MGraph.tokensOfGraphQuick A)
           (* restricting the domain of consequentEmbedding *)
           val (extendedConsequentEmbedding,newTokensUsed') = extendDomain restrictedConsequentEmbedding (MGraph.tokensOfGraphQuick extendedC) tokensOfAC'
-          val consequentDelta = MGraph.image extendedConsequentEmbedding (MGraph.remove C extendedC)
+          val consequentDelta = MGraph.image extendedConsequentEmbedding (MGraph.remove C extendedC) 
           val goalMap = extendedConsequentEmbedding oo extendedInverseConsequentEmbedding
 
           val subgraphsOfA = MGraph.subgraphsRestricted I A
+          (*val _ = print (MGraph.toString (#1(valOf(Seq.pull subgraphsOfA))) ^ "\n")
+          val _ = print (Int.toString (length (Seq.list_of subgraphsOfA)) ^ "\n")*)
           fun findPerSubgraphOfA subgraphOfA = 
             let 
-              val antecedentReifications = MGraph.findReifications T extendedConsequentEmbedding subgraphOfA A'
+              val antecedentReifications = MGraph.findReifications T extendedConsequentEmbedding subgraphOfA (MGraph.imageWeak goalMap A') 
               fun findPerReificationOfSubgraphOfA f' = 
                 let 
                   val complementOfSubgraphOfA = MGraph.remove subgraphOfA A
                   val extendedMap = #1 (extendDomain f' (MGraph.tokensOfGraphQuick complementOfSubgraphOfA) (tokensOfAC' @ newTokensUsed')) (* extend domain of f' : subgraphOfA -> A' from subgraphOfA to A avoiding clashing with A' union C' *)
-                  val antecedentDelta = MGraph.image extendedMap complementOfSubgraphOfA
+                  val antecedentDelta = MGraph.image extendedMap complementOfSubgraphOfA 
                 in 
-                  (extendedMap, goalMap, MGraph.join consequentDelta antecedentDelta)
-                end
+                  (extendedMap, goalMap, MGraph.join consequentDelta antecedentDelta) 
+                end 
             in 
               Seq.map findPerReificationOfSubgraphOfA antecedentReifications
             end
@@ -115,28 +127,31 @@ struct
 
   fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T I [] (A,C) (A',C'))
 
-  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list}
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
+  type schemaData = {schema : sequent, strength : real}
 
-  fun applyBackwardToState T I (A,C) st =
+  fun applyBackwardToState T I {schema = (A,C), strength} state =
     let
-      val (A',C') = #sequent st
-      val discharged = #discharged st
-      val tokenNamesUsed = #tokenNamesUsed st
+      val (A',C') = #sequent state
+      val discharged = #discharged state
+      val tokenNamesUsed = #tokenNamesUsed state
+      val newscore = #score state + strength
       val deltas = findDeltasForBackwardApp T I tokenNamesUsed (A,C) (A',C')
       fun makeResult (f,gf,D) = 
         let
-          val freshlyDischarged = MGraph.image f C
-          val dischargedUpdated = MGraph.image gf discharged
+          val freshlyDischarged = MGraph.image f C 
+          val dischargedUpdated = MGraph.imageWeak gf discharged
           val discharged = MGraph.join freshlyDischarged dischargedUpdated
           val newTokenNamesUsed = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick D) (MGraph.tokenNamesOfGraphQuick discharged)
         in
-          {sequent = (A',D), discharged = discharged, tokenNamesUsed = newTokenNamesUsed}
+          {sequent = (A',D), discharged = discharged, tokenNamesUsed = newTokenNamesUsed, score = newscore} 
         end
     in
-      Seq.map makeResult deltas
-    end
+      Seq.map makeResult deltas 
+    end 
 
   fun applyBackwardAllToState T I SC st =
-      Seq.maps (fn sc => applyBackwardToState T I sc st) SC
+      Seq.maps (fn sc => applyBackwardToState T I sc st) SC 
+
 
 end
