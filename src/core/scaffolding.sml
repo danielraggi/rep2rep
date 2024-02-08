@@ -6,6 +6,7 @@ signature SCAFFOLDING =
 sig 
   val graphOfOldConstruction : Pattern.construction -> Graph.graph
   val oldConstructionsOfGraph : CSpace.conSpecData -> Graph.graph -> Pattern.construction list
+  val makeInstantiationOfTypeVars : MSpace.mTypeSystem -> Type.typ list -> Type.typ list -> (Type.typ -> Type.typ option) list;
   val schemaOfOldTransferSchema : InterCSpace.tSchemaData -> Sequent.schemaData
   val applyTransferSchemas : MSpace.mTypeSystem -> Sequent.schemaData Seq.seq -> Sequent.state -> Sequent.state Seq.seq
   val transfer : int option * int option * int option
@@ -97,16 +98,48 @@ struct
       {schema = ([s,t,a],[Graph.empty,Graph.empty,c]), strength = #strength tSchemaData}
     end
 
-  fun applyTransferSchemas T SC st = 
-    Sequent.applyBackwardAllToState T (fn i => i = 1) SC st 
+  fun makeInstantiationOfTypeVars _ [] _ = [(fn _ => NONE)]
+    | makeInstantiationOfTypeVars T (tyVar::tyVars) tys =
+    let val tys' = List.filter (fn ty => (*#subType (List.last T)*) ((Type.parentOfDanglyType ty)=(Type.parentOfDanglyType tyVar)) handle badType => false) tys
+    in List.flatmap (fn f => (List.map (fn ty => (fn x => if Type.equal tyVar x then SOME ty else f x)) tys')) (makeInstantiationOfTypeVars T tyVars tys)
+    end
 
+  fun makeTokenMapForInstantiationOfTypeVars f = (fn t => case f (CSpace.typeOfToken t) of SOME ty => SOME (CSpace.makeToken (CSpace.nameOfToken t) ty) | NONE => SOME t, fn _ => NONE)
+
+  fun schemasOfVarSchema T tys {schema = (A,C), strength} =
+    let
+      fun getTyVars [] = []
+        | getTyVars ([]::mg) = getTyVars mg
+        | getTyVars ((tin::g)::mg) = 
+            (case (CSpace.typeOfToken (#token tin),getTyVars (g::mg)) of 
+                (ty,tyVars) => if Type.isTypeVar ty andalso not(List.exists (fn x => Type.equal x ty) tyVars) then ty :: tyVars 
+                               else tyVars)
+      val tyVars = getTyVars (A @ C)
+      val tokenMaps = List.map makeTokenMapForInstantiationOfTypeVars (makeInstantiationOfTypeVars T tyVars tys)
+      val R = List.map (fn f => {schema = (MGraph.image f A, MGraph.image f C), strength = strength}) tokenMaps
+    in Seq.of_list R
+      (*if null tyVars then [{schema = (A,C), strength = strength}] else Seq.of_list R*)
+    end
+
+  fun typesInSequent ([],[]) = []
+    | typesInSequent ([],([]::C)) = typesInSequent ([],C)
+    | typesInSequent ([],((tin::g)::C)) = (case (CSpace.typeOfToken (#token tin), typesInSequent ([],(g::C))) of (ty,tys) => if not(List.exists (fn x => Type.equal x ty) tys) then ty :: tys else tys)
+    | typesInSequent (([]::A),C) = typesInSequent (A,C)
+    | typesInSequent (((tin::g)::A),C) = (case (CSpace.typeOfToken (#token tin), typesInSequent (g::A,C)) of (ty,tys) => if not(List.exists (fn x => Type.equal x ty) tys) then ty :: tys else tys)
+  fun applyTransferSchemas T SC st =
+    let
+      val tys = typesInSequent (#sequent st)
+      val SC' = Seq.maps (schemasOfVarSchema T tys) SC
+    in
+      Sequent.applyBackwardAllToState T (fn i => i = 1) SC' st 
+    end
   
   fun compare (st1,st2) = 
     let 
       val (A1,C1) = #sequent st1
       val (A2,C2) = #sequent st2
     in
-      case (MGraph.contained C1 A1, MGraph.contained C2 A2) of
+      case (Graph.contained (List.last C1) (List.last A1), Graph.contained (List.last C2) (List.last A2)) of
           (true,false) => LESS
         | (false,true) => GREATER
         | _ => Real.compare (#score st2, #score st1)
@@ -123,9 +156,9 @@ struct
 
   fun transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured T SC state =
     let
-      val maxNumGoals = case goalLimit of SOME x => x | NONE => 5
-      val maxCompSize = case compositionLimit of SOME x => x | NONE => 100
-      val maxNumResults = case searchLimit of SOME x => x | NONE => 100
+      val maxNumGoals = case goalLimit of SOME x => x | NONE => 20
+      val maxCompSize = case compositionLimit of SOME x => x | NONE => 1000
+      val maxNumResults = case searchLimit of SOME x => x | NONE => 10000
       val ignT = ignore maxNumGoals maxNumResults maxCompSize unistructured
       val stop = if eager then (fn x => case #sequent x of (A',C') => MGraph.contained C' A') else (fn _ => false)
     in

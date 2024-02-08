@@ -409,9 +409,9 @@ struct
       end
 
   fun findINMonomorphisms p f [] IN2 = Seq.single f
-    | findINMonomorphisms p f (in1::IN1') IN2 =
+    | findINMonomorphisms p f (in1::IN1) IN2 =
       let 
-        fun monomorphismsPerResult (f',in2) = findINMonomorphisms p f' IN1' (List.remove in2 IN2)
+        fun monomorphismsPerResult (f',in2) = findINMonomorphisms p f' IN1 (List.remove in2 IN2)
         val inputMatches = findInputMatches p f in1 IN2
       in 
         Seq.maps monomorphismsPerResult inputMatches
@@ -459,7 +459,7 @@ struct
     findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1) f g1 g2
 
   fun findEmbeddingsUpTo T (tks1,tks2) f g1 g2 =
-    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2 orelse tokenInSet t1 tks1 orelse tokenInSet t2 tks2) f g1 g2
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2 orelse (tokenInSet t1 tks1 andalso tokenSpecialises T t2 t1) orelse (tokenInSet t2 tks2 andalso tokenSpecialises T t2 t1)) f g1 g2
   fun findEmbeddings T f g1 g2 =
     findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2) f g1 g2
 
@@ -497,6 +497,8 @@ sig
   val tokensOfGraphFull : mgraph -> token list;
   val tokensOfGraphQuick : mgraph -> token list;
   val tokenNamesOfGraphQuick : mgraph -> string list;
+
+  val normalise : mgraph -> mgraph;
   
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
@@ -557,6 +559,7 @@ struct
     | mapPairs f (x::X) (y::Y) = f x y :: mapPairs f X Y
     | mapPairs _ _ _ = raise Mismatch
 
+  fun normalise g = map Graph.normalise g
   fun join g g' = mapPairs Graph.join g g'
   fun remove g g' = mapPairs Graph.remove g g'
 
