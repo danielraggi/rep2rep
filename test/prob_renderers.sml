@@ -5,7 +5,7 @@ $ ./test/prob_renderers --transfer-map transferMap probability
 *)
 use "base.sml";
 import "probability.prob_parser";
-import "transfer.structure_transfer";
+import "transfer.old_transfer";
 import "server.server";
 import "server.prob_renderers";
 
