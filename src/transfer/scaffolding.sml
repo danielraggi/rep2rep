@@ -1,6 +1,8 @@
 import "core.sequent";
 import "core.interCSpace";
 import "transfer.search";
+(* scaffolding uses old constructions as a medium between parsing and schema-application-to-sequents. 
+    Meant as a temporary structure until the parsers are updated. *)
 
 signature SCAFFOLDING =
 sig 
@@ -27,6 +29,8 @@ end
 
 structure Scaffolding : SCAFFOLDING =
 struct
+
+  exception Fail
 
   fun graphOfOldConstruction ct =
     let
@@ -75,8 +79,10 @@ struct
           let val (x,ch) = makeFromTokenListAndAttach inputTokens ct 
           in if x then (x,Pattern.TCPair ({token = token, constructor = getConstructor constructor}, ch)) else attachDownwards tin ct
           end
+        | attach _ _ = raise Fail
       fun ocotinSingle ({token,inputs = []}) = Pattern.Source token
         | ocotinSingle ({token,inputs = [{constructor,inputTokens}]}) = Pattern.TCPair ({token = token, constructor = getConstructor constructor}, map Pattern.Source inputTokens)
+        | ocotinSingle _ = raise Fail
       fun ocotin tin [] = [ocotinSingle tin]
         | ocotin tin (ct::cts) = 
           let val (x,ct') = attach tin ct 

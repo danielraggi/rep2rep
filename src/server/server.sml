@@ -2,7 +2,7 @@ import "util.rpc";
 import "core.type";
 import "core.cspace";
 import "core.construction";
-import "transfer.structure_transfer";
+import "transfer.old_transfer";
 import "oruga.document";
 import "server.renderers";
 

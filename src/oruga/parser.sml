@@ -1,4 +1,4 @@
-import "transfer.structure_transfer";
+import "transfer.old_transfer";
 import "util.logging";
 
 Logging.enable ();
