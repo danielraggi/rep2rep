@@ -30,14 +30,14 @@ iSchema disjIntra1:(dotDiagramsG,interArithDots) =
     antecedent :metaTrue <- disjoint[t'':arr,t1:arr],
                :metaTrue <- disjoint[t'':arr,t2:arr]
     consequent :metaTrue <- disjoint[t'':arr,t':arr]
-    strength 2
+    strength 0
 
 iSchema disjIntra2:(dotDiagramsG,interArithDots) =
     context t':arr <- join[t1:arr,t2:arr]
     antecedent :metaTrue <- disjoint[t1:arr,t'':arr],
                :metaTrue <- disjoint[t2:arr,t'':arr]
     consequent :metaTrue <- disjoint[t':arr,t'':arr]
-    strength 2
+    strength 0
 
 tSchema plusJoin:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- infixOp[n:numExp,p:plus,m:numExp]
@@ -73,6 +73,6 @@ tSchema parenthesesSuperfluous:(arithG,dotDiagramsG,interArithDots) =
 tSchema someLine:(arithG,dotDiagramsG,interArithDots) =
     source t:?v:nat10
     target t':line <- someLine[t1':?v:nat10]
-    antecedent
-    consequent :metaTrue <- count[t':line,t:?v:nat10]
+    antecedent 
+    consequent x:metaTrue <- count[t':line,t:?v:nat10]
     strength 1

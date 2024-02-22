@@ -1,4 +1,4 @@
-import "transfer.old_transfer";
+import "core.graph";
 import "util.logging";
 
 Logging.enable ();
@@ -18,6 +18,7 @@ sig
   val splitListWhen : ('a -> bool) -> 'a list -> ('a list * 'a list)
   val deTokenise : string -> string list -> string
   val removeOuterBrackets : string list -> string list
+  val parseGraph : CSpace.token list -> string -> CSpace.token list * Graph.graph
 end;
 
 structure Parser : PARSER =
@@ -136,5 +137,92 @@ struct
         val (wL1',wL2') = removeOuterJunk (wL1, rev wL2)
     in wL1' @ rev wL2'
     end
+
+  fun removeOuterJunk s =
+    let fun roj (L,L') =
+            (case (L,L') of
+                (#"("::xL,#")"::xL') => roj (xL,xL')
+              | (#"{"::xL,#"}"::xL') => roj (xL,xL')
+              | (#"["::xL,#"]"::xL') => roj (xL,xL')
+              | (#" "::xL,xL') => roj (xL,xL')
+              | (xL,#" "::xL') => roj (xL,xL')
+              | _ => (L,L'))
+        val wL = String.explode s
+        val (wL1,wL2) = List.split (wL, (List.length wL) div 2)
+        val (wL1',wL2') = roj (wL1, rev wL2)
+    in String.implode (wL1' @ rev wL2')
+    end
+
+  fun parseTyp s =
+      (case String.breakOn ":" s of
+          (s1,":",s2) => Type.fromString (removeOuterJunk s1 ^ ":" ^ removeOuterJunk s2)
+        | _ => Type.fromString (removeOuterJunk s))
+
+  fun parseToken tks s =
+      (case String.breakOn ":" s of
+          (ts,":",tys) => CSpace.makeToken (removeOuterJunk ts) (parseTyp tys)
+        | _ => (case removeOuterJunk s of s' => 
+                  (case List.find (fn x => CSpace.nameOfToken x = s') tks of 
+                      SOME tok => tok 
+                    | NONE => raise ParseError ("unidentified token: " ^ s))))
+
+  fun parseCTyp s = case list parseTyp s of
+                      (ty::tys) => (tys,ty)
+                    | _ => raise ParseError ("bad constructor sig: " ^ s)
+       
+
+fun insert tk tks = if List.exists (fn x => CSpace.sameTokens x tk) tks then tks else tk :: tks
+fun insertMany [] tks' = tks'
+  | insertMany (tk::tks) tks' = insertMany tks (insert tk tks')
+
+fun parseGraph TKS gs = 
+  let
+    fun parseTokenList tks [] = (tks,[],[])
+      | parseTokenList tks (s::ss) =
+        (case String.breakOn "<-" s of
+            (tt,"<-",_) => 
+              (case parseToken tks tt of 
+                tk => case parseTokenList (insert tk tks) ss of
+                      (usedTokens, tokenList, restList) => (usedTokens, tk :: tokenList, s :: restList))
+          | _ =>
+            (case parseToken tks s of 
+              tk => case parseTokenList (insert tk tks) ss of
+                      (usedTokens, tokenList, restList) => (usedTokens, tk :: tokenList, restList)))
+    fun parseInput tks ctinps =
+      case String.breakOn "[" ctinps of
+        (c,"[",ss) =>
+          let 
+            val (xs,ys) = breakOnClosingDelimiter (#"[",#"]") ss
+            val _ = if ys = [] then ()
+                    else raise ParseError ("invalid input sequence to constructor: " ^ ss)
+            val (usedTokens, tokenList, restList) = parseTokenList tks (splitLevel xs)
+          in (usedTokens,{constructor = removeOuterJunk c, inputTokens = tokenList},restList)
+          end
+      | _ => raise ParseError ("fail to parse constructor with inputs: " ^ ctinps)
+    fun parseTIN tks s =
+      case String.breakOn "<-" s of
+          (tt,"<-",ctinps) => (case parseToken tks tt of 
+                                tk => case parseInput (insert tk tks) ctinps of 
+                                        (usedTokens,inp,restList) => (usedTokens,{token = tk, inputs = [inp]},restList))
+        | _ => (case parseToken tks s of 
+                  tk => (insert tk tks,{token = tk, inputs = []},[]))
+    fun pg tks [] = (tks,[])
+      | pg tks (s::ss) =
+        let 
+          val (usedTokens,tin,restList) = parseTIN tks s
+          val (usedTokens',rest) = pg (insertMany usedTokens tks) (restList @ ss)
+        in 
+          (usedTokens',Graph.insertTIN tin rest)
+        end
+    
+    val (usedTokens,result) = 
+      case String.explode (String.removeBraces gs) of s => 
+        if List.all (fn x => x = #" ") s then 
+          ([],Graph.empty) 
+        else 
+          pg TKS (splitLevel s)
+  in 
+    (usedTokens, Graph.normalise result)
+  end
 
 end;

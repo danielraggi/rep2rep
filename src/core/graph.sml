@@ -1,4 +1,5 @@
 import "core.cspace";
+import "util.rpc";
 
 signature TOKEN_MAP =
 sig
@@ -103,6 +104,8 @@ sig
   (* the graph type encodes structure graphs (directed bipartite graphs with tokens and constructor vertices). 
     Tokens are differenciated but constructor vertices are not. This restrictrs us to token-functional graphs. *)
   type graph; 
+  val TIN_rpc : TIN Rpc.Datatype.t;
+  val graph_rpc : graph Rpc.Datatype.t;
 
   val toString : graph -> string;
 
@@ -128,6 +131,8 @@ sig
 
   val join : graph -> graph -> graph;
   val remove : graph -> graph -> graph;
+
+  val insertTIN : TIN -> graph -> graph;
 
   (* factorising makes no more than one tin (token's incoming neighbourhood) for every token *)
   val factorise : graph -> graph;
@@ -183,17 +188,34 @@ struct
   type constructor = CSpace.constructor
   type 'a set = 'a list
 
-  type TIN = {token : token, inputs : {constructor : string, inputTokens : token list} set}
+  type input = {constructor : string, inputTokens : token list}
+  type TIN = {token : token, inputs : input set}
   type graph = TIN set
+
+  val input_rpc = Rpc.Datatype.convert
+                      "Graph.input"
+                      (Rpc.Datatype.tuple2 (String.string_rpc, List.list_rpc CSpace.token_rpc))
+                      (fn (c,i) => {constructor = c, inputTokens = i})
+                      (fn {constructor,inputTokens} => (constructor,inputTokens))
+
+  val TIN_rpc = Rpc.Datatype.convert
+                      "Graph.TIN"
+                      (Rpc.Datatype.tuple2 (CSpace.token_rpc, List.list_rpc input_rpc))
+                      (fn (t,i) => {token = t, inputs = i})
+                      (fn {token,inputs} => (token,inputs))
+                      
+  val graph_rpc = Rpc.Datatype.alias
+                        "Graph.graph"
+                        (List.list_rpc TIN_rpc)
 
   fun stringOfInputs [] = ""
     | stringOfInputs [{constructor,inputTokens}] = constructor ^  List.toString CSpace.stringOfToken inputTokens
     | stringOfInputs ({constructor,inputTokens}::inps) = constructor ^  List.toString CSpace.stringOfToken inputTokens ^ "|" ^ stringOfInputs inps
   fun stringOfTIN {token,inputs = []} = CSpace.stringOfToken token
     | stringOfTIN {token,inputs} = CSpace.stringOfToken token ^ "<-" ^ stringOfInputs inputs
-  fun toString [] = "EMPTY"
-    | toString [tin] = stringOfTIN tin
-    | toString (tin::g) = stringOfTIN tin ^ "  " ^ toString g
+  fun toString' [] = "EMPTY"
+    | toString' [tin] = stringOfTIN tin
+    | toString' (tin::g) = stringOfTIN tin ^ ", " ^ toString' g
   
   open TokenMap
   infix 6 oo
@@ -339,7 +361,11 @@ struct
     | expand (tin::g) = 
       (case #inputs tin of 
           [] => tin :: expand g 
+        | [inp] => tin :: expand g 
         | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
+
+  
+  fun toString g = toString' (expand g)
 
   (* larger subgraphs appear first *)
   fun subgraphs g =
@@ -488,6 +514,8 @@ sig
   val preImage : map -> mgraph -> mgraph;
   val imageWeak : map -> mgraph -> mgraph;
 
+  val size : mgraph -> int;
+
   val wellTyped : CSpace.conSpecData list -> mgraph -> bool;
   val wellFormed : CSpace.conSpecData list -> mgraph -> bool;
   val tokenInGraphQuick : token -> mgraph -> bool;
@@ -534,6 +562,8 @@ struct
   fun image f g = List.map (Graph.image f) g
   fun preImage f g = List.map (Graph.preImage f) g
   fun imageWeak f g = List.map (Graph.imageWeak f) g
+
+  fun size g = List.sumMapInt (Graph.size) g
 
   exception Mismatch;
 

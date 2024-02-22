@@ -9,7 +9,7 @@ conSpec aaronsG:aarons =
         c3 : [a1,a2] -> a2,
         c4 : [a1,a2] -> a1
 
-construction aarons:aaronsG =
+graph aarons:aaronsG =
     t:x:a2 <- c3[t1:x1:a1 <- c2[t11:x11:a1 <- c4[t11:x11:a1,
                                                  t:x:a2],
                                 t11:x11:a1],

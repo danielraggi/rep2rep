@@ -1,6 +1,6 @@
 import transferSchemas/arithDots
 
-construction 1plus2plus3equalsStuff:arithG =
+graph 1plus2plus3equalsStuff:arithG =
     t:1plus2plus3equals3oB3plus1cBdiv2:formula
         <- infixRel[t1:1plus2plus3:numExp
                         <- infixOp[t11:1plus2:numExp
@@ -23,7 +23,7 @@ construction 1plus2plus3equalsStuff:arithG =
                                     t32:div,
                                     t33:2:nat10]]
 
-construction 1plus2plus3plus4equalsStuff:arithG =
+graph 1plus2plus3plus4equalsStuff:arithG =
     t:1+2+3+4=4(4+1)/2:formula
         <- infixRel[t1:1+2+3+4:numExp
                         <- infixOp[t11:1+2+3:numExp
@@ -49,7 +49,7 @@ construction 1plus2plus3plus4equalsStuff:arithG =
                                     t32:div,
                                     t33:2:nat10]]
 
-construction 1plus2equals3:arithG =
+graph 1plus2equals3:arithG =
     t:1plus2equals3:formula
         <- infixRel[t1:1plus2:numExp
                         <- infixOp[t11:1:nat10,
@@ -59,7 +59,7 @@ construction 1plus2equals3:arithG =
                      t3:3:nat10]
 
 transfer
-    sourceConstruction 1plus2plus3equalsStuff
+    sourceGraph 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaTrue <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
@@ -68,7 +68,7 @@ transfer
     limit 1
 
 transfer
-    sourceConstruction 1plus2plus3plus4equalsStuff
+    sourceGraph 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaBool <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]

@@ -146,17 +146,17 @@ tSchema basicD:(propDisjConjNegG,propDisjConjNegG) =
     consequent ([t:D:basicProp],[t':D:basicProp]) :: simplify
     strength 1.0
 
-construction ABCD:propDisjConjNegG =
+graph ABCD:propDisjConjNegG =
   t:AorBandCorD:prop
     <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
             t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
 
-construction ABCD':propDisjConjNegG =
+graph ABCD':propDisjConjNegG =
   t:AorBandCor:prop
     <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
             t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
 
-construction AA:propDisjConjNegG =
+graph AA:propDisjConjNegG =
   t:AB|-AB|-A-BandB-C|-BC|-B-C:prop
     <- conj[t1:AB|-AB|-A-B:prop
                 <- disj[t11:AB:prop <- conj[t111:A:basicProp,t112:B:basicProp],
@@ -175,7 +175,7 @@ construction AA:propDisjConjNegG =
                                     t222:-B-C:prop <- conj[t2221:-B:prop <- neg[t22211:B:basicProp],
                                                            t2222:-C:prop <- neg[t22221:C:basicProp]]]]]
 
-construction AA1:propDisjConjNegG =
+graph AA1:propDisjConjNegG =
   t:-AorBand-Bor-C:prop
     <- conj[t1:-AorB:prop
                 <- disj[t11:-A:prop <- neg[t111:A:basicProp],
@@ -184,7 +184,7 @@ construction AA1:propDisjConjNegG =
                 <- disj[t21:-B:prop <- neg[t211:B:basicProp],
                         t22:-C:prop <- neg[t221:C:basicProp]]]
 
-construction BB:propDisjConjNegG =
+graph BB:propDisjConjNegG =
   t:AorBand-B:prop
     <- disj[t1:A:basicProp,
             t2:Band-B:prop
@@ -193,28 +193,28 @@ construction BB:propDisjConjNegG =
 
 
 comment
-    sourceConstruction ABCD
+    sourceGraph ABCD
     goal ([t:AorBandCorD:prop],[t':prop]) :: simplify
     output abcd
     limit 10
     iterative
 
 comment
-    sourceConstruction AA
+    sourceGraph AA
     goal ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
     output aa
     limit 10
     iterative
 
 comment
-    sourceConstruction AA1
+    sourceGraph AA1
     goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa11
     limit 10
     iterative
 
 transfer
-    sourceConstruction AA1
+    sourceGraph AA1
     goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa
     limit 20

@@ -52,25 +52,25 @@ tSchema basicD:(propDisjConjNegG,propDNFG) =
     consequent ([t:D:basicProp],[t':D:var]) :: id
     strength 1.0
 
-construction ABCD:propDisjConjNegG =
+graph ABCD:propDisjConjNegG =
   t:AorBandCorD:prop
     <- conj[t1:AorB:prop <- disj[t11:A:basicProp,t12:B:basicProp],
             t2:CorD:prop <- disj[t21:C:basicProp,t22:D:basicProp]]
 
-construction ABCD':propDisjConjNegG =
+graph ABCD':propDisjConjNegG =
   t:AandBorCandD:prop
     <- disj[t1:AandB:prop <- conj[t11:A:basicProp,t12:B:basicProp],
             t2:CandD:prop <- conj[t21:C:basicProp,t22:D:basicProp]]
 
 transfer
-    sourceConstruction ABCD
+    sourceGraph ABCD
     targetTypeSystem propDNF
     goal ([t:AorBandCorD:prop],[t':dnf]) :: id
     output abcd1
     limit 10
 
 transfer
-    sourceConstruction ABCD'
+    sourceGraph ABCD'
     targetTypeSystem propDNF
     goal ([t:AandBorCandD:prop],[t':dnf]) :: id
     output abcd2

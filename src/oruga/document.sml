@@ -1,7 +1,8 @@
 import "oruga.parser";
-import "oruga.lift";
+(*import "oruga.lift";*)
 import "latex.latex";
 import "transfer.scaffolding";
+(*import "cognitive.costs";*)
 
 signature DOCUMENT =
 sig
@@ -12,26 +13,25 @@ sig
   val knowledgeOf : documentContent -> Knowledge.base
   val typeSystemsDataOf : documentContent -> Type.typeSystemData list
   val conSpecsDataOf : documentContent -> CSpace.conSpecData list
-  type constructionData = {name : string, conSpecN : string, construction : Construction.construction}
-  val constructionsDataOf : documentContent -> constructionData FiniteSet.set
+  type graphData = {name : string, conSpecN : string, graph : Graph.graph, usedTokens : CSpace.token list}
+  val graphsDataOf : documentContent -> graphData FiniteSet.set
   val transferRequestsOf : documentContent ->  (string list) list
   val tokenise : string -> string list
   val deTokenise : string list -> string
   val normaliseString : string -> string
-  val parseConstruction : CSpace.conSpecData -> string -> Construction.construction
+ (*) val parseConstruction : CSpace.conSpecData -> string -> Construction.construction*)
 
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData option
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData option
-  val findConstructionWithName : documentContent -> string -> constructionData option
-  val findTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData option
-  val findInferenceSchemaWithName : documentContent -> string -> Knowledge.iSchemaData option
+  val findGraphWithName : documentContent -> string -> graphData option
+  val findSchemaWithName : documentContent -> string -> Sequent.schemaData option
 
   val getTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val getConSpecWithName : documentContent -> string -> CSpace.conSpecData
-  val getConstructionWithName : documentContent -> string -> constructionData
-  val getTransferSchemaWithName : documentContent -> string -> InterCSpace.tSchemaData
+  val getGraphWithName : documentContent -> string -> graphData
+  val getTransferSchemaWithName : documentContent -> string -> Sequent.schemaData
 
-  val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint
+  (*val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint*)
 
 end;
 
@@ -39,20 +39,21 @@ structure Document : DOCUMENT =
 struct
 
   val ParseError = Parser.ParseError;
-  type constructionData = {name : string,
-                           conSpecN : string,
-                           construction : Construction.construction}
+  type graphData = {name : string, 
+                    conSpecN : string, 
+                    graph : Graph.graph, 
+                    usedTokens : CSpace.token list}
 
   val importKW = "import"
   val typeSystemKW = "typeSystem"
   val conSpecKW = "conSpec"
   val iSchemaKW = "iSchema"
   val tSchemaKW = "tSchema"
-  val constructionKW = "construction"
+  val graphKW = "graph"
   val transferKW = "transfer"
   val commentKW = "comment"
   val bigKeywords = [importKW,typeSystemKW,conSpecKW,iSchemaKW,
-                     tSchemaKW,constructionKW,transferKW,
+                     tSchemaKW,graphKW,transferKW,
                      commentKW]
 
   val typesKW = "types"
@@ -77,7 +78,7 @@ struct
   val strengthKW = "strength"
   val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,strengthKW]
 
-  val sourceConstructionKW = "sourceConstruction"
+  val sourceGraphKW = "sourceGraph"
   val goalKW = "goal"
   val outputKW = "output"
   val limitKW = "limit"
@@ -93,7 +94,7 @@ struct
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
   val saveKW = "save"
-  val transferKeywords = [sourceConstructionKW,goalKW,outputKW,limitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
+  val transferKeywords = [sourceGraphKW,goalKW,outputKW,limitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
@@ -160,6 +161,7 @@ struct
           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
        |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
 
+(*)
   fun parseConstruction cspec s =
     let fun pc s' =
          case String.breakOn "[" s' of
@@ -189,7 +191,7 @@ struct
                           (fn cspec => SOME (parseConstruction cspec s)
                                        handle ParseError => NONE)
                           (findCSpec cspecName) );
-
+*)
 
   fun removeOuterBrackets wL =
     let fun removeOuterJunk (L,L') =
@@ -242,20 +244,20 @@ struct
        {typeSystemsData : Type.typeSystemData list,
         conSpecsData : CSpace.conSpecData list,
         knowledge : Knowledge.base,
-        constructionsData : constructionData list,
+        graphsData : graphData list,
         transferRequests : (string list) list}
 
   val emptyDocContent =
       {typeSystemsData = [],
        conSpecsData = [],
        knowledge = Knowledge.empty,
-       constructionsData = [],
+       graphsData = [],
        transferRequests = []}
 
   val typeSystemsDataOf = #typeSystemsData
   val conSpecsDataOf = #conSpecsData
   val knowledgeOf = #knowledge
-  val constructionsDataOf = #constructionsData
+  val graphsDataOf = #graphsData
   val transferRequestsOf = #transferRequests
 
   fun findTypeSystemDataWithName DC n =
@@ -264,14 +266,11 @@ struct
   fun findConSpecWithName DC n =
     List.find (fn x => #name x = n) (conSpecsDataOf DC)
 
-  fun findConstructionWithName DC n =
-    FiniteSet.find (fn x => #name x = n) (constructionsDataOf DC)
+  fun findGraphWithName DC n =
+    FiniteSet.find (fn x => #name x = n) (graphsDataOf DC)
 
-  fun findTransferSchemaWithName DC n =
-    Knowledge.findTransferSchemaWithName (knowledgeOf DC) n
-
-  fun findInferenceSchemaWithName DC n =
-    Knowledge.findInferenceSchemaWithName (knowledgeOf DC) n
+  fun findSchemaWithName DC n =
+    Knowledge.findSchemaWithName (knowledgeOf DC) n
 
   fun getTypeSystemDataWithName DC n =
     valOf (findTypeSystemDataWithName DC n)
@@ -281,12 +280,12 @@ struct
     valOf (findConSpecWithName DC n)
     handle Option => raise ParseError ("no constructor specification with name " ^ n)
 
-  fun getConstructionWithName DC n =
-    valOf (findConstructionWithName DC n)
-    handle Option => raise ParseError ("no construction with name " ^ n)
+  fun getGraphWithName DC n =
+    valOf (findGraphWithName DC n)
+    handle Option => raise ParseError ("no graph with name " ^ n)
 
   fun getTransferSchemaWithName DC n =
-    valOf (findTransferSchemaWithName DC n)
+    valOf (findSchemaWithName DC n)
     handle Option => raise ParseError ("no tSchema with name " ^ n)
 
 
@@ -456,7 +455,7 @@ struct
   in {typeSystemsData = typeSystemData :: #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
-      constructionsData = #constructionsData dc,
+      graphsData = #graphsData dc,
       transferRequests = #transferRequests dc}
   end
 
@@ -526,7 +525,7 @@ struct
   in {typeSystemsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedTSD] (List.filter (fn x => #name x <> #name updatedTSD) (#typeSystemsData dc)),
       conSpecsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [updatedConSpec] (#conSpecsData dc),
       knowledge = Knowledge.addConSpecImports (#knowledge dc) (name,importedConSpecNames),
-      constructionsData = #constructionsData dc,
+      graphsData = #graphsData dc,
       transferRequests = #transferRequests dc}
   end
 
@@ -536,8 +535,8 @@ struct
       val _ = if x = ":" then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (contextConSpecN,y,idConSpecN) = String.breakOn "," (String.removeParentheses cspecNs)
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
-      val _ = case findInferenceSchemaWithName dc name of
-                SOME knownSchema => if (#name knownSchema) = name andalso (#idConSpecN knownSchema) = idConSpecN
+      val _ = case findSchemaWithName dc name of
+                SOME knownSchema => if (#name knownSchema) = name andalso (List.last (#conSpecNames knownSchema)) = idConSpecN
                                     then raise ParseError ("duplciated name for tSchema " ^ name ^ " in space " ^ idConSpecN)
                                     else ()
               | NONE => ()
@@ -546,25 +545,12 @@ struct
       val idConSpec = getConSpecWithName dc idConSpecN
       val idTySys = #typeSystem (#typeSystemData idConSpec)
       val _ = Logging.write ("\nAdding inference schema " ^ name ^ "...")
-      fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
-                              raise ParseError ("no " ^ k ^ " in iSchema " ^ String.concat cs))
-        | getPattern k ((x,ps) :: L) =
+      fun getPatternGraph k _ [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
+                              raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
+        | getPatternGraph k tks ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = contextKW then contextConSpec else idConSpec) (deTokenise (removeOuterBrackets ps))
-            else getPattern k L
-      fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
-                              raise ParseError ("no token rels in iSchema " ^ String.concat cs))
-        | getAntecedent ((x,trss) :: L) =
-            if x = SOME antecedentKW
-            then if trss = [] then []
-                 else Parser.splitLevelApply (parseConstruction idConSpec) (List.maps explode (removeOuterBrackets trss))
-            else getAntecedent L
-      fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
-                                raise ParseError ("no construct rel in iSchema " ^ String.concat cs))
-        | getConsequent ((x,crs) :: L) =
-            if x = SOME consequentKW
-            then parseConstruction idConSpec (String.concat (removeOuterBrackets crs))
-            else getConsequent L
+            then Parser.parseGraph tks (String.concat ps)
+            else getPatternGraph k tks L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in iSchema " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
@@ -572,32 +558,29 @@ struct
             then valOf (Real.fromString (String.concat ss)) handle Option => (Logging.write ("strength is not a real number in iSchema " ^ String.concat cs);raise Option)
             else getStrength L
       val blocks = gatherMaterialByKeywords iSchemaKeywords cs
-      val context = getPattern contextKW blocks
-      val antecedent = getAntecedent blocks
-      val consequent = getConsequent blocks
+      val (usedTokens1, context) = getPatternGraph contextKW [] blocks
+      val (usedTokens2, antecedent) = getPatternGraph antecedentKW usedTokens1 blocks
+      val (_,consequent) = getPatternGraph consequentKW usedTokens2 blocks
       val strengthVal = getStrength blocks
-      val _ = if Construction.wellFormed idConSpec context
-              then Logging.write "\n  context pattern is well formed"
-              else Logging.write "\n  WARNING: context pattern is not well formed"
-      val _ = if List.all (Construction.wellFormed idConSpec) antecedent
-              then Logging.write "\n  antecedent patterns are well formed"
-              else Logging.write "\n  WARNING: some antecedent pattern is not well formed"
-      val _ = if Construction.wellFormed idConSpec consequent
-              then Logging.write "\n  consequent pattern is well formed\n"
-              else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
-      val isch = {context = context,
-                  antecedent = antecedent,
-                  consequent = consequent}
+      val _ = if Graph.wellFormed idConSpec context
+              then Logging.write "\n  context pattern graph is well formed"
+              else Logging.write "\n  WARNING: context pattern graph is not well formed"
+      val _ = if Graph.wellFormed idConSpec antecedent
+              then Logging.write "\n  antecedent pattern graph is well formed"
+              else Logging.write "\n  WARNING: antecedent pattern graph is not well formed"
+      val _ = if Graph.wellFormed idConSpec consequent
+              then Logging.write "\n  consequent pattern graph is well formed\n"
+              else Logging.write "\n  WARNING: consequent pattern graph is not well formed\n"
+      val isch = ([context,antecedent],[Graph.empty,consequent])
       val ischData = {name = name,
-                      contextConSpecN = contextConSpecN,
-                      idConSpecN = idConSpecN,
+                      conSpecNames = [contextConSpecN,idConSpecN],
                       strength = strengthVal,
-                      iSchema = isch}
+                      schema = isch}
       val _ = Logging.write ("done\n");
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addInferenceSchema (#knowledge dc) ischData strengthVal,
-      constructionsData = #constructionsData dc,
+      knowledge = Knowledge.addSchema (#knowledge dc) ischData strengthVal,
+      graphsData = #graphsData dc,
       transferRequests = #transferRequests dc}
   end
 
@@ -609,8 +592,8 @@ struct
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
       val (targetConSpecN,y,interConSpecN) = String.breakOn "," (String.removeParentheses targetInterConSpecN)
       val _ = if y = "," then () else raise ParseError ("schema " ^ nn ^ " needs source, target and inter cspecs")
-      val _ = case findTransferSchemaWithName dc name of
-                SOME knownSchema => if (#name knownSchema) = name andalso (#interConSpecN knownSchema) = interConSpecN
+      val _ = case findSchemaWithName dc name of
+                SOME knownSchema => if (#name knownSchema) = name andalso (List.last (#conSpecNames knownSchema)) = interConSpecN
                                     then raise ParseError ("duplciated name for tSchema " ^ name ^ " in space " ^ interConSpecN)
                                     else ()
               | NONE => ()
@@ -621,25 +604,12 @@ struct
       val interConSpec = getConSpecWithName dc interConSpecN
       val interTySys = #typeSystem (#typeSystemData interConSpec)
       val _ = Logging.write ("\nAdding transfer schema " ^ name ^ "...")
-      fun getPattern k [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
+      fun getPatternGraph k _ [] = (Logging.write ("  ERROR: " ^ k ^ " pattern not specified");
                               raise ParseError ("no " ^ k ^ " in tSchema " ^ String.concat cs))
-        | getPattern k ((x,ps) :: L) =
+        | getPatternGraph k tks ((x,ps) :: L) =
             if x = SOME k
-            then parseConstruction (if k = sourceKW then sourceConSpec else targetConSpec) (String.concat (removeOuterBrackets ps))
-            else getPattern k L
-      fun getAntecedent [] = (Logging.write ("  ERROR: token relation not specified");
-                              raise ParseError ("no token rels in tSchema " ^ String.concat cs))
-        | getAntecedent ((x,trss) :: L) =
-            if x = SOME antecedentKW
-            then if trss = [] then []
-                 else Parser.splitLevelApply (parseConstruction interConSpec) (List.maps explode (removeOuterBrackets trss))
-            else getAntecedent L
-      fun getConsequent [] = (Logging.write ("  ERROR: construct relation not specified");
-                                raise ParseError ("no construct rel in tSchema " ^ String.concat cs))
-        | getConsequent ((x,crs) :: L) =
-            if x = SOME consequentKW
-            then parseConstruction interConSpec (String.concat (removeOuterBrackets crs))
-            else getConsequent L
+            then Parser.parseGraph tks (String.concat ps)
+            else getPatternGraph k tks L
       fun getStrength [] = (Logging.write ("  ERROR: strength not specified");
                             raise ParseError ("no strength in tSchema " ^ String.concat cs))
         | getStrength ((x,ss) :: L) =
@@ -649,77 +619,73 @@ struct
                                     raise Option)
             else getStrength L
       val blocks = gatherMaterialByKeywords tSchemaKeywords cs
-      val source = getPattern sourceKW blocks
-      val target = getPattern targetKW blocks
-      val antecedent = getAntecedent blocks
-      val consequent = getConsequent blocks
-      val _ = if Construction.wellFormed sourceConSpec source
+      val (usedTokens1,source) = getPatternGraph sourceKW [] blocks
+      val (usedTokens2,target) = getPatternGraph targetKW usedTokens1 blocks
+      val (usedTokens3,antecedent) = getPatternGraph antecedentKW usedTokens2 blocks
+      val (_,consequent) = getPatternGraph consequentKW usedTokens3 blocks
+      val _ = if Graph.wellFormed sourceConSpec source
               then Logging.write "\n  source pattern is well formed"
-              else Logging.write ("\n  WARNING: source pattern is not well formed: " ^ Construction.toString source)
-      val _ = if Construction.wellFormed targetConSpec target
+              else Logging.write ("\n  WARNING: source pattern is not well formed: " ^ Graph.toString source)
+      val _ = if Graph.wellFormed targetConSpec target
               then Logging.write "\n  target pattern is well formed"
-              else Logging.write "\n  WARNING: target pattern is not well formed"
-      val _ = if List.all (Construction.wellFormed interConSpec) antecedent
+              else Logging.write ("\n  WARNING: target pattern is not well formed: " ^ Graph.toString target)
+      val _ = if Graph.wellFormed interConSpec antecedent
               then Logging.write "\n  antecedent patterns are well formed"
-              else Logging.write "\n  WARNING: some antecedent pattern is not well formed"
-      val _ = if Construction.wellFormed interConSpec consequent
+              else Logging.write ("\n  WARNING: antecedent pattern is not well formed: " ^ Graph.toString antecedent)
+      val _ = if Graph.wellFormed interConSpec consequent
               then Logging.write "\n  consequent pattern is well formed\n"
-              else Logging.write "\n  WARNING: consequent pattern is not well formed\n"
-      val tsch = {source = source,
-                  target = target,
-                  antecedent = antecedent,
-                  consequent = consequent}
+              else Logging.write ("\n  WARNING: consequent pattern is not well formed: " ^ Graph.toString consequent ^ "\n")
+      val tsch = ([source,target,antecedent],[Graph.empty,Graph.empty,consequent])
       val strengthVal = getStrength blocks
-      val tschData = {name = name,
-                      sourceConSpecN = sourceConSpecN,
-                      targetConSpecN = targetConSpecN,
-                      interConSpecN = interConSpecN,
+      val schData = {name = name,
+                     conSpecNames = [sourceConSpecN,targetConSpecN,interConSpecN],
                       strength = strengthVal,
-                      tSchema = tsch}
+                      schema = tsch}
       val _ = Logging.write ("done\n");
   in {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
-      knowledge = Knowledge.addTransferSchema (#knowledge dc) tschData strengthVal,
-      constructionsData = #constructionsData dc,
+      knowledge = Knowledge.addSchema (#knowledge dc) schData strengthVal,
+      graphsData = #graphsData dc,
       transferRequests = #transferRequests dc}
   end
 
-  fun insertConstruction ctRecord DC =
+  fun insertGraph gRecord DC =
        {typeSystemsData = #typeSystemsData DC,
         conSpecsData = #conSpecsData DC,
         knowledge = #knowledge DC,
-        constructionsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [ctRecord] (#constructionsData DC),
+        graphsData = List.mergeNoEQUAL (fn (x,y) => String.compare (#name x, #name y)) [gRecord] (#graphsData DC),
         transferRequests = #transferRequests DC}
 
-  fun addConstruction (N, bs) dc =
-  let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for construction " ^ String.concat N)
+  fun addGraph (N, bs) dc =
+  let val nn = case N of [x] => x | _ => raise ParseError ("invalid name for graph " ^ String.concat N)
       val (name,x,cspecN) = String.breakOn ":" nn
-      val _ = if x = ":" then () else raise ParseError ("construction " ^ nn ^ " needs a cspec")
-      val _ = case findConstructionWithName dc name of
-                SOME knownSchema => raise ParseError ("duplciated name for construction: " ^ name)
+      val _ = if x = ":" then () else raise ParseError ("graph " ^ nn ^ " needs a cspec")
+      val _ = case findGraphWithName dc name of
+                SOME knownSchema => raise ParseError ("duplciated name for graph: " ^ name)
               | NONE => ()
       val cspec = getConSpecWithName dc cspecN
-      val ct = case removeOuterBrackets bs of
-                  "liftString" :: ctL => Lift.string (deTokenise ctL)
-                | ctL => parseConstruction cspec (deTokenise ctL)
+      val (u,g) = (*case removeOuterBrackets bs of
+                      "liftString" :: gL => Lift.string (deTokenise gL)
+                    | gL => Parser.parseGraph [] (deTokenise gL)*)
+                  Parser.parseGraph [] (deTokenise (removeOuterBrackets bs))
 
-      val _ = print ("\nChecking well-formedness of construction " ^ name ^ "...");
+      val _ = print ("\nChecking well-formedness of graph " ^ name ^ "...");
       val startTime = Time.now();
-      val _ = if Construction.wellFormed cspec ct then Logging.write ("\n  "^ name ^ " is well formed\n")
+      val _ = if Graph.wellFormed cspec g then Logging.write ("\n  "^ name ^ " is well formed\n")
                 else print ("\n  WARNING: "^ name ^" is not well formed\n")
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("  well-formedness check runtime: "^ LargeInt.toString runtime ^ " ms \n...done\n  ");
 
-      val ctRecord = {name = name, conSpecN = cspecN, construction = ct}
-  in insertConstruction ctRecord dc
+      val gRecord = {name = name, conSpecN = cspecN, graph = g, usedTokens = u}
+  in insertGraph gRecord dc
   end
 
   fun addTransferRequests ws dc =
      {typeSystemsData = #typeSystemsData dc,
       conSpecsData = #conSpecsData dc,
       knowledge = #knowledge dc,
-      constructionsData = #constructionsData dc,
+      graphsData = #graphsData dc,
       transferRequests = #transferRequests dc @ [ws]}
 
   exception BadGoal
@@ -728,15 +694,15 @@ struct
         | stringifyC [] = ""
       val C = gatherMaterialByKeywords transferKeywords ws
 
-      fun getConstruction [] = raise ParseError "no construction to transfer"
-        | getConstruction ((x,c)::L) =
-            if x = SOME sourceConstructionKW
-            then getConstructionWithName DC (String.concat (removeOuterBrackets c))
-            else getConstruction L
+      fun getGraph [] = raise ParseError "no graph to transfer"
+        | getGraph ((x,c)::L) =
+            if x = SOME sourceGraphKW
+            then getGraphWithName DC (String.concat (removeOuterBrackets c))
+            else getGraph L
 
-      val constructionRecord = getConstruction C
-      val construction = #construction constructionRecord
-      val sourceConSpecN = #conSpecN constructionRecord
+      val graphRecord = getGraph C
+      val graph = #graph graphRecord
+      val sourceConSpecN = #conSpecN graphRecord
       val sourceConSpecData = getConSpecWithName DC sourceConSpecN
       val sourceTypeSystem = #typeSystem (#typeSystemData sourceConSpecData)
 
@@ -758,15 +724,17 @@ struct
             else getTargetTySys L
       val targetTypeSystem = getTargetTySys C*)
       val targetConSpecData = getTargetConSpec C
+      val targetConSpecN = #name targetConSpecData
       val targetTypeSystem = #typeSystem (#typeSystemData targetConSpecData)
 
       val interConSpecData = getInterConSpec C
+      val interConSpecN = #name interConSpecData
       val interTypeSystem = #typeSystem (#typeSystemData interConSpecData)
 
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
             if x = SOME goalKW
-            then parseConstruction interConSpecData (deTokenise (removeOuterBrackets c))
+            then Parser.parseGraph (#usedTokens graphRecord) (deTokenise (removeOuterBrackets c))
             else getGoal L
       fun getOutput [] = NONE
         | getOutput ((x,c)::L) =
@@ -793,28 +761,28 @@ struct
             if x = SOME goalLimitKW
             then Int.fromString (String.concat c)
             else getGoalLimit L
-      fun getMatchTarget [] = NONE
-        | getMatchTarget ((x,c)::L) =
+      fun getMatchTarget tks [] = NONE
+        | getMatchTarget tks ((x,c)::L) =
             if x = SOME matchTargetKW
-            then (let val mtct = parseConstruction targetConSpecData (deTokenise (removeOuterBrackets c))
-                      val _ = if Construction.wellFormed targetConSpecData mtct
+            then (let val (_,mtct) = Parser.parseGraph tks (deTokenise (removeOuterBrackets c))
+                      val _ = if Graph.wellFormed targetConSpecData mtct
                               then Logging.write "\n  pattern for matching is well formed"
                               else Logging.write "\n  WARNING: pattern for matching is not well formed"
                   in SOME mtct
                   end)
-            else getMatchTarget L
+            else getMatchTarget tks L
       fun getEager [] = false
         | getEager ((x,_)::L) =
             if x = SOME eagerKW
             then true
             else getEager L
-      fun getIterative [] = false
-        | getIterative ((x,_)::L) =
+      fun getIterative tks [] = false
+        | getIterative tks ((x,_)::L) =
             if x = SOME iterativeKW
-            then (case getMatchTarget C of
+            then (case getMatchTarget tks C of
                       NONE => true
                     | _ => raise ParseError "iterative and matchTarget are incompatible")
-            else getIterative L
+            else getIterative tks L
       fun getInverse [] = false
         | getInverse ((x,_)::L) =
             if x = SOME inverseKW
@@ -830,35 +798,19 @@ struct
             if x = SOME saveKW
             then SOME (String.concat c)
             else getSave L
-      val goal = getGoal C
+      val (usedTokens1,goal) = getGoal C
       val outputFilePath = getOutput C
       val limit = getLimit C
       val goalLimit = getGoalLimit C
       val compositionLimit = getCompositionLimit C
       val searchLimit = getSearchLimit C
       val eager = getEager C
-      val iterative = getIterative C
+      val iterative = getIterative usedTokens1 C
       val KB = knowledgeOf DC
       val inverse = getInverse C
       val unistructured = getUnistructured C
-      val targetPattern = getMatchTarget C
+      val targetPattern = getMatchTarget usedTokens1 C
       val save = getSave C
-      (*fun mkLatexGoals res =
-        let val goal = State.originalGoalOf res
-            val goals = State.goalsOf res
-            val goalsS = if List.null goals
-                         then "NO\\ OPEN\\ GOALS!"
-                         else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goals)
-            val originalGoalS = Latex.construction (0.0,0.0) goal ^ "\\\\ \n"
-            val IS = Heuristic.scoreMain res
-            val alignedGoals = "\n " ^ ("\\textbf{Original\\ goal}\\\\\n"
-                                                                      ^ originalGoalS
-                                                                      ^ "\\\\ \\textbf{Open\\ goals}\\\\\n"
-                                                                      ^ goalsS ^ "\\\\"
-                                                                      ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
-                                                                      ^ Latex.realToString IS)
-        in alignedGoals
-        end*)
       fun mkLatexGoals res =
         let val goalGraph = List.nth(#2(#sequent res),2)
             val goalConstructions = Scaffolding.oldConstructionsOfGraph interConSpecData goalGraph
@@ -882,20 +834,13 @@ struct
             val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight]))
         end
-      val _ = print ("\nApplying structure transfer to "^ #name constructionRecord ^ "...");
+      val _ = print ("\nApplying structure transfer to "^ #name graphRecord ^ "...");
       val startTime = Time.now();
-      val targetTokens = FiniteSet.filter
-                             (fn x => Set.elementOf (CSpace.typeOfToken x) (#Ty targetTypeSystem))
-                             (Construction.leavesOfConstruction goal)
-                          handle Empty => (Logging.write "ERROR : goal has no tokens in target construction space\n"; raise BadGoal)
-
-      (*
-      val state = Transfer.initState sourceConSpecData targetConSpecData interConSpecData inverse KB construction goal
-      val results = Transfer.masterTransfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured targetPattern state;
-      *)
-      val state = Scaffolding.initState sourceConSpecData targetConSpecData interConSpecData construction goal
+      
+      val state = Scaffolding.initState sourceConSpecData targetConSpecData interConSpecData graph goal
       val TTT = [#typeSystem (#typeSystemData sourceConSpecData), #typeSystem (#typeSystemData targetConSpecData), #typeSystem (#typeSystemData interConSpecData)]
-      val SC = Seq.map Scaffolding.schemaOfOldTransferSchema (#transferSchemas KB)
+      val adaptedKB = Knowledge.adaptToMSpace [sourceConSpecN,targetConSpecN,interConSpecN] KB
+      val SC = #schemas adaptedKB
       val results = Scaffolding.transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured TTT SC state;
 
       val nres = length (Seq.list_of results);
@@ -909,24 +854,16 @@ struct
               SOME (x,_) => (#score x,
                              Graph.numberOfConstructors (List.nth(#2(#sequent x),2)))
             | NONE => (0.0,~1)
-      (*fun resultingConstructionData _ [] = raise ParseError ""
-        | resultingConstructionData s [rct] = [{name = s, conSpecN = #name targetConSpecData, construction = rct}]
-        | resultingConstructionData s L = let fun assignNames n (rct::rctL) = {name = s ^ "_" ^ Int.toString n, conSpecN = #name targetConSpecData, construction = rct} :: assignNames (n+1) rctL
-                                                | assignNames _ [] = []
-                                          in assignNames 0 L end*)
-      (*val updDC = case save of SOME s => foldl (uncurry insertConstruction) DC (resultingConstructionData s constructionsToSave) | NONE => DC*)
-      (*val tproofConstruction = map (TransferProof.toConstruction o State.transferProofOf) listOfResults
-      val _ = print (Construction.toString  (hd tproofConstruction))*)
       val _ = print ("  number of open goals (top result): " ^ Int.toString ngoals ^ "\n")
       val _ = print ("  transfer score (top result): " ^ Real.toString score)
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
-      val latexCT = Latex.construction (0.0,0.0) construction;
+      val latexCT = map (Latex.construction (0.0,0.0)) (Scaffolding.oldConstructionsOfGraph sourceConSpecData graph);
       val _ = print "done\n";
       val _ = print "\nGenerating LaTeX document...";
-      val latexOriginalConsAndGoals = Latex.environment "center" "" latexCT;
-      val opening = (Latex.sectionTitle false "Original construction") ^ "\n"
+      val latexOriginalConsAndGoals = Latex.environment "center" "" (String.concat latexCT);
+      val opening = (Latex.sectionTitle false "Original graph") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
       val _ = case outputFilePath of
                 SOME filePath => let val outputFile = TextIO.openOut filePath
@@ -946,18 +883,18 @@ struct
   fun joinDocumentContents ({typeSystemsData = ts,
                              conSpecsData = sp,
                              knowledge = kb,
-                             constructionsData = cs,
+                             graphsData = cs,
                              transferRequests = tr} :: L) =
     (case joinDocumentContents L of
       {typeSystemsData = ts',
        conSpecsData = sp',
        knowledge = kb',
-       constructionsData = cs',
+       graphsData = cs',
        transferRequests = tr'} =>
           {typeSystemsData = List.mergeNoEQUAL tsdCmp ts ts',
            conSpecsData = List.mergeNoEQUAL csdCmp sp sp',
            knowledge = Knowledge.join kb kb',
-           constructionsData = List.mergeNoEQUAL ctCmp cs cs',
+           graphsData = List.mergeNoEQUAL ctCmp cs cs',
            transferRequests = tr @ tr'})
   | joinDocumentContents [] = emptyDocContent
 
@@ -990,7 +927,7 @@ struct
              if x = SOME conSpecKW then addConSpec (n, ws) dc else
              if x = SOME iSchemaKW then addInferenceSchema (n,ws) dc else
              if x = SOME tSchemaKW then addTransferSchema (n,ws) dc else
-             if x = SOME constructionKW then addConstruction (n,ws) dc else
+             if x = SOME graphKW then addGraph (n,ws) dc else
              if x = SOME transferKW then addTransferRequests c dc else
              if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"
           end handle Bind => raise ParseError "expected name = content, found multiple words before ="

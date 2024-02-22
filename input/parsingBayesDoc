@@ -3,10 +3,10 @@ import transferSchemas/bayesArea
 import transferSchemas/bayesTable
 import transferSchemas/bayesTree
 
-construction tt:bayesG = t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys <- addEqn[t_{00}:Pr(disease)=0.04:probEqn <- makeEqn[t_{000}:disease:event, t_{001}:0.04:real10], t_{01}:Pr(test | disease)=0.95;Pr(-test | -disease)=0.9:probSys <- addEqn[t_{010}:Pr(test | disease)=0.95:probEqn <- makeEqn[t_{0100}:test | disease:condEvent <- makeCond[t_{01000}:test:event, t_{01001}:disease:event], t_{0101}:0.95:real10], t_{011}:Pr(-test | -disease)=0.9:probEqn <- makeEqn[t_{0110}:-test | -disease:condEvent <- makeCond[t_{01100}:-test:event <- complement[t_{011000}:test:event], t_{01101}:-disease:event <- complement[t_{011010}:disease:event]], t_{0111}:0.9:real10]]]
+graph tt:bayesG = t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys <- addEqn[t_{00}:Pr(disease)=0.04:probEqn <- makeEqn[t_{000}:disease:event, t_{001}:0.04:real10], t_{01}:Pr(test | disease)=0.95;Pr(-test | -disease)=0.9:probSys <- addEqn[t_{010}:Pr(test | disease)=0.95:probEqn <- makeEqn[t_{0100}:test | disease:condEvent <- makeCond[t_{01000}:test:event, t_{01001}:disease:event], t_{0101}:0.95:real10], t_{011}:Pr(-test | -disease)=0.9:probEqn <- makeEqn[t_{0110}:-test | -disease:condEvent <- makeCond[t_{01100}:-test:event <- complement[t_{011000}:test:event], t_{01101}:-disease:event <- complement[t_{011010}:disease:event]], t_{0111}:0.9:real10]]]
 
 transfer
-    sourceConstruction tt
+    sourceGraph tt
     targetConSpec areaDiagramG
     interConSpec interBayesArea
     goal :metaTrue <- encode[t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys,t':area]
@@ -15,12 +15,12 @@ transfer
     save bayesAreaTest
     limit 2
 
-construction prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
-construction prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
-construction prSystem1:stringRich = liftString Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1
+graph prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
+graph prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
+graph prSystem1:stringRich = liftString Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1
 
 transfer
-    sourceConstruction prSystem1
+    sourceGraph prSystem1
     targetConSpec btree
     interConSpec interStringBTree
     goal :metaTrue <- TREEIFY[t:Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1:string,t':btree]
@@ -31,7 +31,7 @@ transfer
     goalLimit 3
 
 transfer
-    sourceConstruction test1
+    sourceGraph test1
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
@@ -42,7 +42,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test2
+    sourceGraph test2
     targetConSpec btree
     interConSpec interBTreeBTreeSEMICOLON
     goal :metaTrue <- SEMICOLON[v_{69}:btree,t':btree]
@@ -53,7 +53,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test3
+    sourceGraph test3
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{0}:btree,t':btree]
@@ -64,7 +64,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test4
+    sourceGraph test4
     targetConSpec btree
     interConSpec interBTreeBTreeSPACE
     goal :metaTrue <- SPACE[v_{67}:btree,t':btree]
@@ -75,7 +75,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test5
+    sourceGraph test5
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
@@ -86,7 +86,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test6
+    sourceGraph test6
     targetConSpec btree
     interConSpec interBTreeBTreeMID
     goal :metaTrue <- MID[v_{63}:btree,t':btree]
@@ -97,7 +97,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test7
+    sourceGraph test7
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
     goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
@@ -108,7 +108,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test8
+    sourceGraph test8
     targetConSpec bayesG
     interConSpec interBTreeBayes
     goal :metaTrue <- SYS[v_{57}:btree,t':probSys]
@@ -119,7 +119,7 @@ transfer
     goalLimit 4
 
 transfer
-    sourceConstruction test9
+    sourceGraph test9
     targetConSpec areaDiagramG
     interConSpec interBayesArea
     goal :metaTrue <- encode[v_{0}:probSys,t':area]
@@ -130,7 +130,7 @@ transfer
     goalLimit 5
 
 transfer
-    sourceConstruction test9
+    sourceGraph test9
     targetConSpec contTableG
     interConSpec interBayesTable
     goal :metaTrue <- encode[v_{0}:probSys,t':table]
@@ -141,7 +141,7 @@ transfer
     goalLimit 5
 
 transfer
-    sourceConstruction test9
+    sourceGraph test9
     targetConSpec probTreeG
     interConSpec interBayesTree
     goal :metaTrue <- encode[v_{0}:probSys,t':tree]

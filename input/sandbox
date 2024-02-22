@@ -47,11 +47,11 @@ tSchema tsch2:(sandBox,sandBox,interSBSB) =
 
 
 
-construction ct1:sandBox = t:ty <- C[t1:ty,t2:ty]
-construction ct2:sandBox = t:ty <- C[t1:ty,t2:ty <- C[t21:ty,t22:ty]]
+graph ct1:sandBox = t:ty <- C[t1:ty,t2:ty]
+graph ct2:sandBox = t:ty <- C[t1:ty,t2:ty <- C[t21:ty,t22:ty]]
 
 transfer
-    sourceConstruction ct1
+    sourceGraph ct1
     targetConSpec sandBox
     interConSpec interSBSB
     goal :metaTrue <- R[t:ty,t':ty]

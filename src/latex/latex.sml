@@ -1,4 +1,5 @@
 import "transfer.knowledge";
+import "core.pattern";
 
 signature LATEX =
 sig

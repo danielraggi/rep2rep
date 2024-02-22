@@ -1,6 +1,6 @@
 import transferSchemas/arithGraphs
 
-construction x:arithG =
+graph x:arithG =
     t:0+1+2+3:numExp <- infixOp[t3:0+1+2:numExp <- infixOp[t33:0+1:numExp <- infixOp[t331:0:nat10,
                                                                                      t332:plus,
                                                                                      t333:1:nat10],
@@ -12,7 +12,7 @@ construction x:arithG =
                                 ]
 
 transfer
-    sourceConstruction x
+    sourceGraph x
     targetConSpec graphsG
     interConSpec interArithGraphs
     goal :metaTrue <- encode[t:0+1+2+3:numExp,t':graph]

@@ -15,36 +15,3 @@ conSpec bayesG:bayes =
     makeCond : [event,event] -> condEvent,
     addEqn : [probEqn,probSys] -> probSys,
     calculate : [probSys,events] -> probSys
-
-cognitiveData bayesG =
-    registration
-        makeEqn : notational-index,
-        complement : notational-index,
-        infix : notational-index,
-        makeCond : notational-index,
-        addEqn : notational-index,
-        calculate : search,
-        infixOp : notational-index,
-        infixRel : notational-index,
-        addParentheses : emergent,
-        multiply : notational-index
-    quantityScale
-        event : nominal,
-        inter : ordinal,
-        union : ordinal,
-        condEvent : ratio,
-        probEqn : ratio,
-        probSys : ratio,
-        numExp : ratio,
-        real10 : ratio,
-        nat10 : ratio,
-        plus : interval,
-        minus : interval,
-        times : ratio,
-        div : ratio,
-        leq : ordinal,
-        equals : nominal
-    complexity
-        makeEqn : 18,
-        makeCond : 1,
-        addEqn : 1

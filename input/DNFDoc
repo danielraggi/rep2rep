@@ -1,6 +1,6 @@
 import transferSchemas/DNFCNF
 
-construction AinB:propDNFG =
+graph AinB:propDNFG =
     t:AB|-AB|-A-B:nonclauseDNF
         <- disj[t1:AB:nonliteralDNF <- conj[t11:A:var,
                                      t12:B:var],
@@ -10,7 +10,7 @@ construction AinB:propDNFG =
                              t22:-A-B:nonliteralDNF <- conj[t221:-A:nonvar <- neg[t2211:A:var],
                                                      t222:-B:nonvar <- neg[t2221:B:var]]]]
 
-construction AinBdisjC:propDNFG =
+graph AinBdisjC:propDNFG =
     t:AB-C|-AB-C|-A-BC|-A-B-C:nonclauseDNF
         <- disj[t1:AB-C:nonliteralDNF <- conj[t11:A:var,
                                             t12:B-C:nonliteralDNF <- conj[t121:B:var,
@@ -27,7 +27,7 @@ construction AinBdisjC:propDNFG =
                                                                          t2222:-B-C:nonliteralDNF <- conj[t22221:-B:nonvar <- neg[t222211:B:var],
                                                                                                        t22222:-C:nonvar <- neg[t222221:C:var]]] ]]]
 
-construction AinBdisjCinD:propDNFG =
+graph AinBdisjCinD:propDNFG =
   t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF
       <- disj[t1:AB-CD:nonliteralDNF
                 <- conj[t11:A:var,
@@ -72,7 +72,7 @@ construction AinBdisjCinD:propDNFG =
                             ]
                 ]
 
-construction -A-B|-A-C|B-C:propDNFG =
+graph -A-B|-A-C|B-C:propDNFG =
   t:-A-B|-A-C|B-C:nonclauseDNF
     <- disj[t1:-A-B:nonliteralDNF <- conj[t11:-A:nonvar <- neg[t111:A:var],t12:-B:nonvar <- neg[t121:B:var]],
             t2:-A-C|B-C:nonclauseDNF
@@ -80,7 +80,7 @@ construction -A-B|-A-C|B-C:propDNFG =
                         t22:B-C:nonliteralDNF <- conj[t221:B:var,t222:-C:nonvar <- neg[t2221:C:var]]]]
 
 comment
-   sourceConstruction -A-B|-A-C|B-C
+   sourceGraph -A-B|-A-C|B-C
    targetConSpec propCNFG
    interConSpec interDNFCNFG
    goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
@@ -89,7 +89,7 @@ comment
    limit 50
 
 comment
-   sourceConstruction AinB
+   sourceGraph AinB
    targetConSpec propCNFG
    interConSpec interDNFCNFG
    goal :metaTrue <- entails[t:AB|-AB|-A-B:nonclauseDNF,t':nonliteralCNF]
@@ -98,7 +98,7 @@ comment
    limit 50
 
 transfer
-    sourceConstruction -A-B|-A-C|B-C
+    sourceGraph -A-B|-A-C|B-C
     targetConSpec propCNFG
     interConSpec interDNFCNFG
     goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
@@ -108,7 +108,7 @@ transfer
     matchTarget t:nonliteralCNF <- disj[t1:nonvar, t2:nonvar]
 
 comment
-    sourceConstruction AinBdisjCinD
+    sourceGraph AinBdisjCinD
     targetTypeSystem propCNF
     goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF],[t':nonliteralCNF]) :: entails
     matchTarget t:nonliteralDNF <- disj[t1:B:var, t2:nonvar <- neg[t21:A:var]]
