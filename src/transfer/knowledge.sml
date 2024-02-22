@@ -76,11 +76,11 @@ fun findListInjection p _ [] L = SOME (fn _ => NONE,fn _ => NONE)
     in 
       Seq.single {schema = makeNewSchema 0 CSN, strength = strength, name = name, conSpecNames = CSN}
     end handle Option => Seq.empty
-(*)
+(*
   fun adaptSchema conSpecImports CSN {schema = (A,C), strength, name, conSpecNames} =
     let
       val empty = Graph.empty
-      (*)
+      (*
       val conSpecNames = [0,2,5]
       val CSN = [1,2,3,4,5]
       val empty = ""
