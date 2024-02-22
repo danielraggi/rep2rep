@@ -123,7 +123,7 @@ fun findListInjection p _ [] L = SOME (fn _ => NONE,fn _ => NONE)
   fun adaptToMSpace CSN KB =
     let val {conSpecImports,schemas,...} = KB
         val adaptedSchemas = Seq.maps (adaptSchema conSpecImports CSN) schemas
-        val _ = map (fn x => print ("schema: \n" ^ Sequent.stringOfSchemaData x ^ "\n\n\n")) (Seq.list_of adaptedSchemas)
+        (*val _ = map (fn x => print ("schema: \n" ^ Sequent.stringOfSchemaData x ^ "\n\n")) (Seq.list_of adaptedSchemas)*)
     in {schemas = adaptedSchemas,
         conSpecImports = conSpecImports}
     end
