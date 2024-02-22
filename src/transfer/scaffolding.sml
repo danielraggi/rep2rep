@@ -46,6 +46,21 @@ struct
   fun unzip [] = ([],[])
     | unzip ((x,y)::L) = case unzip L of (Lx,Ly) => (x::Lx,y::Ly)
 
+
+
+fun findTINForToken _ [] = NONE
+  | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
+fun assessTokenHierarchy (g:Graph.graph) t = 
+  1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy g) (List.filter (fn x => not (CSpace.sameTokens x t)) (List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))))))  handle Empty => 1 | Option => 0
+fun assignTokenHierarchy _ [] _ = []
+  | assignTokenHierarchy tks (tin::g:Graph.graph) g' =
+  {h = assessTokenHierarchy g' (#token tin), tin = tin} :: assignTokenHierarchy ((#token tin) :: tks) g g'
+
+fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy [] g g))
+
+
+
+
   fun oldConstructionsOfGraph CS g =
     let
       fun getConstructor cn = case CSpace.findConstructorWithName cn CS of SOME c => c | NONE => (print ("constructor " ^cn ^ " not found"); raise Option)
@@ -93,7 +108,7 @@ struct
           end
       fun ocog [] cts = cts
         | ocog (tin::g') cts = ocog g' (ocotin tin cts)
-    in ocog (Graph.expand g) []
+    in ocog (orderByHierarchy (Graph.expand g)) []
     end
 
 (*
