@@ -18,9 +18,9 @@ transfer
     goal :metaTrue <- encode[t:tt:probSys,t':area]
     output bayesArea
     eager
-    limit 20
+    limit 2
 
-transfer
+comment
     sourceGraph y
     targetConSpec areaDiagramG
     interConSpec interBayesArea
@@ -29,7 +29,7 @@ transfer
     eager
     limit 20
 
-transfer
+comment
     sourceGraph z
     targetConSpec areaDiagramG
     interConSpec interBayesArea

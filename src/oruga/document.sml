@@ -813,13 +813,12 @@ struct
       val save = getSave C
       fun mkLatexGoals res =
         let val goalGraph = List.nth(#2(#sequent res),2)
-            val goalConstructions = Scaffolding.oldConstructionsOfGraph interConSpecData goalGraph
             val goalsS = if Graph.isEmpty goalGraph
                          then "NO\\ OPEN\\ GOALS!"
-                         else String.concatWith "\n " (map (Latex.construction (0.0,0.0)) goalConstructions)
+                         else Latex.tikzOfGraph (0.0,0.0) goalGraph
             val alignedGoals = "\n " ^ "\\textbf{Open\\ goals}\\\\\n"
                                     ^ goalsS ^ "\\\\"
-                                    ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"
+                                    ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"(*"*)
                                     ^ Latex.realToString (#score res)
         in alignedGoals
         end
@@ -827,11 +826,10 @@ struct
         let val dischargedGraph = List.nth(#discharged res,1)
             val targetGraph = List.nth(#2(#sequent res),1)
             val targetGraphFull = Graph.join targetGraph dischargedGraph
-            val targetConstructions = Scaffolding.oldConstructionsOfGraph targetConSpecData targetGraphFull
-            val latexConstructions = map (Latex.construction (0.0,0.0)) targetConstructions
-            val latexLeft = Latex.environment "minipage" "[t]{0.68\\linewidth}" (Latex.printWithHSpace 0.2 latexConstructions)
+            val latexConstructions = Latex.tikzOfGraph (0.0,0.0) targetGraphFull
+            val latexLeft = Latex.environment "minipage" "[t]{0.65\\linewidth}" (Latex.printWithHSpace 0.2 [latexConstructions])
             val latexGoals = mkLatexGoals res
-            val latexRight = Latex.environment "minipage" "[t]{0.3\\linewidth}" latexGoals
+            val latexRight = Latex.environment "minipage" "[t]{0.33\\linewidth}" latexGoals
         in Latex.environment "center" "" (Latex.printWithHSpace 0.0 ([latexLeft,latexRight]))
         end
       val _ = print ("\nApplying structure transfer to "^ #name graphRecord ^ "...");
@@ -859,10 +857,10 @@ struct
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
-      val latexCT = map (Latex.construction (0.0,0.0)) (Scaffolding.oldConstructionsOfGraph sourceConSpecData graph);
+      val latexCT = Latex.tikzOfGraph (0.0,0.0) graph;
       val _ = print "done\n";
       val _ = print "\nGenerating LaTeX document...";
-      val latexOriginalConsAndGoals = Latex.environment "center" "" (String.concat latexCT);
+      val latexOriginalConsAndGoals = Latex.environment "center" "" (latexCT);
       val opening = (Latex.sectionTitle false "Original graph") ^ "\n"
       val resultText = (Latex.sectionTitle false "Structure transfer results") ^ "\n"
       val _ = case outputFilePath of

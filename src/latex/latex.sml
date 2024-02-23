@@ -1,5 +1,4 @@
 import "transfer.knowledge";
-import "core.pattern";
 
 signature LATEX =
 sig
@@ -7,7 +6,7 @@ sig
   val typ : Type.typ -> string;
   val token : CSpace.token -> string;
   val sectionTitle : bool -> string -> string;
-  val construction : real * real -> Construction.construction -> string;
+  val tikzOfGraph : real * real -> Graph.graph -> string;
   val mkDocument : string -> string;
   val outputDocument : TextIO.outstream -> string -> unit;
   val printWithHSpace : real -> string list -> string;
@@ -19,19 +18,74 @@ structure Latex : LATEX =
 struct
 
   fun latexifyForbidden s =
-  let fun lus [] = []
-        | lus (c::C) = if c = #"_" orelse c = #"&" then #"\\" :: c :: lus C
-                       else c :: lus C
-  in String.implode (lus (String.explode s))
-  end
+    let fun lus [] = []
+          | lus (c::C) = if c = (#"_") orelse c = (#"&") then (#"\\"(* " *))  :: c :: lus C
+                        else c :: lus C
+    in String.implode (lus (String.explode s))
+    end 
 
-  fun mathsf s = "\\mathsf{" ^ latexifyForbidden s ^ "}"
-  fun typ ty = mathsf (Type.nameOfType ty)
-  fun token t =
-    let val tok = CSpace.nameOfToken t
-        val ty = typ (CSpace.typeOfToken t)
-    in tok ^ " : " ^ ty
+    fun mathsf s = "\\mathsf{" ^ latexifyForbidden s ^ "}"
+    fun typ ty = mathsf (Type.nameOfType ty)
+    fun token t =
+      let val tok = CSpace.nameOfToken t
+          val ty = typ (CSpace.typeOfToken t)
+      in tok ^ " : " ^ ty
+      end
+
+  fun findTINForToken _ [] = NONE
+    | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
+  fun getMissingOneStepDescendants tks g t = 
+    let val oneStepDescendants = List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))
+    in List.filter (fn x => not (List.exists (fn y => CSpace.sameTokens x y) tks)) oneStepDescendants
     end
+  fun assessTokenHierarchy tks (g:Graph.graph) t = 
+    1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy (t::tks) g) (getMissingOneStepDescendants (t::tks) g t))) handle Empty => 1 | Option => 0
+
+  fun assignTokenHierarchy [] _ = []
+    | assignTokenHierarchy (tin::g:Graph.graph) g' =
+    {h = assessTokenHierarchy [] g' (#token tin), tin = tin} :: assignTokenHierarchy g g'
+
+  fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy g g))
+
+  fun descendantTokens tks g t = 
+    let val oneStepDescendants = getMissingOneStepDescendants tks g t
+        fun dts _ [] = []
+          | dts tks' (d::ds) = (case descendantTokens tks' g d of dd => dd @ dts (tks' @ dd) ds)
+    in oneStepDescendants @ dts (tks @ oneStepDescendants) oneStepDescendants
+    end
+
+  fun descendantTokens' tks g [] = []
+    | descendantTokens' tks g (t::ts) = (case descendantTokens tks g t of dtks => dtks @ descendantTokens' (dtks @ tks) g ts)
+
+  fun pullTINOfToken (g:Graph.graph) t = (case List.partition (fn tin => CSpace.sameTokens t (#token tin)) g of ([tin],g') => (SOME tin,g') | _ => (NONE,g))
+  fun pullTINsOfTokens (g:Graph.graph) tks = List.partition (fn tin => List.exists (fn x => CSpace.sameTokens x (#token tin)) tks) g
+
+  fun mapMany [] [] = []
+    | mapMany (f::fs) (x::xs) = f x :: mapMany fs xs
+    | mapMany _ _ = raise Match
+  fun unzip [] = ([],[])
+    | unzip ((x,y)::XY) = let val (X,Y) = unzip XY in (x::X,y::Y) end
+
+
+  exception Fail
+  fun lines [h] = h
+    | lines (h::t) = h ^ "\n " ^ lines t
+    | lines _ = raise Empty
+  
+  fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\"(* " *) andalso x <> #"|" andalso x <> #"("(* " *) andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
+
+  fun nodeNameOfToken t =
+    let val nt = CSpace.nameOfToken t
+        val tt = CSpace.typeOfToken t
+        val charL = case List.filter nodeNameCharFilter (String.explode (nt ^ "" ^ Type.nameOfType tt)) of #" " :: L => #"Q" :: #" " :: L | L => L
+    in String.addParentheses (String.implode charL)
+    end
+
+  fun nodeNameOfConstructor c t x =
+    let val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t) ^ x)
+        val nn = String.implode (List.filter nodeNameCharFilter (String.explode (c ^ "_" ^ tn)))
+    in String.addParentheses nn
+    end  
 
   fun firstN 0 _ = []
     | firstN n [] = []
@@ -43,7 +97,6 @@ struct
           (#"~"::n) => ("-" ^ String.implode n)
         | n => zs
     end
-
   fun intToString z =
     let val zs = Int.toString z
     in case (String.explode zs) of
@@ -51,62 +104,31 @@ struct
         | n => String.implode (firstN 6 n)
     end
 
-  fun lines [h] = h
-    | lines (h::t) = h ^ "\n " ^ lines t
-    | lines _ = raise Empty
-
-
-  fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\" andalso x <> #"|" andalso x <> #"("andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
-
-  fun nodeNameOfToken t =
-    let val nt = CSpace.nameOfToken t
-        val tt = CSpace.typeOfToken t
-        val charL = case List.filter nodeNameCharFilter (String.explode (nt ^ "" ^ Type.nameOfType tt)) of #" " :: L => #"Q" :: #" " :: L | L => L
-    in String.addParentheses (String.implode charL)
-    end
-
-  fun nodeNameOfConstructor c t =
-    let val nc = CSpace.nameOfConstructor c
-        val tn = (CSpace.nameOfToken t ^ "" ^ Type.nameOfType (CSpace.typeOfToken t))
-        val nn = String.implode (List.filter nodeNameCharFilter (String.explode (nc ^ "_" ^ tn)))
-    in String.addParentheses nn
-    end
-
   fun coordinates (x,y) = String.addParentheses (realToString x ^ "," ^ realToString y)
+  fun coordinatesN (x,y) = String.implode (List.filter nodeNameCharFilter (String.explode ((realToString x ^ "," ^ realToString y)))) 
 
-  fun constructorNode coor c t =
-    let val nc = "$\\mathit{"^CSpace.nameOfConstructor c^"}$"
+  fun constructorNode coor c t x =
+    let val nc = "$\\mathit{"^c^"}$"
         val nodeString = ""
-    in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConstructor c t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
+    in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConstructor c t x ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
     end
-
 
   fun tokenNode isSource coor t =
     let val typn = "$\\mathsf{"^latexifyForbidden(Type.nameOfType (CSpace.typeOfToken t))^"}$"
         val tokn = "$"^CSpace.nameOfToken t^"$"
-        val att = if isSource then "termS" else "term"
+        val att = if isSource then "termS" else "termE"
     in "\\node["^att^" = " ^ String.addBraces typn ^ "] " ^ nodeNameOfToken t ^ " at " ^ coordinates coor ^ " " ^ String.addBraces tokn ^ ";"
     end
-
-  fun arrowBent nodeName parentName (ix,ox) =
-    "\\path[->,in=" ^intToString ix^",out="^intToString ox ^"] " ^ nodeName ^ " edge " ^ parentName ^ ";"
 
   fun arrow nodeName parentName =
     "\\path[->] " ^ nodeName ^ " edge " ^ parentName ^ ";"
 
   fun arrowLabelled nodeName parentName i =
     "\\path[->] " ^ nodeName ^ " edge node[index label] " ^ String.addBraces (intToString i) ^ " " ^ parentName ^ ";"
-  fun arrowLabelledBent nodeName parentName i (ix,ox)=
-    String.concat ["\\path[->,in=", intToString ix, ",out="^intToString ox ^ "] ",
-                   nodeName,
-                   " edge node[index label] ", String.addBraces (intToString i), " ",
-                   parentName,
-                   ";"]
 
-
-  val normalScale = 0.17
-  val scriptScale = normalScale * 0.7
-  val nodeConstant = 2.0 * normalScale
+  val normalScale = 0.2
+  val scriptScale = normalScale * 0.75
+  val nodeConstant = 1.0 * normalScale
 
   fun displaySize (#"_"::(#"{"::S')) = (9.0/10.0) * displaySize S'
     | displaySize (#"}"::S') = (10.0/9.0) * displaySize S'
@@ -120,102 +142,130 @@ struct
   fun displaySizeOfString s = displaySize (String.explode s)
 
   fun sizeOfType t = scriptScale * (displaySizeOfString (Type.nameOfType (CSpace.typeOfToken t)))
-  fun sizeOfToken t = normalScale * (displaySizeOfString (CSpace.nameOfToken t)) + nodeConstant
-  fun sizeOfConstructor c = scriptScale * (displaySizeOfString (CSpace.nameOfConstructor c)) + nodeConstant
+  fun sizeOfToken t = Real.max(normalScale * (displaySizeOfString (CSpace.nameOfToken t)) + nodeConstant, sizeOfType t)
 
-  fun quickWidthEstimate (Construction.Source t) =
-        Real.max(sizeOfToken t, sizeOfType t)
-    | quickWidthEstimate (Construction.Reference _) = 0.0
-    | quickWidthEstimate (Construction.TCPair ({token,constructor},cs)) =
-        List.max Real.compare [sizeOfConstructor constructor,
-                               0.9 * sizeOfToken token + sizeOfType token,
-                               List.sumMap quickWidthEstimate cs]
-
-  fun pullFirstRow ((x11::X1)::M) = (case pullFirstRow M of (fr,m) => (x11::fr,X1::m))
-    | pullFirstRow ([]::M) = pullFirstRow M
-    | pullFirstRow [] = ([],[])
-
-  fun getWidthPerRow M =
-    if null M then [] else
-      (case pullFirstRow M of
-         (fr,m) => (List.sum fr) :: getWidthPerRow m)
-
-  fun rowWidthEstimates (Construction.Source t) =
-        [Real.max(sizeOfToken t, sizeOfType t)]
-    | rowWidthEstimates (Construction.Reference _) = []
-    | rowWidthEstimates (Construction.TCPair ({token,constructor},cs)) =
-      let val widthMatrix = map rowWidthEstimates cs
-          val halfTokenSize = sizeOfToken token / 2.0
-          val tNodeSize = halfTokenSize + Real.max (halfTokenSize, sizeOfType token) + nodeConstant
-      in tNodeSize :: sizeOfConstructor constructor :: getWidthPerRow widthMatrix
-      end
-
-  fun stringOfMatrix ((x11::X1)::M) = realToString x11 ^ " " ^ stringOfMatrix (X1::M)
-    | stringOfMatrix ([]::M) = "\n" ^ stringOfMatrix M
-    | stringOfMatrix [] = ""
-
-  fun mkIntervals M =
-    let val redC = ~1.0*nodeConstant
-        fun intervalNeeded (x1::L1) (x2::L2) LL = (case intervalNeeded L1 L2 (#2 (pullFirstRow LL)) of (x,excess) => (Real.max(x1+x2,x), excess))
-          | intervalNeeded (x1::L1) [] (L3::LL) = (case intervalNeeded (x1::L1) L3 LL of (x,excess) => (x/2.0, excess))
-          | intervalNeeded (x1::_) [] [] = (0.0, x1/2.0)
-          | intervalNeeded [] (x2::_) _ = (x2, 0.0)
-          | intervalNeeded [] [] _ = (0.0,0.0)
-        fun positionsPerRow _ [] = []
-          | positionsPerRow _ [_] = []
-          | positionsPerRow p (L1::(L2::LL)) =
-            (case intervalNeeded L1 L2 LL of
-              (x,excess) => let val point = p + x + redC + excess
-                             in point :: positionsPerRow point (L2::LL)
-                             end)
-    in 0.0 :: positionsPerRow redC M
+  fun mapArrows _ [] _ = []
+    | mapArrows i (tn::tns) cn = arrowLabelled (nodeNameOfToken tn) cn i :: mapArrows (i+1) tns cn
+    
+  fun tikzOfInput t {input = {constructor,inputTokens}, pos} = 
+    let val constructorNodeName = nodeNameOfConstructor constructor t (coordinatesN pos)
+    in (constructorNode pos constructor t (coordinatesN pos), 
+        lines (arrow constructorNodeName (nodeNameOfToken t) :: mapArrows 1 inputTokens constructorNodeName))
+    end
+  fun tikzOfTIN {tin={token,inputsWithPosition},pos} = 
+    let val (nodes,arrows) = unzip (map (tikzOfInput token) inputsWithPosition)
+    in (tokenNode (null inputsWithPosition) pos token :: nodes,arrows)
     end
 
-  fun unzip [] = ([],[])
-    | unzip ((x,y)::L) = (case unzip L of (L1,L2) => (x::L1,y::L2))
-  fun construction' coor parentName (i,n) (ct as Construction.Source t) =
-        (case parentName of
-          NONE => lines [tokenNode true coor t]
-        | SOME pn => lines [tokenNode true coor t, arrowLabelled (nodeNameOfToken t) pn i],
-        (Real.max(sizeOfToken t, sizeOfType t),1.0))
-    | construction' _ parentName (i,n) (ct as Construction.Reference t) =
-        (case parentName of
-          NONE => "% BAD CONSTRUCTION"
-        | SOME pn => if real i <= real n / real 2
-                     then lines [arrowLabelledBent (nodeNameOfToken t) pn i (180,180)]
-                     else lines [arrowLabelledBent (nodeNameOfToken t) pn i (0,0)],
-        (0.0,0.0))
-    | construction' (x,y) parentName (i,n) (ct as Construction.TCPair ({constructor,token},cs)) =
-        let val tn = tokenNode false (x,y) token
-            val cn = constructorNode (x,y-0.9) constructor token
-            val constructorNodeName = nodeNameOfConstructor constructor token
-            val cn2tn = arrow constructorNodeName (nodeNameOfToken token)
-            val widthEstimates = map rowWidthEstimates cs
-            val intervals = mkIntervals widthEstimates
-            val cwidth = List.last intervals
-            val nchildren = length cs
-            fun calcX j = ~cwidth/2.0 + List.nth(intervals,j)
-            fun crec _ [] = []
-              | crec j (ct::cts) = construction' (x + (calcX j), y-1.8) (SOME constructorNodeName) (j+1,nchildren) ct :: crec (j+1) cts
-            val (lcts, xysizes) = unzip (crec 0 cs)
-            val width = List.sumMap #1 xysizes
-            val depth = List.max Real.compare (map #2 xysizes)
-        in (case parentName of
-              NONE => lines ([tn,cn,cn2tn] @ lcts)
-            | SOME pn =>
-                let val tn2parent = arrowLabelled (nodeNameOfToken token) pn i
-                in lines ([tn,tn2parent,cn,cn2tn] @ lcts)
-                end,
-            (width,depth))
+  fun tikzOfGraph (x,y) (g:Graph.graph) =
+    let
+      fun dropLast [] = []
+        | dropLast [x] = []
+        | dropLast (x::xs) = x :: dropLast xs
+      fun dropFirstAndLast L = dropLast (List.tl L)
+      fun xcv right0 [] = [right0]
+        | xcv right0 (spaces::L) = 
+          let val left1 = List.hd spaces 
+              val right1 = List.last spaces 
+              val inner = dropFirstAndLast spaces
+              val i = List.sum inner / 2.0 
+          in right0+left1+i :: (xcv (right1+i) L) 
+          end
+      fun marginsForInput inp g' = 
+        let 
+          fun marginsPerInputToken t = 
+              let val (SOME tin,g'') = pullTINOfToken g' t 
+              in marginsForTIN tin g''
+              end handle Bind => ([0.0],g')
+          fun getMarginsForInputTokens [] g'' = ([],g'')
+            | getMarginsForInputTokens (inptk::inptks) g'' =
+              let val (margins,g''') = marginsPerInputToken inptk
+                  val (marginss,g'''') = getMarginsForInputTokens inptks g'''
+              in (margins :: marginss, g'''')
+              end
+          val (marginsForInputTokens,g'') = getMarginsForInputTokens (#inputTokens inp) g'
+        in (xcv 0.0 marginsForInputTokens,g'')
         end
-
-  fun construction coor ct =
-    let val (ctLatex,(width,depth)) = construction' coor NONE (0,1) ct
-        val (oscale,cscale) = if width > 18.0 orelse depth > 18.0 then ("\\scalebox{0.75}{","}") else ("","")
-        val opening = oscale ^ "\\begin{tikzpicture}[construction,align at top]"
-        val closing = "\\end{tikzpicture}" ^ cscale
-    in lines [opening, ctLatex, closing]
+      and marginsForTIN tin g' =
+        let 
+          fun getMarginsForInputs [] g'' = ([],g'')
+            | getMarginsForInputs (inp::inps) g'' = 
+              let val (margins,g''') = marginsForInput inp g''
+                  val (marginss,g'''') = getMarginsForInputs inps g'''
+              in (margins :: marginss, g'''')
+              end
+          val (marginsForInputs,g'') = if null (#inputs tin) then ([[sizeOfToken (#token tin) / 2.0,sizeOfToken (#token tin)/ 2.0]],g') else getMarginsForInputs (#inputs tin) g'
+        (* val L = xcv 0.0 marginsForInputs
+          val _ = print (CSpace.stringOfToken (#token tin) ^ "\n") 
+          val _ = print (List.toString (List.toString Real.toString) (marginsForInputs) ^ "\n") 
+          val _ = print (List.toString (Real.toString) L  ^ "\n\n") *)
+        in (xcv 0.0 marginsForInputs,g'')
+        end
+      fun assignPositionsForTIN g' (x,y) NONE = ([],g') 
+        | assignPositionsForTIN g' (x,y) (SOME tin) = 
+        let
+          val token = #token tin
+          val inputs = #inputs tin
+          val (margins,_) = marginsForTIN tin g'
+          val inner = dropFirstAndLast margins
+          val newY = y - 0.8
+          fun makePositionsForChildren _ [] = []
+            | makePositionsForChildren xj (s::ss) = (xj+s,newY) :: makePositionsForChildren (xj+s) ss
+          val chPositions = makePositionsForChildren 0.0 (x - (List.sum inner / 2.0) :: inner)
+          fun processMany g'' [] [] = ([],[], g'')
+            | processMany g'' (pos::poss) (inp::inps) = 
+              let 
+                val (inputWithPosition,assignedTINs,unassignedTINs) = assignPositionsForInput g'' pos inp
+                val (inputsWithPosition,moreAssignedTINs,g''') = processMany unassignedTINs poss inps
+              in (inputWithPosition::inputsWithPosition,assignedTINs @ moreAssignedTINs,g''')
+              end
+            | processMany g'' (pos::poss) [] = ([],[], g'')
+            | processMany _ [] (inp::inps) = (raise Fail)
+          val (inputsWithPosition,assignedTINs,unassignedTINs) = processMany g' chPositions inputs
+        in
+          ({tin = {token = token, inputsWithPosition = inputsWithPosition}, pos = (x,y)} :: assignedTINs, unassignedTINs)
+        end 
+      and assignPositionsForInput g' (x,y) inp =
+        let 
+          val (_,g'') = pullTINsOfTokens g' (#inputTokens inp)
+          val (TINs,_) = unzip (map (pullTINOfToken g') (#inputTokens inp))
+          val (margins,_) = marginsForInput inp g'
+          val inner = dropFirstAndLast margins
+          val newY = y - 1.0
+          fun makePositionsForChildren _ [] = []
+            | makePositionsForChildren xj (s::ss) = (xj+s,newY) :: makePositionsForChildren (xj+s) ss
+          val chPositions = makePositionsForChildren 0.0 (x - (List.sum inner / 2.0) :: inner)
+          
+          fun processMany g'' [] [] = ([], g'')
+            | processMany g'' (pos::poss) (tin::tins) = 
+              let 
+                val (assignedTINs,unassignedTINs) = assignPositionsForTIN g'' pos tin
+                val (moreAssignedTINs,g''') = processMany unassignedTINs poss tins
+              in (assignedTINs @ moreAssignedTINs,g''')
+              end
+            | processMany g'' (pos::poss) [] = ([],g'')
+            | processMany _ [] (tin::tins) = (raise Fail)
+          val (assignedTINs,unassignedTINs) = processMany g'' chPositions TINs
+        in ({input = inp, pos = (x,y)}, assignedTINs, unassignedTINs)
+        end
+      fun processGraph _ [] = []
+        | processGraph (x,y) (tin::g') = 
+        let 
+          val (margins,_) = marginsForTIN tin g'
+          val inner = dropFirstAndLast margins
+          val innerSpaceHalved = List.sum inner / 2.0
+          val leftSpace = (List.hd margins) + innerSpaceHalved
+          val rightSpace = (List.last margins) + innerSpaceHalved
+          val (assigned,unassigned) = assignPositionsForTIN g' (x + leftSpace,y) (SOME tin)
+        in assigned @ processGraph (x + rightSpace,y) unassigned
+        end
+      val graphWithPositions = processGraph (x,y) (orderByHierarchy (Graph.normalise g))
+      val (nodes,arrows) = unzip (map tikzOfTIN graphWithPositions)
+      val opening = "\\begin{tikzpicture}[construction,align at top]"
+      val closing = "\\end{tikzpicture}"
+    in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end
+
 
   fun mkDocument content =
     let val opening = "\\documentclass[a3paper,10pt]{article}\n "^

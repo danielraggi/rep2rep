@@ -1,4 +1,4 @@
-import "core.pattern";
+(*import "core.pattern";*)
 import "core.sequent";
 (*import "core.interCSpace";*)
 import "transfer.search";
@@ -8,8 +8,8 @@ import "transfer.search";
 signature SCAFFOLDING =
 sig 
 
-  val graphOfOldConstruction : Pattern.construction -> Graph.graph
-  val oldConstructionsOfGraph : CSpace.conSpecData -> Graph.graph -> Pattern.construction list
+  (*val graphOfOldConstruction : Pattern.construction -> Graph.graph
+  val oldConstructionsOfGraph : CSpace.conSpecData -> Graph.graph -> Pattern.construction list*)
   val makeInstantiationOfTypeVars : MSpace.mTypeSystem -> Type.typ list -> Type.typ Seq.seq -> (Type.typ -> Type.typ option) Seq.seq;
   (*val schemaOfOldTransferSchema : InterCSpace.tSchemaData -> Sequent.schemaData*)
   val applyTransferSchemas : MSpace.mTypeSystem -> Sequent.schemaData Seq.seq -> Sequent.state -> Sequent.state Seq.seq
@@ -34,33 +34,31 @@ structure Scaffolding : SCAFFOLDING =
 struct
 
   exception Fail
-
+(*)
   fun graphOfOldConstruction ct =
     let
       fun gooc (Pattern.Source t) = [{token = t, inputs = []}]
         | gooc (Pattern.Reference t) = [{token = t, inputs = []}]
         | gooc (Pattern.TCPair (tc,ch)) = {token = #token tc, inputs = [{constructor = CSpace.nameOfConstructor (#constructor tc), inputTokens = map Pattern.constructOf ch}]} :: List.flatmap gooc ch
     in Graph.factorise (gooc ct)
-    end
+    end*)
 
   fun unzip [] = ([],[])
     | unzip ((x,y)::L) = case unzip L of (Lx,Ly) => (x::Lx,y::Ly)
 
 
+  fun findTINForToken _ [] = NONE
+    | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
+  fun assessTokenHierarchy tks (g:Graph.graph) t = 
+    1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy (t::tks) g) (List.filter (fn x => not (List.exists (fn y => CSpace.sameTokens x y) tks)) (List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))))))  handle Empty => 1 | Option => 0
+  fun assignTokenHierarchy [] _ = []
+    | assignTokenHierarchy (tin::g:Graph.graph) g' =
+    {h = assessTokenHierarchy [] g' (#token tin), tin = tin} :: assignTokenHierarchy g g'
 
-fun findTINForToken _ [] = NONE
-  | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
-fun assessTokenHierarchy (g:Graph.graph) t = 
-  1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy g) (List.filter (fn x => not (CSpace.sameTokens x t)) (List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))))))  handle Empty => 1 | Option => 0
-fun assignTokenHierarchy _ [] _ = []
-  | assignTokenHierarchy tks (tin::g:Graph.graph) g' =
-  {h = assessTokenHierarchy g' (#token tin), tin = tin} :: assignTokenHierarchy ((#token tin) :: tks) g g'
-
-fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy [] g g))
-
+  fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy g g))
 
 
-
+(*)
   fun oldConstructionsOfGraph CS g =
     let
       fun getConstructor cn = case CSpace.findConstructorWithName cn CS of SOME c => c | NONE => (print ("constructor " ^cn ^ " not found"); raise Option)
@@ -109,7 +107,7 @@ fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int
       fun ocog [] cts = cts
         | ocog (tin::g') cts = ocog g' (ocotin tin cts)
     in ocog (orderByHierarchy (Graph.expand g)) []
-    end
+    end*)
 
 (*
   fun schemaOfOldTransferSchema tSchemaData =
