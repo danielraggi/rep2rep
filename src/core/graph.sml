@@ -315,7 +315,7 @@ struct
         | GREATER => x :: (y::L)
   fun insertTokens tks tks' = List.foldl (fn (t,L) => insertToken t L) tks' tks
   fun insertStrings tks tks' = List.foldl (fn (t,L) => insertString t L) tks' tks
-  val tokensOfGraphFull = List.foldl (fn (tin,L) => insertTokens (#token tin :: List.maps #inputTokens (#inputs tin)) L) []
+  val tokensOfGraphFull = List.foldl (fn (tin,L) => insertTokens (#token tin :: List.flatmap #inputTokens (#inputs tin)) L) []
   val tokensOfGraphQuick = List.foldl (fn (tin,L) => insertToken (#token tin) L) []
   val tokenNamesOfGraphQuick = List.foldl (fn (tin,L) => insertString (CSpace.nameOfToken (#token tin)) L) []
 

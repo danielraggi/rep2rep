@@ -123,9 +123,29 @@ struct
   fun arrow nodeName parentName =
     "\\path[->] " ^ nodeName ^ " edge " ^ parentName ^ ";"
 
-  fun arrowLabelled nodeName parentName i =
-    "\\path[->] " ^ nodeName ^ " edge node[index label] " ^ String.addBraces (intToString i) ^ " " ^ parentName ^ ";"
+  fun angles 1 = ([90],[~90])
+    | angles 2 = ([75, 105],[~150, ~30])
+    | angles 3 = ([60, 90, 120],[~150, ~90, ~30])
+    | angles 4 = ([30, 60, 120, 150],[~165, ~120, ~60, ~15])
+    | angles n = 
+      let 
+        val u = 180 div (n - 1)
+        fun mkL 0 = ([],[]) 
+          | mkL i = case mkL (i-1) of (X,Y) => ((n-i) * u :: X, ~i * u :: Y)
+      in mkL n
+      end
 
+  fun arrowLabelled tokenPos conPos tokenName conName i n =
+    let val (x,y) = conPos
+        val (x',y') = tokenPos
+        val angle = 180.0 * (Math.atan ((x-x')/(y-y'))) / Math.pi
+        val outAngle = if y > y' then 90.0 - angle * 0.5 else if Real.abs(angle) > 15.0 then ~90.0 - angle * 0.5 else if i <= n div 2 then ~165.0 else ~15.0
+        val inAngle = if y > y' then ~90.0 - angle  else if Real.abs(angle) > 15.0 then 90.0 - angle else if i <= n div 2 then ~165.0 else ~15.0
+    in
+      "\\path[->] " ^ tokenName ^ " edge[out = " ^ realToString outAngle ^ ", in = " ^ realToString inAngle ^ 
+      "] node[index label] " ^ String.addBraces (intToString i) ^ " " ^ conName ^ ";"
+    end
+    
   val normalScale = 0.2
   val scriptScale = normalScale * 0.75
   val nodeConstant = 1.0 * normalScale
@@ -143,17 +163,21 @@ struct
 
   fun sizeOfType t = scriptScale * (displaySizeOfString (Type.nameOfType (CSpace.typeOfToken t)))
   fun sizeOfToken t = Real.max(normalScale * (displaySizeOfString (CSpace.nameOfToken t)) + nodeConstant, sizeOfType t)
-
-  fun mapArrows _ [] _ = []
-    | mapArrows i (tn::tns) cn = arrowLabelled (nodeNameOfToken tn) cn i :: mapArrows (i+1) tns cn
     
-  fun tikzOfInput t {input = {constructor,inputTokens}, pos} = 
+  fun findPosOfToken [] t = raise Fail
+    | findPosOfToken (posTIN::posG) t = if CSpace.sameTokens (#token (#tin posTIN)) t then #pos posTIN else findPosOfToken posG t
+
+  fun mapArrows _ _ _ _ _ [] = []
+    | mapArrows g i n conPos cn (tn::tns) = 
+        arrowLabelled (findPosOfToken g tn) conPos (nodeNameOfToken tn) cn i n :: mapArrows g (i+1) n conPos cn tns
+
+  fun tikzOfInput g t {input = {constructor,inputTokens}, pos} = 
     let val constructorNodeName = nodeNameOfConstructor constructor t (coordinatesN pos)
     in (constructorNode pos constructor t (coordinatesN pos), 
-        lines (arrow constructorNodeName (nodeNameOfToken t) :: mapArrows 1 inputTokens constructorNodeName))
+        lines (arrow constructorNodeName (nodeNameOfToken t) :: mapArrows g 1 (length inputTokens) pos constructorNodeName inputTokens))
     end
-  fun tikzOfTIN {tin={token,inputsWithPosition},pos} = 
-    let val (nodes,arrows) = unzip (map (tikzOfInput token) inputsWithPosition)
+  fun tikzOfTIN g {tin={token,inputsWithPosition},pos} = 
+    let val (nodes,arrows) = unzip (map (tikzOfInput g token) inputsWithPosition)
     in (tokenNode (null inputsWithPosition) pos token :: nodes,arrows)
     end
 
@@ -251,16 +275,16 @@ struct
       fun processGraph _ [] = []
         | processGraph (x,y) (tin::g') = 
         let 
-          val (margins,_) = marginsForTIN tin g'
+          val (margins,_) = marginsForTIN tin (tin::g')
           val inner = dropFirstAndLast margins
           val innerSpaceHalved = List.sum inner / 2.0
           val leftSpace = (List.hd margins) + innerSpaceHalved
           val rightSpace = (List.last margins) + innerSpaceHalved
           val (assigned,unassigned) = assignPositionsForTIN g' (x + leftSpace,y) (SOME tin)
-        in assigned @ processGraph (x + rightSpace,y) unassigned
+        in assigned @ processGraph (x + leftSpace + rightSpace,y) unassigned
         end
       val graphWithPositions = processGraph (x,y) (orderByHierarchy (Graph.normalise g))
-      val (nodes,arrows) = unzip (map tikzOfTIN graphWithPositions)
+      val (nodes,arrows) = unzip (map (tikzOfTIN graphWithPositions) graphWithPositions)
       val opening = "\\begin{tikzpicture}[construction,align at top]"
       val closing = "\\end{tikzpicture}"
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]

@@ -140,10 +140,11 @@ sig
     val weightedAvg : (real -> real) -> real list -> real;
     val avg : real list -> real;
 
+    val zip : 'a list -> 'b list -> ('a * 'b) list;
+    val unzip : ('a * 'b) list -> 'a list * 'b list;
     val allZip : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool;
     val funZip : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list;
-    val maps : ('a -> 'b list) -> 'a list -> 'b list;
-    val filterThenMap : ('a -> bool) -> ('a -> 'b) -> 'a list -> 'b list
+    val filterThenMap : ('a -> bool) -> ('a -> 'b) -> 'a list -> 'b list;
 end;
 
 structure List : LIST =
@@ -246,7 +247,8 @@ fun isPermutationOf _ [] [] = true
 
 fun mapArgs f xs = map (fn x => (x, f x)) xs;
 
-fun flatmap f xs = concat (map f xs);
+fun flatmap f [] = []
+  | flatmap f (x :: xs) = f x @ flatmap f xs;
 
 fun product (xs, ys) =
     let
@@ -341,6 +343,13 @@ fun argmin _ [] = raise Empty
                       in if v < #2 r then (x,v) else r
                       end;
 
+fun zip [] [] = []
+  | zip (x::X) (y::Y) = (x,y) :: zip X Y
+  | zip _ _ = raise Match
+
+fun unzip [] = ([],[])
+  | unzip ((x,y)::XY) = let val (X,Y) = unzip XY in (x::X,y::Y) end
+
 fun allZip _ [] [] = true
   | allZip f (h::t) (h'::t') = f h h' andalso allZip f t t'
   | allZip _ _ _ = false
@@ -349,8 +358,6 @@ fun funZip _ [] [] = []
   | funZip f (h::t) (h'::t') = f h h' :: funZip f t t'
   | funZip _ _ _ = raise Match
 
-fun maps f [] = []
-  | maps f (x :: xs) = f x @ maps f xs;
 
 fun filterThenMap f m [] = []
   | filterThenMap f m (x::L) =
