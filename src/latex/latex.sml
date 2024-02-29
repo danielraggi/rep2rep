@@ -174,9 +174,9 @@ struct
       fun marginsForInput inp g' = 
         let 
           fun marginsPerInputToken t = 
-              let val (SOME tin,g'') = pullTINOfToken g' t 
-              in marginsForTIN tin g''
-              end handle Bind => ([0.0],g')
+              let val (tin,g'') = pullTINOfToken g' t 
+              in marginsForTIN (valOf tin) g''
+              end handle Option => ([0.0],g')
           fun getMarginsForInputTokens [] g'' = ([],g'')
             | getMarginsForInputTokens (inptk::inptks) g'' =
               let val (margins,g''') = marginsPerInputToken inptk

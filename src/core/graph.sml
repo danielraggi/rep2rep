@@ -10,7 +10,6 @@ sig
   val emptyMap : map;
   val identityMap : map;
   val addPair : token * token -> map -> map;
-  val updatePair : token * token -> map -> map;
   
   val applyMap : map -> token -> token option;
   val applyInvMap : map -> token -> token option;
@@ -34,8 +33,8 @@ struct
   fun (f1,f2) oo (f1',f2') = (fn t => case f1' t of SOME x => f1 x | NONE => NONE, fn t => case f2 t of SOME x => f2' x | NONE => NONE)
  
   exception Fail
-  (* updates a monomorphism so that fl(x) = y and fr(y) = x. 
-     Fails if map is already defined on that pair with different value. *)
+  (* updates a one-to-one map so that fl(x) = y and fr(y) = x. 
+     Fails if x or y are already mapped to a different element. *)
   fun addPair (x,y) (fl,fr) = 
       (case fl x of 
           SOME z => if CSpace.sameTokens y z then fl else raise Fail
@@ -44,22 +43,17 @@ struct
           SOME z => if CSpace.sameTokens x z then fr else raise Fail
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
 
-  (* updates a monomorphism so that fl(x) = y and fr(y) = x. 
-     Forces new value. *)
-  fun updatePair (x,y) (fl,fr) =
-      (fn t => if CSpace.sameTokens t x then SOME y else fl t,
-       fn t => if CSpace.sameTokens t y then SOME x else fr t)
-
   (*
     functions for building and operating with maps
   *)
-  fun applyMap (f1,_) = f1
-  fun applyInvMap (_,f2) = f2
+  fun applyMap (fl,_) = fl
+  fun applyInvMap (_,fr) = fr
 
-  fun invertMap (f1,f2) = (f2,f1)
-  fun restrictDomain (f1,f2) tks =
-    (fn t => if List.exists (fn x => CSpace.sameTokens x t) tks then NONE else f1 t,
-     fn t => (case f2 t of NONE => NONE | SOME y => if List.exists (fn x => CSpace.sameTokens x y) tks then NONE else f2 t))
+  fun invertMap (fl,fr) = (fr,fl)
+
+  fun restrictDomain (fl,fr) tks =
+    (fn t => if List.exists (fn x => CSpace.sameTokens x t) tks then NONE else fl t,
+     fn t => (case fr t of NONE => NONE | SOME y => if List.exists (fn x => CSpace.sameTokens x y) tks then NONE else fr t))
 
   fun firstUnusedName Ns =
     let fun mkFun n =

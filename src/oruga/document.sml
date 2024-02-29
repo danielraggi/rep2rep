@@ -1,8 +1,6 @@
 import "oruga.parser";
-(*import "oruga.lift";*)
 import "latex.latex";
 import "transfer.scaffolding";
-(*import "cognitive.costs";*)
 
 signature DOCUMENT =
 sig
@@ -19,7 +17,6 @@ sig
   val tokenise : string -> string list
   val deTokenise : string list -> string
   val normaliseString : string -> string
- (*) val parseConstruction : CSpace.conSpecData -> string -> Construction.construction*)
 
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData option
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData option
@@ -30,8 +27,6 @@ sig
   val getConSpecWithName : documentContent -> string -> CSpace.conSpecData
   val getGraphWithName : documentContent -> string -> graphData
   val getTransferSchemaWithName : documentContent -> string -> Sequent.schemaData
-
-  (*val parseConstruction_rpc : (string -> CSpace.conSpecData option) -> Rpc.endpoint*)
 
 end;
 
@@ -160,38 +155,6 @@ struct
     case String.breakOn "<-"  s of
           (_,"",_) => raise ParseError (s ^ " is not a token-constructor pair")
        |  (ts,_,cfgs) => {token = parseToken ts, constructor = findConstructorInConSpec (normaliseString cfgs) cspec}
-
-(*)
-  fun parseConstruction cspec s =
-    let fun pc s' =
-         case String.breakOn "[" s' of
-           (_,"",_) => (case String.breakOn "<-" s' of
-                            (tt,"<-",ctvar) => if String.isPrefix "?" ctvar
-                                               then Construction.TCPair ({constructor = CSpace.makeConstructor(ctvar,([],"")), token = parseToken tt},[])
-                                               else raise ParseError ("unexpected construction variable in: " ^ s')
-                          | _ => Construction.Source (parseToken s'))
-         | (tcps,_,ss) =>
-             let val tcp = parseTCPair tcps cspec
-                 val tok = #token tcp
-                 val (xs,ys) = Parser.breakOnClosingDelimiter (#"[",#"]") ss
-                 val _ = if ys = [] then ()
-                         else raise ParseError ("invalid input sequence to constructor: " ^ ss)
-             in Construction.TCPair (tcp, Parser.splitLevelApply (pc o String.removeParentheses) xs)
-             end
-    in Construction.fixReferences (pc s)
-    end;
-
-  val parseConstruction_rpc =
-   fn findCSpec =>
-      Rpc.provide ("oruga.document.parseConstruction",
-                   Rpc.Datatype.tuple2(String.string_rpc, String.string_rpc),
-                   Option.option_rpc(Construction.construction_rpc))
-                  (fn (cspecName, s) =>
-                      Option.mapPartial
-                          (fn cspec => SOME (parseConstruction cspec s)
-                                       handle ParseError => NONE)
-                          (findCSpec cspecName) );
-*)
 
   fun removeOuterBrackets wL =
     let fun removeOuterJunk (L,L') =
