@@ -25,7 +25,9 @@ struct
     end 
 
     fun mathsf s = "\\mathsf{" ^ latexifyForbidden s ^ "}"
-    fun typ ty = mathsf (Type.nameOfType ty)
+    fun mathtt s = "\\mathtt{" ^ latexifyForbidden s ^ "}"
+    fun texttt s = "\\texttt{" ^ latexifyForbidden s ^ "}"
+    fun typ ty = mathtt (Type.nameOfType ty)
     fun token t =
       let val tok = CSpace.nameOfToken t
           val ty = typ (CSpace.typeOfToken t)
@@ -108,7 +110,7 @@ struct
   fun coordinatesN (x,y) = String.implode (List.filter nodeNameCharFilter (String.explode ((realToString x ^ "," ^ realToString y)))) 
 
   fun constructorNode coor c t x =
-    let val nc = "$\\mathit{"^c^"}$"
+    let val nc = "$\\mathsf{"^c^"}$"
         val nodeString = ""
     in "\\node[constructor = " ^ String.addBraces nc ^ "] " ^ nodeNameOfConstructor c t x ^ " at " ^ coordinates coor ^ " " ^ String.addBraces nodeString ^ ";"
     end
@@ -125,8 +127,9 @@ struct
 
   fun angles 1 = ([90],[~90])
     | angles 2 = ([75, 105],[~150, ~30])
-    | angles 3 = ([60, 90, 120],[~150, ~90, ~30])
-    | angles 4 = ([30, 60, 120, 150],[~165, ~120, ~60, ~15])
+    | angles 3 = ([60, 90, 120],[~165, ~90, ~15])
+    | angles 4 = ([30, 60, 120, 150],[~180, ~120, ~60, ~0])
+    | angles 5 = ([15, 60, 90, 120, 165],[~180, ~120, ~90, ~60, ~0])
     | angles n = 
       let 
         val u = 180 div (n - 1)
@@ -139,30 +142,33 @@ struct
     let val (x,y) = conPos
         val (x',y') = tokenPos
         val angle = 180.0 * (Math.atan ((x-x')/(y-y'))) / Math.pi
-        val outAngle = if y > y' then 90.0 - angle * 0.5 else if Real.abs(angle) > 15.0 then ~90.0 - angle * 0.5 else if i <= n div 2 then ~165.0 else ~15.0
-        val inAngle = if y > y' then ~90.0 - angle  else if Real.abs(angle) > 15.0 then 90.0 - angle else if i <= n div 2 then ~165.0 else ~15.0
+        val outAngle = if y > y' then 90.0 - angle * 0.5 else (if Real.abs(angle) > 30.0 then ~90.0 - angle * 0.5 else (if i <= n div 2 then ~165.0 else ~15.0))
+        val inAngle = if y > y' then ~90.0 - angle  else if Real.abs(angle) > 30.0 then 90.0 - angle else if i <= n div 2 then ~165.0 else ~15.0
+        val actualInAngle = if n > 2 then List.avg[Real.fromInt(List.nth(#2(angles n),i-1)),inAngle] else inAngle
     in
-      "\\path[->] " ^ tokenName ^ " edge[out = " ^ realToString outAngle ^ ", in = " ^ realToString inAngle ^ 
-      "] node[index label] " ^ String.addBraces (intToString i) ^ " " ^ conName ^ ";"
+      "\\path[->] " ^ tokenName ^ " edge[out = " ^ realToString outAngle ^ ", in = " ^ realToString actualInAngle ^ 
+      ", looseness = 0.8] node[index label] " ^ String.addBraces (intToString i) ^ " " ^ conName ^ ";"
     end
     
-  val normalScale = 0.2
-  val scriptScale = normalScale * 0.75
-  val nodeConstant = 1.0 * normalScale
+  val normalScale = 0.215
+  val scriptScale = normalScale * 0.68
 
   fun displaySize (#"_"::(#"{"::S')) = (9.0/10.0) * displaySize S'
     | displaySize (#"}"::S') = (10.0/9.0) * displaySize S'
+    | displaySize (#"m"::S') = 1.2 + displaySize S'
     | displaySize (#":"::S') = 2.0 + displaySize S'
     | displaySize (#"+"::S') = 3.0 + displaySize S'
     | displaySize (#"-"::S') = 3.0 + displaySize S'
     | displaySize (#"="::S') = 3.0 + displaySize S'
-    | displaySize (_::S') = 1.0 + displaySize S'
+    | displaySize (char::S') = (if Char.isUpper char orelse Char.isDigit char then 1.2 else 1.0) + displaySize S'
     | displaySize [] = 0.0
 
   fun displaySizeOfString s = displaySize (String.explode s)
 
+  val nodeConstant = 0.22 * normalScale
   fun sizeOfType t = scriptScale * (displaySizeOfString (Type.nameOfType (CSpace.typeOfToken t)))
-  fun sizeOfToken t = Real.max(normalScale * (displaySizeOfString (CSpace.nameOfToken t)) + nodeConstant, sizeOfType t)
+  fun sizeOfToken t = normalScale * (displaySizeOfString (CSpace.nameOfToken t))
+  fun sizeOfConstructorLabel c = scriptScale * (displaySizeOfString c)
     
   fun findPosOfToken [] t = raise Fail
     | findPosOfToken (posTIN::posG) t = if CSpace.sameTokens (#token (#tin posTIN)) t then #pos posTIN else findPosOfToken posG t
@@ -193,8 +199,9 @@ struct
               val right1 = List.last spaces 
               val inner = dropFirstAndLast spaces
               val i = List.sum inner / 2.0 
-          in right0+left1+i :: (xcv (right1+i) L) 
+          in (right0 + left1 + i) :: (xcv (right1+i) L) 
           end
+      val removeNodeConstant = map (fn x => x - nodeConstant)
       fun marginsForInput inp g' = 
         let 
           fun marginsPerInputToken t = 
@@ -208,7 +215,9 @@ struct
               in (margins :: marginss, g'''')
               end
           val (marginsForInputTokens,g'') = getMarginsForInputTokens (#inputTokens inp) g'
-        in (xcv 0.0 marginsForInputTokens,g'')
+          val margs = removeNodeConstant (xcv 0.0 marginsForInputTokens)
+          val res = Real.max(List.hd margs,sizeOfConstructorLabel (#constructor inp) + nodeConstant) :: List.tl margs handle Empty => margs (* assumes constructor label is on left *)
+        in (res,g'') 
         end
       and marginsForTIN tin g' =
         let 
@@ -218,12 +227,22 @@ struct
                   val (marginss,g'''') = getMarginsForInputs inps g'''
               in (margins :: marginss, g'''')
               end
-          val (marginsForInputs,g'') = if null (#inputs tin) then ([[sizeOfToken (#token tin) / 2.0,sizeOfToken (#token tin)/ 2.0]],g') else getMarginsForInputs (#inputs tin) g'
-        (* val L = xcv 0.0 marginsForInputs
-          val _ = print (CSpace.stringOfToken (#token tin) ^ "\n") 
-          val _ = print (List.toString (List.toString Real.toString) (marginsForInputs) ^ "\n") 
-          val _ = print (List.toString (Real.toString) L  ^ "\n\n") *)
-        in (xcv 0.0 marginsForInputs,g'')
+          val stk = sizeOfToken (#token tin)
+          val sty = sizeOfType (#token tin)
+          val hstk = Real.max(stk,sty) / 2.0 
+          val (marginsForInputs,g'') = 
+                if null (#inputs tin) then 
+                  ([[hstk,hstk]],g') 
+                else 
+                  getMarginsForInputs (#inputs tin) g'
+          val margs = if null (#inputs tin) then xcv 0.0 marginsForInputs else xcv 0.0 (map removeNodeConstant marginsForInputs)
+          val res = if null (#inputs tin) then 
+                      margs 
+                    else 
+                      let val rmargs = List.rev margs 
+                      in List.rev (Real.max(List.hd rmargs,sty+stk/2.0) :: List.tl rmargs)
+                      end handle Empty => margs (* assumes token label (type) is on left *)
+        in (res,g'')
         end
       fun assignPositionsForTIN g' (x,y) NONE = ([],g') 
         | assignPositionsForTIN g' (x,y) (SOME tin) = 
