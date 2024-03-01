@@ -1,6 +1,6 @@
 import "oruga.parser";
 import "latex.latex";
-import "transfer.scaffolding";
+import "transfer.state";
 
 signature DOCUMENT =
 sig
@@ -21,12 +21,12 @@ sig
   val findTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData option
   val findConSpecWithName : documentContent -> string -> CSpace.conSpecData option
   val findGraphWithName : documentContent -> string -> graphData option
-  val findSchemaWithName : documentContent -> string -> Sequent.schemaData option
+  val findSchemaWithName : documentContent -> string -> State.schemaData option
 
   val getTypeSystemDataWithName : documentContent -> string -> Type.typeSystemData
   val getConSpecWithName : documentContent -> string -> CSpace.conSpecData
   val getGraphWithName : documentContent -> string -> graphData
-  val getTransferSchemaWithName : documentContent -> string -> Sequent.schemaData
+  val getTransferSchemaWithName : documentContent -> string -> State.schemaData
 
 end;
 
@@ -798,11 +798,11 @@ struct
       val _ = print ("\nApplying structure transfer to "^ #name graphRecord ^ "...");
       val startTime = Time.now();
       
-      val state = Scaffolding.initState sourceConSpecData targetConSpecData interConSpecData graph goal
+      val state = State.initState sourceConSpecData targetConSpecData interConSpecData graph goal
       val TTT = [#typeSystem (#typeSystemData sourceConSpecData), #typeSystem (#typeSystemData targetConSpecData), #typeSystem (#typeSystemData interConSpecData)]
       val adaptedKB = Knowledge.adaptToMSpace [sourceConSpecN,targetConSpecN,interConSpecN] KB
       val SC = #schemas adaptedKB
-      val results = Scaffolding.transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured TTT SC state;
+      val results = State.transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured TTT SC state;
 
       val nres = length (Seq.list_of results);
       val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;

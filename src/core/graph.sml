@@ -369,10 +369,8 @@ struct
           let val S = fsg g' 
           in Seq.insertManyNoRepetition S (Seq.map (fn g'' => insertTIN tin g'') S) (fn _ => EQUAL) (fn (x,y) => equal x y)
           end
-      (*fun fsg g = Seq.cons empty (Seq.single g)*)
-      val sgs = fsg (expand g)
     in 
-      sgs
+      fsg (expand g)
     end
 
   fun mymap f [] = []
@@ -460,7 +458,7 @@ struct
     | findMonomorphisms p f (tin1::g1') g2 =
       let 
         fun monomorphismsPerResult (F,tin2) = 
-            let val g2' = List.remove tin2 g2 
+            let val g2' = removeTIN tin2 g2 
             in Seq.maps (fn f' => findMonomorphisms p f' g1' g2') F 
             end
         val TINMatches = findTINMatches p f tin1 g2
@@ -479,7 +477,7 @@ struct
     findMonomorphisms (fn (t1,t2) => tokenSpecialises T t2 t1) f g1 g2
 
   fun findEmbeddingsUpTo T (tks1,tks2) f g1 g2 =
-    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2 orelse (tokenInSet t1 tks1 andalso tokenSpecialises T t2 t1) orelse (tokenInSet t2 tks2 andalso tokenSpecialises T t2 t1)) f g1 g2
+    findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2 orelse (tokenSpecialises T t2 t1 andalso (tokenInSet t1 tks1 orelse tokenInSet t2 tks2))) f g1 g2
   fun findEmbeddings T f g1 g2 =
     findMonomorphisms (fn (t1,t2) => tokenSpecialises T t1 t2) f g1 g2
 
@@ -601,9 +599,8 @@ struct
         | sgod i (x::X) = 
             Seq.maps (fn h => (Seq.map (fn x => h :: x) (sgod (i+1) X)))
                      (if I i then Seq.single x else Seq.cons x (Seq.single Graph.empty))
-      val sgrs = sgod 1 g
     in
-      sgrs
+      sgod 1 g
     end
 
  

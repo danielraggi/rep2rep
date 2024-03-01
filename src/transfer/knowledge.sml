@@ -1,21 +1,21 @@
-import "core.sequent";
+import "transfer.state";
 
 signature KNOWLEDGE =
 sig
   type base
 
   (* schema knowledge *)
-  val schemasOf : base -> Sequent.schemaData Seq.seq;
+  val schemasOf : base -> State.schemaData Seq.seq;
   val conSpecImportsOf : base -> (string * string list) list
 
   val conSpecIsImportedBy : (string * string list) list -> string -> string -> bool
 
   (* Building a knowledge base *)
-  val addSchema : base -> Sequent.schemaData -> real -> base;
+  val addSchema : base -> State.schemaData -> real -> base;
   val addConSpecImports : base -> (string * string list) -> base
   val adaptToMSpace : string list -> base -> base;
 
-  val findSchemaWithName : base -> string -> Sequent.schemaData option;
+  val findSchemaWithName : base -> string -> State.schemaData option;
 
   val join : base -> base -> base;
   val empty : base;
@@ -23,7 +23,7 @@ end;
 
 structure Knowledge : KNOWLEDGE =
 struct
-  type base = {schemas : Sequent.schemaData Seq.seq,
+  type base = {schemas : State.schemaData Seq.seq,
                conSpecImports : (string * string list) list};
 
   (* Schema knowledge *)
@@ -82,7 +82,7 @@ struct
   fun adaptToMSpace CSN KB =
     let val {conSpecImports,schemas,...} = KB
         val adaptedSchemas = Seq.maps (adaptSchema conSpecImports CSN) schemas
-        (*val _ = map (fn x => print ("schema: \n" ^ Sequent.stringOfSchemaData x ^ "\n\n")) (Seq.list_of adaptedSchemas)*)
+        (*val _ = map (fn x => print ("schema: \n" ^ State.stringOfSchemaData x ^ "\n\n")) (Seq.list_of adaptedSchemas)*)
     in {schemas = adaptedSchemas,
         conSpecImports = conSpecImports}
     end

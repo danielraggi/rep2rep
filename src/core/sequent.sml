@@ -48,11 +48,6 @@ sig
   val applyForward : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
 *)
 
-  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
-  type schemaData = {name: string, conSpecNames : string list, schema : sequent, strength : real}
-  val stringOfSchemaData : schemaData -> string;
-  val applyBackwardToState : mTypeSystem -> (int -> bool) -> schemaData -> state -> state Seq.seq
-  val applyBackwardAllToState : mTypeSystem -> (int -> bool) -> schemaData Seq.seq -> state -> state Seq.seq
 end
 
 
@@ -127,40 +122,5 @@ struct
   fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') [] (A,C) (A',C'))
 
   fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T I [] (A,C) (A',C'))
-
-  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
-  type schemaData = {name: string, conSpecNames : string list, schema : sequent, strength : real}
-
-  fun stringOfSchemaData {name,conSpecNames,schema = (A,C),strength} =
-    let val s = name ^ ":" ^ List.toString (fn x => x) conSpecNames ^ " \n" ^ MGraph.toString A ^ "\n" ^ MGraph.toString C
-    in s
-    end
-
-  fun wellFormedSchema conSpecNames (A,C) = 
-    MGraph.wellFormed conSpecNames A andalso MGraph.wellFormed conSpecNames C
-
-  fun applyBackwardToState T I {schema = (A,C), strength,...} state =
-    let
-      val (A',C') = #sequent state
-      val discharged = #discharged state
-      val tokenNamesUsed = #tokenNamesUsed state
-      val newscore = #score state + strength
-      val deltas = findDeltasForBackwardApp T I tokenNamesUsed (A,C) (A',C')
-      fun makeResult (f,gf,D) = 
-        let
-          val freshlyDischarged = MGraph.image f C 
-          val dischargedUpdated = MGraph.imageWeak gf discharged
-          val discharged = MGraph.join freshlyDischarged dischargedUpdated
-          val newTokenNamesUsed = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick D) (MGraph.tokenNamesOfGraphQuick discharged)
-        in
-          {sequent = (A',D), discharged = discharged, tokenNamesUsed = newTokenNamesUsed, score = newscore} 
-        end
-    in
-      Seq.map makeResult deltas 
-    end 
-
-  fun applyBackwardAllToState T I SC st =
-      Seq.maps (fn sc => applyBackwardToState T I sc st) SC 
-
 
 end

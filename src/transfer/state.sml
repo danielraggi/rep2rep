@@ -1,30 +1,75 @@
 import "core.sequent";
 import "transfer.search";
 
-signature SCAFFOLDING =
+signature STATE =
 sig 
 
+  include SEQUENT
+
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
+  type schemaData = {name: string, conSpecNames : string list, schema : sequent, strength : real}
+  val stringOfSchemaData : schemaData -> string;
+  val applyBackwardToState : mTypeSystem -> (int -> bool) -> schemaData -> state -> state Seq.seq
+  val applyBackwardAllToState : mTypeSystem -> (int -> bool) -> schemaData Seq.seq -> state -> state Seq.seq
+
   val makeInstantiationOfTypeVars : MSpace.mTypeSystem -> Type.typ list -> Type.typ Seq.seq -> (Type.typ -> Type.typ option) Seq.seq;
-  val applyTransferSchemas : MSpace.mTypeSystem -> Sequent.schemaData Seq.seq -> Sequent.state -> Sequent.state Seq.seq
-  val adaptSchema : string list -> Sequent.schemaData -> Sequent.schemaData
+  val applyTransferSchemas : MSpace.mTypeSystem -> schemaData Seq.seq -> state -> state Seq.seq
+
   val transfer : int option * int option * int option
                   -> bool
                   -> bool
                   -> bool
-                  -> Sequent.mTypeSystem
-                  -> Sequent.schemaData Seq.seq
-                  -> Sequent.state
-                  -> Sequent.state Seq.seq
+                  -> mTypeSystem
+                  -> schemaData Seq.seq
+                  -> state
+                  -> state Seq.seq
+
   val initState : CSpace.conSpecData -> (* Source Constructor Specification *)
                   CSpace.conSpecData -> (* Target Constructor Specification *)
                   CSpace.conSpecData -> (* Inter-space Constructor Specification *)
                   Graph.graph -> (* The construction to transform *)
                   Graph.graph -> (* The goal to satisfy *)
-                  Sequent.state
+                  state
 end
 
-structure Scaffolding : SCAFFOLDING =
+structure State : STATE =
 struct
+
+  open Sequent
+  type state = {sequent : sequent, discharged : mgraph, tokenNamesUsed : string list, score : real}
+  type schemaData = {name: string, conSpecNames : string list, schema : sequent, strength : real}
+
+  fun stringOfSchemaData {name,conSpecNames,schema = (A,C),strength} =
+    let val s = name ^ ":" ^ List.toString (fn x => x) conSpecNames ^ " \n" ^ MGraph.toString A ^ "\n" ^ MGraph.toString C
+    in s
+    end
+
+  fun wellFormedSchema conSpecNames (A,C) = 
+    MGraph.wellFormed conSpecNames A andalso MGraph.wellFormed conSpecNames C
+
+  fun applyBackwardToState T I {schema = (A,C), strength,...} state =
+    let
+      val (A',C') = #sequent state
+      val discharged = #discharged state
+      val tokenNamesUsed = #tokenNamesUsed state
+      val newscore = #score state + strength
+      val deltas = findDeltasForBackwardApp T I tokenNamesUsed (A,C) (A',C')
+      fun makeResult (f,gf,D) = 
+        let
+          val freshlyDischarged = MGraph.image f C 
+          val dischargedUpdated = MGraph.imageWeak gf discharged
+          val discharged = MGraph.join freshlyDischarged dischargedUpdated
+          val newTokenNamesUsed = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick D) (MGraph.tokenNamesOfGraphQuick discharged)
+        in
+          {sequent = (A',D), discharged = discharged, tokenNamesUsed = newTokenNamesUsed, score = newscore} 
+        end
+    in
+      Seq.map makeResult deltas 
+    end 
+
+  fun applyBackwardAllToState T I SC st =
+      Seq.maps (fn sc => applyBackwardToState T I sc st) SC 
+
 
   exception Fail
 
@@ -62,25 +107,6 @@ struct
       (*if null tyVars then [{schema = (A,C), strength = strength}] else R*)
     end
 
-  fun adaptSchema CSN {schema = (A,C), strength, name, conSpecNames} =
-    let
-      val empty = Graph.empty
-      fun whichItem _ _ [] = NONE
-        | whichItem i s (x::xs) = if s = x then SOME i else whichItem (i+1) s xs
-      fun makeFun _ [] = (fn _ => NONE)
-        | makeFun i (x::xs) = (fn j => if i = j then whichItem 0 x conSpecNames else makeFun (i+1) xs j)
-      val f = makeFun 0 CSN
-      fun makeNewSchema _ [] = ([],[])
-        | makeNewSchema i (_::xs) = 
-          let val (A',C') = makeNewSchema (i+1) xs 
-          in case f i of 
-                SOME j => (List.nth(A,j) :: A', List.nth(C,j) :: C')
-              | NONE => (empty :: A', empty :: C')
-          end
-      val x = makeNewSchema 0 CSN;
-    in {schema = makeNewSchema 0 CSN, strength = strength, name = name, conSpecNames = CSN}
-    end
-
   fun typesInSequent ([],[]) = Seq.empty
     | typesInSequent ([],([]::C)) = typesInSequent ([],C)
     | typesInSequent ([],((tin::g)::C)) = 
@@ -96,7 +122,7 @@ struct
       val tys = typesInSequent (#sequent st)
       val SC' = Seq.maps (schemasOfVarSchema T tys) SC
     in
-      Sequent.applyBackwardAllToState T (fn i => i = 1) SC' st 
+      applyBackwardAllToState T (fn i => i = 1) SC' st 
     end
   
   fun compare (st1,st2) = 
