@@ -18,7 +18,7 @@ transfer
     goal :metaTrue <- encode[t:tt:probSys,t':area]
     output bayesArea
     eager
-    limit 2
+    limit 4
 
 comment
     sourceGraph y

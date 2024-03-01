@@ -777,12 +777,12 @@ struct
       fun mkLatexGoals res =
         let val goalGraph = List.nth(#2(#sequent res),2)
             val goalsS = if Graph.isEmpty goalGraph
-                         then "NO\\ OPEN\\ GOALS!"
-                         else Latex.tikzOfGraph (0.0,0.0) goalGraph
-            val alignedGoals = "\n " ^ "\\textbf{Open\\ goals}\\\\\n"
-                                    ^ goalsS ^ "\\\\"
-                                    ^ "\\\\ \\textbf{transfer\\ score}\\\\\n"(*"*)
-                                    ^ Latex.realToString (#score res)
+                         then "\\centerline{NO\\ OPEN\\ GOALS!}\n"
+                         else Latex.propositionsOfGraph goalGraph handle _ => Latex.tikzOfGraph (0.0,0.0) goalGraph
+            val alignedGoals = "\n " ^ "\\centerline{\\textbf{Open\\ goals}}\\smallskip\n"
+                                    ^ goalsS ^ "\n\n\\bigskip"
+                                    ^ "\\centerline{\\textbf{transfer\\ score}}\n"(*"*)
+                                    ^ "\\centerline{" ^ Latex.realToString (#score res) ^ "}"
         in alignedGoals
         end
       fun mkLatexConstructionsAndGoals res =

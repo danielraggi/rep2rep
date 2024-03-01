@@ -63,7 +63,7 @@ transfer
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaTrue <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
-    searchLimit 200
+    searchLimit 100
     output test
     limit 1
 
@@ -72,6 +72,6 @@ transfer
     targetConSpec dotDiagramsG
     interConSpec interArithDots
     goal :metaBool <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
-    searchLimit 200
+    searchLimit 100
     output interSpaceTest
     limit 1

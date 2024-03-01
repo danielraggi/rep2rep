@@ -7,6 +7,7 @@ sig
   val token : CSpace.token -> string;
   val sectionTitle : bool -> string -> string;
   val tikzOfGraph : real * real -> Graph.graph -> string;
+  val propositionsOfGraph : Graph.graph -> string;
   val mkDocument : string -> string;
   val outputDocument : TextIO.outstream -> string -> unit;
   val printWithHSpace : real -> string list -> string;
@@ -165,7 +166,7 @@ struct
 
   fun displaySizeOfString s = displaySize (String.explode s)
 
-  val nodeConstant = 0.22 * normalScale
+  val nodeConstant = 0.2 * normalScale
   fun sizeOfType t = scriptScale * (displaySizeOfString (Type.nameOfType (CSpace.typeOfToken t)))
   fun sizeOfToken t = normalScale * (displaySizeOfString (CSpace.nameOfToken t))
   fun sizeOfConstructorLabel c = scriptScale * (displaySizeOfString c)
@@ -199,7 +200,7 @@ struct
               val right1 = List.last spaces 
               val inner = dropFirstAndLast spaces
               val i = List.sum inner / 2.0 
-          in (right0 + left1 + i) :: (xcv (right1+i) L) 
+          in (right0 + left1 + i) :: (xcv (right1 + i) L) 
           end
       val removeNodeConstant = map (fn x => x - nodeConstant)
       fun marginsForInput inp g' = 
@@ -207,7 +208,7 @@ struct
           fun marginsPerInputToken t = 
               let val (tin,g'') = pullTINOfToken g' t 
               in marginsForTIN (valOf tin) g''
-              end handle Option => ([0.0],g')
+              end handle Option => ([0.0,0.0],g')
           fun getMarginsForInputTokens [] g'' = ([],g'')
             | getMarginsForInputTokens (inptk::inptks) g'' =
               let val (margins,g''') = marginsPerInputToken inptk
@@ -216,7 +217,7 @@ struct
               end
           val (marginsForInputTokens,g'') = getMarginsForInputTokens (#inputTokens inp) g'
           val margs = removeNodeConstant (xcv 0.0 marginsForInputTokens)
-          val res = Real.max(List.hd margs,sizeOfConstructorLabel (#constructor inp) + nodeConstant) :: List.tl margs handle Empty => margs (* assumes constructor label is on left *)
+          val res = Real.max(List.hd margs,sizeOfConstructorLabel (#constructor inp)) :: List.tl margs handle Empty => margs (* assumes constructor label is on left *)
         in (res,g'') 
         end
       and marginsForTIN tin g' =
@@ -235,7 +236,10 @@ struct
                   ([[hstk,hstk]],g') 
                 else 
                   getMarginsForInputs (#inputs tin) g'
-          val margs = if null (#inputs tin) then xcv 0.0 marginsForInputs else xcv 0.0 (map removeNodeConstant marginsForInputs)
+          val margs = if null (#inputs tin) then 
+                        xcv 0.0 marginsForInputs 
+                      else 
+                        xcv 0.0 (map removeNodeConstant marginsForInputs)
           val res = if null (#inputs tin) then 
                       margs 
                     else 
@@ -309,6 +313,27 @@ struct
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end
 
+  fun propositionsOfGraph g =
+    let
+      fun pog [] = []
+        | pog (tin::g') =
+        let 
+          fun makeNegStatements [] = []
+            | makeNegStatements (inp::inps) = 
+              "\\neg" ^ mathtt(#constructor inp) ^ List.toString CSpace.nameOfToken (#inputTokens inp) :: makeNegStatements inps
+          fun makePosStatements [] = []
+            | makePosStatements (inp::inps) = 
+            mathtt(#constructor inp) ^ List.toString CSpace.nameOfToken (#inputTokens inp) :: makePosStatements inps
+          val P = if CSpace.typeOfToken (#token tin) = "metaTrue" orelse null (#inputs tin) then 
+                    makePosStatements (#inputs tin) 
+                  else if CSpace.typeOfToken (#token tin) = "metaFalse" then 
+                    makeNegStatements (#inputs tin)
+                  else raise Fail
+        in P @ pog g'
+        end
+    in 
+      "\\begin{align*} &" ^ String.concatWith "\\\\ &" (pog g) ^ "\\end{align*}"
+    end
 
   fun mkDocument content =
     let val opening = "\\documentclass[a3paper,10pt]{article}\n "^

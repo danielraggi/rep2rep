@@ -153,7 +153,7 @@ struct
   fun transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured T SC state =
     let
       val maxNumGoals = case goalLimit of SOME x => x | NONE => 20
-      val maxCompSize = case compositionLimit of SOME x => x | NONE => 500
+      val maxCompSize = case compositionLimit of SOME x => x | NONE => 100
       val maxNumResults = case searchLimit of SOME x => x | NONE => 500
       val ignT = ignore maxNumGoals maxNumResults maxCompSize unistructured
       val stop = if eager then (fn x => case #sequent x of (A',C') => MGraph.contained C' A') else (fn _ => false)
