@@ -6,7 +6,6 @@ sig
   type token;
   type map; (* these maps are one-to-one relations between tokens. Useful as we use monomorphisms a lot. *)
 
-  exception Fail
   val emptyMap : map;
   val identityMap : map;
   val addPair : token * token -> map -> map;
@@ -32,15 +31,14 @@ struct
   infix 6 oo
   fun (f1,f2) oo (f1',f2') = (fn t => case f1' t of SOME x => f1 x | NONE => NONE, fn t => case f2 t of SOME x => f2' x | NONE => NONE)
  
-  exception Fail
   (* updates a one-to-one map so that fl(x) = y and fr(y) = x. 
      Fails if x or y are already mapped to a different element. *)
   fun addPair (x,y) (fl,fr) = 
       (case fl x of 
-          SOME z => if CSpace.sameTokens y z then fl else raise Fail
+          SOME z => if CSpace.sameTokens y z then fl else raise Fail "not functional"
         | NONE => (fn t => if CSpace.sameTokens t x then SOME y else fl t),
        case fr y of 
-          SOME z => if CSpace.sameTokens x z then fr else raise Fail
+          SOME z => if CSpace.sameTokens x z then fr else raise Fail "not injective"
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
 
   (*
@@ -147,6 +145,13 @@ sig
   val equal : graph -> graph -> bool;
 
   val subgraphs : graph -> graph Seq.seq;
+  val pullTINOfToken : graph -> token -> TIN option * graph;
+  val pullTINsOfTokens : graph -> token list -> graph * graph;
+  val orderByHierarchy : graph -> graph;
+  val largestConstructionOfToken : graph -> token -> graph;
+  val largestConstructionsInGraph : graph -> graph list;
+  val isConstructionOfToken : graph -> token -> bool;
+  val isConstruction : graph -> bool;
 
   (* 
   findMonomorphisms p f g1 g2 finds every extension of f that is a monomorphism 
@@ -373,8 +378,62 @@ struct
       fsg (expand g)
     end
 
+  fun findTINForToken _ [] = NONE
+    | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
+    
+  fun getMissingOneStepDescendants tks g t = 
+    let val oneStepDescendants = List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))
+    in List.filter (fn x => not (List.exists (fn y => CSpace.sameTokens x y) tks)) oneStepDescendants
+    end
+  fun assessTokenHierarchy tks (g:graph) t = 
+    1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy (t::tks) g) (getMissingOneStepDescendants (t::tks) g t))) handle Empty => 1 | Option => 0
+
+  fun assignTokenHierarchy [] _ = []
+    | assignTokenHierarchy (tin::g:graph) g' =
+    {h = assessTokenHierarchy [] g' (#token tin), tin = tin} :: assignTokenHierarchy g g'
+
+  fun orderByHierarchy (g:graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy g g))
+
+  fun descendantTokens tks g t = 
+    let val oneStepDescendants = getMissingOneStepDescendants tks g t
+        fun dts _ [] = []
+          | dts tks' (d::ds) = (case descendantTokens tks' g d of dd => dd @ dts (tks' @ dd) ds)
+    in oneStepDescendants @ dts (tks @ oneStepDescendants) oneStepDescendants
+    end
+
+  fun descendantTokens' tks g [] = []
+    | descendantTokens' tks g (t::ts) = (case descendantTokens tks g t of dtks => dtks @ descendantTokens' (dtks @ tks) g ts)
+
+  fun pullTINOfToken (g:graph) t = (case List.partition (fn tin => CSpace.sameTokens t (#token tin)) g of ([tin],g') => (SOME tin,g') | _ => (NONE,g))
+  fun pullTINsOfTokens (g:graph) tks = List.partition (fn tin => List.exists (fn x => CSpace.sameTokens x (#token tin)) tks) g
+
+  fun largestConstructionOfToken (g:graph) t =
+    let
+      fun lcot seenTks tk = 
+        let 
+          val firstTIN = valOf (findTINForToken tk g)
+          val newSeenTokens = tk::seenTks
+          val oneStepDescendants = getMissingOneStepDescendants newSeenTokens g tk
+        in 
+          firstTIN :: List.flatmap (lcot newSeenTokens) oneStepDescendants
+        end
+    in 
+      normalise (lcot [] t)
+    end
+
+  fun largestConstructionsInGraph g =
+    let 
+      val g' = orderByHierarchy g
+      val t = #token (hd g')
+      val ct = largestConstructionOfToken g' t
+    in ct :: (if equal g' ct then [] else largestConstructionsInGraph (remove ct g'))
+    end handle Empty => empty
+
+  fun isConstructionOfToken g t = equal g (largestConstructionOfToken g t)
+  fun isConstruction g = List.exists (fn t => isConstructionOfToken g t) (tokensOfGraphQuick g)
+
   fun mymap f [] = []
-    | mymap f (h::t) = (f h handle Option => (print ("\n\n token: "^CSpace.stringOfToken h^"\n\n"); raise Option)) :: mymap f t
+    | mymap f (h::t) = (f h handle Option => (print ("\n\n token: " ^ CSpace.stringOfToken h ^ "\n\n"); raise Option)) :: mymap f t
 
   fun image (f1,_) g =
     let
@@ -389,7 +448,7 @@ struct
           {token = mappedToken, inputs = mappedInputs} :: im gx
         end
     in 
-      im g handle Option => raise Fail
+      im g handle Option => raise Fail "undefined image"
     end
 
   fun imageWeak (f1,_) g =
@@ -411,9 +470,9 @@ struct
 
   fun preImage f g = image (invertMap f) g
 
-  fun matchAllPairs p f (x::X) (y::Y) = if p(x,y) then matchAllPairs p (addPair (x,y) f) X Y else raise Fail
+  fun matchAllPairs p f (x::X) (y::Y) = if p(x,y) then matchAllPairs p (addPair (x,y) f) X Y else raise Fail "property"
     | matchAllPairs _ f [] [] = f
-    | matchAllPairs _ _ _ _ = raise Fail
+    | matchAllPairs _ _ _ _ = raise Fail "mismatch"
 
   fun findInputMatches p f in1 [] = Seq.empty
     | findInputMatches p f in1 (in2::IN2') =
@@ -421,7 +480,7 @@ struct
         val rest = findInputMatches p f in1 IN2'
       in
         if #constructor in1 = #constructor in2 then 
-          Seq.cons (matchAllPairs p f (#inputTokens in1) (#inputTokens in2), in2) rest handle Fail => rest
+          Seq.cons (matchAllPairs p f (#inputTokens in1) (#inputTokens in2), in2) rest handle Fail _ => rest
         else
           rest
       end
@@ -440,7 +499,7 @@ struct
         val (t1,t2) = (#token tin1,#token tin2)
       in
         if p(t1,t2) then 
-          findINMonomorphisms p (addPair (t1,t2) f) (#inputs tin1) (#inputs tin2) handle Fail => Seq.empty
+          findINMonomorphisms p (addPair (t1,t2) f) (#inputs tin1) (#inputs tin2) handle Fail _ => Seq.empty
         else
           Seq.empty
       end
@@ -451,7 +510,7 @@ struct
         val this = findTINMonomorphisms p f tin1 tin2
         val rest = findTINMatches p f tin1 g2'
       in
-        Seq.cons (this, tin2) rest handle Fail => rest
+        Seq.cons (this, tin2) rest handle Fail _ => rest
       end
 
   fun findMonomorphisms p f [] g2 = Seq.single f
@@ -602,7 +661,6 @@ struct
     in
       sgod 1 g
     end
-
  
   fun foldMaps h i f [] [] = Seq.single f
     | foldMaps h i f (x::X) (y::Y) = Seq.maps (fn f' => foldMaps h (i+1) f' X Y) (h i f x y)

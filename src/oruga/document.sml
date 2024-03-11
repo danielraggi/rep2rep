@@ -778,10 +778,10 @@ struct
         let val goalGraph = List.nth(#2(#sequent res),2)
             val goalsS = if Graph.isEmpty goalGraph
                          then "\\centerline{NO\\ OPEN\\ GOALS!}\n"
-                         else Latex.propositionsOfGraph goalGraph handle _ => Latex.tikzOfGraph (0.0,0.0) goalGraph
+                         else Latex.propositionsOfGraph goalGraph handle Fail "x" => Latex.tikzOfGraph (0.0,0.0) goalGraph
             val alignedGoals = "\n " ^ "\\centerline{\\textbf{Open\\ goals}}\\smallskip\n"
                                     ^ goalsS ^ "\n\n\\bigskip"
-                                    ^ "\\centerline{\\textbf{transfer\\ score}}\n"(*"*)
+                                    ^ "\\centerline{\\textbf{transfer\\ score}}\n"
                                     ^ "\\centerline{" ^ Latex.realToString (#score res) ^ "}"
         in alignedGoals
         end

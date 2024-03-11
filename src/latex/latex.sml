@@ -20,7 +20,7 @@ struct
 
   fun latexifyForbidden s =
     let fun lus [] = []
-          | lus (c::C) = if c = (#"_") orelse c = (#"&") then (#"\\"(* " *))  :: c :: lus C
+          | lus (c::C) = if c = (#"_") orelse c = (#"&") then #"\\" :: c :: lus C
                         else c :: lus C
     in String.implode (lus (String.explode s))
     end 
@@ -35,33 +35,6 @@ struct
       in tok ^ " : " ^ ty
       end
 
-  fun findTINForToken _ [] = NONE
-    | findTINForToken t (tin::g) = if CSpace.sameTokens t (#token tin) then SOME tin else findTINForToken t g
-  fun getMissingOneStepDescendants tks g t = 
-    let val oneStepDescendants = List.flatmap #inputTokens (#inputs (valOf (findTINForToken t g)))
-    in List.filter (fn x => not (List.exists (fn y => CSpace.sameTokens x y) tks)) oneStepDescendants
-    end
-  fun assessTokenHierarchy tks (g:Graph.graph) t = 
-    1 + (List.max (fn (x,y) => Int.compare (x,y)) (map (assessTokenHierarchy (t::tks) g) (getMissingOneStepDescendants (t::tks) g t))) handle Empty => 1 | Option => 0
-
-  fun assignTokenHierarchy [] _ = []
-    | assignTokenHierarchy (tin::g:Graph.graph) g' =
-    {h = assessTokenHierarchy [] g' (#token tin), tin = tin} :: assignTokenHierarchy g g'
-
-  fun orderByHierarchy (g:Graph.graph) = map #tin (List.mergesort (fn (x,y) => Int.compare(#h y,#h x)) (assignTokenHierarchy g g))
-
-  fun descendantTokens tks g t = 
-    let val oneStepDescendants = getMissingOneStepDescendants tks g t
-        fun dts _ [] = []
-          | dts tks' (d::ds) = (case descendantTokens tks' g d of dd => dd @ dts (tks' @ dd) ds)
-    in oneStepDescendants @ dts (tks @ oneStepDescendants) oneStepDescendants
-    end
-
-  fun descendantTokens' tks g [] = []
-    | descendantTokens' tks g (t::ts) = (case descendantTokens tks g t of dtks => dtks @ descendantTokens' (dtks @ tks) g ts)
-
-  fun pullTINOfToken (g:Graph.graph) t = (case List.partition (fn tin => CSpace.sameTokens t (#token tin)) g of ([tin],g') => (SOME tin,g') | _ => (NONE,g))
-  fun pullTINsOfTokens (g:Graph.graph) tks = List.partition (fn tin => List.exists (fn x => CSpace.sameTokens x (#token tin)) tks) g
 
   fun mapMany [] [] = []
     | mapMany (f::fs) (x::xs) = f x :: mapMany fs xs
@@ -69,13 +42,11 @@ struct
   fun unzip [] = ([],[])
     | unzip ((x,y)::XY) = let val (X,Y) = unzip XY in (x::X,y::Y) end
 
-
-  exception Fail
   fun lines [h] = h
     | lines (h::t) = h ^ "\n " ^ lines t
     | lines _ = raise Empty
   
-  fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\"(* " *) andalso x <> #"|" andalso x <> #"("(* " *) andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
+  fun nodeNameCharFilter x = x <> #"&" andalso x <> #"\\" andalso x <> #"|" andalso x <> #"(" andalso x <> #")" andalso x <> #"[" andalso x <> #"]" andalso x <> #":" andalso x <> #"," andalso x <> #"."
 
   fun nodeNameOfToken t =
     let val nt = CSpace.nameOfToken t
@@ -158,9 +129,11 @@ struct
     | displaySize (#"}"::S') = (10.0/9.0) * displaySize S'
     | displaySize (#"m"::S') = 1.2 + displaySize S'
     | displaySize (#":"::S') = 2.0 + displaySize S'
-    | displaySize (#"+"::S') = 3.0 + displaySize S'
-    | displaySize (#"-"::S') = 3.0 + displaySize S'
-    | displaySize (#"="::S') = 3.0 + displaySize S'
+    | displaySize (#">"::S') = 2.5 + displaySize S'
+    | displaySize (#"<"::S') = 2.5 + displaySize S'
+    | displaySize (#"+"::S') = 2.5 + displaySize S'
+    | displaySize (#"-"::S') = 2.5 + displaySize S'
+    | displaySize (#"="::S') = 2.5 + displaySize S'
     | displaySize (char::S') = (if Char.isUpper char orelse Char.isDigit char then 1.2 else 1.0) + displaySize S'
     | displaySize [] = 0.0
 
@@ -171,7 +144,7 @@ struct
   fun sizeOfToken t = normalScale * (displaySizeOfString (CSpace.nameOfToken t))
   fun sizeOfConstructorLabel c = scriptScale * (displaySizeOfString c)
     
-  fun findPosOfToken [] t = raise Fail
+  fun findPosOfToken [] t = raise Fail "no token"
     | findPosOfToken (posTIN::posG) t = if CSpace.sameTokens (#token (#tin posTIN)) t then #pos posTIN else findPosOfToken posG t
 
   fun mapArrows _ _ _ _ _ [] = []
@@ -201,12 +174,12 @@ struct
               val inner = dropFirstAndLast spaces
               val i = List.sum inner / 2.0 
           in (right0 + left1 + i) :: (xcv (right1 + i) L) 
-          end
+          end 
       val removeNodeConstant = map (fn x => x - nodeConstant)
       fun marginsForInput inp g' = 
         let 
           fun marginsPerInputToken t = 
-              let val (tin,g'') = pullTINOfToken g' t 
+              let val (tin,g'') = Graph.pullTINOfToken g' t 
               in marginsForTIN (valOf tin) g''
               end handle Option => ([0.0,0.0],g')
           fun getMarginsForInputTokens [] g'' = ([],g'')
@@ -267,15 +240,15 @@ struct
               in (inputWithPosition::inputsWithPosition,assignedTINs @ moreAssignedTINs,g''')
               end
             | processMany g'' (pos::poss) [] = ([],[], g'')
-            | processMany _ [] (inp::inps) = (raise Fail)
+            | processMany _ [] (inp::inps) = raise Fail "mismatched inputs and positions"
           val (inputsWithPosition,assignedTINs,unassignedTINs) = processMany g' chPositions inputs
         in
           ({tin = {token = token, inputsWithPosition = inputsWithPosition}, pos = (x,y)} :: assignedTINs, unassignedTINs)
         end 
       and assignPositionsForInput g' (x,y) inp =
         let 
-          val (_,g'') = pullTINsOfTokens g' (#inputTokens inp)
-          val (TINs,_) = unzip (map (pullTINOfToken g') (#inputTokens inp))
+          val (_,g'') = Graph.pullTINsOfTokens g' (#inputTokens inp)
+          val (TINs,_) = unzip (map (Graph.pullTINOfToken g') (#inputTokens inp))
           val (margins,_) = marginsForInput inp g'
           val inner = dropFirstAndLast margins
           val newY = y - 1.0
@@ -291,7 +264,7 @@ struct
               in (assignedTINs @ moreAssignedTINs,g''')
               end
             | processMany g'' (pos::poss) [] = ([],g'')
-            | processMany _ [] (tin::tins) = (raise Fail)
+            | processMany _ [] (tin::tins) = raise Fail "mismatched tins and positions"
           val (assignedTINs,unassignedTINs) = processMany g'' chPositions TINs
         in ({input = inp, pos = (x,y)}, assignedTINs, unassignedTINs)
         end
@@ -301,17 +274,17 @@ struct
           val (margins,_) = marginsForTIN tin (tin::g')
           val inner = dropFirstAndLast margins
           val innerSpaceHalved = List.sum inner / 2.0
-          val leftSpace = (List.hd margins) + innerSpaceHalved
-          val rightSpace = (List.last margins) + innerSpaceHalved
+          val leftSpace = (List.hd margins) + innerSpaceHalved 
+          val rightSpace = (List.last margins) + innerSpaceHalved 
           val (assigned,unassigned) = assignPositionsForTIN g' (x + leftSpace,y) (SOME tin)
         in assigned @ processGraph (x + leftSpace + rightSpace,y) unassigned
         end
-      val graphWithPositions = processGraph (x,y) (orderByHierarchy (Graph.normalise g))
+      val graphWithPositions = processGraph (x,y) (Graph.orderByHierarchy (Graph.normalise g))
       val (nodes,arrows) = unzip (map (tikzOfTIN graphWithPositions) graphWithPositions)
       val opening = "\\begin{tikzpicture}[construction,align at top]"
       val closing = "\\end{tikzpicture}"
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
-    end
+    end handle Empty => ""
 
   fun propositionsOfGraph g =
     let
@@ -328,7 +301,7 @@ struct
                     makePosStatements (#inputs tin) 
                   else if CSpace.typeOfToken (#token tin) = "metaFalse" then 
                     makeNegStatements (#inputs tin)
-                  else raise Fail
+                  else raise Fail "x"
         in P @ pog g'
         end
     in 

@@ -95,13 +95,13 @@ fun statusToString OK = "200 OK"
 
 fun stringToStatus status =
     let val (status, _, _) = String.breakOn " " status
-    in case status of
+    in (case status of
            "200" => OK
          | "204" => NO_CONTENT
          | "400" => BAD_REQUEST
          | "404" => NOT_FOUND
          | "500" => INTERNAL_SERVER_ERROR
-         | s => raise (HttpError ("Unknown status " ^ s))
+         | s => raise (HttpError ("Unknown status " ^ s)))
     end;
 
 fun getBytes vect start len =
@@ -123,7 +123,7 @@ fun splitHeader bytes =
         val (header_bytes, content) = chopHeader 0;
         val header_string = Byte.bytesToString header_bytes;
         val headers = String.splitOn "\r\n" header_string;
-    in case headers of
+    in (case headers of
            [] => raise (HttpError "Empty headers!")
          | (protocol::headers) =>
            (protocol,
@@ -133,7 +133,7 @@ fun splitHeader bytes =
                         (k, ": ", v) => (k, v)
                       | _ => raise (HttpError ("Malformed header '" ^ h ^ "'")))
                 headers,
-            content)
+            content))
     end;
 
 fun getHeader header headers =
