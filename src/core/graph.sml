@@ -136,6 +136,7 @@ sig
   (* normalising adds all tokens that appear in the graph and factorises their 
   configurations into a tin for each token *)
   val normalise : graph -> graph;
+  val normal : graph -> bool;
 
   val isEmpty : graph -> bool;
   val size : graph -> int;
@@ -355,6 +356,8 @@ struct
     | contained (tin::g) g' = tinContained tin g' andalso contained g g'
 
   fun equal g g' = contained g g' andalso contained g' g
+
+  fun normal g = equal g (normalise g)
 
   fun expand [] = []
     | expand (tin::g) = 
@@ -578,6 +581,7 @@ sig
   val tokenNamesOfGraphQuick : mgraph -> string list;
 
   val normalise : mgraph -> mgraph;
+  val normal : mgraph -> bool;
   
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
@@ -646,6 +650,7 @@ struct
 
   fun contained g g' = allPairs Graph.contained g g'
   fun equal g g' = allPairs Graph.equal g g'
+  fun normal g = List.all Graph.normal g
 
   fun mapProduct _ [] = Seq.single []
     | mapProduct f (g::gs) = Seq.maps (fn h => (Seq.map (fn x => h :: x) (mapProduct f gs))) (f g)

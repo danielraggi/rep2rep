@@ -161,6 +161,9 @@ struct
     in (tokenNode (null inputsWithPosition) pos token :: nodes,arrows)
     end
 
+  fun range [] = (0.0,0.0,0.0,0.0)
+    | range ({tin={token,inputsWithPosition},pos= (x,y)}::g) = let val (left,right,bottom,top) = range g in (Real.min(left,x),Real.max(right,x),Real.min(bottom,y),Real.max(top,y)) end
+
   fun tikzOfGraph (x,y) (g:Graph.graph) =
     let
       fun dropLast [] = []
@@ -280,8 +283,11 @@ struct
         in assigned @ processGraph (x + leftSpace + rightSpace,y) unassigned
         end
       val graphWithPositions = processGraph (x,y) (Graph.orderByHierarchy (Graph.normalise g))
+      val (left,right,bottom,top) = range graphWithPositions
       val (nodes,arrows) = unzip (map (tikzOfTIN graphWithPositions) graphWithPositions)
-      val opening = "\\begin{tikzpicture}[construction,align at top]"
+      val xscale = if right - left > 60.0 then ", xscale = " ^ realToString (55.0 / right - left) else ""
+      val yscale =  if top - bottom > 120.0 then ", yscale = " ^ realToString (110.0 / right - left) else ""
+      val opening = "\\begin{tikzpicture}[construction,align at top" ^ xscale ^ yscale ^ "]"
       val closing = "\\end{tikzpicture}"
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end handle Empty => ""
