@@ -62,7 +62,7 @@ transfer
     sourceGraph 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaTrue <- formulaIsValid[t:formula]
+    goal :metaTrue <- isTrue[t:formula]
     searchLimit 100
     output test
     limit 10
@@ -71,7 +71,7 @@ transfer
     sourceGraph 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaBool <- formulaIsValid[t:1+2+3+4=4(4+1)/2:formula]
+    goal :metaBool <- isTrue[t:1+2+3+4=4(4+1)/2:formula]
     searchLimit 100
     output interSpaceTest
     limit 1

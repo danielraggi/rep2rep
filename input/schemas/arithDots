@@ -12,7 +12,7 @@ conSpec interArithDots:interArithDotsT =
     constructors
         count : [arr,numExp] -> metaBool,
         disjoint : [arr,arr] -> metaBool,
-        formulaIsValid : [formula] -> metaBool,
+        isTrue : [formula] -> metaBool,
         perpendicular : [line,line] -> metaBool
 
 tSchema multiplyRectangle:(arithG,dotDiagramsG,interArithDots) =
@@ -53,7 +53,7 @@ tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =
     target t':arr
     antecedent :metaTrue <- count[t':arr,n:numExp],
                :metaTrue <- count[t':arr,m:numExp]
-    consequent :metaTrue <- formulaIsValid[t:formula]
+    consequent :metaTrue <- isTrue[t:formula]
     strength 2
 
 tSchema div2symmetry:(arithG,dotDiagramsG,interArithDots) =

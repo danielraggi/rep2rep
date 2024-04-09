@@ -1,4 +1,4 @@
-import transferSchemas/DNFCNF
+import schemas/DNFCNF
 
 graph AinB:propDNFG =
     t:AB|-AB|-A-B:nonclauseDNF
