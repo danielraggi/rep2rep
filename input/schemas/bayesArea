@@ -1,7 +1,7 @@
 import bayes
 import areaDiagram
 import metaLogic
-import transferSchemas/arithArith
+import schemas/arithArith
 
 typeSystem interBayesAreaT =
     imports bayes, areaDiagram, metaLogicT, interArithArithT

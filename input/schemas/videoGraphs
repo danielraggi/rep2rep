@@ -1,0 +1,68 @@
+import videoArith
+import videoGraph
+import metaLogic
+
+typeSystem interVideoGraphs =
+    imports arith, vgraphs, metaLogicT
+    types path
+    order wayPoints < path, route < path
+
+conSpec interVideoGraphs:interVideoGraphs =
+    imports videoArithG, vgraphsG, metaLogic
+    constructors
+        encode : [path,vgraph] -> metaBool,
+        addWayPoint : [vgraph,wayPoints] -> metaBool,
+        moveOnto : [vgraph,wayPoints] -> metaBool,
+        isFullyConnected : [vgraph] -> metaBool
+
+iSchema step1:(vgraphsG,interVideoGraphs) =
+    context t':origin:vgraph
+    antecedent
+    consequent :metaTrue <- moveOnto[t':origin:vgraph,t:1:nat10]
+    strength 2
+
+iSchema step2:(vgraphsG,interVideoGraphs) =
+    context t':vgraph <- addKeyFrame[t1':vgraph]
+    antecedent :metaTrue <- moveOnto[t1':vgraph,t:1:nat10]
+    consequent :metaTrue <- moveOnto[t':vgraph,t:2:nat10]
+    strength 2
+
+iSchema step3:(vgraphsG,interVideoGraphs) =
+    context t':vgraph <- addKeyFrame[t1':vgraph]
+    antecedent :metaTrue <- moveOnto[t1':vgraph,t:2:nat10]
+    consequent :metaTrue <- moveOnto[t':vgraph,t:1:nat10]
+    strength 2
+
+iSchema step4:(vgraphsG,interVideoGraphs) =
+    context t':vgraph <- addKeyFrame[t1':vgraph]
+    antecedent :metaTrue <- moveOnto[t1':vgraph,t:3:nat10]
+    consequent :metaTrue <- moveOnto[t':vgraph,t:4:nat10]
+    strength 2
+
+iSchema step5:(vgraphsG,interVideoGraphs) =
+    context t':vgraph <- addKeyFrame[t1':vgraph]
+    antecedent :metaTrue <- moveOnto[t1':vgraph,t:4:nat10]
+    consequent :metaTrue <- moveOnto[t':vgraph,t:5:nat10]
+    strength 2
+
+tSchema startingPoint:(videoArithG,vgraphsG,interVideoGraphs) =
+    source t:0:nat10
+    target t':origin:vgraph
+    antecedent
+    consequent :metaTrue <- addWayPoint[t':origin:vgraph,t:0:nat10]
+    strength 2
+
+tSchema cross:(videoArithG,vgraphsG,interVideoGraphs) =
+    source t:wayPoints <- addPoint[t1:wayPoints,t2:to,t3:wayPoints]
+    target t':vgraph <- addKeyFrame[t1':vgraph]
+    antecedent tt1:metaTrue <- addWayPoint[t1':vgraph,t1:wayPoints],
+               tt2:metaTrue <- moveOnto[t1':vgraph,t3:wayPoints]
+    consequent tt:metaTrue <- addWayPoint[t':vgraph,t:wayPoints]
+    strength 2
+
+tSchema encodeWayPoints:(videoArithG,vgraphsG,interVideoGraphs) =
+    source t:wayPoints
+    target g:vgraph
+    antecedent :metaTrue <- addWayPoint[g:vgraph,t:wayPoints]
+    consequent :metaTrue <- encode[t:wayPoints,g:vgraph]
+    strength 2

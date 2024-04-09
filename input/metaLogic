@@ -1,9 +1,10 @@
 typeSystem metaLogicT =
-    types metaTrue, metaFalse, metaBool
-    order metaTrue < metaBool, metaFalse < metaBool
+    types metaTrue, metaFalse, metaBool, _:metaVar
+    order metaTrue < metaBool, metaFalse < metaBool, metaVar < metaBool
 
 conSpec metaLogic:metaLogicT =
     constructors
+        metaConj : [metaBool,metaBool] -> metaBool,
         metaDisj : [metaBool,metaBool] -> metaBool,
         metaImplies : [metaBool,metaBool] -> metaBool,
         metaEquiv : [metaBool,metaBool] -> metaBool,

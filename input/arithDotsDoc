@@ -1,21 +1,21 @@
-import transferSchemas/arithDots
+import schemas/arithDots
 
 graph 1plus2plus3equalsStuff:arithG =
-    t:1plus2plus3equals3oB3plus1cBdiv2:formula
-        <- infixRel[t1:1plus2plus3:numExp
-                        <- infixOp[t11:1plus2:numExp
+    t:formula
+        <- infixRel[t1:numExp
+                        <- infixOp[t11:numExp
                                         <- infixOp[t111:1:nat10,
                                                     t112:plus,
                                                     t113:2:nat10],
                                     t12:plus,
                                     t13:3:nat10],
                      t2:equals,
-                     t3:3oB3plus1cBdiv2:numExp
-                        <- infixOp[t31:3oB3plus1cB:numExp
+                     t3:numExp
+                        <- infixOp[t31:numExp
                                     <- multiply[t311:3:nat10,
-                                                t312:oB3plus1cB:numExp
+                                                t312:numExp
                                                     <- addParentheses[t3121:oB,
-                                                                      t3122:3plus1:numExp
+                                                                      t3122:numExp
                                                                             <- infixOp[t31221:3:nat10,
                                                                                         t31222:plus,
                                                                                         t31223:1:nat10],
@@ -62,10 +62,10 @@ transfer
     sourceGraph 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
     interConSpec interArithDots
-    goal :metaTrue <- formulaIsValid[t:1plus2plus3equals3oB3plus1cBdiv2:formula]
+    goal :metaTrue <- formulaIsValid[t:formula]
     searchLimit 100
     output test
-    limit 1
+    limit 10
 
 transfer
     sourceGraph 1plus2plus3plus4equalsStuff

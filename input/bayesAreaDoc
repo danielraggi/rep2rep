@@ -1,4 +1,4 @@
-import transferSchemas/bayesArea
+import schemas/bayesArea
 
 graph x:bayesG =
     t:tt:probSys <- addEqn[t1:tt1:probEqn <- makeEqn[t11:A:event,t12:0.2:real10 <- makeReal[t121:0,t122:2]],

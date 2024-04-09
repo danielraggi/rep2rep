@@ -1,4 +1,4 @@
-import transferSchemas/arithGraphs
+import schemas/arithGraphs
 
 graph x:arithG =
     t:0+1+2+3:numExp <- infixOp[t3:0+1+2:numExp <- infixOp[t33:0+1:numExp <- infixOp[t331:0:nat10,

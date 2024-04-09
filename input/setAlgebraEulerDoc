@@ -1,4 +1,4 @@
-import transferSchemas/setAlgebraEuler
+import schemas/setAlgebraEuler
 
 graph x:setAlgebraG =
     t1:A_subseteq_B:formula
