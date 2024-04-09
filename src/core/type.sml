@@ -42,6 +42,7 @@ sig
 
   val isTypeVar : typ -> bool
   val parentOfDanglyType : typ -> typ
+  val strippedDanglyType : typ -> typ
   val fixForSubtypeable : typ FiniteSet.set -> (typ * typ -> bool) -> (typ * typ -> bool)
   val insertPrincipalType : principalType -> principalType FiniteSet.set -> principalType FiniteSet.set
 
@@ -184,6 +185,8 @@ struct
   fun isTypeVar s = String.isPrefix "?" s
   fun parentOfDanglyType s =
     (case String.breakOn ":" s of (_,":",y) => y | _ => raise badType)
+  fun strippedDanglyType s =
+    (case String.breakOn ":" s of (x,":",_) => x | _ => raise badType)
   fun isDanglyType Ty s =
     (case String.breakOn ":" s of (_,":",y) => Set.elementOf y Ty | _ => false)
 

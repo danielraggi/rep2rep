@@ -104,6 +104,7 @@ sig
   val image : map -> graph -> graph;
   val preImage : map -> graph -> graph;
   val imageWeak : map -> graph -> graph;
+  val imageWeakTypeGeneralising : Type.typeSystem -> map -> graph -> graph;
 
   val wellTyped : CSpace.conSpecData -> graph -> bool;
   val wellFormed : CSpace.conSpecData -> graph -> bool;
@@ -123,6 +124,7 @@ sig
 
   val join : graph -> graph -> graph;
   val remove : graph -> graph -> graph;
+  val intersection : graph -> graph -> graph;
 
   val insertTIN : TIN -> graph -> graph;
 
@@ -334,7 +336,7 @@ struct
     it re-adds any tokens that are still attached to existing arrows (the normalisation step does this). *)
   fun remove g g' =
     let 
-      fun rem [] g = g
+      fun rem [] g' = g'
         | rem (tin::g) g' = rem g (removeTIN tin g')
     in 
       normalise (rem g g')
@@ -366,6 +368,27 @@ struct
         | [inp] => tin :: expand g 
         | (inp::INP) => {token = #token tin, inputs = [inp]} :: (expand ({token = #token tin, inputs = INP}::g)))
 
+  fun findInputsIntersection [] _ = []
+    | findInputsIntersection (inp::inps) inps' =
+    if inputContained inp inps' then 
+      inp :: findInputsIntersection inps inps' 
+    else 
+      findInputsIntersection inps inps'
+
+  fun findTinIntersection _ [] = NONE
+    | findTinIntersection tin (tin'::g') =
+      if CSpace.sameTokens (#token tin) (#token tin') then
+        SOME ({token = #token tin, inputs = findInputsIntersection (#inputs tin) (#inputs tin')})
+      else
+        findTinIntersection tin g'
+
+  fun intersection g g' =
+    let 
+      fun inter [] g' = []
+        | inter (tin::g) g' = case findTinIntersection tin g' of SOME x => x :: inter g g' | NONE => inter g g'
+    in
+      normalise (inter g g')
+    end
   
   fun toString g = toString' (expand g)
 
@@ -456,7 +479,29 @@ struct
 
   fun imageWeak (f1,_) g =
     let
-      fun mapWeak t = case f1 t of NONE => t | SOME t' => t' 
+      fun mapWeak t = 
+        case f1 t of NONE => t 
+                   | SOME t' => ((*if (CSpace.typeOfToken t) <> (CSpace.typeOfToken t') 
+                                 then print ("\n" ^ CSpace.stringOfToken t ^ " " ^ CSpace.stringOfToken t' ^ "\n")
+                                 else (); *)
+                                 t')
+      fun im [] = []
+        | im (tin::gx) = 
+        let 
+          val mappedToken = mapWeak (#token tin)
+          val inputs = #inputs tin
+          fun inputImage inp = {constructor = #constructor inp, inputTokens = List.map mapWeak (#inputTokens inp)}
+          val mappedInputs = List.map inputImage inputs
+        in 
+          {token = mappedToken, inputs = mappedInputs} :: im gx
+        end
+    in 
+      im g
+    end
+
+  fun imageWeakTypeGeneralising T (f1,_) g =
+    let
+      fun mapWeak t = case f1 t of NONE => t | SOME t' => if #subType T (CSpace.typeOfToken t, CSpace.typeOfToken t') then t' else raise Fail "type generalising"
       fun im [] = []
         | im (tin::gx) = 
         let 
@@ -567,6 +612,7 @@ sig
   val image : map -> mgraph -> mgraph;
   val preImage : map -> mgraph -> mgraph;
   val imageWeak : map -> mgraph -> mgraph;
+  val imageWeakTypeGeneralising : mTypeSystem -> map -> mgraph -> mgraph;
 
   val size : mgraph -> int;
 
@@ -585,6 +631,7 @@ sig
   
   val join : mgraph -> mgraph -> mgraph;
   val remove : mgraph -> mgraph -> mgraph;
+  val intersection : mgraph -> mgraph -> mgraph;
 
   val contained : mgraph -> mgraph -> bool;
   val equal : mgraph -> mgraph -> bool;
@@ -617,6 +664,9 @@ struct
   fun image f g = List.map (Graph.image f) g
   fun preImage f g = List.map (Graph.preImage f) g
   fun imageWeak f g = List.map (Graph.imageWeak f) g
+  fun imageWeakTypeGeneralising [] _ [] = []
+    | imageWeakTypeGeneralising (T::Ts) f (g::gs) = Graph.imageWeakTypeGeneralising T f g :: imageWeakTypeGeneralising Ts f gs
+    | imageWeakTypeGeneralising _ _ _ = (print "horror"; raise Match)
 
   fun size g = List.sumMapInt (Graph.size) g
 
@@ -647,6 +697,7 @@ struct
   fun normalise g = map Graph.normalise g
   fun join g g' = mapPairs Graph.join g g'
   fun remove g g' = mapPairs Graph.remove g g'
+  fun intersection g g' = mapPairs Graph.intersection g g'
 
   fun contained g g' = allPairs Graph.contained g g'
   fun equal g g' = allPairs Graph.equal g g'
