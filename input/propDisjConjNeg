@@ -194,28 +194,28 @@ graph BB:propDisjConjNegG =
 
 comment
     sourceGraph ABCD
-    goal ([t:AorBandCorD:prop],[t':prop]) :: simplify
+    goalGraph ([t:AorBandCorD:prop],[t':prop]) :: simplify
     output abcd
     outputLimit 10
     iterative
 
 comment
     sourceGraph AA
-    goal ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
+    goalGraph ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
     output aa
     outputLimit 10
     iterative
 
 comment
     sourceGraph AA1
-    goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
+    goalGraph ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa11
     outputLimit 10
     iterative
 
 transfer
     sourceGraph AA1
-    goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
+    goalGraph ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa
     outputLimit 20
     iterative

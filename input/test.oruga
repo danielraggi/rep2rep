@@ -1,0 +1,4 @@
+import bayesAreaDoc
+import bayesTreeDoc
+import bayesTableDoc
+import arithDotsDoc

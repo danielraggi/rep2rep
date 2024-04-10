@@ -1,14 +1,15 @@
 typeSystem propCNF =
     types _:var, _:literal, _:clauseCNF, _:cnf, _:nonvar, _:nonliteralCNF, _:nonclauseCNF
-    order var < literal,
+    order {var < literal,
           nonvar < literal,
           literal < clauseCNF,
           nonliteralCNF < clauseCNF,
           clauseCNF < cnf,
-          nonclauseCNF < cnf
+          nonclauseCNF < cnf}
 
 conSpec propCNFG:propCNF =
-  constructors
+  constructors {
     conj : [clauseCNF, cnf] -> nonclauseCNF,
     disj : [literal, clauseCNF] -> nonliteralCNF,
     neg : [var] -> nonvar
+  }

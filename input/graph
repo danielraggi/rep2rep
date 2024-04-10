@@ -1,7 +1,8 @@
 typeSystem graphs =
-    types _:graph
+    types {_:graph}
     order
 
 conSpec graphsG:graphs =
-  constructors
+  constructors {
     addFullyConnectedVertex : [graph] -> graph
+  }

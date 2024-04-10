@@ -1,7 +1,7 @@
 import schemas/arithDots
 
 graph 1plus2plus3equalsStuff:arithG =
-    t:formula
+    {t:formula
         <- infixRel[t1:numExp
                         <- infixOp[t11:numExp
                                         <- infixOp[t111:1:nat10,
@@ -21,10 +21,10 @@ graph 1plus2plus3equalsStuff:arithG =
                                                                                         t31223:1:nat10],
                                                                       t3123:cB]],
                                     t32:div,
-                                    t33:2:nat10]]
+                                    t33:2:nat10]]}
 
 graph 1plus2plus3plus4equalsStuff:arithG =
-    t:1+2+3+4=4(4+1)/2:formula
+    {t:1+2+3+4=4(4+1)/2:formula
         <- infixRel[t1:1+2+3+4:numExp
                         <- infixOp[t11:1+2+3:numExp
                                         <- infixOp[t111:1+2:numExp
@@ -47,31 +47,33 @@ graph 1plus2plus3plus4equalsStuff:arithG =
                                                                                         t31223:1:nat10],
                                                                       t3123:cB]],
                                     t32:div,
-                                    t33:2:nat10]]
+                                    t33:2:nat10]]}
 
 graph 1plus2equals3:arithG =
-    t:1plus2equals3:formula
+    {t:1plus2equals3:formula
         <- infixRel[t1:1plus2:numExp
                         <- infixOp[t11:1:nat10,
                                     t12:plus,
                                     t13:2:nat10],
                      t2:equals,
-                     t3:3:nat10]
+                     t3:3:nat10]}
+
+graph g1:interArithDots = {:metaTrue <- isTrue[t:formula]}
 
 transfer
     sourceGraph 1plus2plus3equalsStuff
     targetConSpec dotDiagramsG
-    interConSpec interArithDots
-    goal :metaTrue <- isTrue[t:formula]
+    goalGraph g1
     searchLimit 100
     output 123
-    outputLimit 10
+    outputLimit 1
+
+graph g2:interArithDots = {:metaBool <- isTrue[t:1+2+3+4=4(4+1)/2:formula]}
 
 transfer
     sourceGraph 1plus2plus3plus4equalsStuff
     targetConSpec dotDiagramsG
-    interConSpec interArithDots
-    goal :metaBool <- isTrue[t:1+2+3+4=4(4+1)/2:formula]
+    goalGraph g2
     searchLimit 100
     output 1234
     outputLimit 1

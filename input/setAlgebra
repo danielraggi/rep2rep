@@ -1,11 +1,11 @@
 import basicLogic
 
 typeSystem setAlgebra =
-    imports basicLogic
-    types _:var, _:formula, _:bset, _:set, \emptyset, \in, \cup, \cap, \subseteq,
+    imports {basicLogic}
+    types {_:var, _:formula, _:bset, _:set, \emptyset, \in, \cup, \cap, \subseteq,
           \powerset, =, binaryOp, binaryRel, unaryOp,
-          oB, cB, \comma
-    order var < set,
+          oB, cB, \comma}
+    order {var < set,
           bset < set,
           \emptyset < set,
           \in < binaryRel,
@@ -13,13 +13,14 @@ typeSystem setAlgebra =
           \subseteq < binaryRel,
           \cup < binaryOp,
           \cap < binaryOp,
-          \powerset < unaryOp
+          \powerset < unaryOp}
 
 conSpec setAlgebraG:setAlgebra =
   imports basicLogicG
-  constructors
+  constructors {
     infixRel : [set,binaryRel,set] -> formula,
     infixOp : [set,binaryOp,set] -> set,
     unaryOpApp : [unaryOp,set] -> set,
     singleton : [oB,set,cB] -> bset,
     insert : [set,\comma,bset] -> bset
+  }

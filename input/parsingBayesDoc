@@ -3,13 +3,13 @@ import schemas/bayesArea
 import schemas/bayesTable
 import schemas/bayesTree
 
-graph tt:bayesG = t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys <- addEqn[t_{00}:Pr(disease)=0.04:probEqn <- makeEqn[t_{000}:disease:event, t_{001}:0.04:real10], t_{01}:Pr(test | disease)=0.95;Pr(-test | -disease)=0.9:probSys <- addEqn[t_{010}:Pr(test | disease)=0.95:probEqn <- makeEqn[t_{0100}:test | disease:condEvent <- makeCond[t_{01000}:test:event, t_{01001}:disease:event], t_{0101}:0.95:real10], t_{011}:Pr(-test | -disease)=0.9:probEqn <- makeEqn[t_{0110}:-test | -disease:condEvent <- makeCond[t_{01100}:-test:event <- complement[t_{011000}:test:event], t_{01101}:-disease:event <- complement[t_{011010}:disease:event]], t_{0111}:0.9:real10]]]
+graph tt:bayesG = {t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys <- addEqn[t_{00}:Pr(disease)=0.04:probEqn <- makeEqn[t_{000}:disease:event, t_{001}:0.04:real10], t_{01}:Pr(test | disease)=0.95;Pr(-test | -disease)=0.9:probSys <- addEqn[t_{010}:Pr(test | disease)=0.95:probEqn <- makeEqn[t_{0100}:test | disease:condEvent <- makeCond[t_{01000}:test:event, t_{01001}:disease:event], t_{0101}:0.95:real10], t_{011}:Pr(-test | -disease)=0.9:probEqn <- makeEqn[t_{0110}:-test | -disease:condEvent <- makeCond[t_{01100}:-test:event <- complement[t_{011000}:test:event], t_{01101}:-disease:event <- complement[t_{011010}:disease:event]], t_{0111}:0.9:real10]]]}
 
 transfer
     sourceGraph tt
     targetConSpec areaDiagramG
     interConSpec interBayesArea
-    goal :metaTrue <- encode[t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys,t':area]
+    goalGraph {:metaTrue <- encode[t_{0}:Pr(disease) = 0.04; Pr(test | disease) = 0.95; Pr(-test | -disease) = 0.9:probSys,t':area]}
     eager
     output bayesAreaTest
     save bayesAreaTest
@@ -23,7 +23,7 @@ transfer
     sourceGraph prSystem1
     targetConSpec btree
     interConSpec interStringBTree
-    goal :metaTrue <- TREEIFY[t:Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1:string,t':btree]
+    goalGraph {:metaTrue <- TREEIFY[t:Pr(-a | b) = 0.63; Pr(b) = 0.5; Pr(b | a) = 1:string,t':btree]}
     eager
     output test1
     save test1
@@ -34,7 +34,7 @@ transfer
     sourceGraph test1
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    goalGraph {:metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]}
     eager
     output test2
     save test2
@@ -45,7 +45,7 @@ transfer
     sourceGraph test2
     targetConSpec btree
     interConSpec interBTreeBTreeSEMICOLON
-    goal :metaTrue <- SEMICOLON[v_{69}:btree,t':btree]
+    goalGraph {:metaTrue <- SEMICOLON[v_{69}:btree,t':btree]}
     eager
     output test3
     save test3
@@ -56,7 +56,7 @@ transfer
     sourceGraph test3
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
-    goal :metaTrue <- SIMPLIFY[v_{0}:btree,t':btree]
+    goalGraph {:metaTrue <- SIMPLIFY[v_{0}:btree,t':btree]}
     eager
     output test4
     save test4
@@ -67,7 +67,7 @@ transfer
     sourceGraph test4
     targetConSpec btree
     interConSpec interBTreeBTreeSPACE
-    goal :metaTrue <- SPACE[v_{67}:btree,t':btree]
+    goalGraph {:metaTrue <- SPACE[v_{67}:btree,t':btree]}
     eager
     output test5
     save test5
@@ -78,7 +78,7 @@ transfer
     sourceGraph test5
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    goalGraph {:metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]}
     eager
     output test6
     save test6
@@ -89,7 +89,7 @@ transfer
     sourceGraph test6
     targetConSpec btree
     interConSpec interBTreeBTreeMID
-    goal :metaTrue <- MID[v_{63}:btree,t':btree]
+    goalGraph {:metaTrue <- MID[v_{63}:btree,t':btree]}
     eager
     output test7
     save test7
@@ -100,7 +100,7 @@ transfer
     sourceGraph test7
     targetConSpec btree
     interConSpec interBTreeBTreeSIMPLIFY
-    goal :metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]
+    goalGraph {:metaTrue <- SIMPLIFY[v_{1}:btree,t':btree]}
     eager
     output test8
     save test8
@@ -111,7 +111,7 @@ transfer
     sourceGraph test8
     targetConSpec bayesG
     interConSpec interBTreeBayes
-    goal :metaTrue <- SYS[v_{57}:btree,t':probSys]
+    goalGraph {:metaTrue <- SYS[v_{57}:btree,t':probSys]}
     eager
     output test9
     save test9
@@ -122,7 +122,7 @@ transfer
     sourceGraph test9
     targetConSpec areaDiagramG
     interConSpec interBayesArea
-    goal :metaTrue <- encode[v_{0}:probSys,t':area]
+    goalGraph {:metaTrue <- encode[v_{0}:probSys,t':area]}
     eager
     output test10area
     save test10area
@@ -133,7 +133,7 @@ transfer
     sourceGraph test9
     targetConSpec contTableG
     interConSpec interBayesTable
-    goal :metaTrue <- encode[v_{0}:probSys,t':table]
+    goalGraph {:metaTrue <- encode[v_{0}:probSys,t':table]}
     eager
     output test10table
     save test10table
@@ -144,7 +144,7 @@ transfer
     sourceGraph test9
     targetConSpec probTreeG
     interConSpec interBayesTree
-    goal :metaTrue <- encode[v_{0}:probSys,t':tree]
+    goalGraph {:metaTrue <- encode[v_{0}:probSys,t':tree]}
     eager
     output test10tree
     save test10tree

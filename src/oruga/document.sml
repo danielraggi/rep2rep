@@ -74,7 +74,7 @@ struct
   val tSchemaKeywords = [targetKW,sourceKW,antecedentKW,consequentKW,strengthKW]
 
   val sourceGraphKW = "sourceGraph"
-  val goalKW = "goal"
+  val goalGraphKW = "goalGraph"
   val outputKW = "output"
   val outputLimitKW = "outputLimit"
   val goalLimitKW = "goalLimit"
@@ -89,7 +89,7 @@ struct
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
   val saveKW = "save"
-  val transferKeywords = [sourceGraphKW,goalKW,outputKW,outputLimitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
+  val transferKeywords = [sourceGraphKW,goalGraphKW,outputKW,outputLimitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
@@ -657,10 +657,20 @@ struct
         | stringifyC [] = ""
       val C = gatherMaterialByKeywords transferKeywords ws
 
+      fun getSourceConSpec [] = raise ParseError "no sourceSpace specified"
+        | getSourceConSpec ((x,c)::L) =
+            if x = SOME sourceConSpecKW
+            then getConSpecWithName DC (String.concat (removeOuterBrackets c))
+            else getSourceConSpec L
+
       fun getGraph [] = raise ParseError "no graph to transfer"
         | getGraph ((x,c)::L) =
             if x = SOME sourceGraphKW
-            then getGraphWithName DC (String.concat (removeOuterBrackets c))
+            then (getGraphWithName DC (String.concat (removeOuterBrackets c))
+                 handle ParseError => let val (_,graph) = Parser.parseGraph [] (deTokenise (removeOuterBrackets c)) 
+                                            val sourceConSpecN = #name (getSourceConSpec C)
+                                        in {name = "source graph", conSpecN = sourceConSpecN, graph = graph, usedTokens = Graph.tokensOfGraphQuick graph}
+                                        end)
             else getGraph L
 
       val graphRecord = getGraph C
@@ -674,7 +684,7 @@ struct
             if x = SOME targetConSpecKW
             then getConSpecWithName DC (String.concat (removeOuterBrackets c))
             else getTargetConSpec L
-      fun getInterConSpec [] = raise ParseError "no inter-space specified"
+      fun getInterConSpec [] = raise ParseError "no interSpace specified"
         | getInterConSpec ((x,c)::L) =
             if x = SOME interConSpecKW
             then getConSpecWithName DC (String.concat (removeOuterBrackets c))
@@ -690,14 +700,14 @@ struct
       val targetConSpecN = #name targetConSpecData
       val targetTypeSystem = #typeSystem (#typeSystemData targetConSpecData)
 
-      val interConSpecData = getInterConSpec C
-      val interConSpecN = #name interConSpecData
-      val interTypeSystem = #typeSystem (#typeSystemData interConSpecData)
-
       fun getGoal [] = raise ParseError "no goal for transfer"
         | getGoal ((x,c)::L) =
-            if x = SOME goalKW
-            then Parser.parseGraph (#usedTokens graphRecord) (deTokenise (removeOuterBrackets c))
+            if x = SOME goalGraphKW
+            then (getGraphWithName DC (String.concat (removeOuterBrackets c))
+                 handle ParseError => let val (_,goal) = Parser.parseGraph (#usedTokens graphRecord) (deTokenise (removeOuterBrackets c)) 
+                                            val interConSpecN = #name (getInterConSpec C)
+                                        in {name = "goal", conSpecN = interConSpecN, graph = goal, usedTokens = Graph.tokensOfGraphQuick goal}
+                                        end)
             else getGoal L
       fun getOutput [] = NONE
         | getOutput ((x,c)::L) =
@@ -761,18 +771,23 @@ struct
             if x = SOME saveKW
             then SOME (String.concat c)
             else getSave L
-      val (usedTokens1,goal) = getGoal C
+      val goalRecord = getGoal C
       val outputFilePath = getOutput C
       val outputLimit = getOutputLimit C
       val goalLimit = getGoalLimit C
       val compositionLimit = getCompositionLimit C
       val searchLimit = getSearchLimit C
       val eager = getEager C
-      val iterative = getIterative usedTokens1 C
+
+      fun insertToken tk tks = if List.exists (fn x => CSpace.sameTokens x tk) tks then tks else tk :: tks
+      fun insertManyTokens [] tks' = tks'
+        | insertManyTokens (tk::tks) tks' = insertManyTokens tks (insertToken tk tks')
+      val usedTokens = insertManyTokens (#usedTokens goalRecord) (#usedTokens graphRecord)
+      val iterative = getIterative usedTokens C
       val KB = knowledgeOf DC
       val inverse = getInverse C
       val unistructured = getUnistructured C
-      val targetPattern = getMatchTarget usedTokens1 C
+      val targetPattern = getMatchTarget usedTokens C
       val save = getSave C
       fun mkLatexGoals res =
         let val goalGraph = List.nth(#2(#sequent res),2)
@@ -798,6 +813,9 @@ struct
       val _ = print ("\nApplying structure transfer to "^ #name graphRecord ^ "...");
       val startTime = Time.now();
       
+      val interConSpecData = getConSpecWithName DC (#conSpecN goalRecord)
+      val interConSpecN = #name interConSpecData
+      val goal = #graph goalRecord
       val state = State.initState sourceConSpecData targetConSpecData interConSpecData graph goal
       val TTT = [#typeSystem (#typeSystemData sourceConSpecData), #typeSystem (#typeSystemData targetConSpecData), #typeSystem (#typeSystemData interConSpecData)]
       val adaptedKB = Knowledge.adaptToMSpace [sourceConSpecN,targetConSpecN,interConSpecN] KB

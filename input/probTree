@@ -2,14 +2,15 @@ import arith
 import event
 
 typeSystem probTree =
-  imports arith, eventT
-  types  _:label, _:tree
-  order event < label
+  imports {arith, eventT}
+  types {_:label, _:tree}
+  order {event < label}
 
 conSpec probTreeG:probTree =
   imports arithG, event
-  constructors
+  constructors {
     notLabel : [label] -> label,
     construct : [label, numExp] -> tree,
     addBranch : [tree, label, numExp] -> tree,
     resolve : [tree, tree] -> tree
+}

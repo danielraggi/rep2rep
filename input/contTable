@@ -8,8 +8,9 @@ typeSystem contTable =
 
 conSpec contTableG:contTable =
     imports arithG, event
-    constructors
+    constructors {
         notName : [name] -> name,
         buildOne : [name,numExp] -> oneDim,
         buildTwo : [oneDim,oneDim,numExp] -> twoDim,
         combine : [table,table] -> table
+    }

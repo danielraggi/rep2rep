@@ -1,12 +1,13 @@
 typeSystem basicLogic =
-  types _:formula, _:basicProp, and, or, implies, not, binary, unary
-  order and < binary,
+  types {_:formula, _:basicProp, and, or, implies, not, binary, unary}
+  order {and < binary,
         or < binary,
         implies < binary,
         not < unary,
-        basicProp < formula
+        basicProp < formula}
 
 conSpec basicLogicG:basicLogic =
-  constructors
+  constructors {
     logicApplyBinary : [binary,formula,formula] -> formula,
     logicApplyUnary : [unary,formula] -> formula
+  }

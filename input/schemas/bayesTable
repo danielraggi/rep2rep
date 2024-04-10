@@ -4,73 +4,74 @@ import metaLogic
 import schemas/arithArith
 
 typeSystem interBayesTableT =
-    imports bayes, contTable, metaLogicT, interArithArithT
-    types
-    order
+    imports {bayes, contTable, metaLogicT, interArithArithT}
+    types {}
+    order {}
 
 conSpec interBayesTable:interBayesTableT =
-    imports contTableG, bayesG, interArithArith
-    constructors
+    imports {contTableG, bayesG, interArithArith}
+    constructors {
         match : [events,name] -> metaBool,
         encode : [probSys,table] -> metaBool
-
+    }
+    
 tSchema eventV:(bayesG,contTableG,interBayesTable) =
-    source t:?v:event
-    target t':?v:event
-    antecedent
-    consequent :metaTrue <- match[t:?v:event,t':?v:event]
+    source {t:?v:event}
+    target {t':?v:event}
+    antecedent {}
+    consequent {:metaTrue <- match[t:?v:event,t':?v:event]}
     strength -1
 
 comment eventMatchSame:(bayesG,contTableG,interBayesTable) =
-    source t:event <- makeEvent[t1:string <- ?v]
-    target t':event <- makeEvent[t1':string <- ?v]
-    antecedent
-    consequent :metaTrue <- match[t:event,t':event]
+    source {t:event <- makeEvent[t1:string <- ?v]}
+    target {t':event <- makeEvent[t1':string <- ?v]}
+    antecedent {}
+    consequent {:metaTrue <- match[t:event,t':event]}
     strength 1
 
 tSchema complEvent:(bayesG,contTableG,interBayesTable) =
-    source t:event <- complement[t1:event]
-    target t':name <- notName[t1':name]
-    antecedent :metaTrue <- match[t1:event,t1':name]
-    consequent :metaTrue <- match[t:event,t':name]
+    source {t:event <- complement[t1:event]}
+    target {t':name <- notName[t1':name]}
+    antecedent {:metaTrue <- match[t1:event,t1':name]}
+    consequent {:metaTrue <- match[t:event,t':name]}
     strength 4
 
 tSchema singleEqn:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- makeEqn[t1:events,t2:numExp]
-    target t':oneDim <- buildOne[t1':name,t2':numExp]
-    antecedent :metaTrue <- match[t1:events,t1':name],
-               :metaTrue <- equal[t2:numExp,t2':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':oneDim]
+    source {t:probEqn <- makeEqn[t1:events,t2:numExp]}
+    target {t':oneDim <- buildOne[t1':name,t2':numExp]}
+    antecedent {:metaTrue <- match[t1:events,t1':name],
+               :metaTrue <- equal[t2:numExp,t2':numExp]}
+    consequent {:metaTrue <- encode[t:probEqn,t':oneDim]}
     strength 1
 
 tSchema condProb:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
-                                t2:numExp]
-    target t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
+    source {t:probEqn <- makeEqn[t1:condEvent <- makeCond[t11:event,t12:event],
+                                t2:numExp]}
+    target {t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
                                  t2':oneDim <- buildOne[t21':name,t22':y:var],
-                                 t3':numExp <- multiply[t31':numExp,t22':y:var]]
-    antecedent :metaTrue <- match[t11:event,t11':name],
+                                 t3':numExp <- multiply[t31':numExp,t22':y:var]]}
+    antecedent {:metaTrue <- match[t11:event,t11':name],
                :metaTrue <- match[t12:event,t21':name],
-               :metaTrue <- equal[t2:numExp,t31':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':twoDim]
+               :metaTrue <- equal[t2:numExp,t31':numExp]}
+    consequent {:metaTrue <- encode[t:probEqn,t':twoDim]}
     strength 8
 
 tSchema jointProb:(bayesG,contTableG,interBayesTable) =
-    source t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
-                                t2:numExp]
-    target t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
+    source {t:probEqn <- makeEqn[t1:event <- infix[t11:event,t12:inter,t13:event],
+                                t2:numExp]}
+    target {t':twoDim <- buildTwo[t1':oneDim <- buildOne[t11':name,t12':x:var],
                                  t2':oneDim <- buildOne[t21':name,t22':y:var],
-                                 t3':numExp]
-    antecedent :metaTrue <- match[t11:event,t11':name],
+                                 t3':numExp]}
+    antecedent {:metaTrue <- match[t11:event,t11':name],
                :metaTrue <- match[t13:event,t21':name],
-               :metaTrue <- equal[t2:numExp,t3':numExp]
-    consequent :metaTrue <- encode[t:probEqn,t':twoDim]
+               :metaTrue <- equal[t2:numExp,t3':numExp]}
+    consequent {:metaTrue <- encode[t:probEqn,t':twoDim]}
     strength 4
 
 tSchema combineEqn:(bayesG,contTableG,interBayesTable) =
-    source t:probSys <- addEqn[t1:probEqn,t2:probSys]
-    target t':table <- combine[t1':table,t2':table]
-    antecedent :metaTrue <- encode[t1:probEqn,t1':table],
-               :metaTrue <- encode[t2:probSys,t2':table]
-    consequent :metaTrue <- encode[t:probSys,t':table]
+    source {t:probSys <- addEqn[t1:probEqn,t2:probSys]}
+    target {t':table <- combine[t1':table,t2':table]}
+    antecedent {:metaTrue <- encode[t1:probEqn,t1':table],
+               :metaTrue <- encode[t2:probSys,t2':table]}
+    consequent {:metaTrue <- encode[t:probSys,t':table]}
     strength 1

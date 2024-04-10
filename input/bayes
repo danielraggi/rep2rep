@@ -2,16 +2,17 @@ import arith
 import event
 
 typeSystem bayes =
-  imports arith, eventT
-  types _:condEvent, _:events, _:probEqn, _:probSys, inter, union, bin, _:problem
-  order probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events
+  imports {arith, eventT}
+  types {_:condEvent, _:events, _:probEqn, _:probSys, inter, union, bin, _:problem}
+  order {probEqn < probSys, inter < bin, union < bin, event < events, condEvent < events}
 
 conSpec bayesG:bayes =
-  imports arithG, event
-  constructors
+  imports {arithG, event}
+  constructors {
     makeEqn : [events,numExp] -> probEqn,
     complement : [event] -> event,
     infix : [event,bin,event] -> event,
     makeCond : [event,event] -> condEvent,
     addEqn : [probEqn,probSys] -> probSys,
     calculate : [probSys,events] -> probSys
+  }

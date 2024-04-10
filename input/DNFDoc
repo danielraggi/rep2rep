@@ -1,6 +1,6 @@
 import schemas/DNFCNF
 
-graph AinB:propDNFG =
+graph AinB:propDNFG = {
     t:AB|-AB|-A-B:nonclauseDNF
         <- disj[t1:AB:nonliteralDNF <- conj[t11:A:var,
                                      t12:B:var],
@@ -9,8 +9,9 @@ graph AinB:propDNFG =
                                                     t212:B:var],
                              t22:-A-B:nonliteralDNF <- conj[t221:-A:nonvar <- neg[t2211:A:var],
                                                      t222:-B:nonvar <- neg[t2221:B:var]]]]
+}
 
-graph AinBdisjC:propDNFG =
+graph AinBdisjC:propDNFG = {
     t:AB-C|-AB-C|-A-BC|-A-B-C:nonclauseDNF
         <- disj[t1:AB-C:nonliteralDNF <- conj[t11:A:var,
                                             t12:B-C:nonliteralDNF <- conj[t121:B:var,
@@ -26,8 +27,10 @@ graph AinBdisjC:propDNFG =
                                           t222:-A-B-C:nonliteralDNF <- conj[t2221:-A:nonvar <- neg[t22211:A:var],
                                                                          t2222:-B-C:nonliteralDNF <- conj[t22221:-B:nonvar <- neg[t222211:B:var],
                                                                                                        t22222:-C:nonvar <- neg[t222221:C:var]]] ]]]
+}
 
-graph AinBdisjCinD:propDNFG =
+
+graph AinBdisjCinD:propDNFG = {
   t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF
       <- disj[t1:AB-CD:nonliteralDNF
                 <- conj[t11:A:var,
@@ -71,19 +74,21 @@ graph AinBdisjCinD:propDNFG =
                                         ]
                             ]
                 ]
+}
 
-graph -A-B|-A-C|B-C:propDNFG =
+graph -A-B|-A-C|B-C:propDNFG = {
   t:-A-B|-A-C|B-C:nonclauseDNF
     <- disj[t1:-A-B:nonliteralDNF <- conj[t11:-A:nonvar <- neg[t111:A:var],t12:-B:nonvar <- neg[t121:B:var]],
             t2:-A-C|B-C:nonclauseDNF
                 <- disj[t21:-A-C:nonliteralDNF <- conj[t211:-A:nonvar <- neg[t2111:A:var],t212:-C:nonvar <- neg[t2121:C:var]],
                         t22:B-C:nonliteralDNF <- conj[t221:B:var,t222:-C:nonvar <- neg[t2221:C:var]]]]
+}
 
 comment
    sourceGraph -A-B|-A-C|B-C
    targetConSpec propCNFG
    interConSpec interDNFCNFG
-   goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
+   goalGraph {:metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]}
    unistructured
    output AinBdisjCTest
    outputLimit 50
@@ -92,7 +97,7 @@ comment
    sourceGraph AinB
    targetConSpec propCNFG
    interConSpec interDNFCNFG
-   goal :metaTrue <- entails[t:AB|-AB|-A-B:nonclauseDNF,t':nonliteralCNF]
+   goalGraph {:metaTrue <- entails[t:AB|-AB|-A-B:nonclauseDNF,t':nonliteralCNF]}
    unistructured
    output AinB
    outputLimit 50
@@ -101,7 +106,7 @@ transfer
     sourceGraph -A-B|-A-C|B-C
     targetConSpec propCNFG
     interConSpec interDNFCNFG
-    goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
+    goalGraph {:metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]}
     output AinBdisjC
     unistructured
     outputLimit 50
@@ -110,7 +115,7 @@ transfer
 comment
     sourceGraph AinBdisjCinD
     targetTypeSystem propCNF
-    goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF],[t':nonliteralCNF]) :: entails
+    goalGraph {:metaTrue <- entails[t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF,t':nonliteralCNF]}
     matchTarget t:nonliteralDNF <- disj[t1:B:var, t2:nonvar <- neg[t21:A:var]]
     targetConSpec propCNFG
     outputLimit 10

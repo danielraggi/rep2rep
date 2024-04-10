@@ -1,7 +1,7 @@
 typeSystem shade =
-    types white, blue, red, green, pattern, _:shading
-    order white < shading,
+    types {white, blue, red, green, pattern, _:shading}
+    order {white < shading,
           blue < shading,
           red < shading,
           green < shading,
-          pattern < shading
+          pattern < shading}

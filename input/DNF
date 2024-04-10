@@ -1,14 +1,15 @@
 typeSystem propDNF =
-    types _:var, _:literal, _:clauseDNF, _:dnf, _:nonvar, _:nonliteralDNF, _:nonclauseDNF
-    order var < literal,
+    types {_:var, _:literal, _:clauseDNF, _:dnf, _:nonvar, _:nonliteralDNF, _:nonclauseDNF}
+    order {var < literal,
           nonvar < literal,
           literal < clauseDNF,
           nonliteralDNF < clauseDNF,
           clauseDNF < dnf,
-          nonclauseDNF < dnf
+          nonclauseDNF < dnf}
 
 conSpec propDNFG:propDNF =
-  constructors
+  constructors {
     conj : [literal, clauseDNF] -> nonliteralDNF,
     disj : [clauseDNF, dnf] -> nonclauseDNF,
     neg : [var] -> nonvar
+  }

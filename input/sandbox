@@ -54,7 +54,7 @@ transfer
     sourceGraph ct1
     targetConSpec sandBox
     interConSpec interSBSB
-    goal :metaTrue <- R[t:ty,t':ty]
+    goalGraph :metaTrue <- R[t:ty,t':ty]
     output sandbox
     outputLimit 20
     searchLimit 50

@@ -65,13 +65,13 @@ graph ABCD':propDisjConjNegG =
 transfer
     sourceGraph ABCD
     targetTypeSystem propDNF
-    goal ([t:AorBandCorD:prop],[t':dnf]) :: id
+    goalGraph ([t:AorBandCorD:prop],[t':dnf]) :: id
     output abcd1
     outputLimit 10
 
 transfer
     sourceGraph ABCD'
     targetTypeSystem propDNF
-    goal ([t:AandBorCandD:prop],[t':dnf]) :: id
+    goalGraph ([t:AandBorCandD:prop],[t':dnf]) :: id
     output abcd2
     outputLimit 10

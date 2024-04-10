@@ -3,15 +3,16 @@ import event
 import shade
 
 typeSystem areaDiagram =
-  imports arith, eventT, shade
-  types _:tag, _:area, _:rect, _:point, empty
-  order empty < area, event < tag
+  imports {arith, eventT, shade}
+  types {_:tag, _:area, _:rect, _:point, empty}
+  order {empty < area, event < tag}
 
 conSpec areaDiagramG:areaDiagram =
-  imports arithG, event
-  constructors
+  imports {arithG, event}
+  constructors {
     reverseTag: [tag] -> tag,
     cPoint:[numExp, numExp] -> point,
     cRect: [point, point] -> rect,
     overlayRect: [area, rect, tag, shading] -> area,
     combine: [area, area] -> area
+    }
