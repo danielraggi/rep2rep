@@ -13,7 +13,7 @@ transfer
     eager
     output bayesAreaTest
     save bayesAreaTest
-    limit 2
+    outputLimit 2
 
 graph prEquation:stringRich = liftString Pr(ab U c | d) = 0.21
 graph prSystem:stringRich = liftString Pr(ab U -c | d) = 0.21; Pr(d) = 0.6
@@ -27,7 +27,7 @@ transfer
     eager
     output test1
     save test1
-    limit 2
+    outputLimit 2
     goalLimit 3
 
 transfer
@@ -38,7 +38,7 @@ transfer
     eager
     output test2
     save test2
-    limit 1
+    outputLimit 1
     goalLimit 4
 
 transfer
@@ -49,7 +49,7 @@ transfer
     eager
     output test3
     save test3
-    limit 1
+    outputLimit 1
     goalLimit 4
 
 transfer
@@ -60,7 +60,7 @@ transfer
     eager
     output test4
     save test4
-    limit 1
+    outputLimit 1
     goalLimit 4
 
 transfer
@@ -71,7 +71,7 @@ transfer
     eager
     output test5
     save test5
-    limit 1
+    outputLimit 1
     goalLimit 4
 
 transfer
@@ -82,7 +82,7 @@ transfer
     eager
     output test6
     save test6
-    limit 1
+    outputLimit 1
     goalLimit 4
 
 transfer
@@ -93,7 +93,7 @@ transfer
     eager
     output test7
     save test7
-    limit 10
+    outputLimit 10
     goalLimit 4
 
 transfer
@@ -104,7 +104,7 @@ transfer
     eager
     output test8
     save test8
-    limit 10
+    outputLimit 10
     goalLimit 4
 
 transfer
@@ -115,7 +115,7 @@ transfer
     eager
     output test9
     save test9
-    limit 10
+    outputLimit 10
     goalLimit 4
 
 transfer
@@ -126,7 +126,7 @@ transfer
     eager
     output test10area
     save test10area
-    limit 10
+    outputLimit 10
     goalLimit 5
 
 transfer
@@ -137,7 +137,7 @@ transfer
     eager
     output test10table
     save test10table
-    limit 10
+    outputLimit 10
     goalLimit 5
 
 transfer
@@ -148,5 +148,5 @@ transfer
     eager
     output test10tree
     save test10tree
-    limit 10
+    outputLimit 10
     goalLimit 5

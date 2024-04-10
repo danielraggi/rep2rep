@@ -67,11 +67,11 @@ transfer
     targetTypeSystem propDNF
     goal ([t:AorBandCorD:prop],[t':dnf]) :: id
     output abcd1
-    limit 10
+    outputLimit 10
 
 transfer
     sourceGraph ABCD'
     targetTypeSystem propDNF
     goal ([t:AandBorCandD:prop],[t':dnf]) :: id
     output abcd2
-    limit 10
+    outputLimit 10

@@ -86,7 +86,7 @@ comment
    goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
    unistructured
    output AinBdisjCTest
-   limit 50
+   outputLimit 50
 
 comment
    sourceGraph AinB
@@ -95,7 +95,7 @@ comment
    goal :metaTrue <- entails[t:AB|-AB|-A-B:nonclauseDNF,t':nonliteralCNF]
    unistructured
    output AinB
-   limit 50
+   outputLimit 50
 
 transfer
     sourceGraph -A-B|-A-C|B-C
@@ -104,7 +104,7 @@ transfer
     goal :metaTrue <- entails[t:-A-B|-A-C|B-C:nonclauseDNF,t':nonliteralCNF]
     output AinBdisjC
     unistructured
-    limit 50
+    outputLimit 50
     matchTarget t:nonliteralCNF <- disj[t1:nonvar, t2:nonvar]
 
 comment
@@ -113,5 +113,5 @@ comment
     goal ([t:AB-CD|-AB-CD|-A-BCD|-A-B-CD|-A-B-C-D:nonclauseDNF],[t':nonliteralCNF]) :: entails
     matchTarget t:nonliteralDNF <- disj[t1:B:var, t2:nonvar <- neg[t21:A:var]]
     targetConSpec propCNFG
-    limit 10
+    outputLimit 10
     output AinBdisjCinD

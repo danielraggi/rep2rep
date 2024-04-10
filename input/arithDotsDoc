@@ -64,8 +64,8 @@ transfer
     interConSpec interArithDots
     goal :metaTrue <- isTrue[t:formula]
     searchLimit 100
-    output test
-    limit 10
+    output 123
+    outputLimit 10
 
 transfer
     sourceGraph 1plus2plus3plus4equalsStuff
@@ -73,5 +73,5 @@ transfer
     interConSpec interArithDots
     goal :metaBool <- isTrue[t:1+2+3+4=4(4+1)/2:formula]
     searchLimit 100
-    output interSpaceTest
-    limit 1
+    output 1234
+    outputLimit 1

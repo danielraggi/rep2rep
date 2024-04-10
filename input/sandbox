@@ -56,6 +56,6 @@ transfer
     interConSpec interSBSB
     goal :metaTrue <- R[t:ty,t':ty]
     output sandbox
-    limit 20
+    outputLimit 20
     searchLimit 50
     unistructured

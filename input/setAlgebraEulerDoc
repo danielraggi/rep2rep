@@ -59,4 +59,4 @@ transfer
     targetTypeSystem Euler
     goal ([t:A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset:formula],[t':diagram]) :: draw
     output draw_A_subseteq_B_and_B_intersection_C_eq_emptyset_implies_A_intersection_C_eq_emptyset
-    limit 50
+    outputLimit 50

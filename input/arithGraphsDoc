@@ -17,4 +17,4 @@ transfer
     interConSpec interArithGraphs
     goal :metaTrue <- encode[t:0+1+2+3:numExp,t':graph]
     output arithGraphsTest
-    limit 10
+    outputLimit 10

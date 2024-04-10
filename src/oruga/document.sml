@@ -76,7 +76,7 @@ struct
   val sourceGraphKW = "sourceGraph"
   val goalKW = "goal"
   val outputKW = "output"
-  val limitKW = "limit"
+  val outputLimitKW = "outputLimit"
   val goalLimitKW = "goalLimit"
   val compositionLimitKW = "compositionLimit"
   val searchLimitKW = "searchLimit"
@@ -89,7 +89,7 @@ struct
   val targetConSpecKW = "targetConSpec"
   val interConSpecKW = "interConSpec"
   val saveKW = "save"
-  val transferKeywords = [sourceGraphKW,goalKW,outputKW,limitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
+  val transferKeywords = [sourceGraphKW,goalKW,outputKW,outputLimitKW,searchLimitKW,goalLimitKW,compositionLimitKW,eagerKW,
                           iterativeKW,unistructuredKW,matchTargetKW,targetConSpecKW,
                           sourceConSpecKW,interConSpecKW,saveKW,inverseKW]
 
@@ -704,11 +704,11 @@ struct
             if x = SOME outputKW
             then SOME ("output/latex/"^(String.concat (removeOuterBrackets c))^".tex")
             else getOutput L
-      fun getLimit [] = NONE
-        | getLimit ((x,c)::L) =
-            if x = SOME limitKW
-            then SOME (valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "limit needs an integer!")
-            else getLimit L
+      fun getOutputLimit [] = NONE
+        | getOutputLimit ((x,c)::L) =
+            if x = SOME outputLimitKW
+            then SOME (valOf (Int.fromString (String.concat c)) handle Option => raise ParseError "outputLimit needs an integer!")
+            else getOutputLimit L
       fun getSearchLimit [] = NONE
         | getSearchLimit ((x,c)::L) =
             if x = SOME searchLimitKW
@@ -763,7 +763,7 @@ struct
             else getSave L
       val (usedTokens1,goal) = getGoal C
       val outputFilePath = getOutput C
-      val limit = getLimit C
+      val outputLimit = getOutputLimit C
       val goalLimit = getGoalLimit C
       val compositionLimit = getCompositionLimit C
       val searchLimit = getSearchLimit C
@@ -805,7 +805,7 @@ struct
       val results = State.transfer (goalLimit,compositionLimit,searchLimit) eager iterative unistructured TTT SC state;
 
       val nres = length (Seq.list_of results);
-      val listOfResults = case limit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
+      val listOfResults = case outputLimit of SOME n => #1(Seq.chop n results) | NONE => Seq.list_of results;
       val endTime = Time.now();
       val runtime = Time.toMilliseconds endTime - Time.toMilliseconds startTime;
       val _ = print ("\n" ^ "  runtime: "^ LargeInt.toString runtime ^ " ms \n");
@@ -862,14 +862,14 @@ struct
   fun read filename =
   let val file_str =
           let
-            val file = TextIO.openIn ("input/"^filename);
+            val file = TextIO.openIn ("input/"^filename^".oruga") handle Io => TextIO.openIn ("input/"^filename);
             val contents = TextIO.inputAll file;
           in
             TextIO.closeIn file;
             contents
           end
       handle IO.Io _ =>
-        (print("File NOT found: input/" ^ filename ^ "\n");
+        (print("File NOT found: neither input/" ^ filename ^ ".oruga nor input/" ^ filename ^ " found\n");
         OS.Process.exit(OS.Process.failure));
 
       val words = tokenise file_str

@@ -58,8 +58,8 @@ tSchema doubleCounting:(arithG,dotDiagramsG,interArithDots) =
 
 tSchema div2symmetry:(arithG,dotDiagramsG,interArithDots) =
     source t:numExp <- infixOp[t1:numExp,tt:div,t2:2:nat10]
-    target t':arr <- manipulate[t1':arr <- remove[t2':arr,t':arr],t2':manipulation]
-    antecedent :metaTrue <- count[t2':arr,t1:numExp]
+    target t':arr <- manipulate[t1':arr <- remove[t12':arr,t':arr],t2':manipulation]
+    antecedent :metaTrue <- count[t12':arr,t1:numExp]
     consequent :metaTrue <- count[t':arr,t:numExp]
     strength 2
 

@@ -196,26 +196,26 @@ comment
     sourceGraph ABCD
     goal ([t:AorBandCorD:prop],[t':prop]) :: simplify
     output abcd
-    limit 10
+    outputLimit 10
     iterative
 
 comment
     sourceGraph AA
     goal ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
     output aa
-    limit 10
+    outputLimit 10
     iterative
 
 comment
     sourceGraph AA1
     goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa11
-    limit 10
+    outputLimit 10
     iterative
 
 transfer
     sourceGraph AA1
     goal ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa
-    limit 20
+    outputLimit 20
     iterative

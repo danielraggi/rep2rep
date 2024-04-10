@@ -19,7 +19,7 @@ transfer
     goal :metaTrue <- encode[t:A-is-0.2-and-B-cond-A-is-0.9-and-not-B-cond-not-A-is-0.7:probSys,t':tree]
     output bayesTree
     eager
-    limit 2
+    outputLimit 2
 
 transfer
     sourceGraph z
@@ -28,4 +28,4 @@ transfer
     goal :metaTrue <- encode[t:A-is-0.4-and-B-cond-not-A-is-0.2-and-A-cond-not-B-is-0.5:probSys,t':tree]
     output treeTest
     eager
-    limit 2
+    outputLimit 2
