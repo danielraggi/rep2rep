@@ -147,17 +147,17 @@ struct
             NONE => Seq.empty
           | SOME (st,s') =>
               if stop st then frontier
-              else if ign (st,acc) then dfsi s' acc
-              else let val unfolded = unfold st
-                   in case Seq.pull unfolded of
-                          NONE => let val recdfsi = dfsi s' (st::acc)
-                                  in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h
-                                  end
-                        | SOME (st',s'') => let val newFrontier = Seq.insertManyNoEQUAL unfolded s' h
-                                                val recdfsi = dfsi newFrontier (st::acc)
-                                            in if forg (st,acc) then recdfsi else Seq.insertNoEQUAL st recdfsi h
-                                            end
-                   end
+              else 
+                if ign (st,acc) then dfsi s' acc
+                else 
+                  let 
+                    val unfolded = unfold st
+                    val newFrontier = Seq.insertManyNoEQUAL unfolded s' h
+                    val recdfsi = dfsi newFrontier (st::acc)
+                  in 
+                    if forg (st,acc) then recdfsi 
+                    else Seq.insertNoEQUAL st recdfsi h
+                  end
           )
     in dfsi (Seq.single state) []
     end
