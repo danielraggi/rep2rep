@@ -864,59 +864,65 @@ struct
                              knowledge = kb,
                              graphsData = cs,
                              transferRequests = tr} :: L) =
-    (case joinDocumentContents L of
-      {typeSystemsData = ts',
-       conSpecsData = sp',
-       knowledge = kb',
-       graphsData = cs',
-       transferRequests = tr'} =>
-          {typeSystemsData = List.mergeNoEQUAL tsdCmp ts ts',
-           conSpecsData = List.mergeNoEQUAL csdCmp sp sp',
-           knowledge = Knowledge.join kb kb',
-           graphsData = List.mergeNoEQUAL ctCmp cs cs',
-           transferRequests = tr @ tr'})
-  | joinDocumentContents [] = emptyDocContent
+      (case joinDocumentContents L of
+        {typeSystemsData = ts',
+        conSpecsData = sp',
+        knowledge = kb',
+        graphsData = cs',
+        transferRequests = tr'} =>
+            {typeSystemsData = List.mergeNoEQUAL tsdCmp ts ts',
+            conSpecsData = List.mergeNoEQUAL csdCmp sp sp',
+            knowledge = Knowledge.join kb kb',
+            graphsData = List.mergeNoEQUAL ctCmp cs cs',
+            transferRequests = tr @ tr'})
+    | joinDocumentContents [] = emptyDocContent
+
+  fun readLight filename =
+    let val file_str =
+            let
+              val file = TextIO.openIn ("input/"^filename^".oruga") handle Io => TextIO.openIn ("input/"^filename);
+              val contents = TextIO.inputAll file;
+            in
+              TextIO.closeIn file;
+              contents
+            end
+        handle IO.Io _ =>
+          (print("File NOT found: neither input/" ^ filename ^ ".oruga nor input/" ^ filename ^ " found\n");
+          OS.Process.exit(OS.Process.failure));
+
+        val words = tokenise file_str
+        val blocks = gatherMaterialByKeywords bigKeywords words
+
+        val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
+        val importedContents = map (readLight o deTokenise o #2) importFilenames
+        val importedContent = joinDocumentContents importedContents
+
+        fun distribute [] = importedContent
+          | distribute ((x,c)::L) =
+            let val dc = distribute L
+                val (n,eq,ws) = breakListOn "=" c
+                (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
+            in if x = SOME typeSystemKW then addTypeSystem (n,ws) dc else
+              if x = SOME conSpecKW then addConSpec (n, ws) dc else
+              if x = SOME iSchemaKW then addInferenceSchema (n,ws) dc else
+              if x = SOME tSchemaKW then addTransferSchema (n,ws) dc else
+              if x = SOME graphKW then addGraph (n,ws) dc else
+              if x = SOME transferKW then addTransferRequests c dc else
+              if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"
+            end handle Bind => raise ParseError "expected name = content, found multiple words before ="
+
+        val nonImported = List.filter (fn (x,_) => x <> SOME importKW) blocks
+    in distribute (rev nonImported)
+    end
 
   fun read filename =
-  let val file_str =
-          let
-            val file = TextIO.openIn ("input/"^filename^".oruga") handle Io => TextIO.openIn ("input/"^filename);
-            val contents = TextIO.inputAll file;
-          in
-            TextIO.closeIn file;
-            contents
-          end
-      handle IO.Io _ =>
-        (print("File NOT found: neither input/" ^ filename ^ ".oruga nor input/" ^ filename ^ " found\n");
-        OS.Process.exit(OS.Process.failure));
-
-      val words = tokenise file_str
-      val blocks = gatherMaterialByKeywords bigKeywords words
-
-      val importFilenames = List.filter (fn (x,_) => x = SOME importKW) blocks
-      val importedContents = map (read o deTokenise o #2) importFilenames
-      val importedContent = joinDocumentContents importedContents
-
-      fun distribute [] = importedContent
-        | distribute ((x,c)::L) =
-          let val dc = distribute L
-              val (n,eq,ws) = breakListOn "=" c
-              (*val _ = if eq = "=" then () else raise ParseError (String.concat n)*)
-          in if x = SOME typeSystemKW then addTypeSystem (n,ws) dc else
-             if x = SOME conSpecKW then addConSpec (n, ws) dc else
-             if x = SOME iSchemaKW then addInferenceSchema (n,ws) dc else
-             if x = SOME tSchemaKW then addTransferSchema (n,ws) dc else
-             if x = SOME graphKW then addGraph (n,ws) dc else
-             if x = SOME transferKW then addTransferRequests c dc else
-             if x = SOME commentKW then dc else raise ParseError "error: this shouldn't have happened"
-          end handle Bind => raise ParseError "expected name = content, found multiple words before ="
-
-      val nonImported = List.filter (fn (x,_) => x <> SOME importKW) blocks
-      val contentBeforeTransfers = distribute (rev nonImported)
+    let 
+      val contentBeforeTransfers = readLight filename
       val contentAfterTransfers = foldl (uncurry processTransferRequests)
-                                        contentBeforeTransfers
-                                        (#transferRequests contentBeforeTransfers)
-  in contentAfterTransfers
-  end
+                                          contentBeforeTransfers
+                                          (#transferRequests contentBeforeTransfers)
+    in 
+      contentAfterTransfers
+    end
 
 end
