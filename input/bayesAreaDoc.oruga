@@ -19,7 +19,7 @@ transfer
     goalGraph {:metaTrue <- encode[t:tt:probSys,t':area]}
     output bayesArea
     eager
-    limit 4
+    outputLimit 10
 
 comment
     sourceGraph y
@@ -28,7 +28,7 @@ comment
     goalGraph {:metaTrue <- encode[t:A-is-0.2-and-B-cond-A-is-0.9-and-not-B-cond-not-A-is-0.7:probSys,t':area]}
     output bayesAreaY
     eager
-    limit 20
+    outputLimit 10
 
 comment
     sourceGraph z
@@ -37,4 +37,4 @@ comment
     goalGraph {:metaTrue <- encode[t:A-is-0.4-and-B-cond-not-A-is-0.2-and-A-cond-not-B-is-0.5:probSys,t':area]}
     output bayesAreaZ
     eager
-    limit 20
+    outputLimit 10
