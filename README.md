@@ -8,9 +8,9 @@ The project is written in Standard ML. You need to have Poly/ML installed: https
 
 Build rep2rep by running `make` in the rep2rep directory. Then you can type
 ```
-dist/rep2rep arithDotsDoc
+dist/rep2rep test
 ```
-to test one example included in the repo. If you have created your own oruga input file you can replace `arithDotsDoc` with your file. Doing this should generate a file in the rep2rep/output/latex/ directory called 123.tex, from which you can compile a pdf. If you can get this done it means things are working well and you're ready to do something more sophisticated.
+to test a batch of examples included in our library. If you have created your own oruga input file you can replace `test` with your file. Doing this should generate latex files in the rep2rep/output/latex/ directory, which you can compile into pdf. If you can get this done it means things are working well and you're ready to do something more sophisticated.
 
 ## The input language
 We have an input language for specifying type systems, constructor specifications, graphs, and schemas. You can find examples of its use in the folder rep2rep/input.
