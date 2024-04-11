@@ -14,6 +14,7 @@ sig
 
   val makeInstantiationOfTypeVars : MSpace.mTypeSystem -> Type.typ list -> Type.typ Seq.seq -> (Type.typ -> Type.typ option) Seq.seq;
   val applyTransferSchemas : MSpace.mTypeSystem -> schemaData Seq.seq -> state -> state Seq.seq
+  val score : state -> real;
 
   val transfer : int option * int option * int option
                   -> bool
@@ -125,6 +126,11 @@ struct
       applyBackwardAllToState T (fn i => i = 1) SC' st 
     end
   
+  fun score st =
+    let val (A,C) = #sequent st
+    in #score st - 0.2 * Real.fromInt (MGraph.size C)
+    end
+
   fun compare (st1,st2) = 
     let 
       val (A1,C1) = #sequent st1
@@ -133,7 +139,6 @@ struct
       val cnq2 = List.last C2
       val anc1 = List.last A1
       val anc2 = List.last A2
-      fun score st = #score st / Real.fromInt (MGraph.size (#2 (#sequent st)))
     in
       case (Graph.contained cnq1 anc1, Graph.contained cnq2 anc2) of
           (true,false) => LESS

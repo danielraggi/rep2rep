@@ -797,7 +797,7 @@ struct
             val alignedGoals = "\n " ^ "\\centerline{\\textbf{Open\\ goals}}\\smallskip\n"
                                     ^ goalsS ^ "\n\n\\bigskip"
                                     ^ "\\centerline{\\textbf{transfer\\ score}}\n"
-                                    ^ "\\centerline{" ^ Latex.realToString (#score res) ^ "}"
+                                    ^ "\\centerline{" ^ Latex.realToString (State.score res) ^ "}"
         in alignedGoals
         end
       fun mkLatexConstructionsAndGoals res =
@@ -830,11 +830,11 @@ struct
       val _ = print ("  number of results: " ^ Int.toString nres ^ "\n");
       val (score,ngoals) =
             case Seq.pull results of
-              SOME (x,_) => (#score x,
+              SOME (x,_) => (State.score x,
                              Graph.numberOfConstructors (List.nth(#2(#sequent x),2)))
             | NONE => (0.0,~1)
       val _ = print ("  number of open goals (top result): " ^ Int.toString ngoals ^ "\n")
-      val _ = print ("  transfer score (top result): " ^ Real.toString score)
+      val _ = print ("  transfer score (top result): " ^ Latex.realToString score)
         val _ = print ("\n...done\n")
       val _ = print "\nComposing patterns and creating tikz figures...";
       val latexCompsAndGoals = Latex.printSubSections 1 (map mkLatexConstructionsAndGoals listOfResults);
