@@ -20,21 +20,21 @@ conSpec interBTreeBayes:interBTreeBayesT =
         COPY : [btree,string] -> metaBool,
         SAME : [char,char] -> metaBool
 
-comment prob:(btree,bayesG,interBTreeBayes) =
+comment {prob:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:btree <- branch[t21:btree,t22:btree <- branch[t221:=:ordinary,t222:?:ordinary]]]
     target t':problem <- makeProblem[t1':probSys,t2':events]
     antecedent :metaTrue <- SYS[t1:btree,t1':probSys],
                :metaTrue <- EVTS[t21:btree,t2':events]
     consequent :metaTrue <- PROB[t:btree,t':problem]
-    strength 1
+    strength 1}
 
-comment evtsCond:(btree,bayesG,interBTreeBayes) =
+comment {evtsCond:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:btree]
     target t':condEvent <- makeCond[t1':event,t2':event]
     antecedent :metaTrue <- EVT[t1:btree,t1':event],
                :metaTrue <- EVT[t2:btree,t2':event]
     consequent :metaTrue <- EVTS[t:btree,t':condEvent]
-    strength 4
+    strength 4}
 
 tSchema evtsEvt:(btree,bayesG,interBTreeBayes) =
     source t:btree
@@ -58,12 +58,12 @@ tSchema sys:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- SYS[t:btree,t':probSys]
     strength 3
 
-comment dummsBin:(btree,bayesG,interBTreeBayes) =
+comment {dummsBin:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:dummy]
     target t':bin
     antecedent :metaTrue <- BIN[t1:btree,t':bin]
     consequent :metaTrue <- BIN[t:btree,t':bin]
-    strength 1
+    strength 1}
 
 tSchema dummsEqreal:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,t2:dummy]
@@ -95,12 +95,12 @@ tSchema copybranch1:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- COPY[t:btree,t':string]
     strength 4
 
-comment copyEmpty:(btree,bayesG,interBTreeBayes) =
+comment {copyEmpty:(btree,bayesG,interBTreeBayes) =
     source t:dummy:leaf
     target t':empty
     antecedent
     consequent :metaTrue <- COPY[t:dummy:leaf,t':empty]
-    strength 1
+    strength 1}
 
 tSchema copyNonBChar:(btree,bayesG,interBTreeBayes) =
     source t:?x:ordinary
@@ -134,19 +134,19 @@ tSchema eqn:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- EQN[t:btree,t':probEqn]
     strength 5
 
-comment binAND:(btree,bayesG,interBTreeBayes) =
+comment {binAND:(btree,bayesG,interBTreeBayes) =
     source t:&:ordinary
     target t':inter
     antecedent
     consequent :metaTrue <- BIN[t:&:ordinary,t':inter]
-    strength 8
+    strength 8}
 
-comment binOR:(btree,bayesG,interBTreeBayes) =
+comment {binOR:(btree,bayesG,interBTreeBayes) =
     source t:U:ordinary
     target t':union
     antecedent
     consequent :metaTrue <- BIN[t:U:ordinary,t':union]
-    strength 8
+    strength 8}
 
 tSchema evtBinAnd:(btree,bayesG,interBTreeBayes) =
     source t:btree <- branch[t1:btree,
@@ -280,13 +280,13 @@ tSchema natural9:(btree,bayesG,interBTreeBayes) =
     consequent :metaTrue <- NAT[t:btree,t':nat10]
     strength 1
 
-    comment natural0':(btree,bayesG,interBTreeBayes) =
+    comment {natural0':(btree,bayesG,interBTreeBayes) =
         source t:btree <- branch[t1:0:ordinary,
                                  t2:dummy]
         target t':0
         antecedent
         consequent :metaTrue <- NAT[t:btree,t':0]
-        strength 1
+        strength 1}
 
 
         tSchema natural0'':(btree,bayesG,interBTreeBayes) =

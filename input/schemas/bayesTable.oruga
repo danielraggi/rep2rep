@@ -22,12 +22,12 @@ tSchema eventV:(bayesG,contTableG,interBayesTable) =
     consequent {:metaTrue <- match[t:?v:event,t':?v:event]}
     strength -1
 
-comment eventMatchSame:(bayesG,contTableG,interBayesTable) =
+comment {eventMatchSame:(bayesG,contTableG,interBayesTable) =
     source {t:event <- makeEvent[t1:string <- ?v]}
     target {t':event <- makeEvent[t1':string <- ?v]}
     antecedent {}
     consequent {:metaTrue <- match[t:event,t':event]}
-    strength 1
+    strength 1}
 
 tSchema complEvent:(bayesG,contTableG,interBayesTable) =
     source {t:event <- complement[t1:event]}

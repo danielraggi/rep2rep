@@ -54,19 +54,19 @@ tSchema basicC3:(propDNFG,propCNFG,interDNFCNFG) =
     consequent :metaTrue <- entails[t:-C:nonvar,t':-C:nonvar]
     strength 2
 
-comment basicD:(propDNFG,propCNFG,interDNFCNFG) =
+comment {basicD:(propDNFG,propCNFG,interDNFCNFG) =
     source t:D:var
     target t':D:var
     antecedent
     consequent :metaTrue <- entails[t:D:var,t':D:var]
-    strength 2
+    strength 2}
 
-comment neg:(propDNFG,propCNFG,interDNFCNFG) =
+comment {neg:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonvar <- neg[t1:var]
     target t':nonvar <- neg[t1':var]
     antecedent :metaTrue <- entails[t1':var,t1:var]
     consequent :metaTrue <- entails[t:nonvar,t':nonvar]
-    strength 2
+    strength 2}
 
 tSchema disjE:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonclauseDNF <- disj[t1:clauseDNF,t2:dnf]
@@ -104,9 +104,9 @@ tSchema conjE2:(propDNFG,propCNFG,interDNFCNFG) =
     consequent :metaTrue <- entails[t:nonliteralDNF,t':cnf]
     strength 2
 
-comment conjI:(propDNFG,propCNFG,interDNFCNFG) =
+comment {conjI:(propDNFG,propCNFG,interDNFCNFG) =
     source t:nonliteral
     target t':nonclause <- conj[t1':clauseCNF,t2':cnf]
     antecedent :metaTrue <- entails[t:nonliteral,t1':clauseCNF], :metaTrue <- entails[t:nonliteral,t2':cnf]
     consequent :metaTrue <- entails[t:nonliteral,t':nonclause]
-    strength 0.1
+    strength 0.1}

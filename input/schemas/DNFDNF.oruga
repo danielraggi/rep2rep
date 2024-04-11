@@ -1,18 +1,19 @@
 import DNF
 
-comment disj:(propDNFG,propDNFG) =
+comment {disj:(propDNFG,propDNFG) =
     source t:nonclause <- disj[t1:clause,t2:dnf]
     target t':nonclause <- disj[t1':clause,t2':dnf]
     antecedent ([t1:clause],[t1':clause]) :: entails, ([t2:dnf],[t2':dnf]) :: entails
     consequent ([t:nonclause],[t':nonclause]) :: entails
     strength 1.0
 
-comment conj:(propDNFG,propDNFG) =
+tSchema conj:(propDNFG,propDNFG) =
     source t:nonliteral <- conj[t1:literal,t2:clause]
     target t':nonliteral <- conj[t1':literal,t2':clause]
     antecedent ([t1:literal],[t1':literal]) :: entails, ([t2:clause],[t2':clause]) :: entails
     consequent ([t:nonliteral],[t':nonliteral]) :: entails
     strength 1.0
+}
 
 tSchema basicA1:(propDNFG,propDNFG) =
     source t:A:var

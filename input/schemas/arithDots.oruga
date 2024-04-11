@@ -16,7 +16,7 @@ conSpec interArithDots:interArithDotsT =
         perpendicular : [line,line] -> metaBool
     }
 
-tSchema multiplyRectangle:(arithG,dotDiagramsG,interArithDots) =
+tSchema multiplyRectangle:(arithG,dotDiagramsG,interArithDots) =  #this schema says that a if you have two perpendicular lines that are non disjoint you can make a rectangle from them (and the dimensions of the rectangle will be the sizes of the lines)
     source {t:numExp <- multiply[n:numExp,m:numExp]}
     target {t':rectangle <- fillRectangle[t1':line,t2':line]}
     antecedent {:metaTrue <- perpendicular[t1':line,t2':line],

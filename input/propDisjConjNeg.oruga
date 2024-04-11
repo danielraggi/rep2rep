@@ -192,26 +192,28 @@ graph BB:propDisjConjNegG =
                         t22:-B:prop <- neg[t221:B:basicProp]]]
 
 
-comment
+comment {
+transfer
     sourceGraph ABCD
     goalGraph ([t:AorBandCorD:prop],[t':prop]) :: simplify
     output abcd
     outputLimit 10
     iterative
 
-comment
+transfer
     sourceGraph AA
     goalGraph ([t:AB|-AB|-A-BandB-C|-BC|-B-C:prop],[t':prop]) :: simplify
     output aa
     outputLimit 10
     iterative
 
-comment
+transfer
     sourceGraph AA1
     goalGraph ([t:-AorBand-Bor-C:prop],[t':prop]) :: simplify
     output aa11
     outputLimit 10
     iterative
+}
 
 transfer
     sourceGraph AA1

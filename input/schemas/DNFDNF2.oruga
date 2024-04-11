@@ -70,16 +70,16 @@ tSchema basicB2':(propDNFG,propDNFG) =
     consequent ([t':B:var],[t:B:var]) :: entails
     strength 1.0
 
-comment basicC1':(propDNFG,propDNFG) =
+comment {basicC1':(propDNFG,propDNFG) =
     source t':C:var
     target t:C:var
     antecedent
     consequent ([t':C:var],[t:C:var]) :: isEntailedBy
-    strength 1.0
+    strength 1.0}
 
-comment basicC2':(propDNFG,propDNFG) =
+comment {basicC2':(propDNFG,propDNFG) =
     source t':C:var
     target t:C:var
     antecedent
     consequent ([t':C:var],[t:C:var]) :: entails
-    strength 1.0
+    strength 1.0}

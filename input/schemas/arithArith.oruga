@@ -12,12 +12,12 @@ conSpec interArithArith:interArithArithT =
         equal : [numExp,numExp] -> metaBool
     }
 
-comment equalNumeral:(arithG,arithG,interArithArith) =
+comment {equalNumeral:(arithG,arithG,interArithArith) =
     source {t:real10 <- ?v}
     target {t':real10 <- ?v}
     antecedent {}
     consequent {:metaTrue <-equal[t:real10,t':real10]}
-    strength 0
+    strength 0}
 
 tSchema equalNumeral':(arithG,arithG,interArithArith) =
     source {t:?v:real10}
@@ -26,7 +26,7 @@ tSchema equalNumeral':(arithG,arithG,interArithArith) =
     consequent {:metaTrue <-equal[t:?v:real10,t':?v:real10]}
     strength 0
 
-comment equalReal:(arithG,arithG,interArithArith) =
+comment {equalReal:(arithG,arithG,interArithArith) =
     source {t:real10 <- makeReal[t1:nat10, t2:nat10]}
     target {t':real10 <- makeReal[t1':nat10, t2':nat10]}
     antecedent {:metaTrue <-equal[t1:nat10,t1':nat10],
@@ -34,83 +34,84 @@ comment equalReal:(arithG,arithG,interArithArith) =
     consequent {:metaTrue <-equal[t:real10,t':real10]}
     strength 1
 
-comment equalNat:(arithG,arithG,interArithArith) =
+tSchema equalNat:(arithG,arithG,interArithArith) =
     source {t:nat10 <- addDigit[t1:digit, t2:nat10]}
     target {t':nat10 <- addDigit[t1':digit, t2':nat10]}
     antecedent {:metaTrue <-equal[t1:digit,t1':digit],
                :metaTrue <-equal[t2:nat10,t2':nat10]}
     consequent {:metaTrue <-equal[t:nat10,t':nat10]}
     strength 2
+}
 
-comment equalDigit1:(arithG,arithG,interArithArith) =
+comment {equalDigit1:(arithG,arithG,interArithArith) =
     source {t:1}
     target {t':1}
     antecedent {}
     consequent {:metaTrue <-equal[t:1,t':1]}
-    strength 0
+    strength 0}
 
-comment equalDigit2:(arithG,arithG,interArithArith) =
+comment {equalDigit2:(arithG,arithG,interArithArith) =
     source {t:2}
     target {t':2}
     antecedent {}
     consequent {:metaTrue <-equal[t:2,t':2]}
-    strength 0
+    strength 0}
 
-comment equalDigit3:(arithG,arithG,interArithArith) =
+comment {equalDigit3:(arithG,arithG,interArithArith) =
     source {t:3}
     target {t':3}
     antecedent {}
     consequent {:metaTrue <-equal[t:3,t':3]}
-    strength 0
+    strength 0}
 
-comment equalDigit4:(arithG,arithG,interArithArith) =
+comment {equalDigit4:(arithG,arithG,interArithArith) =
     source {t:4}
     target {t':4}
     antecedent {}
     consequent {:metaTrue <-equal[t:4,t':4]}
-    strength 0
+    strength 0}
 
-comment equalDigit5:(arithG,arithG,interArithArith) =
+comment {equalDigit5:(arithG,arithG,interArithArith) =
     source {t:5}
     target {t':5}
     antecedent {}
     consequent {:metaTrue <-equal[t:5,t':5]}
-    strength 0
+    strength 0}
 
-comment equalDigit6:(arithG,arithG,interArithArith) =
+comment {equalDigit6:(arithG,arithG,interArithArith) =
     source {t:6}
     target {t':6}
     antecedent {}
     consequent {:metaTrue <-equal[t:6,t':6]}
-    strength 0
+    strength 0}
 
-comment equalDigit7:(arithG,arithG,interArithArith) =
+comment {equalDigit7:(arithG,arithG,interArithArith) =
     source {t:7}
     target {t':7}
     antecedent {}
     consequent {:metaTrue <-equal[t:7,t':7]}
-    strength 0
+    strength 0}
 
-comment equalDigit8:(arithG,arithG,interArithArith) =
+comment {equalDigit8:(arithG,arithG,interArithArith) =
     source {t:8}
     target {t':8}
     antecedent {}
     consequent {:metaTrue <-equal[t:8,t':8]}
-    strength 0
+    strength 0}
 
-comment equalDigit9:(arithG,arithG,interArithArith) =
+comment {equalDigit9:(arithG,arithG,interArithArith) =
     source {t:9}
     target {t':9}
     antecedent {}
     consequent {:metaTrue <-equal[t:9,t':9]}
-    strength 0
+    strength 0}
 
-comment equalDigit0:(arithG,arithG,interArithArith) =
+comment {equalDigit0:(arithG,arithG,interArithArith) =
     source {t:0}
     target {t':0}
     antecedent {}
     consequent {:metaTrue <-equal[t:0,t':0]}
-    strength 0
+    strength 0}
 
 tSchema equalVar:(arithG,arithG,interArithArith) =
     source {t:?x:var}
