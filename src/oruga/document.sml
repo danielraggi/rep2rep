@@ -108,7 +108,7 @@ struct
   fun tokenise s =
     let fun commentChar x = (x = #"#")
         fun lineBreak x = (x = #"\n")
-        fun separator x = (x = #"\n" orelse x = #" " orelse x = #"\t")
+        fun separator x = (x = #"\n" orelse x = #" " orelse x = #"\t" orelse x = #"\r")
         fun standAlone x = List.exists (fn y => y = x) standAloneChars
         fun t [] = (true,[])
           | t (x::xs) =
