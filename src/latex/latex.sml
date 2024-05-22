@@ -292,6 +292,8 @@ struct
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end handle Empty => ""
 
+  fun stringOfToken t = CSpace.nameOfToken t ^ ":" ^ mathtt (CSpace.typeOfToken t)
+
   fun propositionsOfGraph g =
     let
       fun pog [] = []
@@ -299,10 +301,10 @@ struct
         let 
           fun makeNegStatements [] = []
             | makeNegStatements (inp::inps) = 
-              "\\neg" ^ mathtt(#constructor inp) ^ List.toString CSpace.nameOfToken (#inputTokens inp) :: makeNegStatements inps
+              "\\neg" ^ mathtt(#constructor inp) ^ List.toString stringOfToken (#inputTokens inp) :: makeNegStatements inps
           fun makePosStatements [] = []
             | makePosStatements (inp::inps) = 
-            mathtt(#constructor inp) ^ List.toString CSpace.nameOfToken (#inputTokens inp) :: makePosStatements inps
+            mathtt(#constructor inp) ^ List.toString stringOfToken (#inputTokens inp) :: makePosStatements inps
           val P = if CSpace.typeOfToken (#token tin) = "metaTrue" orelse null (#inputs tin) then 
                     makePosStatements (#inputs tin) 
                   else if CSpace.typeOfToken (#token tin) = "metaFalse" then 
