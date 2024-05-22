@@ -285,14 +285,12 @@ struct
       val graphWithPositions = processGraph (x,y) (Graph.orderByHierarchy (Graph.normalise g))
       val (left,right,bottom,top) = range graphWithPositions
       val (nodes,arrows) = unzip (map (tikzOfTIN graphWithPositions) graphWithPositions)
-      val xscale = if right - left > 60.0 then ", xscale = " ^ realToString (55.0 / right - left) else ""
-      val yscale =  if top - bottom > 120.0 then ", yscale = " ^ realToString (110.0 / right - left) else ""
+      val xscale = let val width = right - left in if width > 100.0 then ", xscale = " ^ realToString (30.0 / width) else if width > 60.0 then ", xscale = " ^ realToString (55.0 / width) else "" end
+      val yscale =  let val height = top - bottom in if height > 120.0 then ", yscale = " ^ realToString (110.0 / height) else "" end
       val opening = "\\begin{tikzpicture}[construction,align at top" ^ xscale ^ yscale ^ "]"
       val closing = "\\end{tikzpicture}"
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end handle Empty => ""
-
-  fun stringOfToken t = CSpace.nameOfToken t ^ ":" ^ mathtt (CSpace.typeOfToken t)
 
   fun propositionsOfGraph g =
     let
@@ -301,10 +299,10 @@ struct
         let 
           fun makeNegStatements [] = []
             | makeNegStatements (inp::inps) = 
-              "\\neg" ^ mathtt(#constructor inp) ^ List.toString stringOfToken (#inputTokens inp) :: makeNegStatements inps
+              "\\neg" ^ mathtt(#constructor inp) ^ List.toString token (#inputTokens inp) :: makeNegStatements inps
           fun makePosStatements [] = []
             | makePosStatements (inp::inps) = 
-            mathtt(#constructor inp) ^ List.toString stringOfToken (#inputTokens inp) :: makePosStatements inps
+            mathtt(#constructor inp) ^ List.toString token (#inputTokens inp) :: makePosStatements inps
           val P = if CSpace.typeOfToken (#token tin) = "metaTrue" orelse null (#inputs tin) then 
                     makePosStatements (#inputs tin) 
                   else if CSpace.typeOfToken (#token tin) = "metaFalse" then 
