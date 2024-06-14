@@ -292,6 +292,17 @@ struct
     in lines [opening, lines (List.concat (nodes @ arrows)), closing]
     end handle Empty => ""
 
+  fun reduceGraph g = 
+    let
+      fun removeLeaves _ [] = []
+        | removeLeaves tks (tin'::g) = 
+          if List.exists (fn x => CSpace.sameTokens x (#token tin')) tks andalso null (#inputs tin') then 
+            removeLeaves tks g 
+          else 
+            tin' :: removeLeaves (List.flatmap #inputTokens (#inputs tin') @ tks) g
+    in removeLeaves [] (Graph.orderByHierarchy g)
+    end
+
   fun propositionsOfGraph g =
     let
       fun pog [] = []
@@ -303,15 +314,16 @@ struct
           fun makePosStatements [] = []
             | makePosStatements (inp::inps) = 
             mathtt(#constructor inp) ^ List.toString token (#inputTokens inp) :: makePosStatements inps
-          val P = if CSpace.typeOfToken (#token tin) = "metaTrue" orelse null (#inputs tin) then 
+          val P = if CSpace.typeOfToken (#token tin) = "metaTrue" then 
                     makePosStatements (#inputs tin) 
                   else if CSpace.typeOfToken (#token tin) = "metaFalse" then 
                     makeNegStatements (#inputs tin)
+                  else if null (#inputs tin) then [token (#token tin)] 
                   else raise Fail "x"
         in P @ pog g'
         end
     in 
-      "\\begin{align*} &" ^ String.concatWith "\\\\ &" (pog g) ^ "\\end{align*}"
+      "\\begin{align*} &" ^ String.concatWith "\\\\ &" (pog (reduceGraph g)) ^ "\\end{align*}"
     end
 
   fun mkDocument content =

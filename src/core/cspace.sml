@@ -111,7 +111,7 @@ struct
             else (print ("WARNING: type " ^ (Type.nameOfType typ) ^ " is not in type system " ^ name ^ "\n"); false)
       fun nonEmptyInput s inTyps =
         if inTyps = []
-        then (print ("WARNING: Empty input types for " ^ s ^ "\n"); false)
+        then (print ("WARNING: Empty input types for " ^ s ^ "\n"); true)
         else true
       fun checkConstructors [] = []
         | checkConstructors ((s,(inTyps,outTyp))::L) =

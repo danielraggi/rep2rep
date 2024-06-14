@@ -8,6 +8,7 @@ sig
   val breadthFirstIgnore : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
   val breadthFirstIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
   val bestFirstIgnore : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
+  val bestFirstIgnoreStop : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
   val bestFirstIgnoreForget : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> 'a -> 'a Seq.seq;
   val bestFirstAll : ('a -> 'a Seq.seq) -> ('a * 'a -> order) -> ('a * 'a list -> bool) -> ('a * 'a list -> bool) -> ('a -> bool) -> 'a -> 'a Seq.seq;
 end;
@@ -122,6 +123,26 @@ struct
                   | SOME (st',s'') => let val newFrontier = Seq.insertManyNoEQUAL s'' (Seq.insertNoEQUAL st' s' h) h
                                           val recdfsi = dfsi newFrontier (st::acc)
                                       in Seq.insertNoEQUAL st recdfsi h end))
+    in dfsi (Seq.single state) []
+    end
+
+
+  fun bestFirstIgnoreStop next h ign stop state =
+    let fun dfsi frontier acc =
+          (case Seq.pull frontier of
+            NONE => Seq.empty
+          | SOME (st,s') =>
+              if ign (st,acc) then dfsi s' acc
+              else
+                (case Seq.pull (next st) of
+                    NONE => let val recdfsi = dfsi s' (st::acc)
+                            in Seq.insertNoEQUAL st recdfsi h end
+                  | SOME (st',s'') => if stop st' then 
+                                        Seq.cons st' (Seq.insertManyNoEQUAL s'' frontier h)
+                                      else
+                                        let val newFrontier = Seq.insertManyNoEQUAL s'' (Seq.insertNoEQUAL st' s' h) h
+                                            val recdfsi = dfsi newFrontier (st::acc)
+                                        in Seq.insertNoEQUAL st recdfsi h end))
     in dfsi (Seq.single state) []
     end
 

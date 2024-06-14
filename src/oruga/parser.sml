@@ -178,6 +178,7 @@ fun insertMany [] tks' = tks'
 fun parseGraph TKS gs = 
   let
     fun parseTokenList tks [] = (tks,[],[])
+      | parseTokenList tks [""] = (tks,[],[])
       | parseTokenList tks (s::ss) =
         (case String.breakOn "<-" s of
             (tt,"<-",_) => 

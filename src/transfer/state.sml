@@ -127,8 +127,8 @@ struct
     end
   
   fun score st =
-    let val (A,C) = #sequent st
-    in #score st - 0.2 * Real.fromInt (MGraph.size C)
+    let val (_,C) = #sequent st
+    in 10.0 * #score st / (1.0 + Real.fromInt (MGraph.size C))
     end
 
   fun compare (st1,st2) = 
@@ -143,12 +143,12 @@ struct
       case (Graph.contained cnq1 anc1, Graph.contained cnq2 anc2) of
           (true,false) => LESS
         | (false,true) => GREATER
-        | _ => Real.compare (score st2, score st1)
+        | _ => (case Real.compare (score st2, score st1) of EQUAL => if MGraph.equal C1 C2 andalso MGraph.equal A1 A2 then EQUAL else LESS | ord => ord)
     end
 
   fun ignore maxNumGoals maxNumResults maxCompSize unistructured (st,L) =
     let
-      val (A',C') = #sequent st
+      val (_,C') = #sequent st
     in 
       (Graph.numberOfConstructors (List.last C') > maxNumGoals orelse 
       length L > maxNumResults orelse
