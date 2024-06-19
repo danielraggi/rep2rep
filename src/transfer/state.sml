@@ -143,7 +143,12 @@ struct
       case (Graph.contained cnq1 anc1, Graph.contained cnq2 anc2) of
           (true,false) => LESS
         | (false,true) => GREATER
-        | _ => (case Real.compare (score st2, score st1) of EQUAL => if MGraph.equal C1 C2 andalso MGraph.equal A1 A2 then EQUAL else LESS | ord => ord)
+        | _ => (if MGraph.equal C1 C2 andalso MGraph.equal A1 A2 then 
+                  EQUAL
+                else
+                  case Real.compare (score st2, score st1) of 
+                    EQUAL => LESS
+                  | ord => ord)
     end
 
   fun ignore maxNumGoals maxNumResults maxCompSize unistructured (st,L) =
