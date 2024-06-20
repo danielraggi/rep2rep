@@ -9,6 +9,7 @@ sig
   val emptyMap : map;
   val identityMap : map;
   val addPair : token * token -> map -> map;
+  val updateMap : token * token -> map -> map;
   
   val applyMap : map -> token -> token option;
   val applyInvMap : map -> token -> token option;
@@ -40,6 +41,10 @@ struct
        case fr y of 
           SOME z => if CSpace.sameTokens x z then fr else raise Fail "not injective"
         | NONE => (fn t => if CSpace.sameTokens t y then SOME x else fr t))
+
+  fun updateMap (x,y) (fl,fr) = 
+    (fn t => if CSpace.sameTokens x t then SOME y else (case fl x of SOME y' => (case fr y' of SOME x' => if CSpace.sameTokens x' t then NONE else fl t | _ => fl t) | _ => fl t), 
+     fn t => if CSpace.sameTokens y t then SOME x else (case fr x of SOME x' => (case fl x' of SOME y' => if CSpace.sameTokens y' t then NONE else fr t | _ => fr t) | _ => fr t))
 
   (*
     functions for building and operating with maps

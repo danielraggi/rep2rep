@@ -55,9 +55,9 @@ struct
       val tokenNamesUsed = #tokenNamesUsed state
       val newscore = #score state + strength
       val deltas = findDeltasForBackwardApp T I tokenNamesUsed (A,C) (A',C')
-      fun makeResult (f,gf,D) = 
+      fun makeResult ((xA,xC),f,gf,D) = 
         let
-          val freshlyDischarged = MGraph.image f C 
+          val freshlyDischarged = MGraph.image f xC
           val dischargedUpdated = MGraph.imageWeak gf discharged
           val discharged = MGraph.join freshlyDischarged dischargedUpdated
           val newTokenNamesUsed = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick D) (MGraph.tokenNamesOfGraphQuick discharged)
@@ -124,7 +124,7 @@ struct
       val SC' = Seq.maps (schemasOfVarSchema T tys) SC
     in
       applyBackwardAllToState T (fn i => i = 1) SC' st 
-    end
+    end 
   
   fun score st =
     let val (_,C) = #sequent st
@@ -169,7 +169,7 @@ struct
       val stop = if eager then (fn x => case #sequent x of (A',C') => MGraph.contained C' A') else (fn _ => false)
     in
       Search.bestFirstAll (applyTransferSchemas T SC) compare ignT (fn _ => false) stop state 
-    end
+    end 
   
   fun initState sCSD tCSD iCSD graph goal =
     let val tTS = #typeSystem (#typeSystemData tCSD)

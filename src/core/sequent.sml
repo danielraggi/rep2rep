@@ -28,7 +28,7 @@ sig
     (c1',...,cn'). Importantly, this means that <a1',...,an' ||- d1,...,dn> is an 
     application of <a1,...,an ||- c1,...,cn> to <a1',...,an' ||- c1',...,cn'>.
   *)
-  val findDeltasForBackwardApp : mTypeSystem -> (int -> bool) -> string list -> sequent -> sequent -> (map * map * mgraph) Seq.seq
+  val findDeltasForBackwardApp : mTypeSystem -> (int -> bool) -> string list -> sequent -> sequent -> (sequent * map * map * mgraph) Seq.seq
 
   val applyBackwardFree : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
   val applyBackwardRestricted : mTypeSystem -> sequent -> sequent -> sequent Seq.seq
@@ -59,6 +59,31 @@ struct
   open TokenMap
   infix 6 oo
 
+  (* Given consequentEmbedding: C -> C', we adapt (A,C) and (A',C') so that (A,C) is directly applicable to (A',C').
+     Everything done is valid, i.e., (updatedA,updatedB) is still a schema, and the validity of (updatedA',updatedC') implies the validity of (A',C'). *)
+  fun specialiseSchemaForConsequentEmbedding T consequentEmbedding (A,C) (A',C') =
+    let 
+      fun ssfce (f,f') _ [] = (f,f')
+        | ssfce (f,f') (T'::TT') ([]::G) = ssfce (f,f') TT' G
+        | ssfce (f,f') (T'::TT') ((tin::g)::G) = 
+          let
+            val t = #token tin 
+            val t' = valOf (applyMap consequentEmbedding t)
+            val (newTok,newTok') = case Type.min (#subType T') (CSpace.typeOfToken t,CSpace.typeOfToken t') of 
+                            SOME mt => (CSpace.makeToken (CSpace.nameOfToken t) mt,CSpace.makeToken (CSpace.nameOfToken t') mt)
+                          | NONE => raise Fail "min type"
+          in ssfce (addPair (newTok,newTok') f, addPair (t',newTok') f') (T'::TT') (g::G)
+          end
+        | ssfce _ _ _ = raise Match
+      val (newConsequentEmbedding,goalMap) = ssfce (emptyMap,emptyMap) T C
+      val updatedC = MGraph.image ((invertMap newConsequentEmbedding) oo goalMap oo consequentEmbedding) C
+      val updatedA = MGraph.imageWeak ((invertMap newConsequentEmbedding) oo goalMap oo consequentEmbedding) A
+      val updatedC' = MGraph.imageWeak goalMap C'
+      val updatedA' = MGraph.imageWeakTypeGeneralising T goalMap A'
+    in
+      ((updatedA,updatedC),(updatedA',updatedC'),newConsequentEmbedding,goalMap)
+    end 
+
   (* 
     The assumption for findDeltasForBackwardApp is that (A,C) is a schema and (A',C') is a sequent.
     It aims to find a d such that (A,C) can be refined into (A' \cup d, C'') where C'' is a specialisation of C'.
@@ -74,59 +99,46 @@ struct
     I is a list of integers that indicates the dimensions on which we DO NOT want non-trivial deltas, i.e., where (#i sA) = (#i A).
     
   *)
+
   fun findDeltasForBackwardApp T I tns (A,C) (A',C') =
     let
       val tokensOfA = MGraph.tokensOfGraphQuick A
       val consequentEmbeddings = 
         MGraph.findEmbeddingsUpTo T (tokensOfA,[]) emptyMap C C'
 
-      val tokensOfAC = Graph.insertStrings (MGraph.tokenNamesOfGraphQuick A) (MGraph.tokenNamesOfGraphQuick C)
-      val tokensOfAC' = Graph.insertStrings (Graph.insertStrings (MGraph.tokenNamesOfGraphQuick A') (MGraph.tokenNamesOfGraphQuick C')) tns
-
       fun findDeltasPerConsequentEmbedding consequentEmbedding = 
         let 
-          val extendedInverseConsequentEmbedding = #1 (extendDomain (invertMap consequentEmbedding) (MGraph.tokensOfGraphQuick C') tokensOfAC)
-          val extendedC = MGraph.image extendedInverseConsequentEmbedding C'  (* extension of C that mimics the structure of C' *)
-          val restrictedConsequentEmbedding = restrictDomain (invertMap extendedInverseConsequentEmbedding) tokensOfA
-          (* restricting the domain of consequentEmbedding *)
-          val (extendedConsequentEmbedding,newTokensUsed') = extendDomain restrictedConsequentEmbedding (MGraph.tokensOfGraphQuick extendedC) tokensOfAC'
-          val consequentDelta = MGraph.image extendedConsequentEmbedding (MGraph.remove C extendedC) 
-          val goalMap = extendedConsequentEmbedding oo extendedInverseConsequentEmbedding
-
-          val subgraphsOfA = MGraph.subgraphsRestricted I A
-          val updatedA' = MGraph.imageWeakTypeGeneralising T goalMap A'
-          (*val updatedC' = MGraph.imageWeak goalMap C'*)
-          (*val _ = print (MGraph.toString (#1(valOf(Seq.pull subgraphsOfA))) ^ "\n")
-          val _ = print (Int.toString (length (Seq.list_of subgraphsOfA)) ^ "\n")*)
+          val ((updatedA,updatedC),(updatedA',updatedC'),newConsequentEmbedding,goalMap) = specialiseSchemaForConsequentEmbedding T consequentEmbedding (A,C) (A',C')
+          val tokensOfAC' = Graph.insertStrings (Graph.insertStrings (MGraph.tokenNamesOfGraphQuick updatedA') (MGraph.tokenNamesOfGraphQuick updatedC')) tns
+          
+          val consequentDelta = MGraph.remove (MGraph.image newConsequentEmbedding updatedC) updatedC' 
+          val subgraphsOfA = MGraph.subgraphsRestricted I updatedA
           fun findPerSubgraphOfA subgraphOfA = 
             let 
-              val antecedentReifications = MGraph.findReifications T extendedConsequentEmbedding subgraphOfA updatedA'
-             (* val _ = if isSome (Seq.pull antecedentReifications) andalso not (MGraph.equal A' updatedA') then (
-                  print ("\n\nx: " ^ MGraph.toString A' ^ "\n");
-                  print ("y: " ^ MGraph.toString updatedA' ^ "\n")) else ()*)
-              val complementOfSubgraphOfA = MGraph.remove subgraphOfA A
+              val antecedentReifications = MGraph.findReifications T newConsequentEmbedding subgraphOfA updatedA'
+              val complementOfSubgraphOfA = MGraph.remove subgraphOfA updatedA
               fun findPerReificationOfSubgraphOfA f' = 
                 let 
-                  val extendedMap = #1 (extendDomain f' (MGraph.tokensOfGraphQuick complementOfSubgraphOfA) (tokensOfAC' @ newTokensUsed')) (* extend domain of f' : subgraphOfA -> A' from subgraphOfA to A avoiding clashing with A' union C' *)
-                  val antecedentDelta = MGraph.image extendedMap complementOfSubgraphOfA 
+                  val (extendedMap,_) = extendDomain f' (MGraph.tokensOfGraphQuick complementOfSubgraphOfA) (tokensOfAC') (* extend domain of f' : subgraphOfA -> A' from subgraphOfA to A avoiding clashing with A' union C' *)
+                  val antecedentDelta = MGraph.image extendedMap complementOfSubgraphOfA
                 in 
-                  (extendedMap, goalMap, MGraph.join consequentDelta antecedentDelta) 
-                end 
+                  ((updatedA,updatedC), extendedMap, goalMap, MGraph.join consequentDelta antecedentDelta) 
+                end
             in 
               Seq.map findPerReificationOfSubgraphOfA antecedentReifications
             end
         in 
           Seq.maps findPerSubgraphOfA subgraphsOfA
-        end handle Fail "type generalising" => Seq.empty
+        end handle Fail "type generalising" => Seq.empty | Fail "min type" => Seq.empty
     in
       Seq.maps findDeltasPerConsequentEmbedding consequentEmbeddings 
-    end
+    end 
 
-  fun applyBackwardFree T (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T (fn _ => false) [] (A,C) (A',C'))
+  fun applyBackwardFree T (A,C) (A',C') = Seq.map (fn x => (A', #4 x)) (findDeltasForBackwardApp T (fn _ => false) [] (A,C) (A',C'))
 
   fun metaSpaceSelector M i = i < length M
-  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') [] (A,C) (A',C'))
+  fun applyBackwardRestricted T (A,C) (A',C') = Seq.map (fn x => (A', #4 x)) (findDeltasForBackwardApp T (metaSpaceSelector C') [] (A,C) (A',C'))
 
-  fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #3 x)) (findDeltasForBackwardApp T I [] (A,C) (A',C'))
+  fun applyBackwardTargetting T I (A,C) (A',C') = Seq.map (fn x => (A', #4 x)) (findDeltasForBackwardApp T I [] (A,C) (A',C'))
 
 end
